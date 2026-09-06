@@ -1,11 +1,19 @@
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef } from "react";
+import { Fragment, useLayoutEffect, useRef } from "react";
 
 /**
  * Aceternity-style Text Generate Effect: the heading animates in word by
  * word, once, on mount/route-enter. Each segment can carry its own styling
  * (e.g. gradient-text for the accent words).
+ *
+ * Robustness rules (these fixed a production bug):
+ * - Words are visible by default — the hidden pre-animation state is applied
+ *   imperatively by GSAP (useLayoutEffect, before paint), never via a static
+ *   `opacity-0` class, so a failed/missed trigger can never leave a word
+ *   invisible.
+ * - An explicit space is inserted between segments so adjacent inline spans
+ *   can never concatenate ("intoclarity").
  */
 export function TextGenerate({
   segments,
@@ -18,7 +26,7 @@ export function TextGenerate({
 }) {
   const ref = useRef<HTMLHeadingElement | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const words = el.querySelectorAll<HTMLElement>(".tge-word");
@@ -46,18 +54,25 @@ export function TextGenerate({
 
   return (
     <h1 ref={ref} className={className}>
-      {segments.map((segment, si) => (
-        <span key={si} className={cn("inline", segment.className)}>
-          {segment.text.split(" ").map((word, wi) => (
-            <span key={`${si}-${wi}`} className="inline-block whitespace-pre">
-              <span className="tge-word inline-block opacity-0 will-change-transform">
-                {word}
-              </span>
-              {wi < segment.text.split(" ").length - 1 ? " " : ""}
+      {segments.map((segment, si) => {
+        const words = segment.text.split(" ");
+        return (
+          <Fragment key={si}>
+            <span className={segment.className}>
+              {words.map((word, wi) => (
+                <span key={wi} className="inline-block whitespace-pre">
+                  <span className="tge-word inline-block will-change-transform">
+                    {word}
+                  </span>
+                  {wi < words.length - 1 ? " " : ""}
+                </span>
+              ))}
             </span>
-          ))}
-        </span>
-      ))}
+            {/* Explicit space between segments — never let them concatenate */}
+            {si < segments.length - 1 ? <span aria-hidden="true"> </span> : null}
+          </Fragment>
+        );
+      })}
     </h1>
   );
 }
