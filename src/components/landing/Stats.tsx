@@ -99,9 +99,12 @@ export default function Stats() {
         root.querySelectorAll<HTMLElement>("[data-count]"),
         { textContent: 0 },
         {
-          textContent: (i, el) => Number((el as HTMLElement).dataset.count ?? 0),
-          duration: (i, el) => {
-            const digits = String(Number((el as HTMLElement).dataset.count ?? 0)).length;
+          textContent: (i: number, el: unknown) =>
+            Number((el as HTMLElement).dataset.count ?? 0),
+          duration: (i: number, el: unknown) => {
+            const digits = String(
+              Number((el as HTMLElement).dataset.count ?? 0),
+            ).length;
             return 0.7 + digits * 0.3;
           },
           ease: "power2.out",
@@ -149,7 +152,7 @@ export default function Stats() {
               {/* Final value rendered server-side (SEO / no-JS); GSAP counts
                   it up from 0 when the section scrolls into view. */}
               <span data-count={stat.value}>{stat.value}</span>
-              {stat.suffix ? (
+              {"suffix" in stat && stat.suffix ? (
                 <span className="text-2xl text-text-dim">{stat.suffix}</span>
               ) : null}
             </div>

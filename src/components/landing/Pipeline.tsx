@@ -53,6 +53,7 @@ export default function Pipeline() {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const progressRef = useRef<HTMLSpanElement | null>(null);
+  const tlRef = useRef<ReturnType<typeof gsap.timeline> | null>(null);
 
   useEffect(() => {
     const root = ref.current;

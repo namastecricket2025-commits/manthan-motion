@@ -8,7 +8,7 @@ import {
   useTransform,
 } from "motion/react";
 import { IconPlus } from "@tabler/icons-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
 export type DockItem = {
@@ -100,9 +100,29 @@ function FloatingDockMobile({
 }) {
   const [open, setOpen] = useState(false);
   const down = direction === "down";
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss on Escape or a tap/click outside the dock.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [open]);
 
   return (
-    <div className={cn("relative block md:hidden", className)}>
+    <div ref={rootRef} className={cn("relative block md:hidden", className)}>
       <AnimatePresence>
         {open && (
           <motion.div

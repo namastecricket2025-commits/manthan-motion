@@ -91,7 +91,7 @@ export default function Navbar() {
         <div className="hidden md:block">
           <FloatingDock
             items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
-            desktopClassName="h-12 items-center gap-1.5 border-0 bg-transparent px-2 backdrop-blur-none"
+            desktopClassName="h-12 items-center gap-1.5 border-0 bg-transparent px-2 pb-0 backdrop-blur-none"
             minSize={36}
             maxSize={58}
             minIconSize={17}
