@@ -1,4 +1,10 @@
-import { gsap, prefersReducedMotion, refreshOnLoad, revealConfig } from "@/lib/gsap";
+import {
+  gsap,
+  prefersReducedMotion,
+  refreshOnLoad,
+  revealConfig,
+  ScrollTrigger,
+} from "@/lib/gsap";
 import { FileUp, ListChecks, Network, Layers, PackageCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -119,10 +125,43 @@ export default function Pipeline() {
         { x: () => -distance(), duration: 1 },
         0,
       );
+
+      tlRef.current = tl;
     }, root);
+
+    // Mobile browsers hide/show the URL bar while scrolling, which fires
+    // resize events. ScrollTrigger's auto-refresh-on-resize re-measures and
+    // re-pins mid-scroll, visibly jumping the track. Instead: snap the pinned
+    // animation to its end (which un-pins the section), then refresh and
+    // restore the exact progress once the viewport settles.
+    let resizeTimer: number | undefined;
+    let savedProgress: number | null = null;
+    const onResize = () => {
+      const tl = tlRef.current;
+      if (!tl) return;
+      const st = tl.scrollTrigger;
+      if (!st) return;
+      if (savedProgress === null) {
+        savedProgress = st.progress;
+        tl.pause();
+        st.animation?.progress(1); // un-pins the section
+      }
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        ScrollTrigger.refresh();
+        if (savedProgress !== null) {
+          st.animation?.progress(savedProgress);
+          savedProgress = null;
+        }
+        tl.play();
+      }, 220);
+    };
+    window.addEventListener("resize", onResize);
 
     const stopRefresh = refreshOnLoad();
     return () => {
+      window.removeEventListener("resize", onResize);
+      window.clearTimeout(resizeTimer);
       ctx.revert();
       stopRefresh();
     };

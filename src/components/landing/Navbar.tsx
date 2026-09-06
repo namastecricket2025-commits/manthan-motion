@@ -101,14 +101,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          {!isAuthenticated && !isLoading && (
-            <a
-              href={AUTH_URL}
-              className="btn-ghost hidden rounded-full border border-[var(--card-border)] px-4 py-2 text-sm font-medium text-text-dim md:inline-block"
-            >
-              Sign in
-            </a>
-          )}
+          {/* Sign in lives once, in the dock (icon + tooltip). */}
           <div className="hidden sm:block">{cta}</div>
           {/* Mobile dock (expandable trigger) */}
           <FloatingDock

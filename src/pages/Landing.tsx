@@ -10,6 +10,7 @@ import Pipeline from "@/components/landing/Pipeline";
 import Stats from "@/components/landing/Stats";
 import { TextGenerate } from "@/components/landing/TextGenerate";
 import { useAuth } from "@/hooks/use-auth";
+import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -122,6 +123,10 @@ function Hero() {
 }
 
 export default function Landing() {
+  // Lenis glide-scrolling for the marketing page (reduced-motion falls back
+  // to native scrolling inside the hook).
+  useSmoothScroll();
+
   return (
     <div className="relative min-h-screen">
       <BlobBackground />
