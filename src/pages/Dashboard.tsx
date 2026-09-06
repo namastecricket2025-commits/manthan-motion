@@ -1,11 +1,13 @@
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import HeroPreview from "@/components/landing/HeroPreview";
-import { Bar, BarChart, BarXAxis, Grid } from "@/components/charts/bar-chart";
-import {
-  PieCenter,
-} from "@/components/charts/pie-center";
-import { PieChart, PieSlice } from "@/components/charts/pie-chart";
+import BarChart from "@/components/charts/bar-chart";
+import Bar from "@/components/charts/bar";
+import BarXAxis from "@/components/charts/bar-x-axis";
+import Grid from "@/components/charts/grid";
+import PieCenter from "@/components/charts/pie-center";
+import PieChart from "@/components/charts/pie-chart";
+import PieSlice from "@/components/charts/pie-slice";
 import { ChartTooltip } from "@/components/charts/tooltip";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,7 +118,7 @@ export default function Dashboard() {
     };
   }, []);
 
-  const addToQueue = (items: QueueItem[]) =>
+  const addToQueue = (items: Omit<QueueItem, "id">[]) =>
     setQueue((q) => [...q, ...items.map((it, i) => ({ ...it, id: Date.now() + i }))]);
 
   const onFiles = (files: FileList | null) => {
