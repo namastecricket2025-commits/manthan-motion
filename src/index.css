@@ -327,18 +327,32 @@
 
   /* Gradient headline text. --text-main is the DOMINANT stop with --signal
      only as a tail accent — the inverse of the old weighting, which let red
-     blob backgrounds swallow red-dominant headlines in dark mode. */
+     blob backgrounds swallow red-dominant headlines in dark mode.
+
+     Robustness hardening:
+     - `color: var(--text-main)` is the declared fallback, not transparent —
+       if background-clip:text is unsupported/stripped, words still render
+       solid instead of vanishing.
+     - `-webkit-text-fill-color: transparent` is what Chrome/Safari actually
+       honour for gradient fills (plain `color: transparent` can be beaten by
+       inherited UA styles).
+     - A faint text-shadow gives the signal-coloured tail stop separation
+       from red blob backgrounds at whatever scroll position it lands. */
   .gradient-text {
+    color: var(--text-main);
     background: linear-gradient(
       98deg,
       var(--text-main) 0%,
-      var(--text-main) 42%,
-      color-mix(in srgb, var(--text-main) 62%, var(--signal) 38%) 66%,
-      var(--signal) 96%
+      var(--text-main) 46%,
+      color-mix(in srgb, var(--text-main) 68%, var(--signal) 32%) 72%,
+      var(--signal) 98%
     );
     -webkit-background-clip: text;
     background-clip: text;
-    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow:
+      0 1px 0
+      color-mix(in srgb, var(--ink) 55%, transparent);
   }
 
   /* Section kicker chip used above headings */

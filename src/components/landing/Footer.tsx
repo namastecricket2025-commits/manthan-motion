@@ -3,31 +3,83 @@ import { Logo } from "./Logo";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
+/**
+ * Site footer — a solid (opaque) panel that visibly separates from the
+ * animated blob canvas above it, with founder credit and legal links.
+ */
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="relative border-t border-[var(--card-border)]">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 py-10 sm:px-6 md:flex-row">
-        <div className="flex flex-col items-center gap-3 md:items-start">
-          <Logo markClassName="h-7 w-7" />
-          <p className="max-w-xs text-center text-xs leading-relaxed text-text-dim md:text-left">
-            Manthan churns raw notes, files and links into ready-to-study
-            material — summaries, flashcards and question banks.
-          </p>
+    <footer className="relative z-10 border-t border-[var(--card-border)] bg-[var(--ink)]">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          {/* Brand */}
+          <div className="flex flex-col items-start gap-3">
+            <Logo markClassName="h-7 w-7" />
+            <p className="max-w-xs text-sm leading-relaxed text-text-dim">
+              Manthan churns raw notes, files and links into ready-to-study
+              material — summaries, flashcards and question banks.
+            </p>
+            <p className="text-xs font-medium text-text-dim">
+              Founded by{" "}
+              <span className="font-display font-bold text-foreground">
+                Luv Moond
+              </span>
+            </p>
+          </div>
+
+          {/* Product */}
+          <nav
+            aria-label="Product"
+            className="flex flex-col items-start gap-2.5 text-sm font-medium text-text-dim"
+          >
+            <span className="kicker mb-1">Product</span>
+            <a href="#features" className="transition-colors hover:text-foreground">
+              Features
+            </a>
+            <a href="#how" className="transition-colors hover:text-foreground">
+              How it works
+            </a>
+            <a href="#stats" className="transition-colors hover:text-foreground">
+              Impact
+            </a>
+            <Link
+              to={AUTH_URL}
+              className="transition-colors hover:text-foreground"
+            >
+              Sign in
+            </Link>
+          </nav>
+
+          {/* Legal */}
+          <nav
+            aria-label="Legal"
+            className="flex flex-col items-start gap-2.5 text-sm font-medium text-text-dim"
+          >
+            <span className="kicker mb-1">Legal</span>
+            <Link to="/terms" className="transition-colors hover:text-foreground">
+              Terms of Service
+            </Link>
+            <Link
+              to="/privacy"
+              className="transition-colors hover:text-foreground"
+            >
+              Privacy Policy
+            </Link>
+            <a
+              href="mailto:support@manthan.app"
+              className="transition-colors hover:text-foreground"
+            >
+              Contact
+            </a>
+          </nav>
         </div>
-        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium text-text-dim">
-          <a href="#features" className="transition-colors hover:text-foreground">
-            Features
-          </a>
-          <a href="#how" className="transition-colors hover:text-foreground">
-            How it works
-          </a>
-          <Link to={AUTH_URL} className="transition-colors hover:text-foreground">
-            Sign in
-          </Link>
-        </nav>
-        <p className="text-xs text-text-dim">
-          © {new Date().getFullYear()} Manthan · crafted in the dark
-        </p>
+
+        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-[var(--card-border)] pt-6 text-xs text-text-dim sm:flex-row">
+          <p>© {year} Manthan · All rights reserved</p>
+          <p>Built for learners, by learners.</p>
+        </div>
       </div>
     </footer>
   );
