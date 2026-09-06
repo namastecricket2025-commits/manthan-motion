@@ -17,9 +17,10 @@ const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 /**
  * Top-menu navigation via the Floating Dock.
  *
- * Desktop (md+): an inline glass pill that magnifies icons by mouse
- * proximity, with tooltips on hover.
- * Mobile (<md): a compact +/× trigger that fans the same links out downward.
+ * A single FloatingDock instance serves both modes: on desktop (md+) it is
+ * an inline glass pill that magnifies icons subtly by mouse proximity, with
+ * tooltips on hover; on mobile (<md) it is a compact +/× trigger that fans
+ * the same links out downward.
  *
  * Hash targets scroll to landing sections; route targets use the SPA router.
  */
@@ -87,27 +88,22 @@ export default function Navbar() {
           <Logo markClassName="h-7 w-7" />
         </a>
 
-        {/* Desktop dock (magnify-on-proximity) */}
-        <div className="hidden md:block">
-          <FloatingDock
-            items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
-            desktopClassName="h-12 items-center gap-1.5 border-0 bg-transparent px-2 pb-0 backdrop-blur-none"
-            minSize={36}
-            maxSize={58}
-            minIconSize={17}
-            maxIconSize={30}
-          />
-        </div>
-
         <div className="flex items-center gap-2">
-          <ThemeToggle />
-          {/* Sign in lives once, in the dock (icon + tooltip). */}
-          <div className="hidden sm:block">{cta}</div>
-          {/* Mobile dock (expandable trigger) */}
+          {/* The one dock: a glass pill that magnifies gently on desktop,
+              an expandable trigger on mobile. Magnification is capped so
+              icons never balloon past the navbar. */}
           <FloatingDock
             items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
             mobileDirection="down"
+            desktopClassName="h-14 items-center gap-2 px-3 pb-0"
+            minSize={36}
+            maxSize={50}
+            minIconSize={16}
+            maxIconSize={24}
           />
+          <ThemeToggle />
+          {/* Sign in lives once, in the dock (icon + tooltip). */}
+          <div className="hidden sm:block">{cta}</div>
         </div>
       </nav>
     </header>

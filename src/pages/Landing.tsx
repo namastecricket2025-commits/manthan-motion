@@ -111,7 +111,9 @@ function Hero() {
               data-hero-fade
               className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-medium text-text-dim"
             >
-              <span>Boards · JEE/NEET · UPSC · semester exams</span>
+              <span>
+                PDFs · slides · links · handwritten notes — any material works
+              </span>
             </div>
           </div>
 
