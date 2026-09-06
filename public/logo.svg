@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512">
+  <!-- Manthan mark: two metaballs churning together -->
+  <rect width="64" height="64" rx="16" fill="#150c0b"/>
+  <circle cx="29" cy="35" r="17" fill="#e0323a"/>
+  <circle cx="42" cy="24" r="11" fill="#8f1d22"/>
+  <circle cx="42" cy="24" r="11" fill="#e0323a" opacity="0.35"/>
+</svg>
