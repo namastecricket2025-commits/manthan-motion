@@ -126,6 +126,9 @@ export default function Landing() {
     <div className="relative min-h-screen">
       <BlobBackground />
       <div className="relative z-10">
+        {/* Anchor target for the "Home" nav item — the header is fixed, so
+            an anchor on it can't scroll the page; this spans the top. */}
+        <div id="top" aria-hidden="true" />
         <Navbar />
         <main>
           <Hero />

@@ -53,7 +53,11 @@ export default function Stats() {
   }, []);
 
   return (
-    <section ref={ref} className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-20">
+    <section
+      id="stats"
+      ref={ref}
+      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 md:py-20"
+    >
       <div data-reveal className="mx-auto max-w-2xl text-center">
         <span className="kicker">What Manthan does</span>
       </div>
