@@ -1,10 +1,25 @@
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { useEffect, useRef } from "react";
 
+/**
+ * No real usage data exists yet, so this section states qualitative
+ * strengths instead of invented metrics (revision prompt §1.4). When real
+ * figures are available, swap each entry for { value, suffix, label } and
+ * restore the GSAP count-up that used to live here.
+ */
 const STATS = [
-  { value: 24500, suffix: "+", label: "Study materials generated" },
-  { value: 118000, suffix: "+", label: "Flashcards & question banks" },
-  { value: 92, suffix: "%", label: "Report faster revision" },
+  {
+    title: "A pipeline you can watch",
+    body: "Parse, summarise, structure, distill, deliver — live status at every step, so you always know what's happening to your notes.",
+  },
+  {
+    title: "Built for the phone",
+    body: "Off-canvas navigation, stacked cards and an ambient background tuned for mid-range devices. Study happens on the go — so does Manthan.",
+  },
+  {
+    title: "Labelled and cited",
+    body: "Every flashcard and question is labelled by topic and traced back to the source it came from — no mystery material, ever.",
+  },
 ];
 
 export default function Stats() {
@@ -13,65 +28,46 @@ export default function Stats() {
   useEffect(() => {
     const root = ref.current;
     if (!root) return;
-    const nums = root.querySelectorAll<HTMLElement>("[data-num]");
+    const els = root.querySelectorAll<HTMLElement>("[data-reveal]");
 
     if (prefersReducedMotion()) {
-      nums.forEach((el) => {
-        el.textContent = (el.dataset.value ?? "0") + (el.dataset.suffix ?? "");
-      });
+      gsap.set(els, { opacity: 1, y: 0 });
       return;
     }
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        root.querySelectorAll<HTMLElement>("[data-reveal]"),
-        { opacity: 0, y: 24 },
+        els,
+        { opacity: 0, y: 26 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.6,
+          duration: 0.65,
           ease: "power3.out",
           stagger: 0.08,
           scrollTrigger: { trigger: root, ...revealConfig },
         },
       );
-      nums.forEach((el) => {
-        const target = Number(el.dataset.value ?? 0);
-        const suffix = el.dataset.suffix ?? "";
-        const state = { v: 0 };
-        gsap.to(state, {
-          v: target,
-          duration: 1.4,
-          ease: "power2.out",
-          scrollTrigger: { trigger: root, start: "top 82%", toggleActions: "play none none none" },
-          onUpdate: () => {
-            el.textContent = Math.round(state.v).toLocaleString("en-US") + suffix;
-          },
-        });
-      });
     }, root);
     return () => ctx.revert();
   }, []);
 
   return (
-    <section
-      ref={ref}
-      className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-20"
-    >
-      <div
-        data-reveal
-        className="glass-panel grid grid-cols-3 divide-x divide-[var(--card-border)] px-2 py-8 sm:px-8 md:py-10"
-      >
-        {STATS.map((stat) => (
-          <div key={stat.label} className="px-2 text-center sm:px-6">
-            <p className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px]">
-              <span data-num data-value={stat.value} data-suffix={stat.suffix}>
-                0
-              </span>
-            </p>
-            <p className="mt-1.5 text-[11px] font-medium leading-snug text-text-dim sm:text-sm">
-              {stat.label}
-            </p>
+    <section ref={ref} className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-20">
+      <div data-reveal className="mx-auto max-w-2xl text-center">
+        <span className="kicker">What Manthan does</span>
+      </div>
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3 md:mt-12">
+        {STATS.map((item) => (
+          <div
+            key={item.title}
+            data-reveal
+            className="glass-panel p-6 text-center sm:text-left"
+          >
+            <h3 className="font-display text-lg font-bold tracking-tight text-foreground">
+              {item.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-text-dim">{item.body}</p>
           </div>
         ))}
       </div>

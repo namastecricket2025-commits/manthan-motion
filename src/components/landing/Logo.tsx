@@ -1,24 +1,23 @@
 import { cn } from "@/lib/utils";
 
-/** Manthan wordmark — two metaballs churning, echoing the background system. */
+/**
+ * Manthan mark — exact shapes from the reference files:
+ * a red circle connected by a thin line to a smaller light-colored circle,
+ * no background tile.
+ */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 64 64"
-      className={cn("h-8 w-8", className)}
-      aria-hidden="true"
-    >
-      <rect
-        width="64"
-        height="64"
-        rx="16"
-        fill="var(--ink)"
-        stroke="var(--card-border)"
-        strokeWidth="1.5"
+    <svg viewBox="0 0 40 40" className={cn("h-7 w-7", className)} aria-hidden="true">
+      <circle cx="20" cy="20" r="9" fill="var(--signal)" />
+      <circle cx="33" cy="20" r="3" fill="var(--text-main)" />
+      <line
+        x1="20"
+        y1="20"
+        x2="33"
+        y2="20"
+        stroke="var(--text-dim)"
+        strokeWidth="1.4"
       />
-      <circle cx="29" cy="35" r="17" fill="var(--signal)" />
-      <circle cx="42" cy="24" r="11" fill="var(--signal-2)" opacity="0.9" />
-      <circle cx="29" cy="35" r="17" fill="var(--signal)" opacity="0.35" />
     </svg>
   );
 }

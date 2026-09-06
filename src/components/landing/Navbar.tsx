@@ -16,7 +16,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
-  { label: "How it works", href: "#pipeline" },
+  { label: "How it works", href: "#how" },
 ];
 
 export default function Navbar() {

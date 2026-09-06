@@ -1,234 +1,197 @@
-import { gsap, prefersReducedMotion } from "@/lib/gsap";
+import { gsap, prefersReducedMotion, refreshOnLoad, revealConfig } from "@/lib/gsap";
+import { FileUp, ListChecks, Network, Layers, PackageCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 const STEPS = [
   {
+    icon: FileUp,
+    num: "01",
     title: "Parse",
     desc: "Files, links and pasted notes are cleaned into plain text — sources stay visible in the queue the whole time.",
   },
   {
+    icon: ListChecks,
+    num: "02",
     title: "Summarise",
     desc: "Core ideas are condensed into a crisp outline, flagging the concepts worth drilling.",
   },
   {
+    icon: Network,
+    num: "03",
     title: "Structure",
     desc: "Material is organised by chapter, topic and weight so the mix knows what to emphasise.",
   },
   {
+    icon: Layers,
+    num: "04",
     title: "Distill",
     desc: "Summaries, flashcards, question banks and concept maps are generated from the structured outline.",
   },
   {
+    icon: PackageCheck,
+    num: "05",
     title: "Deliver",
     desc: "A study kit lands in your dashboard — every card labelled, every source cited back to the original.",
   },
 ];
 
-const STATUS = [
-  "Parsing sources…",
-  "Summarising core ideas…",
-  "Structuring by topic…",
-  "Distilling flashcards & questions…",
-  "Delivering study kit…",
-];
-
-const DONE_STATUS = "Study kit ready — labelled and cited. Open it in your dashboard.";
-
 /**
- * The 5-step "generation pipeline" (mp-node walkthrough): one GSAP timeline
- * keeps node states, connector lines, step rows and status text perfectly in
- * sync. Fires once when scrolled into view.
+ * "How it works" — the original sticky, horizontally-scrolling card track:
+ * the section pins while the cards glide left as the user scrolls down, with
+ * a gentle center-focus scale on whichever card is nearest the viewport
+ * center. Fires once; fully static (native overflow scroll) when reduced
+ * motion is preferred.
  */
 export default function Pipeline() {
   const ref = useRef<HTMLElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const progressRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     const root = ref.current;
-    if (!root) return;
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    if (!root || !viewport || !track) return;
 
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>("[data-node]"));
-    const rows = Array.from(root.querySelectorAll<HTMLElement>("[data-row]"));
-    const segments = Array.from(
-      root.querySelectorAll<HTMLElement>("[data-segment]"),
-    );
-    const status = root.querySelector<HTMLElement>("[data-status]");
+    const cards = Array.from(track.querySelectorAll<HTMLElement>(".how-card"));
+    const reduced = prefersReducedMotion();
 
-    const activate = (i: number) => {
-      const done = i === -1;
-      nodes.forEach((node, j) => {
-        const isActive = j === i;
-        node.style.borderColor = done || j <= i ? "var(--signal)" : "var(--card-border)";
-        node.style.background =
-          done || j < i ? "var(--signal)" : isActive ? "color-mix(in srgb, var(--signal) 22%, transparent)" : "transparent";
-        node.style.color = done || j < i ? "var(--ink)" : isActive ? "var(--text-main)" : "var(--text-dim)";
-        node.style.boxShadow =
-          isActive && !done
-            ? "0 0 0 5px color-mix(in srgb, var(--signal) 18%, transparent)"
-            : "none";
+    if (reduced) {
+      // Accessible fallback: native horizontal scroll, no pin, no scrub.
+      viewport.style.overflowX = "auto";
+      gsap.set([...cards, ...root.querySelectorAll("[data-reveal]")], {
+        opacity: 1,
+        y: 0,
+        scale: 1,
       });
-      segments.forEach((seg, j) => {
-        seg.style.background =
-          done || j < i ? "var(--signal)" : "var(--card-border)";
-      });
-      rows.forEach((row, j) => {
-        const isActive = j === i;
-        row.style.borderColor =
-          done || j <= i ? "var(--signal)" : "var(--card-border)";
-        row.style.background =
-          done || isActive
-            ? "color-mix(in srgb, var(--signal) 7%, transparent)"
-            : "transparent";
-      });
-      if (status) status.textContent = done ? DONE_STATUS : STATUS[i] ?? "";
-    };
-
-    if (prefersReducedMotion()) {
-      gsap.set([...nodes, ...rows], { opacity: 1 });
-      gsap.set(segments, { scaleY: 1 });
-      activate(-1);
       return;
     }
 
     const ctx = gsap.context(() => {
-      gsap.set(root.querySelectorAll<HTMLElement>(
-        "[data-reveal-heading], [data-reveal-visual]",
-      ), { opacity: 0, y: 24 });
-      gsap.set(nodes, { scale: 0.5, opacity: 0.4 });
-      gsap.set(segments, { scaleY: 0 });
-      gsap.set(rows, { opacity: 0.45 });
-
-      const tl = gsap.timeline({
-        scrollTrigger: { trigger: root, start: "top 72%", toggleActions: "play none none none" },
-        defaults: { ease: "power2.inOut" },
-      });
-
-      tl.to(
-        root.querySelectorAll<HTMLElement>(
-          "[data-reveal-heading], [data-reveal-visual]",
-        ),
-        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.1 },
-        0,
+      // Entrance reveal for the heading block
+      gsap.fromTo(
+        root.querySelectorAll<HTMLElement>("[data-reveal]"),
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: "power3.out",
+          stagger: 0.08,
+          scrollTrigger: { trigger: root, ...revealConfig },
+        },
       );
 
-      STEPS.forEach((_, i) => {
-        if (i > 0) {
-          tl.to(segments[i - 1], { scaleY: 1, duration: 0.4 }, ">-0.25");
-        }
-        tl.call(() => activate(i), [], "<0.05");
-        tl.fromTo(
-          nodes[i],
-          { scale: 0.5, opacity: 0.4 },
-          { scale: 1, opacity: 1, duration: 0.45 },
-          "<0.1",
-        );
-        tl.fromTo(
-          rows[i],
-          { opacity: 0.45 },
-          { opacity: 1, duration: 0.35 },
-          "<",
-        );
-        tl.to({}, { duration: 0.9 });
+      const distance = () => Math.max(0, track.scrollWidth - viewport.clientWidth);
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: viewport,
+          pin: true,
+          scrub: 0.6,
+          anticipatePin: 1,
+          start: "top top",
+          end: () => `+=${distance() * 1.15}`,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            // Center-focus scaling: the card nearest the viewport center
+            // scales up slightly; neighbours ease back down.
+            const x = gsap.getProperty(track, "x") as number;
+            const center = viewport.clientWidth / 2 - x;
+            for (const card of cards) {
+              const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+              const delta = Math.abs(center - cardCenter);
+              const t = Math.min(1, delta / (card.offsetWidth * 0.85));
+              card.style.transform = `scale(${(1 + 0.06 * (1 - t)).toFixed(4)})`;
+            }
+            if (progressRef.current) {
+              progressRef.current.style.transform = `scaleX(${self.progress.toFixed(4)})`;
+            }
+          },
+        },
+        defaults: { ease: "none" },
       });
-      tl.call(() => activate(-1), [], ">-0.4");
-      tl.to({}, { duration: 0.3 });
+
+      tl.fromTo(
+        track,
+        { x: 0 },
+        { x: () => -distance(), duration: 1 },
+        0,
+      );
     }, root);
 
-    return () => ctx.revert();
+    const stopRefresh = refreshOnLoad();
+    return () => {
+      ctx.revert();
+      stopRefresh();
+    };
   }, []);
 
   return (
     <section
-      id="pipeline"
+      id="how"
       ref={ref}
-      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6 md:py-28"
+      className="relative scroll-mt-24 py-20 md:py-28"
     >
-      <div className="mx-auto max-w-2xl text-center" data-reveal-heading>
-        <span className="kicker">How it works</span>
-        <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
-          One pipeline, <span className="gradient-text">five guided steps</span>
-        </h2>
-        <p className="mt-4 text-base leading-relaxed text-text-dim">
-          Watch a generation run live: every node, connector and status line is
-          driven by a single timeline, so what you see is exactly what the
-          pipeline is doing.
-        </p>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center" data-reveal>
+          <span className="kicker">How it works</span>
+          <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
+            One pipeline,{" "}
+            <span className="gradient-text">five guided steps</span>
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-text-dim">
+            Keep scrolling — the cards glide as you go, from raw notes to a
+            finished study kit.
+          </p>
+        </div>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 items-start gap-10 md:mt-16 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] min-[900px]:gap-14">
-        {/* ---- Visual: vertical rail (identical on mobile & desktop) ---- */}
-        <div className="glass-panel p-5 sm:p-7" data-reveal-visual>
-          <div className="relative flex h-[300px] flex-col items-stretch">
-            {/* connectors (vertical, between node slots) */}
-            {STEPS.map((_, i) =>
-              i === 0 ? null : (
-                <span
-                  key={`seg${i}`}
-                  data-segment
-                  className="absolute w-0.5 origin-top bg-[var(--card-border)]"
-                  style={{
-                    left: "calc(50% - 1px)",
-                    top: `${(i - 0.5) * 20}%`,
-                    height: "20%",
-                  }}
-                />
-              ),
-            )}
-            {/* node slots */}
-            {STEPS.map((step, i) => (
-              <div
-                key={step.title}
-                className="flex flex-1 items-center justify-center"
-              >
-                <span
-                  data-node
-                  className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--card-border)] font-display text-sm font-bold"
-                >
-                  {i + 1}
-                </span>
-              </div>
-            ))}
-          </div>
+      {/* Pinned viewport: full-bleed, cards glide horizontally */}
+      <div
+        ref={viewportRef}
+        className="how-sticky relative mt-12 h-[72svh] min-h-[430px] w-full overflow-hidden md:mt-16"
+      >
+        {/* scrub progress line */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 z-10 mx-auto block h-[2px] w-full max-w-6xl bg-[var(--card-border)]"
+        >
+          <span
+            ref={progressRef}
+            className="block h-full w-full origin-left bg-[var(--signal)]"
+            style={{ transform: "scaleX(0)" }}
+          />
+        </span>
 
-          <p
-            data-status
-            className="mt-6 min-h-6 text-center text-sm font-medium text-foreground"
-          >
-            Scroll in to run the pipeline
-          </p>
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {STEPS.map((step, i) => (
-              <span
-                key={step.title}
-                className="glass-chip px-3 py-1 text-[11px] font-medium text-text-dim"
-              >
-                {i + 1} · {step.title}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* ---- Step list ---- */}
-        <ol className="flex flex-col gap-3">
-          {STEPS.map((step, i) => (
-            <li
-              key={step.title}
-              data-row
-              className="rounded-2xl border border-[var(--card-border)] p-5 transition-[background,border-color] duration-300 sm:p-6"
+        <div ref={trackRef} className="how-track h-full items-center">
+          {STEPS.map((step) => (
+            <article
+              key={step.num}
+              data-reveal
+              className="how-card glass-panel flex flex-col justify-between p-6 will-change-transform sm:p-8"
             >
-              <div className="flex items-baseline gap-3">
-                <span className="font-display text-sm font-bold text-[var(--signal)]">
-                  0{i + 1}
-                </span>
-                <h3 className="font-display text-lg font-bold tracking-tight text-foreground">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
+                    <step.icon className="h-5 w-5" />
+                  </span>
+                  <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--signal)_38%,transparent)]">
+                    {step.num}
+                  </span>
+                </div>
+                <h3 className="mt-6 font-display text-2xl font-bold tracking-tight text-foreground">
                   {step.title}
                 </h3>
+                <p className="mt-3 text-sm leading-relaxed text-text-dim sm:text-base">
+                  {step.desc}
+                </p>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-text-dim">
-                {step.desc}
-              </p>
-            </li>
+              <span className="mt-8 h-0.5 w-12 rounded-full bg-[var(--signal)] opacity-70" />
+            </article>
           ))}
-        </ol>
+        </div>
       </div>
     </section>
   );

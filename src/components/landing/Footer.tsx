@@ -18,7 +18,7 @@ export default function Footer() {
           <a href="#features" className="transition-colors hover:text-foreground">
             Features
           </a>
-          <a href="#pipeline" className="transition-colors hover:text-foreground">
+          <a href="#how" className="transition-colors hover:text-foreground">
             How it works
           </a>
           <Link to={AUTH_URL} className="transition-colors hover:text-foreground">

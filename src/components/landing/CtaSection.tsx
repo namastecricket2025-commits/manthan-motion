@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { Sparkles } from "@/components/ui/sparkles";
 import { MovingBorderButton } from "./MovingBorderButton";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
@@ -41,11 +42,12 @@ export default function CtaSection() {
         data-reveal
         className="glass-panel relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
       >
-        {/* soft signal glow */}
+        {/* soft signal glow + Magic UI-style sparkle accents */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[130%] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] blur-3xl"
         />
+        <Sparkles count={9} seed={11} className="hidden min-[760px]:block" />
         <div className="relative">
           <span className="kicker">Start churning</span>
           <h2

@@ -50,6 +50,45 @@
     sans-serif;
   --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui,
     sans-serif;
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --color-chart-scale-pattern-color: var(----chart-scale-pattern-color);
+  --color-chart-scale-05: var(----chart-scale-05);
+  --color-chart-scale-04: var(----chart-scale-04);
+  --color-chart-scale-03: var(----chart-scale-03);
+  --color-chart-scale-02: var(----chart-scale-02);
+  --color-chart-scale-01: var(----chart-scale-01);
+  --color-chart-label: var(----chart-label);
+  --color-chart-marker-foreground: var(----chart-marker-foreground);
+  --color-chart-marker-border: var(----chart-marker-border);
+  --color-chart-marker-background: var(----chart-marker-background);
+  --color-chart-tooltip-muted: var(----chart-tooltip-muted);
+  --color-chart-tooltip-foreground: var(----chart-tooltip-foreground);
+  --color-chart-tooltip-background: var(----chart-tooltip-background);
+  --chart-brush-border: var(----chart-brush-border);
+  --color-chart-grid: var(----chart-grid);
+  --color-chart-crosshair: var(----chart-crosshair);
+  --chart-line-secondary: var(----chart-line-secondary);
+  --chart-line-primary: var(----chart-line-primary);
+  --color-chart-foreground-muted: var(----chart-foreground-muted);
+  --color-chart-foreground: var(----chart-foreground);
+  --color-chart-background: var(----chart-background);
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
 
 /* ============================================================
@@ -70,6 +109,29 @@
   --bg-canvas-b: #8f1d22;
   --bg-canvas-c: #f2ece8;
   --bg-canvas-opacity: 0.65;
+
+  /* Bklit chart tokens (light) — mapped to the Manthan palette */
+  ----chart-1: var(--chart-1);
+  ----chart-2: var(--chart-2);
+  ----chart-3: var(--chart-3);
+  ----chart-4: var(--chart-4);
+  ----chart-5: var(--chart-5);
+  ----chart-background: var(--card);
+  ----chart-foreground: var(--text-main);
+  ----chart-foreground-muted: var(--text-dim);
+  ----chart-grid: rgba(36, 20, 18, 0.12);
+  ----chart-crosshair: rgba(36, 20, 18, 0.2);
+  ----chart-label: var(--text-dim);
+  ----chart-line-primary: var(--signal);
+  ----chart-line-secondary: var(--signal-2);
+  ----chart-tooltip-background: var(--card);
+  ----chart-tooltip-foreground: var(--text-main);
+  ----chart-tooltip-muted: var(--text-dim);
+  ----chart-marker-background: var(--card);
+  ----chart-marker-border: var(--card-border);
+  ----chart-marker-foreground: var(--text-main);
+  ----chart-segment-background: rgba(200, 31, 39, 0.1);
+  ----chart-segment-line: rgba(200, 31, 39, 0.25);
 
   /* shadcn aliases (light) */
   --background: var(--ink);
@@ -103,6 +165,27 @@
   --sidebar-accent-foreground: #3a2320;
   --sidebar-border: rgba(36, 20, 18, 0.12);
   --sidebar-ring: var(--signal);
+  --chart-background: oklch(1 0 0);
+  --chart-foreground: oklch(0.145 0.004 285);
+  --chart-foreground-muted: oklch(0.55 0.014 260);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: oklch(0.4 0.1828 274.34);
+  --chart-grid: oklch(0.9 0 0);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: oklch(0.21 0.006 285 / 0.8);
+  --chart-tooltip-foreground: oklch(0.985 0 0);
+  --chart-tooltip-muted: oklch(0.65 0.01 260);
+  --chart-marker-background: oklch(0.97 0.005 260);
+  --chart-marker-border: oklch(0.85 0.01 260);
+  --chart-marker-foreground: oklch(0.3 0.01 260);
+  --chart-label: oklch(0.45 0.01 260);
+  --chart-scale-01: oklch(0.98 0.003 106);
+  --chart-scale-02: oklch(0.92 0.008 106);
+  --chart-scale-03: oklch(0.82 0.015 106);
+  --chart-scale-04: oklch(0.68 0.02 106);
+  --chart-scale-05: oklch(0.55 0.025 106);
+  --chart-scale-pattern-color: oklch(0.96 0.005 106);
 }
 
 /* ============================================================
@@ -122,6 +205,29 @@
   --bg-canvas-b: #8f1d22;
   --bg-canvas-c: #150c0b;
   --bg-canvas-opacity: 0.9;
+
+  /* Bklit chart tokens (dark) — mapped to the Manthan palette */
+  ----chart-1: var(--chart-1);
+  ----chart-2: var(--chart-2);
+  ----chart-3: var(--chart-3);
+  ----chart-4: var(--chart-4);
+  ----chart-5: var(--chart-5);
+  ----chart-background: var(--card);
+  ----chart-foreground: var(--text-main);
+  ----chart-foreground-muted: var(--text-dim);
+  ----chart-grid: rgba(244, 236, 233, 0.1);
+  ----chart-crosshair: rgba(244, 236, 233, 0.18);
+  ----chart-label: var(--text-dim);
+  ----chart-line-primary: var(--signal);
+  ----chart-line-secondary: #b97750;
+  ----chart-tooltip-background: #241614;
+  ----chart-tooltip-foreground: var(--text-main);
+  ----chart-tooltip-muted: var(--text-dim);
+  ----chart-marker-background: #241614;
+  ----chart-marker-border: var(--card-border);
+  ----chart-marker-foreground: var(--text-main);
+  ----chart-segment-background: rgba(224, 50, 58, 0.12);
+  ----chart-segment-line: rgba(224, 50, 58, 0.3);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -173,7 +279,9 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
+    /* clip (not hidden) — hidden would create a scroll container and break
+       the pinned horizontal "How it works" section */
+    overflow-x: clip;
   }
   ::selection {
     background: color-mix(in srgb, var(--signal) 75%, transparent);
@@ -217,12 +325,16 @@
     border-radius: 999px;
   }
 
+  /* Gradient headline text. --text-main is the DOMINANT stop with --signal
+     only as a tail accent — the inverse of the old weighting, which let red
+     blob backgrounds swallow red-dominant headlines in dark mode. */
   .gradient-text {
     background: linear-gradient(
-      96deg,
-      var(--signal) 0%,
-      var(--signal-2) 58%,
-      color-mix(in srgb, var(--text-dim) 55%, var(--signal) 45%) 130%
+      98deg,
+      var(--text-main) 0%,
+      var(--text-main) 42%,
+      color-mix(in srgb, var(--text-main) 62%, var(--signal) 38%) 66%,
+      var(--signal) 96%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -335,6 +447,88 @@
   }
 
   /* ------------------------------------------------
+     Manthan mark — exact shapes from the reference files
+     (red circle + thin connector + small light circle),
+     with the hero-sized orbit animation.
+     ------------------------------------------------ */
+  .logo-svg .big-circle {
+    fill: var(--signal);
+  }
+  .logo-svg .small-circle {
+    fill: var(--text-main);
+  }
+  .logo-svg .connector {
+    stroke: var(--text-dim);
+    stroke-width: 2;
+  }
+  .logo-svg .orbit-group {
+    transform-origin: 200px 200px;
+    animation: orbit 14s linear infinite;
+  }
+
+  /* ------------------------------------------------
+     "How it works" — sticky horizontal card track
+     ------------------------------------------------ */
+  .how-track {
+    --how-card-w: 78vw;
+    display: flex;
+    width: max-content;
+    gap: 1.25rem;
+    padding-inline: max(1.25rem, calc(50vw - var(--how-card-w) / 2));
+    will-change: transform;
+  }
+  @media (min-width: 760px) {
+    .how-track {
+      --how-card-w: 420px;
+      gap: 1.5rem;
+    }
+  }
+  .how-card {
+    width: var(--how-card-w);
+    flex: none;
+  }
+
+  /* ------------------------------------------------
+     Magic UI accents — sparkles + pipeline beam sweeps
+     ------------------------------------------------ */
+  .sparkle {
+    opacity: 0;
+    animation: twinkle ease-in-out infinite;
+  }
+  .pipe-segment {
+    position: relative;
+    overflow: hidden;
+  }
+  .pipe-segment::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--text-main) 92%, transparent),
+      transparent
+    );
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  .pipe-segment--v::after {
+    background: linear-gradient(
+      180deg,
+      transparent,
+      color-mix(in srgb, var(--text-main) 92%, transparent),
+      transparent
+    );
+    transform: translateY(-100%);
+  }
+  .pipe-segment.seg-active::after {
+    animation: beam-sweep 0.6s ease-out forwards;
+  }
+  .pipe-segment--v.seg-active::after {
+    animation: beam-sweep-y 0.6s ease-out forwards;
+  }
+
+  /* ------------------------------------------------
      Pixelated blob canvas
      ------------------------------------------------ */
   .blob-canvas {
@@ -348,6 +542,49 @@
     pointer-events: none;
   }
 
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+@keyframes beam-sweep {
+  0% {
+    opacity: 0.9;
+    transform: translateX(-100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes beam-sweep-y {
+  0% {
+    opacity: 0.9;
+    transform: translateY(-100%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
 }
 
 /* Animated conic border angle */
