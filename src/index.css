@@ -110,9 +110,11 @@
   --bg-canvas-c: #f2ece8;
   --bg-canvas-opacity: 0.65;
 
-  /* Accent-word gradient stops — "ember" sweep: hot spark into deep red */
-  --gt-hot: #ff7050;
-  --gt-deep: #8f1d22;
+  /* Accent-word gradient stops (light): dark espresso that ignites into the
+     signal tail on the final letters — mirrors the Manthan mark (dark dot
+     joined to the red dot) and stays readable over the pale blob wash. */
+  --gt-head: #3a2320;
+  --gt-tail: #c81f27;
 
   /* Bklit chart tokens (light) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -210,9 +212,12 @@
   --bg-canvas-c: #150c0b;
   --bg-canvas-opacity: 0.9;
 
-  /* Accent-word gradient stops (dark): bright peach spark into vivid signal */
-  --gt-hot: #ffb9a3;
-  --gt-deep: #e0323a;
+  /* Accent-word gradient stops (dark): a warm ivory head — brighter than the
+     heading body text, so the accent word lifts off the page — burning into
+     the signal red only at the tail end. The near-white dominant stop keeps
+     the word legible no matter which blob sits behind it. */
+  --gt-head: #fff4ee;
+  --gt-tail: #e0323a;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -333,36 +338,36 @@
     border-radius: 999px;
   }
 
-  /* Gradient headline text — an "ember" sweep: a bright warm spark that
-     burns down into the deep signal red. Both stops are theme-aware
-     (--gt-hot / --gt-deep) so the word is always the most vivid thing
-     around it: in dark mode the hot stop pops against the muted blob
-     field; in light mode the deep stop holds contrast over the pink
-     blob wash.
+  /* Gradient headline text — an "ember tail": the accent word reads in the
+     theme's light text colour for most of its length (slightly brighter than
+     the heading around it, so it lifts off the page), then ignites into the
+     signal red across its final letters. The dominant stop is the light
+     colour, not red, so the word stays legible regardless of which blob sits
+     behind it at that scroll position.
 
      Robustness hardening (kept from the previous fix):
-     - `color: var(--gt-deep)` is the declared fallback, not transparent —
+     - `color: var(--text-main)` is the declared fallback, not transparent —
        if background-clip:text is unsupported/stripped, words still render
-       solid instead of vanishing.
+       solid in the heading colour instead of vanishing.
      - `-webkit-text-fill-color: transparent` is what Chrome/Safari actually
        honour for gradient fills (plain `color: transparent` can be beaten by
        inherited UA styles).
      - A faint ink text-shadow adds edge separation from red blob
        backgrounds at whatever scroll position it lands. */
   .gradient-text {
-    color: var(--gt-deep);
+    color: var(--text-main);
     background: linear-gradient(
-      98deg,
-      var(--gt-hot) 0%,
-      var(--gt-hot) 14%,
-      var(--gt-deep) 82%
+      100deg,
+      var(--gt-head) 0%,
+      var(--gt-head) 46%,
+      var(--gt-tail) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow:
       0 1px 1px
-      color-mix(in srgb, var(--ink) 45%, transparent);
+      color-mix(in srgb, var(--ink) 48%, transparent);
   }
 
   /* Section kicker chip used above headings */

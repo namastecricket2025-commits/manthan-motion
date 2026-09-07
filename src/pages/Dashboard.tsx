@@ -245,7 +245,7 @@ export default function Dashboard() {
               </p>
               <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
                 {user?.name ?? "Welcome back"}
-                <span className="gradient-text">.</span>
+                <span className="text-[var(--signal)]">.</span>
               </h1>
             </div>
             <span className="glass-chip px-3 py-1.5 text-[11px] font-medium text-text-dim">
