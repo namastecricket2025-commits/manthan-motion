@@ -110,10 +110,11 @@
   --bg-canvas-c: #f2ece8;
   --bg-canvas-opacity: 0.65;
 
-  /* Accent-word gradient stops (light): dark espresso that ignites into the
-     signal tail on the final letters — mirrors the Manthan mark (dark dot
-     joined to the red dot) and stays readable over the pale blob wash. */
-  --gt-head: #3a2320;
+  /* Accent-word gradient stops (light): the accent word starts in the same
+     espresso black as the heading text, then ignites into the signal red on
+     its final letters — reads natively in light mode and stays crisp over
+     the pale blob wash. */
+  --gt-head: #241412;
   --gt-tail: #c81f27;
 
   /* Bklit chart tokens (light) — mapped to the Manthan palette */
@@ -212,11 +213,12 @@
   --bg-canvas-c: #150c0b;
   --bg-canvas-opacity: 0.9;
 
-  /* Accent-word gradient stops (dark): a warm ivory head — brighter than the
-     heading body text, so the accent word lifts off the page — burning into
-     the signal red only at the tail end. The near-white dominant stop keeps
-     the word legible no matter which blob sits behind it. */
-  --gt-head: #fff4ee;
+  /* Accent-word gradient stops (dark): the accent word starts pure warm
+     white — the same colour as the rest of the heading — then burns into
+     the signal red only across its final letters. The white-dominant stops
+     guarantee the word reads like the heading around it no matter which
+     blob sits behind it. */
+  --gt-head: #fff7f1;
   --gt-tail: #e0323a;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
@@ -338,44 +340,56 @@
     border-radius: 999px;
   }
 
-  /* Gradient headline text — an "ember tail": the accent word reads in the
-     theme's light text colour for most of its length (slightly brighter than
-     the heading around it, so it lifts off the page), then ignites into the
-     signal red across its final letters. The dominant stop is the light
-     colour, not red, so the word stays legible regardless of which blob sits
-     behind it at that scroll position.
+  /* Gradient headline text — an "ember tail": the accent word starts in the
+     heading colour (pure warm white in dark mode, espresso black in light
+     mode) for roughly the first half, then sweeps into the signal red across
+     its final letters. Because the dominant stop is the heading colour and
+     not red, the word always reads exactly like the text around it — no
+     "invisible red word on a red blob" failure mode at any scroll position.
 
-     Robustness hardening (kept from the previous fix):
+     Robustness hardening (kept from previous fixes):
      - `color: var(--text-main)` is the declared fallback, not transparent —
        if background-clip:text is unsupported/stripped, words still render
        solid in the heading colour instead of vanishing.
-     - `-webkit-text-fill-color: transparent` is what Chrome/Safari actually
-       honour for gradient fills (plain `color: transparent` can be beaten by
+     - `-webkit-text-fill-color: transparent` is what Chrome/Safari honour
+       for gradient fills (plain `color: transparent` can be beaten by
        inherited UA styles).
-     - A faint ink text-shadow adds edge separation from red blob
-       backgrounds at whatever scroll position it lands. */
+     - No text-shadow is applied: with background-clip:text a shadow is
+       painted behind the transparent glyph fill and visibly dims/embosses
+       the gradient, which reads as a dirty box over the word. Crisp,
+       shadow-free glyphs keep the accent word identical to the heading. */
   .gradient-text {
     color: var(--text-main);
     background: linear-gradient(
       100deg,
       var(--gt-head) 0%,
-      var(--gt-head) 46%,
+      var(--gt-head) 48%,
+      var(--gt-tail) 86%,
       var(--gt-tail) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow:
-      0 1px 1px
-      color-mix(in srgb, var(--ink) 48%, transparent);
   }
 
-  /* Section kicker chip used above headings */
+  /* Section kicker chip used above headings.
+
+     Legibility: kickers are signal-red text that can sit directly over a
+     bright red blob, so instead of a bare red-tinted wash they get a soft
+     ink scrim (theme-aware: near-black in dark, near-cream in light) plus a
+     slight blur — the chip visibly lifts off the background in both themes
+     without becoming a heavy solid pill. */
   .kicker {
     @apply inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em];
     color: var(--signal);
-    border: 1px solid var(--card-border);
-    background: color-mix(in srgb, var(--signal) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+    background: color-mix(
+      in srgb,
+      var(--signal) 8%,
+      color-mix(in srgb, var(--ink) 55%, transparent)
+    );
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
   }
   .kicker::before {
     content: "";
