@@ -46,8 +46,8 @@ export default function OrbitMark() {
         {/* Orbit group first (under), big circle last (over) so the
             connector always appears anchored to the circle's rim. */}
         <g className="orbit-group">
-          <line className="connector" x1="200" y1="200" x2="352" y2="200" />
-          <circle className="small-circle" cx="352" cy="200" r="24" />
+          <line className="connector" x1="200" y1="200" x2="390" y2="200" />
+          <circle className="small-circle" cx="390" cy="200" r="24" />
         </g>
         <circle className="big-circle" cx="200" cy="200" r="86" />
       </svg>

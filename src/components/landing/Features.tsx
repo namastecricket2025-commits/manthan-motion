@@ -100,7 +100,7 @@ export default function Features() {
         <span className="kicker">Why Manthan</span>
         <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
           Everything you need to go from{" "}
-          <span className="gradient-text">notes</span> to knowledge
+          <span className="gradient-text">notes</span> to study material
         </h2>
         <p className="mt-4 text-base leading-relaxed text-text-dim">
           One upload queue, one guided pipeline, and a study kit that matches

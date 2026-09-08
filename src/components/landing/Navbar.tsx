@@ -52,6 +52,16 @@ const DOCK_LINKS: DockItem[] = [
   },
 ];
 
+// Desktop icon magnification bounds (compact navbar placement).
+// Tuned slightly smaller than the previous default so icons never zoom past
+// the navbar on hover.
+export const DOCK_ZOOM = {
+  minSize: 34,
+  maxSize: 46,
+  minIconSize: 15,
+  maxIconSize: 22,
+};
+
 export default function Navbar() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -96,10 +106,10 @@ export default function Navbar() {
             items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
             mobileDirection="down"
             desktopClassName="h-14 items-center gap-2 px-3 pb-0"
-            minSize={36}
-            maxSize={50}
-            minIconSize={16}
-            maxIconSize={24}
+            minSize={DOCK_ZOOM.minSize}
+            maxSize={DOCK_ZOOM.maxSize}
+            minIconSize={DOCK_ZOOM.minIconSize}
+            maxIconSize={DOCK_ZOOM.maxIconSize}
           />
           <ThemeToggle />
           {/* Sign in lives once, in the dock (icon + tooltip). */}

@@ -304,6 +304,14 @@
   }
   html {
     scroll-behavior: smooth;
+    /* Slow, motion-rich glide as the default; reduced-motion falls back to
+       instant inside the @media block below and inside the Lenis hook for
+       the marketing page. */
+    scroll-behavior: smooth;
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
   }
   body {
     @apply bg-background text-foreground;
@@ -379,15 +387,34 @@
   .gradient-text {
     color: var(--text-main);
     background: linear-gradient(
-      100deg,
+      105deg,
       var(--gt-head) 0%,
-      var(--gt-head) 55%,
-      var(--gt-tail) 85%,
+      var(--gt-head) 66%,
+      var(--gt-tail) 86%,
       var(--gt-tail) 100%
     );
-    -webkit-background-clip: text;
     background-clip: text;
+    -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    /* readability: a faint backstop so gradient words never go translucent
+       over bright blobs in either theme. The shadow is intentionally tiny —
+       enough contrast insurance without turning the word into a boxed
+       headline. */
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+  }
+  .dark .gradient-text,
+  [data-theme="dark"] .gradient-text {
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  }
+  .text-hover-effect {
+    /* the closing "STUDY MATERIAL" word inherits the gradient-text stack,
+       but gets its own slightly stronger safety shadow so it stays crisp
+       over any blob position in both themes. */
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+  }
+  .dark .text-hover-effect,
+  [data-theme="dark"] .text-hover-effect {
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
   }
 
   /* Section kicker chip used above headings.

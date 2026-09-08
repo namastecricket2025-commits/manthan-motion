@@ -11,7 +11,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative z-10 border-t border-[var(--card-border)] bg-[var(--ink)]">
+    <footer className="relative z-10 border-t-0 border-[var(--card-border)] bg-[var(--ink)]">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
           {/* Brand */}
@@ -77,6 +77,13 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-[var(--card-border)] pt-6 text-xs text-text-dim sm:flex-row">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-text-dim sm:justify-start">
+            <nav aria-label="Footer" className="flex flex-wrap gap-3">
+              <a href="#" className="transition-colors hover:text-foreground">Terms of Service</a>
+              <a href="#" className="transition-colors hover:text-foreground">Privacy Policy</a>
+              <a href="#" className="transition-colors hover:text-foreground">Cookies</a>
+            </nav>
+          </div>
           <p>© {year} Manthan · All rights reserved</p>
           <p>Built for learners, by learners.</p>
         </div>

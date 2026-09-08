@@ -67,14 +67,12 @@ function Hero() {
           <div>
             <span data-hero-fade className="kicker">
               Manthan · study material, distilled
-            </span>
-
-            <TextGenerate
+            </span>              <TextGenerate
               className="mt-6 font-display text-[40px] font-bold leading-[1.05] tracking-tight text-foreground sm:text-6xl md:text-[68px] md:leading-[1.02]"
               delay={0.25}
               segments={[
                 { text: "Churn your notes into" },
-                { text: "clarity.", className: "gradient-text" },
+                { text: "clarity." },
               ]}
             />
 

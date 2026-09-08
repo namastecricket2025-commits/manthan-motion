@@ -2,7 +2,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Sparkles } from "@/components/ui/sparkles";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { TextHoverEffect } from "./TextHoverEffect";
 
@@ -48,7 +47,6 @@ export default function CtaSection() {
           aria-hidden="true"
           className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[130%] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] blur-3xl"
         />
-        <Sparkles count={9} seed={11} className="hidden min-[760px]:block" />
         <div className="relative">
           <span className="kicker">Start churning</span>
           <h2
@@ -57,15 +55,11 @@ export default function CtaSection() {
           >
             Your notes are waiting to become
           </h2>
-          {/* Closing display word — filled Outfit 800 with an ember
-              gradient + glow. On desktop the vivid gradient follows the
-              cursor; on touch the whole word glows with no interaction
-              required. */}
+          {/* Closing display word — filled Outfit 800 with a solid
+              gradient (text colour → signal red). No cursor interaction;
+              reduced motion shows the finished state immediately. */}
           <div data-reveal className="mx-auto mt-5 w-full max-w-2xl">
-            <TextHoverEffect
-              text="STUDY MATERIAL"
-              className="w-full"
-            />
+            <TextHoverEffect text="STUDY MATERIAL" />
           </div>
           <p
             data-reveal
