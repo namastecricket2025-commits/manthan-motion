@@ -3,7 +3,6 @@ import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { MovingBorderButton } from "./MovingBorderButton";
-import { TextHoverEffect } from "./TextHoverEffect";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
@@ -42,7 +41,7 @@ export default function CtaSection() {
         data-reveal
         className="glass-panel relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
       >
-        {/* soft signal glow + Magic UI-style sparkle accents */}
+        {/* soft signal glow behind the card content */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[130%] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] blur-3xl"
@@ -53,14 +52,9 @@ export default function CtaSection() {
             data-reveal
             className="mx-auto mt-5 max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
           >
-            Your notes are waiting to become
+            Your notes are waiting to become{" "}
+            <span className="gradient-text">study material</span>
           </h2>
-          {/* Closing display word — filled Outfit 800 with a solid
-              gradient (text colour → signal red). No cursor interaction;
-              reduced motion shows the finished state immediately. */}
-          <div data-reveal className="mx-auto mt-5 w-full max-w-2xl">
-            <TextHoverEffect text="STUDY MATERIAL" />
-          </div>
           <p
             data-reveal
             className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim"

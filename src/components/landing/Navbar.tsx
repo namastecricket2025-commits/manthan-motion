@@ -4,6 +4,7 @@ import {
   IconHome,
   IconLayoutDashboard,
   IconLogin,
+  IconNotebook,
   IconSparkles,
   IconWand,
 } from "@tabler/icons-react";
@@ -44,6 +45,11 @@ const DOCK_LINKS: DockItem[] = [
     title: "Impact",
     icon: <IconBolt className="h-full w-full" strokeWidth={1.7} />,
     href: "#stats",
+  },
+  {
+    title: "Notebooks",
+    icon: <IconNotebook className="h-full w-full" strokeWidth={1.7} />,
+    href: "#notebooks",
   },
   {
     title: "Dashboard",

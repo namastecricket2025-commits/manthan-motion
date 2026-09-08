@@ -5,6 +5,7 @@ import Footer from "@/components/landing/Footer";
 import HeroPreview from "@/components/landing/HeroPreview";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import Navbar from "@/components/landing/Navbar";
+import Notebooks from "@/components/landing/Notebooks";
 import OrbitMark from "@/components/landing/OrbitMark";
 import Pipeline from "@/components/landing/Pipeline";
 import Stats from "@/components/landing/Stats";
@@ -72,7 +73,7 @@ function Hero() {
               delay={0.25}
               segments={[
                 { text: "Churn your notes into" },
-                { text: "clarity." },
+                { text: "clarity.", className: "gradient-text" },
               ]}
             />
 
@@ -140,6 +141,7 @@ export default function Landing() {
           <Features />
           <Pipeline />
           <Stats />
+          <Notebooks />
           <CtaSection />
         </main>
         <Footer />
