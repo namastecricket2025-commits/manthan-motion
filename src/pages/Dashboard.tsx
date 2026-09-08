@@ -24,6 +24,7 @@ import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
   BookOpen,
   FileText,
+  FlaskConical,
   LayoutDashboard,
   Link2,
   LogOut,
@@ -160,16 +161,22 @@ export default function Dashboard() {
         [
           { label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
           { label: "Notebooks", icon: BookOpen, key: "notebooks" },
+          { label: "STEM Lab", icon: FlaskConical, key: "lab" },
         ] as const
       ).map((item) => {
-        const active = view === item.key;
+        const active = item.key !== "lab" && view === item.key;
         return (
           <button
             key={item.label}
             type="button"
             onClick={() => {
-              setView(item.key);
-              setSheetOpen(false);
+              if (item.key === "lab") {
+                setSheetOpen(false);
+                navigate("/lab");
+              } else {
+                setView(item.key);
+                setSheetOpen(false);
+              }
             }}
             className={
               "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors " +

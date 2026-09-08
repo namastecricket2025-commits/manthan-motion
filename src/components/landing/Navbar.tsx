@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import {
+  IconAtom,
   IconBolt,
   IconHome,
   IconLayoutDashboard,
@@ -50,6 +51,11 @@ const DOCK_LINKS: DockItem[] = [
     title: "Notebooks",
     icon: <IconNotebook className="h-full w-full" strokeWidth={1.7} />,
     href: "#notebooks",
+  },
+  {
+    title: "STEM Lab",
+    icon: <IconAtom className="h-full w-full" strokeWidth={1.7} />,
+    href: "/lab",
   },
   {
     title: "Dashboard",

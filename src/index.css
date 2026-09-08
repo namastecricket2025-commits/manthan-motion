@@ -730,3 +730,32 @@
     --border-angle: 360deg;
   }
 }
+
+/* ============================================================
+   STEM Lab helpers
+   ============================================================ */
+@keyframes beam-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+/* Animated dash-flow overlay for the reflection rays */
+.lab-beam {
+  stroke-dasharray: 7 9;
+  animation: beam-flow 0.9s linear infinite;
+}
+.lab-beam--slow {
+  animation-duration: 1.6s;
+}
+
+/* Electron + bulb glow in the circuit sandbox */
+.lab-electron {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--signal) 80%, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-beam {
+    animation: none;
+  }
+}
