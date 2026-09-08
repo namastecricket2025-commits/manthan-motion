@@ -202,3 +202,64 @@ export const CAT_COLOR: Record<Category, string> = {
   actinide: "#8a5f57",
   synthetic: "#6f6a6a",
 };
+
+/** Well-known group names for the 18 columns (empty for transition-metal
+ * columns where no single common name exists). */
+export const GROUP_NAMES: (string | null)[] = [
+  null, // 1-indexed placeholder
+  "Alkali metals",
+  "Alkaline earth metals",
+  null, // scandium group
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  "Boron group",
+  "Carbon group",
+  "Pnictogens",
+  "Chalcogens",
+  "Halogens",
+  "Noble gases",
+];
+
+/** Electrons per principal quantum number shell (n = 1, 2, 3, …), derived
+ * from the Aufbau configuration — used for Bohr-style diagrams. */
+export function shellsFor(z: number): number[] {
+  const shells: number[] = [];
+  let remaining = z;
+  for (const [orbital, capacity] of AUFBAU) {
+    if (remaining <= 0) break;
+    const n = Number(orbital[0]);
+    const count = Math.min(capacity, remaining);
+    shells[n - 1] = (shells[n - 1] ?? 0) + count;
+    remaining -= count;
+  }
+  return shells.filter((s) => s !== undefined && s > 0);
+}
+
+/** Block letter (s/p/d/f) of the element's outermost subshell. */
+export function blockFor(z: number): string {
+  let remaining = z;
+  let last = "s";
+  for (const [orbital, capacity] of AUFBAU) {
+    if (remaining <= 0) break;
+    const count = Math.min(capacity, remaining);
+    remaining -= count;
+    if (count > 0) last = orbital[1];
+  }
+  return last;
+}
+
+/** Period (row) and group (column) as printed on the periodic table.
+ * f-block elements report their group as null (they sit in the floating
+ * rows below the main grid). */
+export function periodGroupOf(n: number): { period: number; group: number | null } {
+  const pos = gridPos(n);
+  // lanthanides (row 9) sit in period 6, actinides (row 10) in period 7
+  if (pos.row >= 9) return { period: pos.row - 3, group: null };
+  return { period: pos.row, group: pos.col };
+}

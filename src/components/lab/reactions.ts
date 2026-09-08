@@ -10,29 +10,31 @@ export interface Substance {
   formula: string;
   name: string;
   state: "gas" | "liquid" | "solid" | "aq";
+  /** Accent colour used for the substance's visual tile. */
+  color: string;
 }
 
 export const SUBSTANCES: Substance[] = [
-  { id: "h2", formula: "H2", name: "Hydrogen gas", state: "gas" },
-  { id: "o2", formula: "O2", name: "Oxygen gas", state: "gas" },
-  { id: "n2", formula: "N2", name: "Nitrogen gas", state: "gas" },
-  { id: "cl2", formula: "Cl2", name: "Chlorine gas", state: "gas" },
-  { id: "co2", formula: "CO2", name: "Carbon dioxide", state: "gas" },
-  { id: "ch4", formula: "CH4", name: "Methane", state: "gas" },
-  { id: "nh3", formula: "NH3", name: "Ammonia", state: "gas" },
-  { id: "h2o", formula: "H2O", name: "Water", state: "liquid" },
-  { id: "hcl", formula: "HCl", name: "Hydrochloric acid", state: "aq" },
-  { id: "naoh", formula: "NaOH", name: "Sodium hydroxide", state: "aq" },
-  { id: "nacl", formula: "NaCl", name: "Sodium chloride", state: "aq" },
-  { id: "cuso4", formula: "CuSO4", name: "Copper(II) sulfate", state: "aq" },
-  { id: "agno3", formula: "AgNO3", name: "Silver nitrate", state: "aq" },
-  { id: "na", formula: "Na", name: "Sodium metal", state: "solid" },
-  { id: "mg", formula: "Mg", name: "Magnesium ribbon", state: "solid" },
-  { id: "fe", formula: "Fe", name: "Iron filings", state: "solid" },
-  { id: "cu", formula: "Cu", name: "Copper wire", state: "solid" },
-  { id: "c", formula: "C", name: "Carbon (graphite)", state: "solid" },
-  { id: "cao", formula: "CaO", name: "Quicklime", state: "solid" },
-  { id: "caco3", formula: "CaCO3", name: "Limestone", state: "solid" },
+  { id: "h2", formula: "H2", name: "Hydrogen gas", state: "gas", color: "#7fb4c9" },
+  { id: "o2", formula: "O2", name: "Oxygen gas", state: "gas", color: "#5aa0b5" },
+  { id: "n2", formula: "N2", name: "Nitrogen gas", state: "gas", color: "#6f8fae" },
+  { id: "cl2", formula: "Cl2", name: "Chlorine gas", state: "gas", color: "#8fa86a" },
+  { id: "co2", formula: "CO2", name: "Carbon dioxide", state: "gas", color: "#7d8f78" },
+  { id: "ch4", formula: "CH4", name: "Methane", state: "gas", color: "#8aa0b8" },
+  { id: "nh3", formula: "NH3", name: "Ammonia", state: "gas", color: "#8f9bb8" },
+  { id: "h2o", formula: "H2O", name: "Water", state: "liquid", color: "#4f7f8a" },
+  { id: "hcl", formula: "HCl", name: "Hydrochloric acid", state: "aq", color: "#4f8a7a" },
+  { id: "naoh", formula: "NaOH", name: "Sodium hydroxide", state: "aq", color: "#5f8a7c" },
+  { id: "nacl", formula: "NaCl", name: "Sodium chloride", state: "aq", color: "#6a8f9a" },
+  { id: "cuso4", formula: "CuSO4", name: "Copper(II) sulfate", state: "aq", color: "#3f7d96" },
+  { id: "agno3", formula: "AgNO3", name: "Silver nitrate", state: "aq", color: "#7d8f96" },
+  { id: "na", formula: "Na", name: "Sodium metal", state: "solid", color: "#c2543f" },
+  { id: "mg", formula: "Mg", name: "Magnesium ribbon", state: "solid", color: "#c07a3e" },
+  { id: "fe", formula: "Fe", name: "Iron filings", state: "solid", color: "#b0715f" },
+  { id: "cu", formula: "Cu", name: "Copper wire", state: "solid", color: "#c48a4f" },
+  { id: "c", formula: "C", name: "Carbon (graphite)", state: "solid", color: "#8a8a8a" },
+  { id: "cao", formula: "CaO", name: "Quicklime", state: "solid", color: "#b0a68a" },
+  { id: "caco3", formula: "CaCO3", name: "Limestone", state: "solid", color: "#a8a08a" },
 ];
 
 export interface Reaction {

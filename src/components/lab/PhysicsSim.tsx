@@ -1,13 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
+  Activity,
   Atom,
+  Gauge,
   Lightbulb,
   MoveRight,
   Pause,
   Play,
   Power,
   RotateCcw,
+  Timer,
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -16,19 +19,34 @@ const G = 9.8;
 const TAU = Math.PI * 2;
 const OBJ_W = 56;
 
+const SURFACES = [
+  { id: "ice", label: "Ice", mu: 0.05 },
+  { id: "wood", label: "Wood", mu: 0.3 },
+  { id: "rubber", label: "Rubber", mu: 0.7 },
+] as const;
+
 interface SimState {
   t: number;
   x: number;
   v: number;
+  stopped: boolean;
   trackW: number;
-  points: { t: number; x: number }[];
+  points: { t: number; x: number; v: number }[];
   maxX: number;
   last: number;
 }
 
 /* ------------------------------------------------------------------ */
-/* 1. Motion lab — draggable block, sliders, live position graph       */
+/* 1. Motion lab — draggable block, sliders, live graphs + stop report */
 /* ------------------------------------------------------------------ */
+
+type TraceKey = "x" | "v" | "a";
+
+const TRACE_META: Record<TraceKey, { label: string; color: string }> = {
+  x: { label: "Position", color: "var(--signal)" },
+  v: { label: "Velocity", color: "#e8915a" },
+  a: { label: "Acceleration", color: "#5aa0b5" },
+};
 
 function MotionLab() {
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -38,13 +56,18 @@ function MotionLab() {
   const tRef = useRef<HTMLSpanElement | null>(null);
   const xRef = useRef<HTMLSpanElement | null>(null);
   const vRef = useRef<HTMLSpanElement | null>(null);
+  const aRef = useRef<HTMLSpanElement | null>(null);
   const keRef = useRef<HTMLSpanElement | null>(null);
+  const pRef = useRef<HTMLSpanElement | null>(null);
 
   const [params, setParams] = useState({ v0: 8, mass: 12, mu: 0.25 });
+  const [surface, setSurface] = useState<string>("wood");
+  const [traces, setTraces] = useState<Record<TraceKey, boolean>>({ x: true, v: true, a: false });
   const [running, setRunning] = useState(false);
+  const [restAt, setRestAt] = useState<{ t: number; x: number } | null>(null);
   const paramsRef = useRef(params);
   const sim = useRef<SimState>({
-    t: 0, x: 0, v: 0, trackW: 0, points: [], maxX: 1, last: 0,
+    t: 0, x: 0, v: 0, stopped: false, trackW: 0, points: [], maxX: 1, last: 0,
   });
   const dragging = useRef(false);
   const raf = useRef(0);
@@ -59,10 +82,12 @@ function MotionLab() {
     s.t = 0;
     s.x = 0;
     s.v = p.v0;
+    s.stopped = false;
     s.trackW = W - OBJ_W;
     s.points = [];
     s.maxX = 1;
     s.last = performance.now();
+    setRestAt(null);
     if (objRef.current) objRef.current.style.transform = "translateX(0px)";
     updateReadouts(0, 0, p.v0);
     drawGraph();
@@ -70,17 +95,22 @@ function MotionLab() {
 
   const updateReadouts = (t: number, x: number, v: number) => {
     const p = paramsRef.current;
+    const a = v > 0 ? -p.mu * G : 0;
     const ke = 0.5 * p.mass * v * v;
+    const mom = p.mass * v;
     if (tRef.current) tRef.current.textContent = t.toFixed(1);
     if (xRef.current) xRef.current.textContent = x.toFixed(1);
     if (vRef.current) vRef.current.textContent = v.toFixed(2);
+    if (aRef.current) aRef.current.textContent = a.toFixed(2);
     if (keRef.current) keRef.current.textContent = ke.toFixed(1);
+    if (pRef.current) pRef.current.textContent = mom.toFixed(1);
   };
 
   const drawGraph = () => {
     const canvas = graphRef.current;
     const wrap = graphWrapRef.current;
     const s = sim.current;
+    const p = paramsRef.current;
     if (!canvas || !wrap) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = wrap.clientWidth;
@@ -126,32 +156,51 @@ function MotionLab() {
     ctx.fillText("t (s) →", w - 44, h - 8);
     ctx.fillText("x (m)", 4, 10);
 
-    // position curve
-    ctx.strokeStyle = "var(--signal)";
-    ctx.lineWidth = 2.2;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    s.points.forEach((p, i) => {
-      const px = pad.l + (p.t / tMax) * pw;
-      const py = pad.t + ph - (p.x / xMax) * ph;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
-    ctx.stroke();
+    // velocity / acceleration maxima for their own scales
+    let vMax = 1;
+    for (const pt of s.points) vMax = Math.max(vMax, Math.abs(pt.v));
+    const aMag = p.mu * G;
 
-    const last = s.points[s.points.length - 1];
-    if (last) {
-      const px = pad.l + (last.t / tMax) * pw;
-      const py = pad.t + ph - (last.x / xMax) * ph;
-      ctx.fillStyle = "var(--signal)";
+    const trace = (key: TraceKey, color: string) => {
+      if (!traces[key]) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = key === "x" ? 2.2 : 1.8;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.arc(px, py, 3.6, 0, TAU);
-      ctx.fill();
-      ctx.strokeStyle = "color-mix(in srgb, var(--signal) 45%, transparent)";
-      ctx.beginPath();
-      ctx.arc(px, py, 6, 0, TAU);
+      s.points.forEach((pt, i) => {
+        const px = pad.l + (pt.t / tMax) * pw;
+        let val: number;
+        if (key === "x") val = pt.x / xMax;
+        else if (key === "v") val = (pt.v + vMax) / (2 * vMax);
+        // acceleration: constant −μg while moving, 0 once stopped
+        else val = pt.v > 0 ? 0 : 0.5;
+        const py = pad.t + ph - val * ph;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
       ctx.stroke();
+    };
+
+    trace("x", TRACE_META.x.color);
+    trace("v", TRACE_META.v.color);
+    trace("a", TRACE_META.a.color);
+
+    // end dot for the primary trace
+    if (traces.x) {
+      const last = s.points[s.points.length - 1];
+      if (last) {
+        const px = pad.l + (last.t / tMax) * pw;
+        const py = pad.t + ph - (last.x / xMax) * ph;
+        ctx.fillStyle = "var(--signal)";
+        ctx.beginPath();
+        ctx.arc(px, py, 3.6, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = "color-mix(in srgb, var(--signal) 45%, transparent)";
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, TAU);
+        ctx.stroke();
+      }
     }
   };
 
@@ -162,26 +211,30 @@ function MotionLab() {
       const p = paramsRef.current;
       const dt = Math.min((performance.now() - s.last) / 1000, 0.05);
       s.last = performance.now();
-      if (s.v > 0) {
+      if (!s.stopped) {
         const a = p.mu * G;
         s.v = Math.max(0, s.v - a * dt);
         s.x += s.v * dt;
         s.t += dt;
+        let hitEnd = false;
         if (s.x >= s.trackW) {
           s.x = s.trackW;
           s.v = 0;
+          hitEnd = true;
         }
-        s.points.push({ t: s.t, x: s.x });
+        s.points.push({ t: s.t, x: s.x, v: s.v });
         if (s.points.length > 900) s.points.shift();
         s.maxX = Math.max(s.maxX, s.x);
         if (objRef.current) objRef.current.style.transform = `translateX(${s.x}px)`;
         updateReadouts(s.t, s.x, s.v);
         drawGraph();
-      }
-      if (s.v <= 0) {
-        setRunning(false);
-        drawGraph();
-        return;
+        if (s.v <= 0 || hitEnd) {
+          s.stopped = true;
+          setRestAt({ t: s.t, x: s.x });
+          setRunning(false);
+          drawGraph();
+          return;
+        }
       }
       raf.current = requestAnimationFrame(loop);
     };
@@ -191,24 +244,28 @@ function MotionLab() {
 
   useEffect(() => {
     resetSim();
-    // Re-measure track on resize so the sim stays inside the visible bar.
     const onResize = () => resetSim();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Slider changes stop the run and restart it with the new physics.
   const setParam = (key: keyof typeof params, value: number) => {
     setRunning(false);
     setParams((prev) => ({ ...prev, [key]: value }));
   };
 
-  // New parameters → fresh run from the start line.
   useEffect(() => {
     resetSim();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
+
+  const pickSurface = (id: string) => {
+    const s = SURFACES.find((x) => x.id === id);
+    if (!s) return;
+    setSurface(id);
+    setParam("mu", s.mu);
+  };
 
   const onObjDown = (e: React.PointerEvent) => {
     setRunning(false);
@@ -224,9 +281,11 @@ function MotionLab() {
     s.t = 0;
     s.x = x;
     s.v = paramsRef.current.v0;
+    s.stopped = false;
     s.trackW = W;
     s.points = [];
     s.maxX = 1;
+    setRestAt(null);
     if (objRef.current) objRef.current.style.transform = `translateX(${x}px)`;
     updateReadouts(0, x, paramsRef.current.v0);
     drawGraph();
@@ -234,6 +293,13 @@ function MotionLab() {
   const onObjUp = () => {
     dragging.current = false;
   };
+
+  // predicted stop (friction-only)
+  const mu = params.mu;
+  const tPred = mu > 0 ? params.v0 / (mu * G) : 0;
+  const dPred = mu > 0 ? (params.v0 * params.v0) / (2 * mu * G) : 0;
+  const accelMag = mu * G;
+  const fricForce = mu * params.mass * G;
 
   return (
     <section className="glass-panel overflow-hidden">
@@ -244,7 +310,7 @@ function MotionLab() {
             Motion lab
           </h2>
           <p className="mt-0.5 text-xs text-text-dim">
-            Friction drags the block to rest — watch position vs time as it happens.
+            Friction decelerates the block at a = −μg — watch it glide, then read the full stop report.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -252,7 +318,7 @@ function MotionLab() {
             size="sm"
             className="gap-1.5 rounded-full bg-[var(--signal)] text-[var(--primary-foreground)] hover:bg-[var(--signal)]/90"
             onClick={() => {
-              if (!running && sim.current.v <= 0) resetSim();
+              if (!running && sim.current.stopped) resetSim();
               setRunning((r) => !r);
             }}
           >
@@ -274,9 +340,32 @@ function MotionLab() {
         </div>
       </header>
 
-      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
+      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-6">
         {/* Control deck */}
         <div className="flex flex-col gap-5">
+          {/* surface presets */}
+          <div>
+            <p className="text-xs font-medium text-text-dim">Surface</p>
+            <div className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-[var(--card-border)] p-1">
+              {SURFACES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => pickSurface(s.id)}
+                  className={
+                    "rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors " +
+                    (surface === s.id
+                      ? "bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] text-foreground"
+                      : "text-text-dim hover:text-foreground")
+                  }
+                >
+                  {s.label}
+                  <span className="block text-[9px] font-medium opacity-70">μ = {s.mu}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {(
             [
               { key: "v0", label: "Initial velocity", unit: "m/s", min: 1, max: 20, step: 0.5, value: params.v0 },
@@ -303,21 +392,24 @@ function MotionLab() {
             </div>
           ))}
 
-          {/* Live readouts */}
+          {/* live readouts */}
           <div className="mt-1 grid grid-cols-2 gap-2">
             {(
               [
-                { label: "Time", ref: tRef, unit: "s" },
-                { label: "Distance", ref: xRef, unit: "m" },
-                { label: "Velocity", ref: vRef, unit: "m/s" },
-                { label: "Kinetic E", ref: keRef, unit: "J" },
+                { label: "Time", ref: tRef, unit: "s", icon: Timer },
+                { label: "Distance", ref: xRef, unit: "m", icon: MoveRight },
+                { label: "Velocity", ref: vRef, unit: "m/s", icon: Gauge },
+                { label: "Accel.", ref: aRef, unit: "m/s²", icon: Activity },
+                { label: "Kinetic E", ref: keRef, unit: "J", icon: Zap },
+                { label: "Momentum", ref: pRef, unit: "kg·m/s", icon: Power },
               ] as const
             ).map((r) => (
               <div
                 key={r.label}
                 className="rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_5%,transparent)] px-3 py-2"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
+                <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-text-dim">
+                  <r.icon className="h-3 w-3" />
                   {r.label}
                 </p>
                 <p className="mt-0.5 font-display text-base font-bold tabular-nums text-foreground">
@@ -326,6 +418,19 @@ function MotionLab() {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* physics summary */}
+          <div className="rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_4%,transparent)] px-3.5 py-3 text-[11px] leading-relaxed text-text-dim">
+            <p className="font-semibold text-foreground">Setup</p>
+            <p className="mt-1">
+              Deceleration <span className="font-semibold tabular-nums text-foreground">{accelMag.toFixed(2)} m/s²</span>{" "}
+              from friction F = μmg = <span className="font-semibold tabular-nums text-foreground">{fricForce.toFixed(1)} N</span>.
+            </p>
+            <p className="mt-1">
+              Predicted stop at <span className="font-semibold tabular-nums text-foreground">t = {tPred.toFixed(1)} s</span>,{" "}
+              <span className="font-semibold tabular-nums text-foreground">d = {dPred.toFixed(1)} m</span>.
+            </p>
           </div>
           <p className="flex items-start gap-2 text-[11px] leading-relaxed text-text-dim">
             <MoveRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
@@ -344,7 +449,6 @@ function MotionLab() {
                 "repeating-linear-gradient(90deg, color-mix(in srgb, var(--text-dim) 12%, transparent) 0 1px, transparent 1px 32px)",
             }}
           >
-            {/* start flag */}
             <span className="absolute left-2 top-1/2 h-3 w-1 -translate-y-1/2 rounded-full bg-[var(--signal)]" />
             <div
               ref={objRef}
@@ -360,13 +464,81 @@ function MotionLab() {
               </div>
             </div>
             <span className="pointer-events-none absolute bottom-1.5 right-2 text-[10px] font-medium text-text-dim">
-              friction coefficient μ = {params.mu.toFixed(2)}
+              {SURFACES.find((s) => s.id === surface)?.label ?? "Custom"} · μ = {params.mu.toFixed(2)}
             </span>
           </div>
 
-          {/* Graph */}
-          <div ref={graphWrapRef} className="relative h-48 w-full overflow-hidden rounded-2xl border border-[var(--card-border)] sm:h-56">
-            <canvas ref={graphRef} className="absolute inset-0 h-full w-full" />
+          {/* stop report */}
+          <div
+            className={
+              "flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border px-3.5 py-2.5 text-[11px] transition-colors " +
+              (restAt
+                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                : "border-[var(--card-border)] bg-transparent text-text-dim")
+            }
+          >
+            {restAt ? (
+              <>
+                <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal)]" />
+                  Block at rest
+                </span>
+                <span className="tabular-nums">
+                  actual: <b className="text-foreground">t = {restAt.t.toFixed(1)} s</b> ·{" "}
+                  <b className="text-foreground">d = {restAt.x.toFixed(1)} m</b>
+                </span>
+                <span className="tabular-nums">
+                  predicted: <b className="text-foreground">t = {tPred.toFixed(1)} s</b> ·{" "}
+                  <b className="text-foreground">d = {dPred.toFixed(1)} m</b>
+                </span>
+                {restAt.x >= sim.current.trackW - 0.01 && (
+                  <span className="text-text-dim">— the block ran out of track first.</span>
+                )}
+              </>
+            ) : (
+              <span>
+                {running ? "Simulating… velocity is bleeding off at μg = " : "Run the sim — "}
+                <b className="tabular-nums text-foreground">{accelMag.toFixed(2)} m/s²</b>
+                {!running && " to see the stop report."}
+              </span>
+            )}
+          </div>
+
+          {/* Graph with trace toggles */}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { key: "x", ...TRACE_META.x },
+                  { key: "v", ...TRACE_META.v },
+                  { key: "a", ...TRACE_META.a },
+                ] as const
+              ).map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTraces((prev) => ({ ...prev, [t.key]: !prev[t.key] }))}
+                  className={
+                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors " +
+                    (traces[t.key]
+                      ? "border-[var(--card-border)] text-foreground"
+                      : "border-transparent text-text-dim opacity-60 hover:opacity-100")
+                  }
+                >
+                  <span className="h-1.5 w-3 rounded-full" style={{ background: t.color }} />
+                  {t.label}
+                </button>
+              ))}
+              <span className="ml-auto text-[10px] text-text-dim">
+                velocity & acceleration use their own scales
+              </span>
+            </div>
+            <div
+              ref={graphWrapRef}
+              className="relative h-48 w-full overflow-hidden rounded-2xl border border-[var(--card-border)] sm:h-56"
+            >
+              <canvas ref={graphRef} className="absolute inset-0 h-full w-full" />
+            </div>
           </div>
         </div>
       </div>
@@ -375,7 +547,7 @@ function MotionLab() {
 }
 
 /* ------------------------------------------------------------------ */
-/* 2. Reflection lab — rotating beam against a mirror                  */
+/* 2. Reflection lab — glowing beam, specular/diffuse surfaces         */
 /* ------------------------------------------------------------------ */
 
 const RB_CX = 300;
@@ -384,17 +556,17 @@ const RB_R = 150;
 
 function ReflectionLab() {
   const [angle, setAngle] = useState(70);
+  const [surface, setSurface] = useState<"mirror" | "rough">("mirror");
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragging = useRef(false);
 
   const rad = (angle * Math.PI) / 180;
-  // Beam comes from above the horizontal mirror: y shrinks as the angle
-  // approaches 90° (normal incidence), so the knob stays inside the viewBox.
   const srcX = RB_CX + RB_R * Math.cos(rad);
   const srcY = RB_CY - RB_R * Math.sin(rad);
   const refX = RB_CX - RB_R * Math.cos(rad);
   const refY = RB_CY - RB_R * Math.sin(rad);
   const incidence = Math.abs(90 - angle);
+  const glancing = 90 - incidence;
 
   const angleFromPointer = (e: React.PointerEvent) => {
     const svg = svgRef.current;
@@ -408,6 +580,18 @@ function ReflectionLab() {
     return Math.max(0, Math.min(180, a));
   };
 
+  // What's happening now — pedagogical readout
+  const readout =
+    surface === "rough"
+      ? "Rough surface: the reflected ray breaks into a scattered fan — each micro-facet sends light its own way, so the mirror image blurs into diffuse reflection."
+      : incidence === 0
+        ? "Normal incidence: the beam strikes the mirror head-on and retraces its own path — θi = θr = 0°, a perfect bounce-back."
+        : incidence === 90
+          ? "Grazing incidence: the beam skims along the surface. The reflected ray hugs the mirror and the image appears edge-on."
+          : incidence > 45
+            ? `Steep incidence: the ray meets the mirror at ${incidence}° from the normal and leaves at exactly the same ${incidence}° — the reflected angle mirrors the incident one.`
+            : `Shallow incidence: the ray grazes in at ${incidence}° from the normal. Reflection is symmetric across the normal, so θi = θr = ${incidence}°.`;
+
   return (
     <section className="glass-panel overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--card-border)] px-5 py-4 sm:px-6">
@@ -417,10 +601,32 @@ function ReflectionLab() {
             Reflection lab
           </h2>
           <p className="mt-0.5 text-xs text-text-dim">
-            Drag the beam knob — the angle of incidence always equals the angle of reflection.
+            Drag the beam knob or type an angle — the law of reflection holds at every step.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="glass-chip flex items-center gap-1 p-1">
+            {(
+              [
+                { key: "mirror", label: "Mirror" },
+                { key: "rough", label: "Rough" },
+              ] as const
+            ).map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setSurface(s.key)}
+                className={
+                  "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors " +
+                  (surface === s.key
+                    ? "bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] text-foreground"
+                    : "text-text-dim hover:text-foreground")
+                }
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
           <label className="text-xs font-medium text-text-dim">Angle</label>
           <input
             type="number"
@@ -456,21 +662,33 @@ function ReflectionLab() {
 
           <div className="rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_5%,transparent)] px-3.5 py-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-text-dim">Incidence</span>
+              <span className="text-text-dim">Incidence θi</span>
               <span className="font-display text-base font-bold tabular-nums text-foreground">
                 {incidence}°
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="text-text-dim">Reflection</span>
+              <span className="text-text-dim">Reflection θr</span>
               <span className="font-display text-base font-bold tabular-nums text-[var(--signal)]">
-                {incidence}°
+                {surface === "rough" ? "scattered" : `${incidence}°`}
               </span>
             </div>
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <span className="text-text-dim">Glancing angle</span>
+              <span className="font-semibold tabular-nums text-foreground">{glancing}°</span>
+            </div>
             <p className="mt-2.5 border-t border-[var(--card-border)] pt-2 text-[11px] leading-relaxed text-text-dim">
-              θ<sub>i</sub> = θ<sub>r</sub> — the law of reflection, measured from the normal
-              (dashed line).
+              θ<sub>i</sub> = θ<sub>r</sub> — always measured from the normal (dashed line).
             </p>
+          </div>
+
+          {/* live explanation */}
+          <div className="rounded-xl border border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_7%,transparent)] px-3.5 py-3">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--signal)]">
+              <Zap className="h-3 w-3" />
+              What's happening
+            </p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-foreground">{readout}</p>
           </div>
         </div>
 
@@ -491,6 +709,14 @@ function ReflectionLab() {
                 <stop offset="45%" stopColor="color-mix(in srgb, var(--text-main) 18%, transparent)" />
                 <stop offset="100%" stopColor="color-mix(in srgb, var(--text-main) 55%, transparent)" />
               </linearGradient>
+              <radialGradient id="impactGlow">
+                <stop offset="0%" stopColor="color-mix(in srgb, var(--signal) 60%, transparent)" />
+                <stop offset="55%" stopColor="color-mix(in srgb, var(--signal) 22%, transparent)" />
+                <stop offset="100%" stopColor="color-mix(in srgb, var(--signal) 0%, transparent)" />
+              </radialGradient>
+              <filter id="beamBlur" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="4" />
+              </filter>
             </defs>
 
             {/* mirror */}
@@ -515,7 +741,7 @@ function ReflectionLab() {
               />
             ))}
             <text x="318" y={RB_CY + 34} fontSize="10" fill="color-mix(in srgb, var(--text-dim) 75%, transparent)" textAnchor="middle">
-              MIRROR
+              {surface === "mirror" ? "MIRROR" : "ROUGH SURFACE"}
             </text>
 
             {/* normal (dashed) */}
@@ -532,50 +758,86 @@ function ReflectionLab() {
               normal
             </text>
 
-            {/* incident ray */}
+            {/* impact glow */}
+            <circle cx={RB_CX} cy={RB_CY} r="64" fill="url(#impactGlow)" />
+
+            {/* incident ray — core + glow + flowing dashes */}
             <line
-              x1={srcX}
-              y1={srcY}
-              x2={RB_CX}
-              y2={RB_CY}
-              stroke="var(--signal)"
-              strokeWidth="3"
-              strokeLinecap="round"
+              x1={srcX} y1={srcY} x2={RB_CX} y2={RB_CY}
+              stroke="var(--signal)" strokeWidth="6" strokeLinecap="round" opacity="0.28"
+              filter="url(#beamBlur)"
             />
             <line
-              x1={srcX}
-              y1={srcY}
-              x2={RB_CX}
-              y2={RB_CY}
-              stroke="var(--signal)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              className="lab-beam"
-              opacity="0.85"
-            />
-            {/* reflected ray */}
-            <line
-              x1={RB_CX}
-              y1={RB_CY}
-              x2={refX}
-              y2={refY}
-              stroke="#b97750"
-              strokeWidth="3"
-              strokeLinecap="round"
+              x1={srcX} y1={srcY} x2={RB_CX} y2={RB_CY}
+              stroke="var(--signal)" strokeWidth="3" strokeLinecap="round"
             />
             <line
-              x1={RB_CX}
-              y1={RB_CY}
-              x2={refX}
-              y2={refY}
-              stroke="#b97750"
-              strokeWidth="3"
-              strokeLinecap="round"
-              className="lab-beam lab-beam--slow"
-              opacity="0.85"
+              x1={srcX} y1={srcY} x2={RB_CX} y2={RB_CY}
+              stroke="var(--signal)" strokeWidth="3" strokeLinecap="round"
+              className="lab-beam" opacity="0.85"
             />
 
+            {/* reflected rays */}
+            {surface === "mirror" ? (
+              <g>
+                <line
+                  x1={RB_CX} y1={RB_CY} x2={refX} y2={refY}
+                  stroke="#e8915a" strokeWidth="6" strokeLinecap="round" opacity="0.25"
+                  filter="url(#beamBlur)"
+                />
+                <line
+                  x1={RB_CX} y1={RB_CY} x2={refX} y2={refY}
+                  stroke="#e8915a" strokeWidth="3" strokeLinecap="round"
+                />
+                <line
+                  x1={RB_CX} y1={RB_CY} x2={refX} y2={refY}
+                  stroke="#e8915a" strokeWidth="3" strokeLinecap="round"
+                  className="lab-beam lab-beam--slow" opacity="0.85"
+                />
+              </g>
+            ) : (
+              /* diffuse fan — rays scattered over ±34° */
+              <g>
+                {[-2, -1, 0, 1, 2].map((k) => {
+                  const spread = (k * 17 * Math.PI) / 180;
+                  const fx = RB_CX - RB_R * 0.92 * Math.cos(rad + spread);
+                  const fy = RB_CY - RB_R * 0.92 * Math.sin(rad + spread);
+                  const op = 0.9 - Math.abs(k) * 0.22;
+                  return (
+                    <line
+                      key={k}
+                      x1={RB_CX} y1={RB_CY} x2={fx} y2={fy}
+                      stroke="#e8915a" strokeWidth={k === 0 ? 2.6 : 1.6}
+                      strokeLinecap="round" opacity={op}
+                    />
+                  );
+                })}
+              </g>
+            )}
+
+            {/* photons flowing along the beams */}
+            {surface === "mirror" && (
+              <g>
+                <circle r="3" fill="#ffd9c2" opacity="0.9">
+                  <animateMotion
+                    dur="1.6s"
+                    repeatCount="indefinite"
+                    path={`M ${srcX} ${srcY} L ${RB_CX} ${RB_CY}`}
+                  />
+                </circle>
+                <circle r="3" fill="#ffd9c2" opacity="0.9">
+                  <animateMotion
+                    dur="2.2s"
+                    begin="0.8s"
+                    repeatCount="indefinite"
+                    path={`M ${refX} ${refY} L ${RB_CX} ${RB_CY}`}
+                  />
+                </circle>
+              </g>
+            )}
+
             {/* source + knob */}
+            <circle cx={srcX} cy={srcY} r="20" fill="var(--signal)" opacity="0.16" filter="url(#beamBlur)" />
             <circle cx={srcX} cy={srcY} r="13" fill="var(--signal)" opacity="0.18" />
             <circle
               cx={srcX}
@@ -594,6 +856,9 @@ function ReflectionLab() {
             <text x={srcX} y={srcY - 20} fontSize="10" fill="var(--text-dim)" textAnchor="middle">
               source
             </text>
+            <text x={refX} y={refY - 14} fontSize="10" fill="color-mix(in srgb, #e8915a 80%, transparent)" textAnchor="middle">
+              {surface === "mirror" ? `θr = ${incidence}°` : "scattered"}
+            </text>
           </svg>
         </div>
       </div>
@@ -602,29 +867,34 @@ function ReflectionLab() {
 }
 
 /* ------------------------------------------------------------------ */
-/* 3. Circuit sandbox — series circuit with switch and two bulbs       */
+/* 3. Circuit sandbox — voltage slider, per-part switches, live maths  */
 /* ------------------------------------------------------------------ */
 
 const CIRCUIT_PATH = "M 140 250 H 560 V 72 H 100 V 250";
 
 function CircuitLab() {
+  const [volts, setVolts] = useState(9);
   const [power, setPower] = useState(true);
   const [swClosed, setSwClosed] = useState(true);
   const [bulb1, setBulb1] = useState(true);
   const [bulb2, setBulb2] = useState(true);
 
+  const R_BULB = 30;
+  const rTotal = R_BULB * 2;
   const energized = power && swClosed && bulb1 && bulb2;
-  const wireColor = energized ? "var(--signal)" : "var(--card-border)";
+  const current = energized ? volts / rTotal : 0; // amps
+  const totalPower = energized ? volts * current : 0; // watts
+  const brightness = Math.min(1, current / 0.15); // 1.0 at the 9 V baseline
 
   const status = !power
     ? "Power is off — no current flows."
     : !swClosed
-      ? "Switch open — the circuit is broken."
+      ? "Switch open — the loop is broken, current drops to zero instantly."
       : !bulb1
-        ? "Bulb 1 is burnt out — a series circuit needs every component."
+        ? "Bulb 1 removed — a series circuit needs every component in the loop."
         : !bulb2
-          ? "Bulb 2 is burnt out — a series circuit needs every component."
-          : "Circuit closed — current flows through both bulbs.";
+          ? "Bulb 2 removed — a series circuit needs every component in the loop."
+          : `Circuit closed — ${current.toFixed(2)} A flows through both bulbs.`;
 
   return (
     <section className="glass-panel overflow-hidden">
@@ -635,7 +905,7 @@ function CircuitLab() {
             Circuit sandbox
           </h2>
           <p className="mt-0.5 text-xs text-text-dim">
-            A 9 V series circuit — toggle the battery, switch and bulbs to trace the current.
+            A series circuit — dial the battery, open the switch, pull a bulb. Watch current obey Ohm's law.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -681,6 +951,25 @@ function CircuitLab() {
 
       <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
         <div className="flex flex-col gap-4">
+          {/* battery voltage */}
+          <div>
+            <div className="flex items-center justify-between text-xs font-medium text-text-dim">
+              <span>Battery voltage</span>
+              <span className="font-semibold tabular-nums text-foreground">{volts.toFixed(0)} V</span>
+            </div>
+            <Slider
+              className="mt-2.5"
+              min={3}
+              max={12}
+              step={1}
+              value={[volts]}
+              onValueChange={([v]) => setVolts(v)}
+            />
+            <p className="mt-1.5 text-[10px] leading-relaxed text-text-dim">
+              More volts, more push — current and bulb brightness rise together.
+            </p>
+          </div>
+
           <div
             className={
               "rounded-xl border px-3.5 py-3 text-xs leading-relaxed transition-colors " +
@@ -690,11 +979,7 @@ function CircuitLab() {
             }
           >
             <span className="flex items-center gap-1.5 font-semibold">
-              <span
-                className={
-                  "relative flex h-1.5 w-1.5 " + (energized ? "" : "opacity-40")
-                }
-              >
+              <span className={"relative flex h-1.5 w-1.5 " + (energized ? "" : "opacity-40")}>
                 <span
                   className={
                     "absolute inline-flex h-full w-full animate-ping rounded-full " +
@@ -712,25 +997,36 @@ function CircuitLab() {
               {energized ? "Current flowing" : "No current"}
             </span>
             <p className="mt-1.5 text-[11px]">{status}</p>
-            <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[var(--card-border)] pt-2.5 text-center">
+            <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[var(--card-border)] pt-2.5 text-center">
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-text-dim">V</p>
-                <p className="font-display text-sm font-bold tabular-nums">9.0</p>
+                <p className="font-display text-sm font-bold tabular-nums">{volts.toFixed(1)} V</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-text-dim">R</p>
-                <p className="font-display text-sm font-bold tabular-nums">60 Ω</p>
+                <p className="text-[10px] uppercase tracking-widest text-text-dim">R total</p>
+                <p className="font-display text-sm font-bold tabular-nums">{rTotal} Ω</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-text-dim">I</p>
+                <p className="text-[10px] uppercase tracking-widest text-text-dim">I = V/R</p>
                 <p className="font-display text-sm font-bold tabular-nums">
-                  {energized ? "0.15 A" : "0 A"}
+                  {energized ? `${current.toFixed(2)} A` : "0 A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-text-dim">P = VI</p>
+                <p className="font-display text-sm font-bold tabular-nums">
+                  {energized ? `${totalPower.toFixed(2)} W` : "0 W"}
                 </p>
               </div>
             </div>
           </div>
           <p className="text-[11px] leading-relaxed text-text-dim">
-            Two 30 Ω bulbs in series: total resistance 60 Ω, so I = V ÷ R = 9 ÷ 60 = 0.15 A.
+            Two {R_BULB} Ω bulbs in series: R = {R_BULB} + {R_BULB} = {rTotal} Ω, so I = V ÷ {rTotal}. Each bulb
+            burns I²R ={" "}
+            <span className="font-semibold tabular-nums text-foreground">
+              {energized ? (current * current * R_BULB).toFixed(2) : "0.00"} W
+            </span>
+            .
           </p>
         </div>
 
@@ -752,19 +1048,19 @@ function CircuitLab() {
             <path
               d="M 100 250 H 560 V 72 H 100 V 250"
               fill="none"
-              stroke={wireColor}
+              stroke={energized ? "var(--signal)" : "var(--card-border)"}
               strokeWidth={energized ? 3.5 : 2.5}
               strokeLinecap="round"
               style={{ transition: "stroke 300ms ease, stroke-width 300ms ease" }}
             />
 
-            {/* electrons */}
+            {/* electrons — speed follows current */}
             {energized && (
               <g>
                 {[0, 1, 2].map((i) => (
                   <circle key={i} r="4.5" fill="var(--signal)" className="lab-electron">
                     <animateMotion
-                      dur={`${1.8 + i * 0.55}s`}
+                      dur={`${(1.8 + i * 0.55) * (0.15 / current)}s`}
                       repeatCount="indefinite"
                       path={CIRCUIT_PATH}
                       begin={`${i * 0.6}s`}
@@ -782,7 +1078,7 @@ function CircuitLab() {
               <text x="133" y="282" fontSize="11" fill="var(--text-dim)" fontWeight="700">−</text>
               <rect x="84" y="242" width="58" height="10" rx="5" fill="url(#batteryGrad)" opacity={power ? 1 : 0.35} />
               <text x="104" y="306" fontSize="10" fill="color-mix(in srgb, var(--text-dim) 80%, transparent)" textAnchor="middle">
-                9 V
+                {volts.toFixed(0)} V
               </text>
             </g>
 
@@ -806,10 +1102,9 @@ function CircuitLab() {
               </text>
             </g>
 
-            {/* bulb 1 (top-left) */}
-            <Bulb x={165} y={72} lit={energized && bulb1} label="R₁ · 30 Ω" />
-            {/* bulb 2 (top-right) */}
-            <Bulb x={460} y={72} lit={energized && bulb2} label="R₂ · 30 Ω" />
+            {/* bulbs */}
+            <Bulb x={165} y={72} lit={energized && bulb1} glow={brightness} label="R₁ · 30 Ω" />
+            <Bulb x={460} y={72} lit={energized && bulb2} glow={brightness} label="R₂ · 30 Ω" />
           </svg>
         </div>
       </div>
@@ -817,18 +1112,31 @@ function CircuitLab() {
   );
 }
 
-function Bulb({ x, y, lit, label }: { x: number; y: number; lit: boolean; label: string }) {
+function Bulb({ x, y, lit, glow, label }: { x: number; y: number; lit: boolean; glow: number; label: string }) {
+  const intensity = lit ? glow : 0;
   return (
     <g>
       <rect x={x - 16} y={y + 14} width="32" height="10" rx="4" fill="var(--card-border)" />
-      {lit && <circle cx={x} cy={y} r="46" fill="url(#bulbGlow)" className="lab-electron" />}
+      <circle
+        cx={x}
+        cy={y}
+        r="46"
+        fill="url(#bulbGlow)"
+        className="lab-electron"
+        style={{ opacity: intensity }}
+      />
       <circle
         cx={x}
         cy={y}
         r="17"
-        fill={lit ? "color-mix(in srgb, #ffd27a 85%, white)" : "color-mix(in srgb, var(--text-main) 10%, transparent)"}
+        fill={
+          lit
+            ? `color-mix(in srgb, #ffd27a ${45 + glow * 40}%, ${glow > 0.35 ? "white" : "transparent"})`
+            : "color-mix(in srgb, var(--text-main) 10%, transparent)"
+        }
         stroke={lit ? "#ffd27a" : "var(--card-border)"}
         strokeWidth="2"
+        style={{ transition: "fill 300ms ease, stroke 300ms ease" }}
       />
       {/* filament */}
       <path
