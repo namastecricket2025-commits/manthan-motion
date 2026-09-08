@@ -6,11 +6,13 @@ import { useEffect, useId, useRef, useState } from "react";
 /**
  * Aceternity-style Text Hover Effect, dressed in Manthan's tokens:
  *
- * - The word renders as a stroked outline (theme text colour) that draws
- *   itself in once on mount.
- * - On pointer devices, a signal-red gradient stroke is revealed through a
- *   radial mask that follows the cursor — move across the word to paint it
- *   red.
+ * - "STUDY MATERIAL" renders in Anton — a heavy condensed poster face that
+ *   reads as a designed display word rather than a squished Space Grotesk
+ *   outline. (Loaded in index.html; `--font-poster` in index.css.)
+ * - The word draws itself in once on mount as a stroked outline.
+ * - On pointer devices, an ember gradient stroke (pale peach → coral →
+ *   signal red in dark mode; burnt coral → signal → deep maroon in light
+ *   mode) is revealed through a radial mask that follows the cursor.
  * - On touch devices (most of Manthan's traffic) there is no cursor to
  *   follow, so the mask widens to cover the whole word and the gradient
  *   stroke simply sits underneath the outline — the headline still reads as
@@ -49,18 +51,14 @@ export function TextHoverEffect({
     setMaskPosition({ cx: `${cx}%`, cy: `${cy}%` });
   }, [cursor, isTouch]);
 
-  // Wide viewBox so longer phrases fit: ~52 units per char at the 72px
-  // display font (the Aceternity default 300×100 only fits 4–5 letters).
-  const viewBoxW = Math.max(300, text.length * 52);
-  const dash = viewBoxW * 4; // generous dash length for the draw-in sweep
-
   return (
     <svg
       ref={svgRef}
       width="100%"
       height="100%"
-      viewBox={`0 0 ${viewBoxW} 100`}
+      viewBox="0 0 300 100"
       xmlns="http://www.w3.org/2000/svg"
+      preserveAspectRatio="xMidYMid meet"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
         setHovered(false);
@@ -72,17 +70,18 @@ export function TextHoverEffect({
       className={cn("select-none", className)}
     >
       <defs>
+        {/* Ember sweep across the word — themed via tokens */}
         <linearGradient
           id={`${uid}-textGradient`}
           gradientUnits="userSpaceOnUse"
           x1="0"
           y1="0"
-          x2={viewBoxW}
+          x2="300"
           y2="0"
         >
-          <stop offset="0%" stopColor="var(--signal)" />
-          <stop offset="45%" stopColor="var(--signal)" />
-          <stop offset="100%" stopColor="var(--signal-2)" />
+          <stop offset="0%" stopColor="var(--stroke-a)" />
+          <stop offset="50%" stopColor="var(--stroke-b)" />
+          <stop offset="100%" stopColor="var(--stroke-c)" />
         </linearGradient>
 
         <motion.radialGradient
@@ -110,12 +109,12 @@ export function TextHoverEffect({
       {/* Base outline — always visible, brightens on hover */}
       <text
         x="50%"
-        y="50%"
+        y="54%"
         textAnchor="middle"
         dominantBaseline="middle"
         stroke="var(--text-dim)"
-        strokeWidth="1.4"
-        className="fill-transparent font-display text-[72px] font-bold"
+        strokeWidth="0.9"
+        className="stroke-display fill-transparent text-[86px]"
         style={{ opacity: hovered ? 0.85 : 0.5 }}
       >
         {text}
@@ -125,26 +124,26 @@ export function TextHoverEffect({
       {reduced ? (
         <text
           x="50%"
-          y="50%"
+          y="54%"
           textAnchor="middle"
           dominantBaseline="middle"
           stroke="var(--text-main)"
-          strokeWidth="1.4"
-          className="fill-transparent font-display text-[72px] font-bold"
+          strokeWidth="0.9"
+          className="stroke-display fill-transparent text-[86px]"
         >
           {text}
         </text>
       ) : (
         <motion.text
           x="50%"
-          y="50%"
+          y="54%"
           textAnchor="middle"
           dominantBaseline="middle"
           stroke="var(--text-main)"
-          strokeWidth="1.4"
-          className="fill-transparent font-display text-[72px] font-bold"
-          initial={{ strokeDashoffset: dash, strokeDasharray: dash }}
-          animate={{ strokeDashoffset: 0, strokeDasharray: dash }}
+          strokeWidth="0.9"
+          className="stroke-display fill-transparent text-[86px]"
+          initial={{ strokeDashoffset: 1200, strokeDasharray: 1200 }}
+          animate={{ strokeDashoffset: 0, strokeDasharray: 1200 }}
           transition={{ duration: 3, ease: "easeInOut" }}
         >
           {text}
@@ -155,13 +154,13 @@ export function TextHoverEffect({
           touch / reduced motion, where there's no cursor to track) */}
       <text
         x="50%"
-        y="50%"
+        y="54%"
         textAnchor="middle"
         dominantBaseline="middle"
         stroke={`url(#${uid}-textGradient)`}
-        strokeWidth="1.4"
+        strokeWidth="1.1"
         mask={`url(#${uid}-textMask)`}
-        className="fill-transparent font-display text-[72px] font-bold"
+        className="stroke-display fill-transparent text-[86px]"
       >
         {text}
       </text>
