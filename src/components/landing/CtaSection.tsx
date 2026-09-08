@@ -57,14 +57,14 @@ export default function CtaSection() {
           >
             Your notes are waiting to become
           </h2>
-          {/* Closing display word — Aceternity Text Hover Effect: the
-              stroke draws itself in, then the signal-red gradient follows
-              the cursor on desktop. On touch it simply shows the gradient
-              across the whole word — no interaction required. */}
+          {/* Closing display word — filled Outfit 800 with an ember
+              gradient + glow. On desktop the vivid gradient follows the
+              cursor; on touch the whole word glows with no interaction
+              required. */}
           <div data-reveal className="mx-auto mt-5 w-full max-w-2xl">
             <TextHoverEffect
               text="STUDY MATERIAL"
-              className="h-14 w-full sm:h-20"
+              className="w-full"
             />
           </div>
           <p

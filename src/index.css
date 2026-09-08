@@ -50,7 +50,7 @@
     sans-serif;
   --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui,
     sans-serif;
-  --font-poster: "Anton", "Space Grotesk", "Inter", ui-sans-serif, system-ui,
+  --font-poster: "Outfit", "Space Grotesk", "Inter", ui-sans-serif, system-ui,
     sans-serif;
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
@@ -119,11 +119,11 @@
   --gt-head: #241412;
   --gt-tail: #c81f27;
 
-  /* Stroke-text display gradient (light): a burnt-ember sweep that stays
-     visible on the pale ink wash — hot coral into deep signal red. */
-  --stroke-a: #e8543f;
-  --stroke-b: #c81f27;
-  --stroke-c: #8f1d22;
+  /* Stroke-text display gradient (light): a golden-ember sweep that pops
+     on the pale ink wash — honey gold through signal red. */
+  --stroke-a: #e8a33d;
+  --stroke-b: #e8543f;
+  --stroke-c: #c81f27;
 
   /* Bklit chart tokens (light) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -232,10 +232,10 @@
   --gt-tail: #ff4f58;
 
   /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
-     peach through coral into the signal red, so the outlined display word
-     glows instead of reading as a flat red line. */
-  --stroke-a: #ffd9c4;
-  --stroke-b: #ff8a5c;
+     gold through amber into signal red, so the filled display word glows
+     like an ember against the dark canvas. */
+  --stroke-a: #ffe8c2;
+  --stroke-b: #ffb35c;
   --stroke-c: #ff4f58;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
@@ -508,11 +508,37 @@
   }
 
   /* Stroke-text display word (TextHoverEffect) — heavy poster type at a
-     large optical size. Anton is loaded in index.html alongside the other
-     brand fonts. */
+     large optical size. Outfit 800 is loaded in index.html alongside the
+     other brand fonts. */
   .stroke-display {
     font-family: var(--font-poster);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.02em;
+  }
+
+  /* Glow layers for the filled display word — a blurred ember halo sits
+     behind the crisp gradient glyphs, plus a subtle drop-shadow on the
+     glyphs themselves. Layer opacity is animated so the halo breathes
+     gently on hover instead of popping. */
+  .stroke-glow-layer {
+    filter: blur(10px);
+    opacity: 0.55;
+    transition: opacity 400ms ease;
+  }
+  .stroke-glow-wrap:hover .stroke-glow-layer {
+    opacity: 0.9;
+  }
+  .stroke-fill-layer {
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--stroke-b) 55%, transparent));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stroke-glow-layer,
+    .stroke-fill-layer {
+      transition: none;
+      filter: none;
+    }
+    .stroke-glow-layer {
+      opacity: 0.35;
+    }
   }
 
   /* ------------------------------------------------
