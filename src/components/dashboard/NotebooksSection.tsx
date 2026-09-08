@@ -179,7 +179,12 @@ function NotebookRow({ nb }: { nb: (typeof NOTEBOOKS)[number] }) {
   );
 }
 
-export default function NotebooksSection() {
+export default function NotebooksSection({
+  showHeader = true,
+}: {
+  /** Page-level headers (e.g. the dashboard tab) render their own title + CTA. */
+  showHeader?: boolean;
+}) {
   const ref = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -257,25 +262,32 @@ export default function NotebooksSection() {
       ref={ref}
       className="glass-panel overflow-hidden px-5 py-6 sm:px-6 sm:py-8"
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-display text-base font-bold tracking-tight">
-            Notebooks
-          </h2>
-          <p className="mt-1 text-xs text-text-dim">
-            Every generated kit, organised by subject.
-          </p>
+      {showHeader ? (
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-base font-bold tracking-tight">
+              Notebooks
+            </h2>
+            <p className="mt-1 text-xs text-text-dim">
+              Every generated kit, organised by subject.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] bg-transparent px-3.5 py-2 text-[11px] font-semibold text-foreground transition-colors hover:border-[var(--signal)] hover:text-[var(--signal)]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New notebook
+          </button>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] bg-transparent px-3.5 py-2 text-[11px] font-semibold text-foreground transition-colors hover:border-[var(--signal)] hover:text-[var(--signal)]"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New notebook
-        </button>
-      </div>
+      ) : null}
 
-      <div className="mt-5 grid grid-cols-1 gap-4 min-[760px]:grid-cols-2">
+      <div
+        className={
+          "grid grid-cols-1 gap-4 min-[760px]:grid-cols-2" +
+          (showHeader ? " mt-5" : "")
+        }
+      >
         {NOTEBOOKS.map((nb) => (
           <NotebookRow key={nb.title} nb={nb} />
         ))}

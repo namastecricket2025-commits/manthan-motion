@@ -112,14 +112,12 @@
   --bg-canvas-c: #f2ece8;
   --bg-canvas-opacity: 0.65;
 
-  /* Accent-word gradient stops (light): the accent word starts deep espresso
-     black — the same colour as the heading text — holds it for the first ~60%
-     of the word, then transitions through a short warm-oxide ramp before
-     settling into the signal red on its final letters. The stepped stops
-     (black → warm oxide → red) avoid a sudden black-to-red snap and keep
-     the word legible as heading text until the red lands near the end. */
+  /* Accent-word gradient stops (light): the accent word starts in the exact
+     heading espresso (`--text-main`) and holds it for just over half the
+     word, then blends through two warm oxide stops into the signal red on
+     the final letters. The extra intermediate stops make the black→red
+     sweep silky instead of a hard snap. */
   --gt-head: #241412;
-  --gt-oxide: #6b1c14;
   --gt-tail: #c81f27;
 
   /* Stroke-text display gradient (light): a golden-ember sweep that pops
@@ -224,15 +222,13 @@
   --bg-canvas-c: #150c0b;
   --bg-canvas-opacity: 0.9;
 
-  /* Accent-word gradient stops (dark): the accent word starts pure warm white —
-     the same colour as the rest of the heading — holds white for the first
-     ~60% of the word, then transitions through a short pale-rose ramp before
-     settling into a bright signal-family red on its final letters. The
-     stepped stops (white → pale rose → bright red) avoid a sudden white-to-
-     red snap and keep the word legible as heading text until the red lands
-     near the end. */
-  --gt-head: #f7f1ec;
-  --gt-rose: #c6333f;
+  /* Accent-word gradient stops (dark): the accent word starts in the exact
+     heading warm-white (`--text-main`) and holds it for just over half the
+     word, then blends through a pale rose into a bright signal red on the
+     final letters. Matching the heading colour exactly plus two intermediate
+     stops keeps the word reading as heading text while the tail ignites
+     smoothly. */
+  --gt-head: #f4ece9;
   --gt-tail: #ff4f58;
 
   /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
@@ -393,41 +389,32 @@
     background: linear-gradient(
       105deg,
       var(--gt-head) 0%,
-      var(--gt-head) 60%,
-      var(--gt-oxide, var(--gt-head)) 78%,
+      var(--gt-head) 52%,
+      #6b1c14 68%,
+      #a1261f 82%,
       var(--gt-tail) 100%
     );
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    /* readability: a faint backstop so gradient words never go translucent
-       over bright blobs in either theme. The shadow is intentionally tiny —
-       enough contrast insurance without turning the word into a boxed
-       headline. */
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+    /* No text-shadow here: with -webkit-text-fill-color: transparent the
+       shadow is painted *behind* the transparent glyph fill, so it shows
+       through the gradient and muddies the colours (white turns grey, red
+       turns dull). The words live on glass panels / dark canvas, so a
+       shadow is unnecessary — the gradient alone stays crisp in both
+       themes. */
   }
   .dark .gradient-text,
   [data-theme="dark"] .gradient-text {
     background: linear-gradient(
       105deg,
       var(--gt-head) 0%,
-      var(--gt-head) 60%,
-      var(--gt-rose, var(--gt-head)) 78%,
+      var(--gt-head) 52%,
+      #eeb3ae 66%,
+      #d9505c 80%,
       var(--gt-tail) 100%
     );
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
   }
-  .text-hover-effect {
-    /* the closing "STUDY MATERIAL" word inherits the gradient-text stack,
-       but gets its own slightly stronger safety shadow so it stays crisp
-       over any blob position in both themes. */
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
-  }
-  .dark .text-hover-effect,
-  [data-theme="dark"] .text-hover-effect {
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
-  }
-
   /* Section kicker chip used above headings.
 
      Legibility: kickers are signal-red text that can sit directly over a

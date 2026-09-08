@@ -20,7 +20,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
-import { gsap, prefersReducedMotion, revealConfig, refreshOnLoad } from "@/lib/gsap";
+import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
   BookOpen,
   FileText,
@@ -78,6 +78,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [hovered, setHovered] = useState<number | null>(null);
+  /** Sidebar tabs — Notebooks renders its own full section. */
+  const [view, setView] = useState<"dashboard" | "notebooks">("dashboard");
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([
     { id: 1, name: "thermo-ch4.pdf", detail: "2.4 MB · PDF", kind: "file" },
     { id: 2, name: "khanacademy.org/electrostatics", detail: "Link", kind: "link" },
@@ -95,6 +98,8 @@ export default function Dashboard() {
       gsap.set(els, { opacity: 1, y: 0 });
       return;
     }
+    // Runs on mount and whenever the sidebar tab changes — newly mounted
+    // panels glide in as they appear.
     const ctx = gsap.context(() => {
       gsap.fromTo(
         els,
@@ -105,16 +110,11 @@ export default function Dashboard() {
           duration: 0.6,
           ease: "power3.out",
           stagger: 0.07,
-          scrollTrigger: { trigger: root, ...revealConfig },
         },
       );
     }, root);
-    const stopRefresh = refreshOnLoad();
-    return () => {
-      ctx.revert();
-      stopRefresh();
-    };
-  }, []);
+    return () => ctx.revert();
+  }, [view]);
 
   const addToQueue = (items: Omit<QueueItem, "id">[]) => {
     setQueue((q) => [...q, ...items.map((it, i) => ({ ...it, id: Date.now() + i }))]);
@@ -156,29 +156,40 @@ export default function Dashboard() {
 
   const nav = (
     <nav className="flex flex-col gap-1">
-      {[
-        { label: "Dashboard", icon: LayoutDashboard, active: true },
-        { label: "Notebooks", icon: BookOpen, active: false },
-        { label: "Settings", icon: Menu, soon: true },
-      ].map((item) => (
-        <span
-          key={item.label}
-          className={
-            "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium " +
-            (item.active
-              ? "border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
-              : "text-text-dim")
-          }
-        >
-          <item.icon className="h-4 w-4" />
-          {item.label}
-          {item.soon && (
-            <span className="ml-auto text-[10px] uppercase tracking-widest text-text-dim/70">
-              soon
-            </span>
-          )}
+      {(
+        [
+          { label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
+          { label: "Notebooks", icon: BookOpen, key: "notebooks" },
+        ] as const
+      ).map((item) => {
+        const active = view === item.key;
+        return (
+          <button
+            key={item.label}
+            type="button"
+            onClick={() => {
+              setView(item.key);
+              setSheetOpen(false);
+            }}
+            className={
+              "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors " +
+              (active
+                ? "border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                : "border border-transparent text-text-dim hover:text-foreground")
+            }
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </button>
+        );
+      })}
+      <span className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-text-dim">
+        <Menu className="h-4 w-4" />
+        Settings
+        <span className="ml-auto text-[10px] uppercase tracking-widest text-text-dim/70">
+          soon
         </span>
-      ))}
+      </span>
     </nav>
   );
 
@@ -213,7 +224,7 @@ export default function Dashboard() {
         <Logo />
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <button
                 type="button"
@@ -251,6 +262,8 @@ export default function Dashboard() {
       {/* ---- Main ---- */}
       <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
+          {view === "dashboard" ? (
+            <>
           {/* Greeting */}
           <div data-reveal className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -459,10 +472,33 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Notebooks — same design language as the landing section */}
-          <div data-reveal>
-            <NotebooksSection />
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Notebooks tab — page header + the same section as the landing */}
+              <div data-reveal className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
+                    Notebooks
+                  </p>
+                  <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                    Your study kits
+                    <span className="text-[var(--signal)]">.</span>
+                  </h1>
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-2 text-[12px] font-semibold text-foreground transition-colors hover:border-[var(--signal)] hover:text-[var(--signal)]"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  New notebook
+                </button>
+              </div>
+              <div data-reveal>
+                <NotebooksSection showHeader={false} />
+              </div>
+            </>
+          )}
         </div>
       </main>
       </div>
