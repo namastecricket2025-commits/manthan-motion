@@ -386,7 +386,12 @@
        shadow-free glyphs keep the accent word identical to the heading. */
   .gradient-text {
     color: var(--text-main);
-    background: linear-gradient(
+    /* background-image (longhand), never the `background` shorthand: the
+       shorthand resets background-clip to border-box, which paints the
+       gradient as a solid rectangle behind the transparent glyph fill — the
+       "gradient block" bug — whenever a more specific rule (like the dark
+       theme override) uses it. */
+    background-image: linear-gradient(
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
@@ -406,7 +411,11 @@
   }
   .dark .gradient-text,
   [data-theme="dark"] .gradient-text {
-    background: linear-gradient(
+    /* Longhand only: the `background` shorthand resets background-clip to
+       border-box, which would paint the gradient as a solid rectangle behind
+       the transparent glyph fill (the "gradient block" bug). background-image
+       leaves background-clip: text from the base rule intact. */
+    background-image: linear-gradient(
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
