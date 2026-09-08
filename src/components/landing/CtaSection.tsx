@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Sparkles } from "@/components/ui/sparkles";
 import { MovingBorderButton } from "./MovingBorderButton";
+import { TextHoverEffect } from "./TextHoverEffect";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
@@ -54,9 +55,18 @@ export default function CtaSection() {
             data-reveal
             className="mx-auto mt-5 max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
           >
-            Your notes are waiting to become{" "}
-            <span className="gradient-text">study material</span>
+            Your notes are waiting to become
           </h2>
+          {/* Closing display word — Aceternity Text Hover Effect: the
+              stroke draws itself in, then the signal-red gradient follows
+              the cursor on desktop. On touch it simply shows the gradient
+              across the whole word — no interaction required. */}
+          <div data-reveal className="mx-auto mt-5 w-full max-w-2xl">
+            <TextHoverEffect
+              text="STUDY MATERIAL"
+              className="h-14 w-full sm:h-20"
+            />
+          </div>
           <p
             data-reveal
             className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim"
