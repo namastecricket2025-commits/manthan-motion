@@ -10,6 +10,7 @@ import PieCenter from "@/components/charts/pie-center";
 import PieChart from "@/components/charts/pie-chart";
 import PieSlice from "@/components/charts/pie-slice";
 import { ChartTooltip } from "@/components/charts/tooltip";
+import NotebooksSection from "@/components/dashboard/NotebooksSection";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -54,12 +55,7 @@ const WEEK = [
   { day: "Sun", Minutes: 40 },
 ];
 
-const MATERIALS = [
-  { title: "Thermodynamics — Chapter 4", kind: "Flashcards", count: 24, when: "Today" },
-  { title: "Organic reactions overview", kind: "Summary", count: 6, when: "Yesterday" },
-  { title: "Electrostatics question bank", kind: "Questions", count: 12, when: "2 days ago" },
-  { title: "Mughal history — notes", kind: "Summary", count: 5, when: "4 days ago" },
-];
+
 
 interface QueueItem {
   id: number;
@@ -162,7 +158,7 @@ export default function Dashboard() {
     <nav className="flex flex-col gap-1">
       {[
         { label: "Dashboard", icon: LayoutDashboard, active: true },
-        { label: "Notebooks", icon: BookOpen, soon: true },
+        { label: "Notebooks", icon: BookOpen, active: false },
         { label: "Settings", icon: Menu, soon: true },
       ].map((item) => (
         <span
@@ -463,57 +459,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Recent materials — table on desktop, stacked cards on mobile */}
-          <div data-reveal className="glass-panel overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 sm:px-6">
-              <h2 className="font-display text-base font-bold tracking-tight">
-                Recent materials
-              </h2>
-              <span className="text-[11px] font-medium text-text-dim">last 7 days</span>
-            </div>
-
-            {/* Desktop table */}
-            <table className="hidden w-full text-left text-sm min-[760px]:table">
-              <thead>
-                <tr className="border-y border-[var(--card-border)] text-[11px] uppercase tracking-widest text-text-dim">
-                  <th className="px-6 py-2.5 font-semibold">Material</th>
-                  <th className="px-6 py-2.5 font-semibold">Kind</th>
-                  <th className="px-6 py-2.5 font-semibold">Items</th>
-                  <th className="px-6 py-2.5 font-semibold">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--card-border)]">
-                {MATERIALS.map((m) => (
-                  <tr key={m.title} className="transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_5%,transparent)]">
-                    <td className="px-6 py-3.5 font-medium">{m.title}</td>
-                    <td className="px-6 py-3.5">
-                      <span className="glass-chip px-2.5 py-0.5 text-[11px] font-semibold text-[var(--signal)]">
-                        {m.kind}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3.5 tabular-nums text-text-dim">{m.count}</td>
-                    <td className="px-6 py-3.5 text-text-dim">{m.when}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Mobile stacked cards */}
-            <ul className="divide-y divide-[var(--card-border)] border-t border-[var(--card-border)] min-[760px]:hidden">
-              {MATERIALS.map((m) => (
-                <li key={m.title} className="px-5 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold">{m.title}</span>
-                    <span className="glass-chip shrink-0 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--signal)]">
-                      {m.kind}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {m.count} items · {m.when}
-                  </p>
-                </li>
-              ))}
-            </ul>
+          {/* Notebooks — same design language as the landing section */}
+          <div data-reveal>
+            <NotebooksSection />
           </div>
         </div>
       </main>

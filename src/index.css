@@ -112,11 +112,14 @@
   --bg-canvas-c: #f2ece8;
   --bg-canvas-opacity: 0.65;
 
-  /* Accent-word gradient stops (light): the accent word starts in the same
-     espresso black as the heading text, holds it for well over half the
-     word, then ignites into the signal red only on its final letters —
-     reads natively in light mode and stays crisp over the pale blob wash. */
+  /* Accent-word gradient stops (light): the accent word starts deep espresso
+     black — the same colour as the heading text — holds it for the first ~60%
+     of the word, then transitions through a short warm-oxide ramp before
+     settling into the signal red on its final letters. The stepped stops
+     (black → warm oxide → red) avoid a sudden black-to-red snap and keep
+     the word legible as heading text until the red lands near the end. */
   --gt-head: #241412;
+  --gt-oxide: #6b1c14;
   --gt-tail: #c81f27;
 
   /* Stroke-text display gradient (light): a golden-ember sweep that pops
@@ -221,14 +224,15 @@
   --bg-canvas-c: #150c0b;
   --bg-canvas-opacity: 0.9;
 
-  /* Accent-word gradient stops (dark): the accent word starts pure warm
-     white — the same colour as the rest of the heading — holds white for
-     well over half the word, then burns into a bright signal-family red on
-     its final letters. The white-dominant stops guarantee the word reads
-     like the heading around it no matter which blob sits behind it, and the
-     luminous tail (brighter than the canvas blobs) keeps the red from
-     melting into the background. */
-  --gt-head: #fff9f5;
+  /* Accent-word gradient stops (dark): the accent word starts pure warm white —
+     the same colour as the rest of the heading — holds white for the first
+     ~60% of the word, then transitions through a short pale-rose ramp before
+     settling into a bright signal-family red on its final letters. The
+     stepped stops (white → pale rose → bright red) avoid a sudden white-to-
+     red snap and keep the word legible as heading text until the red lands
+     near the end. */
+  --gt-head: #f7f1ec;
+  --gt-rose: #c6333f;
   --gt-tail: #ff4f58;
 
   /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
@@ -389,8 +393,8 @@
     background: linear-gradient(
       105deg,
       var(--gt-head) 0%,
-      var(--gt-head) 66%,
-      var(--gt-tail) 86%,
+      var(--gt-head) 60%,
+      var(--gt-oxide, var(--gt-head)) 78%,
       var(--gt-tail) 100%
     );
     background-clip: text;
@@ -404,6 +408,13 @@
   }
   .dark .gradient-text,
   [data-theme="dark"] .gradient-text {
+    background: linear-gradient(
+      105deg,
+      var(--gt-head) 0%,
+      var(--gt-head) 60%,
+      var(--gt-rose, var(--gt-head)) 78%,
+      var(--gt-tail) 100%
+    );
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
   }
   .text-hover-effect {

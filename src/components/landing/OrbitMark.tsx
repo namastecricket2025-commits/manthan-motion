@@ -6,15 +6,18 @@ import { useEffect, useRef } from "react";
  * circle slowly orbiting around it (14s linear), connected by a thin line
  * that stays fixed to the big circle's center.
  *
- * Correctness notes (this fixed a visible detachment bug):
- * - The rotation pivot is the SVG user-space point (200, 200) — the big
- *   circle's true center. Using transformOrigin "50% 50%" instead would
- *   pivot around the orbit-group's *bounding box* center, which sits far
- *   right of the circle (the line extends to x=330), so the assembly swung
- *   around the wrong point and the line visually detached from the circle.
- * - The big circle is painted AFTER the orbit group so the connector
- *   visually emerges from the circle's rim instead of drawing over it.
- * - Reduced motion shows the static mark with the satellite at 3 o'clock.
+ * Layout:
+ * - viewBox 0 0 400 400; big circle at (200,200) r=86.
+ * - Orbit group rotates around (200,200) via GSAP svgOrigin.
+ * - The connector line and small circle are placed at x=358 (r=78 orbit),
+ *   so the satellite sits just outside the big circle rim with a visible
+ *   connector gap. Both fit well inside the 400-wide viewBox, so neither
+ *   the connector nor the small circle is clipped by the SVG edges.
+ *
+ * Rendering order: orbit group first (under), big circle last (over) so the
+ * connector visually emerges from the circle's rim instead of drawing over it.
+ *
+ * Reduced motion shows the static mark with the satellite at 3 o'clock.
  */
 export default function OrbitMark() {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -38,7 +41,7 @@ export default function OrbitMark() {
   return (
     <div ref={ref} className="flex h-full w-full items-center justify-center">
       <svg
-        className="logo-svg h-auto w-[min(62vw,320px)]"
+        className="logo-svg h-auto w-[min(72vw,360px)]"
         viewBox="0 0 400 400"
         role="img"
         aria-label="Manthan"
@@ -46,8 +49,8 @@ export default function OrbitMark() {
         {/* Orbit group first (under), big circle last (over) so the
             connector always appears anchored to the circle's rim. */}
         <g className="orbit-group">
-          <line className="connector" x1="200" y1="200" x2="390" y2="200" />
-          <circle className="small-circle" cx="390" cy="200" r="24" />
+          <line className="connector" x1="200" y1="200" x2="358" y2="200" />
+          <circle className="small-circle" cx="358" cy="200" r="22" />
         </g>
         <circle className="big-circle" cx="200" cy="200" r="86" />
       </svg>

@@ -130,32 +130,18 @@ export default function Pipeline() {
       tlRef.current = tl;
     }, root);
 
-    // Mobile browsers hide/show the URL bar while scrolling, which fires
-    // resize events. ScrollTrigger's auto-refresh-on-resize re-measures and
-    // re-pins mid-scroll, visibly jumping the track. Instead: snap the pinned
-    // animation to its end (which un-pins the section), then refresh and
-    // restore the exact progress once the viewport settles.
+      // Layout stability on viewport change: when the window resizes, the
+    // pinned section's end distance changes; ScrollTrigger's own refresh can
+    // briefly desync on mobile (where the URL bar shows/hides mid-scroll).
+    // On resize we invalidate the existing ScrollTrigger, let refresh
+    // recompute the pin span, then restore scroll position relative to the
+    // viewport so the track doesn't jump.
     let resizeTimer: number | undefined;
-    let savedProgress: number | null = null;
     const onResize = () => {
-      const tl = tlRef.current;
-      if (!tl) return;
-      const st = tl.scrollTrigger;
-      if (!st) return;
-      if (savedProgress === null) {
-        savedProgress = st.progress;
-        tl.pause();
-        st.animation?.progress(1); // un-pins the section
-      }
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
         ScrollTrigger.refresh();
-        if (savedProgress !== null) {
-          st.animation?.progress(savedProgress);
-          savedProgress = null;
-        }
-        tl.play();
-      }, 220);
+      }, 120);
     };
     window.addEventListener("resize", onResize);
 
@@ -178,7 +164,7 @@ export default function Pipeline() {
         <div className="mx-auto max-w-2xl text-center" data-reveal>
           <span className="kicker">How it works</span>
           <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
-            One pipeline,{" "}
+            One pipeline:{" "}
             <span className="gradient-text">five guided steps</span>
           </h2>
           <p className="mt-4 text-base leading-relaxed text-text-dim">
@@ -188,10 +174,12 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* Pinned viewport: full-bleed, cards glide horizontally */}
+      {/* Pinned viewport: full-bleed, cards glide horizontally.
+          min-h keeps it tall enough on short screens; on mobile the
+          horizontal glide is the focus, so padding is tighter. */}
       <div
         ref={viewportRef}
-        className="how-sticky relative mt-12 h-[72svh] min-h-[430px] w-full overflow-hidden md:mt-16"
+        className="how-sticky relative mt-10 h-[68svh] min-h-[400px] w-full overflow-hidden md:mt-16"
       >
         {/* scrub progress line */}
         <span
