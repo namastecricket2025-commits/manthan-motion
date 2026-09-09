@@ -1,583 +1,435 @@
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Atom, Beaker, FlaskConical, Layers, Sigma } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
-import {
-  blockFor,
-  CAT_COLOR,
-  configFor,
-  ELEMENTS,
-  gridPos,
-  GROUP_NAMES,
-  periodGroupOf,
-  shellsFor,
-  type ElementData,
-} from "./periodic-data";
-import { REACTIONS, SUBSTANCES, type Substance } from "./reactions";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { ChevronLeft, ChevronRight, Droplets, FlaskConical, LayoutGrid, X } from "lucide-react";
+import Atom3D from "./Atom3D";
+import ReactionBench from "./ReactionBench";
+import Titration from "./Titration";
+import { SPRING } from "./use-canvas";
+import { CAT_COLOR, ELEMENTS, GROUP_NAMES, configFor, gridPos, periodGroupOf, shellsFor } from "./periodic-data";
+import type { Category, ElementData } from "./periodic-data";
 
-/* ------------------------------------------------------------------ */
-/* Shared helpers                                                      */
-/* ------------------------------------------------------------------ */
+type ChemTab = "table" | "bench" | "titration";
 
-/** Renders "2 H2 + O2 -> 2 H2O" with proper subscripts and an arrow. */
-function Fmt({ text }: { text: string }) {
-  const tokens = text.match(/(\d+)|([^\d]+)/g) ?? [];
-  const out: ReactNode[] = [];
-  let prev = "";
-  tokens.forEach((tok, i) => {
-    if (/^\d+$/.test(tok)) {
-      out.push(
-        prev !== "" && /[A-Za-z)]/.test(prev) ? (
-          <sub key={i} className="text-[0.72em]">
-            {tok}
-          </sub>
-        ) : (
-          <span key={i}>{tok}</span>
-        ),
-      );
-    } else {
-      out.push(<span key={i}>{tok}</span>);
-      prev = tok[tok.length - 1] ?? "";
-    }
-  });
-  return <>{out}</>;
-}
-
-const PHASE_LABEL: Record<ElementData["phase"], { label: string; color: string }> = {
-  solid: { label: "Solid", color: "#8a7a52" },
-  liquid: { label: "Liquid", color: "#4f7f8a" },
-  gas: { label: "Gas", color: "#3f7d96" },
-  synthetic: { label: "Synthetic", color: "#6f6a6a" },
+const CAT_LABEL: Record<Category, string> = {
+  alkali: "Alkali metal",
+  alkaline: "Alkaline earth",
+  transition: "Transition metal",
+  "post-transition": "Post-transition metal",
+  metalloid: "Metalloid",
+  nonmetal: "Non-metal",
+  halogen: "Halogen",
+  "noble gas": "Noble gas",
+  lanthanide: "Lanthanide",
+  actinide: "Actinide",
+  synthetic: "Synthetic",
 };
 
-/** Bohr-style shell diagram — nucleus + electron rings. */
-function BohrDiagram({ el, size = 210 }: { el: ElementData; size?: number }) {
-  const shells = shellsFor(el.n);
+function ElementCell({
+  el,
+  dimmed,
+  selected,
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  el: ElementData;
+  dimmed: boolean;
+  selected: boolean;
+  onClick: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}) {
   const color = CAT_COLOR[el.cat];
-  const c = size / 2;
-  const nucleusR = el.n > 20 ? 17 : 14;
-  const ringBase = nucleusR + 14;
-  const ringStep = Math.min(26, (size / 2 - ringBase - 8) / Math.max(1, shells.length - 1) || 24);
-  const total = shells.reduce((a, b) => a + b, 0);
-
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full">
-      {/* soft glow behind the atom */}
-      <circle cx={c} cy={c} r={c * 0.9} fill={color} opacity="0.06" />
-      {shells.map((count, i) => {
-        const r = ringBase + i * ringStep;
-        const dots: { x: number; y: number }[] = [];
-        for (let k = 0; k < count; k++) {
-          // golden-angle spacing + per-index offset keeps dots off each other
-          const a = (k * 2.39996 + i * 0.7) * Math.PI;
-          dots.push({ x: c + r * Math.cos(a), y: c + r * Math.sin(a) });
-        }
-        return (
-          <g key={i}>
-            <circle
-              cx={c}
-              cy={c}
-              r={r}
-              fill="none"
-              stroke="color-mix(in srgb, var(--text-dim) 35%, transparent)"
-              strokeWidth="1"
-              strokeDasharray={i === shells.length - 1 ? "none" : "3 4"}
-            />
-            {dots.map((d, k) => (
-              <circle
-                key={k}
-                cx={d.x}
-                cy={d.y}
-                r={total > 40 ? 2.6 : 3.2}
-                fill={color}
-                opacity={0.9}
-              />
-            ))}
-          </g>
-        );
-      })}
-      {/* nucleus */}
-      <circle cx={c} cy={c} r={nucleusR} fill="color-mix(in srgb, var(--text-main) 14%, transparent)" stroke={color} strokeWidth="1.5" />
-      <text
-        x={c}
-        y={c + 4}
-        textAnchor="middle"
-        fontSize={el.n > 40 ? 12 : 14}
-        fontWeight="700"
-        fill="var(--text-main)"
+    <motion.button
+      type="button"
+      onClick={onClick}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: dimmed ? 0.22 : 1, scale: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      whileHover={{ scale: dimmed ? 1 : 1.18, zIndex: 5 }}
+      className="relative flex min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1.5 text-center transition-shadow"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{
+        borderColor: selected ? "#ff3b5c" : `${color}55`,
+        background: selected
+          ? "linear-gradient(160deg, rgba(255,59,92,0.22), rgba(255,59,92,0.06))"
+          : `linear-gradient(160deg, ${color}26, ${color}0d)`,
+        boxShadow: selected ? "0 0 18px rgba(255,59,92,0.35)" : "none",
+        cursor: "pointer",
+      }}
+    >
+      <span className="text-[8px] leading-none text-slate-400">{el.n}</span>
+      <span
+        className="font-display text-[13px] font-bold leading-tight sm:text-sm"
+        style={{ color: selected ? "#fff" : "#e2e8f0", textShadow: selected ? "0 0 8px rgba(255,59,92,0.8)" : "none" }}
       >
         {el.sym}
-      </text>
-      <text x={c} y={c + nucleusR + 12} textAnchor="middle" fontSize="8" fill="var(--text-dim)">
-        {el.n} p⁺
-      </text>
-    </svg>
+      </span>
+      <span className="hidden text-[7px] leading-tight text-slate-400 md:block">{el.name}</span>
+    </motion.button>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Periodic table                                                      */
-/* ------------------------------------------------------------------ */
-
-function PeriodicTable({ onPick, selected }: { onPick: (el: ElementData) => void; selected: number | null }) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const main = ELEMENTS.filter((el) => gridPos(el.n).row <= 7);
-  const lanth = ELEMENTS.filter((el) => gridPos(el.n).row === 9);
-  const actin = ELEMENTS.filter((el) => gridPos(el.n).row === 10);
-
-  const hoverEl = hovered !== null ? ELEMENTS.find((e) => e.n === hovered) ?? null : null;
-  const hoverPos = hoverEl ? gridPos(hoverEl.n) : null;
-  const hoverIsF = hoverPos !== null && hoverPos.row >= 9;
-
-  // column highlight: same group column (or same f-block family)
-  const inGroup = (el: ElementData) => {
-    if (!hoverPos || !hoverEl) return false;
-    const pos = gridPos(el.n);
-    if (hoverIsF) return pos.row >= 9 && el.cat === hoverEl.cat;
-    return pos.row <= 7 && pos.col === hoverPos.col;
-  };
-
-  const hoverGroupName =
-    hoverEl && hoverPos
-      ? hoverIsF
-        ? hoverEl.cat === "lanthanide"
-          ? "Lanthanides (4f block)"
-          : "Actinides (5f block)"
-        : `Group ${hoverPos.col}${GROUP_NAMES[hoverPos.col] ? ` — ${GROUP_NAMES[hoverPos.col]}` : ""}`
-      : null;
-
-  const Cell = ({ el }: { el: ElementData }) => {
-    const color = CAT_COLOR[el.cat];
-    const active = selected === el.n;
-    const dimmed = hovered !== null && !inGroup(el);
-    return (
-      <button
-        type="button"
-        onClick={() => onPick(el)}
-        onPointerEnter={() => setHovered(el.n)}
-        onPointerLeave={() => setHovered(null)}
-        style={{ gridRow: gridPos(el.n).row, gridColumn: gridPos(el.n).col }}
-        className={
-          "group relative flex aspect-square min-w-0 flex-col items-center justify-center rounded-lg border text-center transition-all duration-150 " +
-          (active
-            ? "z-10 scale-110 border-[var(--signal)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--signal)_35%,transparent)]"
-            : hovered === el.n
-              ? "z-10 scale-110 border-[var(--signal)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--signal)_28%,transparent)]"
-              : inGroup(el) && hovered !== null
-                ? "border-[var(--signal)]/60"
-                : "border-transparent") +
-          (dimmed ? " opacity-30" : "")
-        }
-      >
-        <span
-          className="absolute inset-0 rounded-lg opacity-70 transition-opacity group-hover:opacity-90"
-          style={{ background: `color-mix(in srgb, ${color} 20%, transparent)` }}
-        />
-        <span className="relative text-[9px] font-semibold leading-none text-text-dim">
-          {el.n}
-        </span>
-        <span
-          className="relative mt-0.5 font-display text-[13px] font-bold leading-none sm:text-sm"
-          style={{ color }}
-        >
-          {el.sym}
-        </span>
-      </button>
-    );
-  };
+function ElementProfile({
+  el,
+  orbitals,
+  setOrbitals,
+  onClose,
+  onNav,
+}: {
+  el: ElementData;
+  orbitals: boolean;
+  setOrbitals: (v: boolean) => void;
+  onClose: () => void;
+  onNav: (dir: 1 | -1) => void;
+}) {
+  const idx = ELEMENTS.findIndex((e) => e.n === el.n);
+  const shells = useMemo(() => shellsFor(el.n), [el.n]);
+  const pg = periodGroupOf(el.n);
+  const color = CAT_COLOR[el.cat];
+  const outer = shells[shells.length - 1] ?? 0;
 
   return (
-    <div className="overflow-x-auto pb-2">
-      {/* group strip */}
-      <div className="mb-2 flex min-w-[840px] items-center justify-between gap-3">
-        <div className="flex items-baseline gap-3">
-          {Array.from({ length: 7 }, (_, i) => (
-            <span key={i} className="text-[9px] font-semibold uppercase tracking-wider text-text-dim">
-              P{i + 1}
-            </span>
-          ))}
-          <span className="ml-1 text-[9px] font-semibold uppercase tracking-wider text-text-dim">f</span>
+    <div className="lab-glass-deep flex h-full flex-col overflow-hidden">
+      {/* header */}
+      <div className="flex items-start justify-between gap-3 border-b border-white/10 p-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-14 w-14 flex-col items-center justify-center rounded-xl border"
+            style={{ borderColor: `${color}77`, background: `linear-gradient(160deg, ${color}33, ${color}11)` }}
+          >
+            <span className="text-[9px] text-slate-400">{el.n}</span>
+            <span className="font-display text-lg font-bold text-white">{el.sym}</span>
+          </div>
+          <div>
+            <h3 className="font-display text-lg font-bold text-white">{el.name}</h3>
+            <p className="text-[11px] text-slate-400">{CAT_LABEL[el.cat]} · {el.phase === "synthetic" ? "synthetic" : `${el.phase} at STP`}</p>
+          </div>
         </div>
-        {hoverGroupName ? (
-          <span className="rounded-full border border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] px-3 py-1 text-[10px] font-semibold text-foreground">
-            {hoverGroupName} — hover highlights the whole group
-          </span>
-        ) : (
-          <span className="text-[10px] font-medium text-text-dim">
-            Hover any element to highlight its group
-          </span>
-        )}
-      </div>
-
-      <div
-        className="grid min-w-[840px] gap-1"
-        style={{ gridTemplateColumns: "repeat(18, minmax(0, 1fr))" }}
-      >
-        {main.map((el) => (
-          <Cell key={el.n} el={el} />
-        ))}
-      </div>
-
-      {/* f-block rows */}
-      <div className="mt-1.5 flex min-w-[840px] items-center gap-1">
-        <span className="w-8 shrink-0 pr-1 text-right text-[9px] font-semibold uppercase tracking-wider text-text-dim">
-          57–71
-        </span>
-        <div className="grid flex-1 gap-1" style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}>
-          {lanth.map((el) => (
-            <Cell key={el.n} el={el} />
-          ))}
-        </div>
-      </div>
-      <div className="mt-1.5 flex min-w-[840px] items-center gap-1">
-        <span className="w-8 shrink-0 pr-1 text-right text-[9px] font-semibold uppercase tracking-wider text-text-dim">
-          89–103
-        </span>
-        <div className="grid flex-1 gap-1" style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}>
-          {actin.map((el) => (
-            <Cell key={el.n} el={el} />
-          ))}
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => onNav(-1)} className="lab-btn !px-2">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => onNav(1)} className="lab-btn !px-2">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={onClose} className="lab-btn !px-2" aria-label="Close">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* category legend */}
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-[var(--card-border)] pt-3">
-        {Object.entries(CAT_COLOR).map(([cat, color]) => (
-          <span key={cat} className="inline-flex items-center gap-1.5 text-[10px] font-medium text-text-dim">
-            <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-            {cat}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
+      <div className="lab-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        {/* 3D atom */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="lab-label">Interactive 3D atom — {el.name}</p>
+            <button
+              type="button"
+              onClick={() => setOrbitals(!orbitals)}
+              className="lab-btn"
+              style={orbitals ? { borderColor: "rgba(255,59,92,0.5)", color: "#fff", background: "rgba(255,59,92,0.12)" } : undefined}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${orbitals ? "bg-[#ff3b5c] shadow-[0_0_6px_rgba(255,59,92,0.9)]" : "bg-slate-600"}`} />
+              3D quantum orbitals
+            </button>
+          </div>
+          <Atom3D z={el.n} shells={shells} symbol={el.sym} orbitals={orbitals} />
+        </div>
 
-function ElementCard({ el }: { el: ElementData | null }) {
-  if (!el) {
-    return (
-      <div className="flex h-full min-h-56 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--card-border)] p-6 text-center">
-        <Sigma className="h-6 w-6 text-text-dim" />
-        <p className="text-sm font-medium text-text-dim">
-          Tap any element to open its profile card
+        {/* properties */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {[
+            { k: "Atomic mass", v: `${el.mass} u` },
+            { k: "Period / group", v: pg.group ? `${pg.period} / ${pg.group}` : `${pg.period} (f-block)` },
+            { k: "Block", v: shells.length ? `outer shell · ${outer} e⁻` : "—" },
+          ].map((r) => (
+            <div key={r.k} className="rounded-xl border border-white/10 bg-black/20 p-2.5">
+              <p className="lab-label">{r.k}</p>
+              <p className="lab-value mt-1 text-[13px]">{r.v}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* shells */}
+        <div>
+          <p className="lab-label mb-1.5">Electron shells (K, L, M, …)</p>
+          <div className="flex flex-wrap gap-1.5">
+            {shells.map((c, i) => (
+              <span key={i} className="lab-chip">
+                {String.fromCharCode(75 + i)}: <span className="lab-value text-slate-200">{c}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* configuration */}
+        <div>
+          <p className="lab-label mb-1.5">Ground-state configuration</p>
+          <code className="lab-value block rounded-xl border border-white/10 bg-black/25 p-3 text-[11px] leading-relaxed">
+            {configFor(el.n)}
+          </code>
+        </div>
+
+        <p className="text-[10px] leading-relaxed text-slate-500">
+          Configuration follows the Aufbau filling order (1s, 2s, 2p, 3s, 3p, 4s, 3d …) — for
+          chromium and copper the real ground state has a half/full-filled d-subshell, which this
+          textbook ordering approximates.
         </p>
       </div>
-    );
-  }
-  const color = CAT_COLOR[el.cat];
-  const phase = PHASE_LABEL[el.phase];
-  const shells = shellsFor(el.n);
-  const pg = periodGroupOf(el.n);
-  const outer = shells[shells.length - 1] ?? 0;
-  const block = blockFor(el.n);
 
-  return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--card-border)]">
-      <div
-        className="relative flex items-center justify-between px-5 py-4"
-        style={{ background: `color-mix(in srgb, ${color} 16%, transparent)` }}
-      >
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
-            Atomic No. {el.n}
-          </p>
-          <p className="mt-0.5 font-display text-2xl font-bold tracking-tight text-foreground">
-            {el.name}
-          </p>
-        </div>
-        <span
-          className="font-display text-6xl font-bold leading-none"
-          style={{ color }}
-        >
-          {el.sym}
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-3 p-5 text-sm">
-        {/* Bohr diagram */}
-        <div className="rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_3%,transparent)] p-3">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-text-dim">
-            <Atom className="h-3 w-3" />
-            Shell model
-          </p>
-          <div className="mx-auto mt-1 max-w-[190px]">
-            <BohrDiagram el={el} />
-          </div>
-          <p className="mt-1 text-center font-mono text-[10.5px] text-text-dim">
-            K{shells[0] ? `(${shells[0]})` : ""}
-            {shells.slice(1).map((s, i) => ` · L${i + 1}(${s})`).join("")}
-          </p>
-        </div>
-
-        <Row label="Mass" value={`${el.mass} u`} />
-        <Row label="Category" value={el.cat} dot={color} />
-        <Row label="Phase (STP)" value={phase.label} dot={phase.color} />
-        <Row label="Period / Group" value={pg.group !== null ? `${pg.period} / ${pg.group}` : `${pg.period} (f-block)`} />
-        <Row label="Block" value={block} />
-        <Row label="Outer-shell e⁻" value={`${outer}`} />
-
-        <div className="mt-1 rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_4%,transparent)] px-3.5 py-2.5">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-text-dim">
-            <Layers className="h-3 w-3" />
-            Electron configuration
-          </p>
-          <p className="mt-1 font-mono text-[12.5px] leading-relaxed text-foreground">
-            {configFor(el.n)}
-          </p>
-        </div>
+      <div className="flex items-center justify-between border-t border-white/10 px-4 py-2.5">
+        <span className="text-[10px] text-slate-500">{idx + 1} / 118 · navigate with the arrows</span>
+        <span className="lab-chip">drag · scroll · right-drag</span>
       </div>
     </div>
   );
 }
-
-function Row({ label, value, dot }: { label: string; value: string; dot?: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs font-medium text-text-dim">{label}</span>
-      <span className="inline-flex items-center gap-2 text-right text-[13px] font-semibold text-foreground">
-        {dot && <span className="h-2 w-2 rounded-full" style={{ background: dot }} />}
-        {value}
-      </span>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Reaction workbench                                                  */
-/* ------------------------------------------------------------------ */
-
-/** A substance "logo" tile — coloured square with the formula inside. */
-function SubstanceTile({
-  formula,
-  name,
-  color,
-  coeff,
-  product,
-  size = "md",
-}: {
-  formula: string;
-  name: string;
-  color: string;
-  coeff?: string;
-  product?: boolean;
-  size?: "md" | "sm";
-}) {
-  const dim = size === "md" ? "h-16 w-16" : "h-11 w-11";
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="relative">
-        {coeff && coeff !== "1" && (
-          <span className="absolute -left-2 -top-2 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--ink)] px-1 text-[10px] font-bold tabular-nums text-foreground ring-1 ring-[var(--card-border)]">
-            {coeff}
-          </span>
-        )}
-        <div
-          className={`${dim} flex items-center justify-center rounded-2xl border font-display font-bold shadow-lg transition-transform duration-300`}
-          style={{
-            borderColor: `color-mix(in srgb, ${color} 70%, transparent)`,
-            background: `linear-gradient(160deg, color-mix(in srgb, ${color} 26%, transparent), color-mix(in srgb, ${color} 8%, transparent))`,
-            color: product ? "var(--signal)" : color,
-            fontSize: size === "md" ? 19 : 14,
-            boxShadow: `0 6px 22px -8px color-mix(in srgb, ${color} 55%, transparent)`,
-          }}
-        >
-          <Fmt text={formula} />
-        </div>
-      </div>
-      <span className="max-w-20 text-center text-[9px] font-medium leading-tight text-text-dim">
-        {name}
-      </span>
-    </div>
-  );
-}
-
-function ReactionWorkbench() {
-  const [a, setA] = useState<string>("h2");
-  const [b, setB] = useState<string>("o2");
-  const [result, setResult] = useState<{ eq: string; type: string; note: string } | null>(null);
-  const [miss, setMiss] = useState(false);
-
-  const react = () => {
-    setMiss(false);
-    const key = [a, b].sort().join("|");
-    const r = REACTIONS[key];
-    if (r) {
-      setResult(r);
-    } else {
-      setResult(null);
-      setMiss(true);
-    }
-  };
-
-  const sub = (id: string) => SUBSTANCES.find((s) => s.id === id) ?? SUBSTANCES[0];
-
-  // parse products of the balanced equation into [coeff, formula] pairs
-  const products = useMemo(() => {
-    if (!result) return [] as { coeff: string; formula: string }[];
-    const rhs = result.eq.split("->")[1]?.trim() ?? "";
-    return rhs.split("+").map((part) => {
-      const t = part.trim();
-      const m = t.match(/^(\d+)\s+(.+)$/);
-      return m ? { coeff: m[1], formula: m[2] } : { coeff: "1", formula: t };
-    });
-  }, [result]);
-
-  const subA = sub(a);
-  const subB = sub(b);
-
-  return (
-    <section className="glass-panel overflow-hidden">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--card-border)] px-5 py-4 sm:px-6">
-        <div>
-          <h2 className="flex items-center gap-2 font-display text-base font-bold tracking-tight">
-            <FlaskConical className="h-4 w-4 text-[var(--signal)]" />
-            Reaction workbench
-          </h2>
-          <p className="mt-0.5 text-xs text-text-dim">
-            Pick two substances from the shelf and press React — a balanced equation appears.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={a} onValueChange={setA}>
-            <SelectTrigger className="w-36 rounded-full border-[var(--card-border)] bg-transparent sm:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SUBSTANCES.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.formula} · {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="font-display text-sm font-bold text-text-dim">+</span>
-          <Select value={b} onValueChange={setB}>
-            <SelectTrigger className="w-36 rounded-full border-[var(--card-border)] bg-transparent sm:w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SUBSTANCES.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.formula} · {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            className="gap-1.5 rounded-full bg-[var(--signal)] text-[var(--primary-foreground)] hover:bg-[var(--signal)]/90"
-            onClick={react}
-          >
-            <Beaker className="h-4 w-4" />
-            React
-          </Button>
-        </div>
-      </header>
-
-      <div className="p-5 sm:p-6">
-        {result ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 rounded-2xl border border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_7%,transparent)] px-5 py-6">
-              <SubstanceTile formula={subA.formula} name={subA.name} color={subA.color} />
-              <span className="font-display text-lg font-bold text-text-dim">+</span>
-              <SubstanceTile formula={subB.formula} name={subB.name} color={subB.color} />
-              <span className="font-display text-xl font-bold text-[var(--signal)]">→</span>
-              {products.map((p, i) => (
-                <div key={i} className="flex items-center gap-x-4">
-                  <SubstanceTile
-                    formula={p.formula}
-                    name={p.formula}
-                    color="#e0323a"
-                    coeff={p.coeff}
-                    product
-                  />
-                  {i < products.length - 1 && (
-                    <span className="font-display text-base font-bold text-text-dim">+</span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-              <span className="glass-chip w-fit px-3 py-1 text-[11px] font-semibold text-[var(--signal)]">
-                {result.type}
-              </span>
-              <p className="text-xs leading-relaxed text-text-dim sm:text-[13px]">
-                {result.note}
-              </p>
-            </div>
-            <p className="border-t border-[var(--card-border)] pt-3 font-mono text-[12.5px] leading-relaxed text-text-dim">
-              <Fmt text={result.eq} />
-            </p>
-          </div>
-        ) : miss ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-[var(--card-border)] px-5 py-6 sm:flex-row sm:justify-center sm:gap-5">
-            <div className="flex items-center gap-3">
-              <SubstanceTile formula={subA.formula} name={subA.name} color={subA.color} size="sm" />
-              <span className="font-display text-sm font-bold text-text-dim">+</span>
-              <SubstanceTile formula={subB.formula} name={subB.name} color={subB.color} size="sm" />
-            </div>
-            <div className="max-w-md text-sm leading-relaxed text-text-dim">
-              <Sigma className="mb-1 h-5 w-5 text-text-dim" />
-              No spontaneous reaction between{" "}
-              <span className="font-semibold text-foreground">
-                <Fmt text={subA.formula} />
-              </span>{" "}
-              and{" "}
-              <span className="font-semibold text-foreground">
-                <Fmt text={subB.formula} />
-              </span>{" "}
-              in this lab set. Try a metal with an acid, or hydrogen with oxygen.
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[var(--card-border)] px-5 py-5 text-sm text-text-dim">
-            <Beaker className="h-5 w-5 shrink-0 text-[var(--signal)]" />
-            <p>
-              Ready when you are — press{" "}
-              <span className="font-semibold text-foreground">React</span> to run the
-              simulation.
-            </p>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 
 export default function ChemistryWorkspace() {
+  const [tab, setTab] = useState<ChemTab>("table");
   const [selected, setSelected] = useState<ElementData | null>(null);
-  const el = useMemo(
-    () => (selected ? ELEMENTS.find((e) => e.n === selected.n) ?? null : null),
-    [selected],
+  const [hover, setHover] = useState<{ group: number | null; family: string | null } | null>(null);
+  const [orbitals, setOrbitals] = useState(false);
+
+  const isDimmed = (el: ElementData) => {
+    if (!hover) return false;
+    if (hover.group !== null) return periodGroupOf(el.n).group !== hover.group;
+    if (hover.family) {
+      if (hover.family === "lanthanide") return el.cat !== "lanthanide";
+      if (hover.family === "actinide") return el.cat !== "actinide";
+    }
+    return false;
+  };
+
+  const onHoverEl = (el: ElementData) => {
+    const pg = periodGroupOf(el.n);
+    if (pg.group !== null) setHover({ group: pg.group, family: null });
+    else setHover({ group: null, family: el.cat === "lanthanide" ? "lanthanide" : "actinide" });
+  };
+
+  const navSelected = (dir: 1 | -1) => {
+    setSelected((cur) => {
+      if (!cur) return cur;
+      const i = ELEMENTS.findIndex((e) => e.n === cur.n);
+      const next = ELEMENTS[Math.min(ELEMENTS.length - 1, Math.max(0, i + dir))];
+      return next ?? cur;
+    });
+  };
+
+  const groupChip = hover?.group ? GROUP_NAMES[hover.group] : hover?.family === "lanthanide" ? "Lanthanide series" : hover?.family === "actinide" ? "Actinide series" : null;
+
+  // cells per row for the main grid
+  const cells = useMemo(() => {
+    const rows: (ElementData | null)[][] = [];
+    for (let r = 1; r <= 7; r++) {
+      const row: (ElementData | null)[] = [];
+      for (let c = 1; c <= 18; c++) {
+        const el = ELEMENTS.find((e) => {
+          const p = gridPos(e.n);
+          return p.row === r && p.col === c;
+        });
+        row.push(el ?? null);
+      }
+      rows.push(row);
+    }
+    const lanth: (ElementData | null)[] = [];
+    const act: (ElementData | null)[] = [];
+    for (let c = 1; c <= 18; c++) {
+      lanth.push(ELEMENTS.find((e) => gridPos(e.n).row === 9 && gridPos(e.n).col === c) ?? null);
+      act.push(ELEMENTS.find((e) => gridPos(e.n).row === 10 && gridPos(e.n).col === c) ?? null);
+    }
+    return { rows, lanth, act };
+  }, []);
+
+  const table = (
+    <div className="min-w-0 transition-all duration-500">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-bold text-slate-100">Periodic table</p>
+          <p className="text-[11px] text-slate-500">
+            {hover && groupChip ? (
+              <span className="text-[#ff647c]">{groupChip} highlighted</span>
+            ) : (
+              "Hover a group · click an element for its 3D profile"
+            )}
+          </p>
+        </div>
+        <span className="lab-chip hidden sm:inline-flex">118 elements · real data</span>
+      </div>
+
+      <div className="lab-scroll overflow-x-auto pb-2">
+        <div className="grid gap-[3px]" style={{ gridTemplateColumns: "repeat(18, minmax(34px, 1fr))", minWidth: 760 }}>
+          {/* group numbers */}
+          {Array.from({ length: 18 }, (_, i) => (
+            <div key={i} className="pb-0.5 text-center">
+              <span className="text-[8px] text-slate-600">{i + 1}</span>
+            </div>
+          ))}
+          {cells.rows.map((row, ri) =>
+            row.map((el, ci) =>
+              el ? (
+                <div key={el.n}>
+                  <ElementCell
+                    el={el}
+                    dimmed={isDimmed(el)}
+                    selected={selected?.n === el.n}
+                    onClick={() => {
+                      setSelected(el);
+                      setOrbitals(false);
+                    }}
+                    onMouseEnter={() => onHoverEl(el)}
+                    onMouseLeave={() => setHover(null)}
+                  />
+                </div>
+              ) : (
+                <div key={`${ri}-${ci}`} />
+              ),
+            ),
+          )}
+          {/* f-block spacer + rows */}
+          <div className="col-span-18 h-3" />
+          <div className="col-span-1" />
+          <div className="col-span-1 flex items-center justify-center">
+            <span className="rotate-180 text-[8px] tracking-wider text-slate-500" style={{ writingMode: "vertical-rl" }}>
+              57–71
+            </span>
+          </div>
+          {cells.lanth.map((el, ci) =>
+            el ? (
+              <div key={el.n}>
+                <ElementCell el={el} dimmed={isDimmed(el)} selected={selected?.n === el.n} onClick={() => setSelected(el)} onMouseEnter={() => onHoverEl(el)} onMouseLeave={() => setHover(null)} />
+              </div>
+            ) : (
+              <div key={`l${ci}`} />
+            ),
+          )}
+          <div className="col-span-18 h-1" />
+          <div className="col-span-1" />
+          <div className="col-span-1 flex items-center justify-center">
+            <span className="rotate-180 text-[8px] tracking-wider text-slate-500" style={{ writingMode: "vertical-rl" }}>
+              89–103
+            </span>
+          </div>
+          {cells.act.map((el, ci) =>
+            el ? (
+              <div key={el.n}>
+                <ElementCell el={el} dimmed={isDimmed(el)} selected={selected?.n === el.n} onClick={() => setSelected(el)} onMouseEnter={() => onHoverEl(el)} onMouseLeave={() => setHover(null)} />
+              </div>
+            ) : (
+              <div key={`a${ci}`} />
+            ),
+          )}
+        </div>
+      </div>
+    </div>
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="glass-panel overflow-hidden">
-        <header className="border-b border-[var(--card-border)] px-5 py-4 sm:px-6">
-          <h2 className="flex items-center gap-2 font-display text-base font-bold tracking-tight">
-            <Sigma className="h-4 w-4 text-[var(--signal)]" />
-            Periodic table
-          </h2>
-          <p className="mt-0.5 text-xs text-text-dim">
-            Hover an element to spotlight its group — tap it for the shell model and full profile.
-          </p>
-        </header>
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
-          <PeriodicTable onPick={setSelected} selected={el?.n ?? null} />
-          <div className="lg:sticky lg:top-24">
-            <ElementCard el={el} />
-          </div>
-        </div>
-      </section>
-      <ReactionWorkbench />
+    <div className="space-y-4">
+      {/* sub-tabs */}
+      <div className="lab-tabs">
+        {(
+          [
+            { key: "table", label: "Periodic table", icon: LayoutGrid },
+            { key: "bench", label: "Reaction bench", icon: FlaskConical },
+            { key: "titration", label: "Titration", icon: Droplets },
+          ] as const
+        ).map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
+            <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
+              {active && <motion.span layoutId="chem-sub-pill" className="lab-pill" transition={SPRING} />}
+              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#ff647c]" : "text-slate-500"}`} />
+              <span className="relative z-10">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {tab === "table" && (
+          <motion.div
+            key="table"
+            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          >
+            <div className={selected ? "grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]" : ""}>
+              {table}
+
+              {/* desktop: morph-in side panel */}
+              <AnimatePresence>
+                {selected && (
+                  <motion.aside
+                    key="desk-profile"
+                    initial={{ opacity: 0, x: 48, scale: 0.98 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 40, scale: 0.98 }}
+                    transition={SPRING}
+                    className="hidden h-[560px] lg:block"
+                  >
+                    <ElementProfile el={selected} orbitals={orbitals} setOrbitals={setOrbitals} onClose={() => setSelected(null)} onNav={navSelected} />
+                  </motion.aside>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* mobile: immersive overlay */}
+            <AnimatePresence>
+              {selected && (
+                <motion.div
+                  key="mobile-profile"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-md lg:hidden"
+                  onClick={() => setSelected(null)}
+                >
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={SPRING}
+                    className="absolute inset-2 rounded-2xl sm:inset-4"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ElementProfile el={selected} orbitals={orbitals} setOrbitals={setOrbitals} onClose={() => setSelected(null)} onNav={navSelected} />
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {tab === "bench" && (
+          <motion.div
+            key="bench"
+            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          >
+            <ReactionBench />
+          </motion.div>
+        )}
+
+        {tab === "titration" && (
+          <motion.div
+            key="titration"
+            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+          >
+            <Titration />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

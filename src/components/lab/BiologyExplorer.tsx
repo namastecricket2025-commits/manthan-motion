@@ -1,851 +1,454 @@
-import { Slider } from "@/components/ui/slider";
-import { Crosshair, Dna, Heart, Maximize, Minus, Minimize, Plus, RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { Dna, Focus, HeartPulse, Microscope } from "lucide-react";
+import { SPRING, clamp, useCanvasSize, useRaf } from "./use-canvas";
+import DnaSandbox from "./bio/DnaSandbox";
+import HeartAnatomy from "./bio/HeartAnatomy";
 
-/* ------------------------------------------------------------------ */
-/* Annotation model                                                    */
-/* ------------------------------------------------------------------ */
+type BioTab = "explorer" | "dna" | "heart";
 
-interface Annotation {
-  id: string;
-  name: string;
-  def: string;
-  x: number; // anchor on the structure
-  y: number;
-  lx: number; // label position
-  ly: number;
-  minor?: boolean; // only shown when zoomed in
-  flow?: string; // blood-flow note for vessels
-}
+/* ---------------- molecular particle mosaic ---------------- */
+function ParticleMosaic() {
+  const { ref, size } = useCanvasSize<HTMLCanvasElement>();
+  const ions = useRef<
+    { x: number; y: number; vx: number; vy: number; r: number; label: string; color: string }[]
+  >([]);
 
-const CELL_ANNOTATIONS: Annotation[] = [
-  { id: "membrane", name: "Cell membrane", def: "The phospholipid boundary that controls what enters and leaves the cell.", x: 44, y: 250, lx: 30, ly: 128 },
-  { id: "cytoplasm", name: "Cytoplasm", def: "The jelly-like fluid filling the cell where organelles float and reactions occur.", x: 300, y: 330, lx: 300, ly: 380 },
-  { id: "nucleus", name: "Nucleus", def: "The control centre — stores DNA and directs the cell's activities.", x: 215, y: 185, lx: 150, ly: 105 },
-  { id: "dna", name: "DNA (chromatin)", def: "Long DNA strands loosely coiled in the nucleus; they condense into chromosomes during division.", x: 215, y: 185, lx: 296, ly: 160, minor: true },
-  { id: "nucleolus", name: "Nucleolus", def: "A dense spot inside the nucleus where ribosomes are assembled.", x: 240, y: 165, lx: 296, ly: 128, minor: true },
-  { id: "mitochondria", name: "Mitochondrion", def: "The powerhouse — burns glucose to make ATP through cellular respiration.", x: 410, y: 130, lx: 468, ly: 92 },
-  { id: "er", name: "Rough ER", def: "A folded membrane factory studded with ribosomes, making and folding proteins.", x: 128, y: 130, lx: 62, ly: 78 },
-  { id: "smoothER", name: "Smooth ER", def: "Membrane tubes that make lipids and detoxify chemicals.", x: 96, y: 268, lx: 42, ly: 316, minor: true },
-  { id: "golgi", name: "Golgi apparatus", def: "The post office — packages and ships proteins to where they're needed.", x: 172, y: 350, lx: 118, ly: 410 },
-  { id: "lysosome", name: "Lysosome", def: "The recycling bin — enzymes break down worn-out parts and waste.", x: 330, y: 235, lx: 386, ly: 224, minor: true },
-  { id: "vacuole", name: "Vacuole", def: "A storage sac holding water, ions and nutrients; large in plant cells.", x: 400, y: 300, lx: 452, ly: 336 },
-  { id: "ribosomes", name: "Ribosomes", def: "Tiny machines that build proteins from mRNA instructions.", x: 300, y: 95, lx: 352, ly: 60, minor: true },
-];
+  useRaf((dt, t) => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const { w, h, dpr } = size.current;
+    if (!w || !h) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-const HEART_ANNOTATIONS: Annotation[] = [
-  { id: "ra", name: "Right atrium", def: "Receives deoxygenated blood from the body via the venae cavae.", x: 195, y: 195, lx: 108, ly: 108 },
-  { id: "rv", name: "Right ventricle", def: "Pumps deoxygenated blood to the lungs through the pulmonary artery.", x: 205, y: 330, lx: 108, ly: 386 },
-  { id: "la", name: "Left atrium", def: "Receives oxygenated blood from the lungs via the pulmonary veins.", x: 368, y: 195, lx: 452, ly: 108 },
-  { id: "lv", name: "Left ventricle", def: "The strongest chamber — pumps oxygenated blood to the whole body.", x: 342, y: 348, lx: 452, ly: 420 },
-  { id: "septum", name: "Septum", def: "The muscular wall separating oxygenated and deoxygenated sides.", x: 258, y: 280, lx: 258, ly: 240, minor: true },
-  { id: "aorta", name: "Aorta", def: "The body's largest artery, carrying oxygenated blood out of the heart.", x: 318, y: 96, lx: 356, ly: 40, flow: "Oxygenated blood — flowing away from the heart to the whole body." },
-  { id: "pulmArt", name: "Pulmonary artery", def: "Carries deoxygenated blood from the right ventricle to the lungs.", x: 228, y: 104, lx: 186, ly: 44, flow: "Deoxygenated blood — leaving for the lungs to collect oxygen." },
-  { id: "svc", name: "Vena cava", def: "The large vein returning deoxygenated blood from the upper body.", x: 182, y: 118, lx: 108, ly: 60, minor: true, flow: "Deoxygenated blood — returning from the upper body into the right atrium." },
-  { id: "pulmVein", name: "Pulmonary veins", def: "Return oxygenated blood from the lungs into the left atrium.", x: 428, y: 176, lx: 480, ly: 216, minor: true, flow: "Oxygenated blood — returning from the lungs into the left atrium." },
-  { id: "tricuspid", name: "Tricuspid valve", def: "One-way flap between the right atrium and ventricle.", x: 222, y: 252, lx: 176, ly: 258, minor: true },
-  { id: "mitral", name: "Mitral valve", def: "One-way flap between the left atrium and ventricle.", x: 338, y: 252, lx: 384, ly: 258, minor: true },
-  { id: "pulmValve", name: "Pulmonary valve", def: "Prevents blood flowing back into the right ventricle from the lungs.", x: 244, y: 138, lx: 244, ly: 168, minor: true },
-];
+    if (ions.current.length === 0) {
+      const defs = [
+        { label: "Na⁺", color: "#ff6b6b" },
+        { label: "K⁺", color: "#a78bfa" },
+        { label: "Ca²⁺", color: "#fbbf24" },
+        { label: "Cl⁻", color: "#4ade80" },
+      ];
+      for (let i = 0; i < 18; i++) {
+        const d = defs[i % defs.length];
+        ions.current.push({
+          x: 60 + Math.random() * (w - 120),
+          y: 60 + Math.random() * (h - 120),
+          vx: (Math.random() - 0.5) * 130,
+          vy: (Math.random() - 0.5) * 130,
+          r: 7 + Math.random() * 3,
+          label: d.label,
+          color: d.color,
+        });
+      }
+    }
 
-/* ------------------------------------------------------------------ */
-/* Shared interactive label layer                                      */
-/* ------------------------------------------------------------------ */
+    const pad = 34;
+    const chX = w / 2;
+    const chW = 26;
+    const chTop = pad;
+    const chBot = h - pad;
+    const speed = 0.7 + 0.3 * Math.sin(t * 0.6);
 
-function AnnotationLayer({
-  list,
-  hovered,
-  onHover,
-  color = "var(--signal)",
-}: {
-  list: Annotation[];
-  hovered: string | null;
-  onHover: (id: string | null) => void;
-  color?: string;
-}) {
-  return (
-    <g>
-      {list.map((a) => {
-        const active = hovered === a.id;
-        return (
-          <g key={a.id} pointerEvents="none">
-            <line
-              x1={a.x}
-              y1={a.y}
-              x2={a.lx}
-              y2={a.ly}
-              stroke={active ? color : "color-mix(in srgb, var(--text-dim) 55%, transparent)"}
-              strokeWidth={active ? 1.8 : 1.2}
-              strokeDasharray="3 4"
-            />
-            <circle cx={a.x} cy={a.y} r={active ? 4 : 2.6} fill={active ? color : "var(--text-dim)"} />
-            <text
-              x={a.lx}
-              y={a.ly}
-              fontSize="11"
-              fontWeight={active ? 700 : 500}
-              textAnchor={a.lx < 280 ? "start" : "end"}
-              className={active ? "fill-[var(--signal)]" : "fill-[var(--text-dim)]"}
-            >
-              {a.name}
-            </text>
-          </g>
-        );
-      })}
-    </g>
-  );
-}
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
 
-/* ------------------------------------------------------------------ */
-/* Diagrams                                                           */
-/* ------------------------------------------------------------------ */
+    // membrane
+    ctx.strokeStyle = "rgba(148,163,184,0.7)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(pad, pad, w - pad * 2, h - pad * 2, 26);
+    ctx.stroke();
+    // channel proteins
+    for (const cy of [chTop, chBot]) {
+      ctx.fillStyle = "rgba(255,59,92,0.55)";
+      ctx.fillRect(chX - chW / 2, cy - 4, chW, 8);
+      ctx.strokeStyle = "rgba(255,100,124,0.9)";
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(chX - chW / 2, cy - 4, chW, 8);
+    }
 
-function CellDiagram({
-  zoomed,
-  hovered,
-  onHover,
-  svgRef,
-}: {
-  zoomed: boolean;
-  hovered: string | null;
-  onHover: (id: string | null) => void;
-  svgRef?: React.Ref<SVGSVGElement>;
-}) {
-  const hov = (id: string) => ({
-    onPointerEnter: () => onHover(id),
-    onPointerLeave: () => onHover(null),
-    style: hovered === id ? { stroke: "var(--signal)", strokeWidth: 2.6 } : undefined,
+    for (const ion of ions.current) {
+      ion.x += ion.vx * dt * speed;
+      ion.y += ion.vy * dt * speed;
+      const inChannelTop = Math.abs(ion.x - chX) < chW / 2 - 2 && ion.y < chTop + 6;
+      const inChannelBot = Math.abs(ion.x - chX) < chW / 2 - 2 && ion.y > chBot - 6;
+      if (inChannelTop && ion.y < pad) ion.y = pad + 2;
+      if (inChannelBot && ion.y > h - pad) ion.y = h - pad - 2;
+      if (ion.x < pad + ion.r) { ion.x = pad + ion.r; ion.vx = Math.abs(ion.vx); }
+      if (ion.x > w - pad - ion.r) { ion.x = w - pad - ion.r; ion.vx = -Math.abs(ion.vx); }
+      if (!inChannelTop && ion.y < pad + ion.r) { ion.y = pad + ion.r; ion.vy = Math.abs(ion.vy); }
+      if (!inChannelBot && ion.y > h - pad - ion.r) { ion.y = h - pad - ion.r; ion.vy = -Math.abs(ion.vy); }
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createRadialGradient(ion.x, ion.y, 0.5, ion.x, ion.y, ion.r * 2.6);
+      g.addColorStop(0, ion.color);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(ion.x, ion.y, ion.r * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "rgba(226,232,240,0.95)";
+      ctx.font = "700 9px ui-monospace, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(ion.label, ion.x, ion.y - ion.r - 3);
+    }
   });
-  return (
-    <svg ref={svgRef} viewBox="0 0 560 480" className="block h-auto w-full">
-      <defs>
-        <radialGradient id="cytoGrad" cx="0.42" cy="0.4" r="0.75">
-          <stop offset="0%" stopColor="color-mix(in srgb, var(--text-main) 13%, transparent)" />
-          <stop offset="100%" stopColor="color-mix(in srgb, var(--signal) 5%, transparent)" />
-        </radialGradient>
-        <radialGradient id="nucleusGrad" cx="0.4" cy="0.35" r="0.8">
-          <stop offset="0%" stopColor="color-mix(in srgb, var(--text-main) 22%, transparent)" />
-          <stop offset="100%" stopColor="color-mix(in srgb, var(--signal) 14%, transparent)" />
-        </radialGradient>
-        <clipPath id="mitoClip1">
-          <ellipse cx="410" cy="130" rx="52" ry="30" transform="rotate(-24 410 130)" />
-        </clipPath>
-        <clipPath id="mitoClip2">
-          <ellipse cx="150" cy="330" rx="40" ry="22" transform="rotate(18 150 330)" />
-        </clipPath>
-      </defs>
 
-      {/* cytoplasm */}
-      <ellipse cx="280" cy="250" rx="236" ry="196" fill="url(#cytoGrad)" />
-      {/* membrane — outer + inner line */}
-      <ellipse
-        cx="280"
-        cy="250"
-        rx="238"
-        ry="198"
-        fill="none"
-        stroke="color-mix(in srgb, var(--signal) 70%, transparent)"
-        strokeWidth="3.5"
-        {...hov("membrane")}
-      />
-      <ellipse cx="280" cy="250" rx="228" ry="189" fill="none" stroke="color-mix(in srgb, var(--text-main) 30%, transparent)" strokeWidth="1.2" />
-
-      {/* organelles */}
-      <g {...hov("er")}>
-        <path
-          d="M 118 108 Q 150 96 146 124 Q 142 152 172 140 Q 200 128 190 158"
-          fill="none"
-          stroke="#b97750"
-          strokeWidth="7"
-          strokeLinecap="round"
-          opacity="0.55"
-        />
-        <circle cx="196" cy="132" r="2.4" fill="#b97750" />
-        <circle cx="178" cy="112" r="2.4" fill="#b97750" />
-        <circle cx="150" cy="136" r="2.4" fill="#b97750" />
-      </g>
-      <g {...hov("smoothER")}>
-        <path
-          d="M 84 258 Q 112 246 108 272 Q 104 298 134 286"
-          fill="none"
-          stroke="color-mix(in srgb, var(--signal-2) 65%, transparent)"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-      </g>
-      <g {...hov("nucleus")}>
-        <ellipse cx="215" cy="185" rx="78" ry="62" fill="url(#nucleusGrad)" stroke="color-mix(in srgb, var(--signal) 55%, transparent)" strokeWidth="2.2" />
-
-        {/* rotating DNA loops — the inner ring spins slowly */}
-        <g {...hov("dna")}>
-          <circle
-            cx="215"
-            cy="185"
-            r="30"
-            fill="none"
-            stroke="color-mix(in srgb, var(--text-main) 45%, transparent)"
-            strokeWidth="1.6"
-            strokeDasharray="10 6"
-          >
-            <animateTransform attributeName="transform" type="rotate" from="0 215 185" to="360 215 185" dur="16s" repeatCount="indefinite" />
-          </circle>
-          <circle
-            cx="215"
-            cy="185"
-            r="20"
-            fill="none"
-            stroke="color-mix(in srgb, var(--signal) 45%, transparent)"
-            strokeWidth="1.2"
-            strokeDasharray="4 8"
-          >
-            <animateTransform attributeName="transform" type="rotate" from="360 215 185" to="0 215 185" dur="11s" repeatCount="indefinite" />
-          </circle>
-        </g>
-
-        <circle cx="240" cy="166" r="13" fill="#b97750" opacity="0.85" {...hov("nucleolus")} />
-        {zoomed && (
-          <ellipse cx="215" cy="185" rx="70" ry="55" fill="none" stroke="color-mix(in srgb, var(--text-main) 35%, transparent)" strokeWidth="1.1" strokeDasharray="4 5" />
-        )}
-      </g>
-      <g {...hov("mitochondria")}>
-        <ellipse cx="410" cy="130" rx="52" ry="30" transform="rotate(-24 410 130)" fill="color-mix(in srgb, var(--signal) 24%, transparent)" stroke="color-mix(in srgb, var(--signal) 70%, transparent)" strokeWidth="2.2" />
-        {zoomed && (
-          <g clipPath="url(#mitoClip1)">
-            <path d="M 370 118 Q 390 138 410 118 T 450 118" fill="none" stroke="color-mix(in srgb, var(--signal) 65%, transparent)" strokeWidth="2" />
-            <path d="M 375 128 Q 395 146 415 128 T 455 128" fill="none" stroke="color-mix(in srgb, var(--signal) 45%, transparent)" strokeWidth="1.6" />
-          </g>
-        )}
-      </g>
-      <g {...hov("mitochondria")}>
-        <ellipse cx="150" cy="330" rx="40" ry="22" transform="rotate(18 150 330)" fill="color-mix(in srgb, var(--signal) 20%, transparent)" stroke="color-mix(in srgb, var(--signal) 60%, transparent)" strokeWidth="2" />
-        {zoomed && (
-          <g clipPath="url(#mitoClip2)">
-            <path d="M 120 320 Q 138 338 156 320 T 190 320" fill="none" stroke="color-mix(in srgb, var(--signal) 55%, transparent)" strokeWidth="1.8" />
-          </g>
-        )}
-      </g>
-      <g {...hov("golgi")}>
-        {[0, 1, 2, 3].map((i) => (
-          <path
-            key={i}
-            d={`M ${150 + i * 10} ${372 - i * 9} Q 172 ${342 - i * 9} 194 ${372 - i * 9}`}
-            fill="none"
-            stroke="#b97750"
-            strokeWidth="5"
-            strokeLinecap="round"
-            opacity={0.75 - i * 0.12}
-          />
-        ))}
-      </g>
-      <g {...hov("lysosome")}>
-        <circle cx="330" cy="235" r="13" fill="color-mix(in srgb, #7d8f78 45%, transparent)" stroke="#7d8f78" strokeWidth="2" />
-        <circle cx="327" cy="231" r="3.5" fill="#7d8f78" opacity="0.7" />
-      </g>
-      <g {...hov("vacuole")}>
-        <ellipse cx="400" cy="300" rx="54" ry="42" fill="color-mix(in srgb, #4f7f8a 22%, transparent)" stroke="color-mix(in srgb, #4f7f8a 55%, transparent)" strokeWidth="2" />
-        <ellipse cx="392" cy="292" rx="30" ry="20" fill="color-mix(in srgb, #4f7f8a 18%, transparent)" />
-      </g>
-      <g {...hov("ribosomes")}>
-        {[
-          [300, 95],
-          [352, 82],
-          [392, 210],
-          [138, 208],
-          [262, 330],
-        ].map(([x, y], i) => (
-          <g key={i}>
-            <circle cx={x - 3.4} cy={y} r="3.2" fill="color-mix(in srgb, var(--signal) 75%, transparent)" />
-            <circle cx={x + 3.4} cy={y} r="3.2" fill="color-mix(in srgb, var(--signal) 60%, transparent)" />
-          </g>
-        ))}
-      </g>
-      <g {...hov("vesicle")}>
-        <circle cx="262" cy="306" r="8" fill="color-mix(in srgb, var(--text-dim) 40%, transparent)" stroke="color-mix(in srgb, var(--text-dim) 70%, transparent)" strokeWidth="1.6" />
-      </g>
-
-      {/* annotations */}
-      <AnnotationLayer
-        list={CELL_ANNOTATIONS.filter((a) => (a.minor ? zoomed : true))}
-        hovered={hovered}
-        onHover={onHover}
-      />
-    </svg>
-  );
+  return <canvas ref={ref} className="h-full w-full" />;
 }
 
-/** Vessel routes with animated blood cells. Paths start at the heart and
- * follow the direction of flow (out of, or into, the heart). */
-const VESSEL_FLOW = [
-  { path: "M 318 150 C 330 116, 330 86, 314 58", color: "#ff8a7a", cells: 3, dur: 2.6, r: 4.5 }, // aorta — out
-  { path: "M 246 152 C 236 120, 216 96, 190 84", color: "#c24046", cells: 3, dur: 2.8, r: 4 }, // pulmonary artery — out
-  { path: "M 180 64 C 188 94, 192 116, 198 140", color: "#a43a41", cells: 2, dur: 3, r: 4 }, // vena cava — in
-  { path: "M 468 148 C 432 154, 414 160, 410 176", color: "#ff8a7a", cells: 2, dur: 3.2, r: 4 }, // pulmonary vein — in
-  { path: "M 468 192 C 434 194, 416 198, 410 208", color: "#ff8a7a", cells: 2, dur: 3.4, r: 4 },
-];
+/* ---------------- structural explorer ---------------- */
+const STRUCTS: Record<string, { name: string; def: string }> = {
+  membrane: { name: "Plasma membrane", def: "Phospholipid bilayer studded with proteins — controls what enters and leaves the cell." },
+  nucleus: { name: "Nucleus", def: "The control centre; houses chromatin (DNA) and directs protein synthesis via mRNA." },
+  nucleolus: { name: "Nucleolus", def: "Ribosome factory — dense region where ribosomal RNA is made." },
+  dna: { name: "DNA (chromatin)", def: "Circular loops of DNA complexed with histones — the cell's genetic blueprint." },
+  mito: { name: "Mitochondrion", def: "Powerhouse of the cell; folds (cristae) maximise surface area for ATP production." },
+  er: { name: "Rough endoplasmic reticulum", def: "Studded with ribosomes that fold proteins into the lumen for transport." },
+  golgi: { name: "Golgi apparatus", def: "Sorting and packaging depot — modifies proteins and ships them in vesicles." },
+  lysosome: { name: "Lysosome", def: "Digestive sac of enzymes that breaks down worn-out organelles and pathogens." },
+  ribo: { name: "Ribosomes", def: "Molecular machines reading mRNA to assemble proteins from amino acids." },
+  vesicle: { name: "Vesicle", def: "Membrane bubble ferrying cargo between organelles and the membrane." },
+  cent: { name: "Centrosome", def: "Organises microtubules; anchors the mitotic spindle during cell division." },
+};
 
-function HeartDiagram({
-  zoomed,
-  hovered,
-  onHover,
-  svgRef,
-}: {
-  zoomed: boolean;
-  hovered: string | null;
-  onHover: (id: string | null) => void;
-  svgRef?: React.Ref<SVGSVGElement>;
-}) {
-  const hov = (id: string) => ({
-    onPointerEnter: () => onHover(id),
-    onPointerLeave: () => onHover(null),
-    style: hovered === id ? { stroke: "var(--signal)", strokeWidth: 3 } : undefined,
-  });
-  return (
-    <svg ref={svgRef} viewBox="0 0 560 480" className="block h-auto w-full">
-      <defs>
-        <linearGradient id="bloodGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#c24046" />
-          <stop offset="100%" stopColor="#7a1d24" />
-        </linearGradient>
-        <linearGradient id="chamberGrad" x1="0" y1="0" x2="0.6" y2="1">
-          <stop offset="0%" stopColor="color-mix(in srgb, #c24046 34%, transparent)" />
-          <stop offset="100%" stopColor="color-mix(in srgb, #7a1d24 26%, transparent)" />
-        </linearGradient>
-        <radialGradient id="heartGlow" cx="0.5" cy="0.4" r="0.7">
-          <stop offset="0%" stopColor="color-mix(in srgb, var(--signal) 16%, transparent)" />
-          <stop offset="100%" stopColor="color-mix(in srgb, var(--signal) 4%, transparent)" />
-        </radialGradient>
-      </defs>
-
-      <rect x="0" y="0" width="560" height="480" rx="18" fill="url(#heartGlow)" />
-
-      {/* silhouette */}
-      <path
-        d="M 280 412 C 188 352, 108 292, 118 200 C 128 128, 198 98, 244 134 C 261 149, 271 168, 280 186 C 289 168, 299 149, 316 134 C 362 98, 432 128, 442 200 C 452 292, 372 352, 280 412 Z"
-        fill="color-mix(in srgb, var(--signal) 10%, transparent)"
-        stroke="color-mix(in srgb, var(--signal) 55%, transparent)"
-        strokeWidth="2.5"
-      />
-
-      {/* septum */}
-      <path
-        d="M 252 172 C 258 220, 258 262, 252 302 C 259 330, 263 360, 260 392"
-        fill="none"
-        stroke="color-mix(in srgb, var(--text-main) 45%, transparent)"
-        strokeWidth="4"
-        strokeLinecap="round"
-        {...hov("septum")}
-      />
-
-      {/* chambers */}
-      <g {...hov("ra")}>
-        <path
-          d="M 150 192 C 158 156, 208 144, 234 164 C 250 180, 252 210, 240 236 C 226 262, 194 272, 174 252 C 150 228, 142 210, 150 192 Z"
-          fill="url(#chamberGrad)"
-          stroke="color-mix(in srgb, #c24046 80%, transparent)"
-          strokeWidth="2"
-        />
-      </g>
-      <g {...hov("rv")}>
-        <path
-          d="M 174 302 C 200 282, 236 282, 250 306 C 262 330, 260 362, 240 382 C 210 402, 168 396, 152 370 C 136 344, 156 320, 174 302 Z"
-          fill="url(#chamberGrad)"
-          stroke="color-mix(in srgb, #c24046 80%, transparent)"
-          strokeWidth="2"
-        />
-      </g>
-      <g {...hov("la")}>
-        <path
-          d="M 326 166 C 346 148, 396 154, 406 178 C 416 202, 406 226, 386 236 C 360 250, 330 244, 318 222 C 308 202, 312 180, 326 166 Z"
-          fill="url(#chamberGrad)"
-          stroke="color-mix(in srgb, #c24046 80%, transparent)"
-          strokeWidth="2"
-        />
-      </g>
-      <g {...hov("lv")}>
-        <path
-          d="M 310 306 C 330 286, 362 288, 376 312 C 392 342, 386 376, 362 392 C 332 410, 292 406, 278 380 C 268 358, 286 322, 310 306 Z"
-          fill="url(#chamberGrad)"
-          stroke="color-mix(in srgb, #c24046 80%, transparent)"
-          strokeWidth="2"
-        />
-      </g>
-
-      {/* vessels — thick rounded strokes */}
-      <g {...hov("aorta")}>
-        <path d="M 318 150 C 330 116, 330 86, 314 58" fill="none" stroke="url(#bloodGrad)" strokeWidth="26" strokeLinecap="round" />
-      </g>
-      <g {...hov("pulmArt")}>
-        <path d="M 246 152 C 236 120, 216 96, 190 84" fill="none" stroke="url(#bloodGrad)" strokeWidth="20" strokeLinecap="round" />
-      </g>
-      <g {...hov("svc")}>
-        <path d="M 180 64 C 188 94, 192 116, 198 140" fill="none" stroke="url(#bloodGrad)" strokeWidth="18" strokeLinecap="round" />
-      </g>
-      <g {...hov("pulmVein")}>
-        <path d="M 468 148 C 432 154, 414 160, 410 176" fill="none" stroke="url(#bloodGrad)" strokeWidth="16" strokeLinecap="round" />
-        <path d="M 468 192 C 434 194, 416 198, 410 208" fill="none" stroke="url(#bloodGrad)" strokeWidth="16" strokeLinecap="round" />
-      </g>
-
-      {/* flowing blood cells */}
-      {VESSEL_FLOW.map((vf, i) => (
-        <g key={i}>
-          {Array.from({ length: vf.cells }, (_, k) => (
-            <circle key={k} r={vf.r} fill={vf.color} opacity="0.9">
-              <animateMotion
-                dur={`${vf.dur}s`}
-                begin={`${(k * vf.dur) / vf.cells}s`}
-                repeatCount="indefinite"
-                path={vf.path}
-              />
-            </circle>
-          ))}
-        </g>
-      ))}
-
-      {/* valves (zoomed detail) */}
-      {zoomed && (
-        <g>
-          <g {...hov("tricuspid")}>
-            <path d="M 208 236 Q 226 226 244 238" fill="none" stroke="var(--text-main)" strokeWidth="3" strokeLinecap="round" />
-          </g>
-          <g {...hov("mitral")}>
-            <path d="M 316 238 Q 334 226 352 236" fill="none" stroke="var(--text-main)" strokeWidth="3" strokeLinecap="round" />
-          </g>
-          <g {...hov("pulmValve")}>
-            <path d="M 228 142 Q 240 132 252 142" fill="none" stroke="var(--text-main)" strokeWidth="2.6" strokeLinecap="round" />
-          </g>
-          <g {...hov("aorticValve")}>
-            <path d="M 306 132 Q 318 122 330 132" fill="none" stroke="var(--text-main)" strokeWidth="2.6" strokeLinecap="round" />
-          </g>
-        </g>
-      )}
-
-      {/* annotations */}
-      <AnnotationLayer
-        list={HEART_ANNOTATIONS.filter((a) => (a.minor ? zoomed : true))}
-        hovered={hovered}
-        onHover={onHover}
-        color="#ff8a5e"
-      />
-    </svg>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Explorer shell                                                      */
-/* ------------------------------------------------------------------ */
-
-const MIN_S = 0.75;
-const MAX_S = 3;
-
-function scaleName(s: number): { name: string; detail: string } {
-  if (s < 1.05) return { name: "Macro", detail: "whole structure · 10–100 µm" };
-  if (s < 1.6) return { name: "Cellular", detail: "organelles · 1–10 µm" };
-  if (s < 2.2) return { name: "Organelle", detail: "membrane detail · 100–1000 nm" };
-  return { name: "Molecular", detail: "DNA & molecules · 1–100 nm" };
-}
-
-function Explorer({ kind }: { kind: "cell" | "heart" }) {
-  const list = kind === "cell" ? CELL_ANNOTATIONS : HEART_ANNOTATIONS;
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [view, setView] = useState({ x: 0, y: 0, s: 1 });
-  const [anim, setAnim] = useState(true);
-  const [tip, setTip] = useState<{ x: number; y: number } | null>(null);
+function ExplorerTab() {
+  const [zoom, setZoom] = useState(1.1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [hover, setHover] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const viewRef = useRef(view);
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinchBase = useRef<{ dist: number; mid: { x: number; y: number }; view: { x: number; y: number; s: number } } | null>(null);
-  const dragBase = useRef<{ x: number; y: number; view: { x: number; y: number; s: number } } | null>(null);
+  const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
-  viewRef.current = view;
-  const zoomed = view.s >= 1.55;
-  const active = list.find((a) => a.id === hovered) ?? null;
-  const scaleInfo = scaleName(view.s);
-
-  const clampView = (v: { x: number; y: number; s: number }) => {
-    const wrap = wrapRef.current;
-    if (!wrap) return v;
-    const w = wrap.clientWidth;
-    const h = wrap.clientHeight;
-    const baseW = Math.min(w - 48, 640);
-    const baseH = (baseW * 480) / 560;
-    const maxDX = Math.max(0, (baseW * v.s - w) / 2 + 48);
-    const maxDY = Math.max(0, (baseH * v.s - h) / 2 + 48);
-    return {
-      x: Math.max(-maxDX, Math.min(maxDX, v.x)),
-      y: Math.max(-maxDY, Math.min(maxDY, v.y)),
-      s: Math.max(MIN_S, Math.min(MAX_S, v.s)),
-    };
+  const onWheel = (e: React.WheelEvent) => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const next = clamp(zoom * (e.deltaY > 0 ? 0.93 : 1.08), 0.7, 3.2);
+    const ratio = next / zoom;
+    setPan({ x: mx - (mx - pan.x) * ratio, y: my - (my - pan.y) * ratio });
+    setZoom(next);
   };
 
-  // wheel zoom (non-passive so the page doesn't scroll with it)
-  useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = wrap.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const v = viewRef.current;
-      const factor = Math.exp(-e.deltaY * 0.0016);
-      const s = Math.max(MIN_S, Math.min(MAX_S, v.s * factor));
-      const next = clampView({
-        x: mx - (mx - v.x) * (s / v.s),
-        y: my - (my - v.y) * (s / v.s),
-        s,
-      });
-      setAnim(false);
-      setView(next);
-    };
-    wrap.addEventListener("wheel", onWheel, { passive: false });
-    return () => wrap.removeEventListener("wheel", onWheel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const focus = (tx: number, ty: number, target = 2.4) => {
-    const wrap = wrapRef.current;
-    const svg = svgRef.current;
-    if (!wrap || !svg) return;
-    const wrapRect = wrap.getBoundingClientRect();
-    const svgRect = svg.getBoundingClientRect();
-    const sx = svgRect.left - wrapRect.left + (tx / 560) * svgRect.width;
-    const sy = svgRect.top - wrapRect.top + (ty / 480) * svgRect.height;
-    setAnim(true);
-    setView(
-      clampView({
-        x: wrapRect.width / 2 - sx * target,
-        y: wrapRect.height / 2 - sy * target,
-        s: target,
-      }),
-    );
+  const focus = (sx: number, sy: number) => {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const z = 2.1;
+    setPan({ x: rect.width / 2 - sx * z, y: rect.height / 2 - sy * z });
+    setZoom(z);
   };
 
-  const resetView = () => {
-    setAnim(true);
-    setView({ x: 0, y: 0, s: 1 });
-  };
+  // zoom-level label streaming
+  const bigOp = clamp((1.45 - zoom) / 0.35, 0, 1);
+  const orgOp = clamp((zoom - 1.05) / 0.25, 0, 1) * clamp((2.75 - zoom) / 0.5, 0, 1);
+  const detOp = clamp((zoom - 1.75) / 0.3, 0, 1) * clamp((2.95 - zoom) / 0.4, 0, 1);
+  const molOp = clamp((zoom - 2.45) / 0.3, 0, 1);
+  const detailVis = clamp((zoom - 1.35) / 0.35, 0, 1);
 
-  const zoomBy = (dir: number) => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const v = viewRef.current;
-    setAnim(true);
-    setView(
-      clampView({
-        x: wrap.clientWidth / 2 - (wrap.clientWidth / 2 - v.x) * ((v.s + dir) / v.s),
-        y: wrap.clientHeight / 2 - (wrap.clientHeight / 2 - v.y) * ((v.s + dir) / v.s),
-        s: v.s + dir,
-      }),
-    );
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    const el = e.currentTarget;
-    el.setPointerCapture?.(e.pointerId);
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.current.size === 1 && e.pointerType === "mouse") {
-      setAnim(false);
-      dragBase.current = { x: e.clientX, y: e.clientY, view: viewRef.current };
-    }
-    if (pointers.current.size === 2) {
-      dragBase.current = null;
-      const [p1, p2] = [...pointers.current.values()];
-      pinchBase.current = {
-        dist: Math.hypot(p2.x - p1.x, p2.y - p1.y),
-        mid: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
-        view: viewRef.current,
-      };
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!pointers.current.has(e.pointerId)) return;
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const rect = wrap.getBoundingClientRect();
-
-    // pinch zoom with two pointers
-    if (pointers.current.size === 2) {
-      const base = pinchBase.current;
-      if (!base) return;
-      const [p1, p2] = [...pointers.current.values()];
-      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-      const s = Math.max(MIN_S, Math.min(MAX_S, base.view.s * (dist / base.dist)));
-      setAnim(false);
-      setView(
-        clampView({
-          x: mid.x - rect.left - ((base.mid.x - rect.left) - base.view.x) * (s / base.view.s),
-          y: mid.y - rect.top - ((base.mid.y - rect.top) - base.view.y) * (s / base.view.s),
-          s,
-        }),
-      );
-      return;
-    }
-
-    // mouse drag pan
-    if (pointers.current.size === 1 && dragBase.current) {
-      const d = dragBase.current;
-      setView(
-        clampView({
-          ...d.view,
-          x: d.view.x + (e.clientX - d.x),
-          y: d.view.y + (e.clientY - d.y),
-        }),
-      );
-    }
-  };
-
-  const onPointerUp = (e: React.PointerEvent) => {
-    pointers.current.delete(e.pointerId);
-    pinchBase.current = null;
-    dragBase.current = null;
-  };
-
-  // slider sync (1–10 steps → 0.75–2.3)
-  const sliderVal = Math.round(((view.s - MIN_S) / 1.55) * 9 + 1);
-
-  const focusTargets =
-    kind === "cell"
-      ? [
-          { label: "Nucleus", x: 215, y: 185 },
-          { label: "DNA", x: 215, y: 185, s: 2.8 },
-          { label: "Mitochondrion", x: 410, y: 130 },
-        ]
-      : [
-          { label: "Left ventricle", x: 342, y: 348 },
-          { label: "Aorta", x: 318, y: 96 },
-          { label: "Valves", x: 280, y: 240 },
-        ];
+  const h = (id: string) => ({
+    onMouseEnter: () => setHover(id),
+    onMouseLeave: () => setHover(null),
+    style: { cursor: "help" as const },
+  });
 
   return (
-    <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
-      {/* Zoom deck */}
-      <div className="flex shrink-0 flex-row items-center justify-center gap-3 lg:w-16 lg:flex-col">
-        <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-text-dim">
-          <Maximize className="h-3.5 w-3.5" />
-          Micro
-        </span>
-        <div className="flex h-44 items-center lg:h-64">
-          <Slider
-            orientation="vertical"
-            min={1}
-            max={10}
-            step={1}
-            value={[Math.max(1, Math.min(10, sliderVal))]}
-            onValueChange={([v]) => {
-              const s = MIN_S + ((v - 1) / 9) * 1.55;
-              setAnim(true);
-              setView(clampView({ ...viewRef.current, s }));
-            }}
-            className="h-44 lg:h-64"
-          />
+    <div className="lab-glass p-3 sm:p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-bold text-slate-100">Structural explorer — animal cell</p>
+          <p className="text-[11px] text-slate-500">
+            Scroll or pinch to zoom — large labels fade out as organelles and molecular detail stream in. Above 250% the view dissolves into an ion-transport mosaic.
+          </p>
         </div>
-        <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-text-dim">
-          <Minimize className="h-3.5 w-3.5" />
-          Macro
-        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              { k: "Nucleus", x: 400, y: 265 },
+              { k: "Mitochondria", x: 230, y: 190 },
+              { k: "DNA", x: 350, y: 240 },
+              { k: "Membrane", x: 130, y: 300 },
+            ] as const
+          ).map((f) => (
+            <button key={f.k} type="button" onClick={() => focus(f.x, f.y)} className="lab-chip hover:border-[#ff3b5c] hover:text-slate-100">
+              <Focus className="h-3 w-3 text-[#ff647c]" /> {f.k}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Diagram */}
-      <div className="min-w-0 flex-1">
-        {/* toolbar */}
-        <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-          <div className="glass-chip flex items-center gap-1 p-1">
-            <button
-              type="button"
-              onClick={() => zoomBy(-0.3)}
-              className="rounded-full p-1.5 text-text-dim transition-colors hover:text-foreground"
-              aria-label="Zoom out"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className="w-14 text-center font-mono text-[11px] font-semibold tabular-nums text-foreground">
-              {Math.round(view.s * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => zoomBy(0.3)}
-              className="rounded-full p-1.5 text-text-dim transition-colors hover:text-foreground"
-              aria-label="Zoom in"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={resetView}
-            className="glass-chip inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-text-dim transition-colors hover:text-foreground"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Reset
-          </button>
-          {focusTargets.map((t) => (
-            <button
-              key={t.label}
-              type="button"
-              onClick={() => focus(t.x, t.y, t.s ?? 2.4)}
-              className="glass-chip inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
-            >
-              <Crosshair className="h-3 w-3 text-[var(--signal)]" />
-              {t.label}
-            </button>
-          ))}
-          <span className="ml-auto hidden text-[10px] text-text-dim sm:block">
-            scroll to zoom · drag to pan · pinch on touch
+      <div
+        ref={wrapRef}
+        className="relative h-[520px] touch-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_35%,#12203a_0%,#0b1120_80%)]"
+        onWheel={onWheel}
+        onPointerDown={(e) => {
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          dragRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+        }}
+        onPointerMove={(e) => {
+          const d = dragRef.current;
+          if (!d) return;
+          setPan({ x: d.px + e.clientX - d.x, y: d.py + e.clientY - d.y });
+        }}
+        onPointerUp={() => (dragRef.current = null)}
+      >
+        <svg
+          viewBox="0 0 800 620"
+          className="h-full w-full"
+          style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}
+        >
+          <defs>
+            <radialGradient id="cyto" cx="0.5" cy="0.45" r="0.62">
+              <stop offset="0" stopColor="rgba(103,232,249,0.10)" />
+              <stop offset="1" stopColor="rgba(15,23,42,0.4)" />
+            </radialGradient>
+            <linearGradient id="nuc-fill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="rgba(99,102,241,0.22)" />
+              <stop offset="1" stopColor="rgba(79,70,229,0.1)" />
+            </linearGradient>
+          </defs>
+
+          {/* membrane + cytoplasm */}
+          <path
+            d="M 120 300 C 120 140, 240 56, 400 56 C 560 56, 680 140, 680 300 C 680 460, 560 566, 400 566 C 240 566, 120 460, 120 300 Z"
+            fill="url(#cyto)"
+            stroke={hover === "membrane" ? "#ff647c" : "rgba(103,232,249,0.55)"}
+            strokeWidth="4"
+            {...h("membrane")}
+          />
+
+          {/* nucleus */}
+          <g {...h("nucleus")}>
+            <ellipse cx="400" cy="265" rx="138" ry="112" fill="url(#nuc-fill)" stroke={hover === "nucleus" ? "#ff647c" : "rgba(148,163,184,0.65)"} strokeWidth="3" />
+            <ellipse cx="400" cy="265" rx="124" ry="99" fill="none" stroke="rgba(148,163,184,0.3)" strokeWidth="1.5" strokeDasharray="3 7" />
+            {/* nuclear pores */}
+            <g opacity={detailVis}>
+              {Array.from({ length: 10 }, (_, i) => {
+                const a = (i / 10) * Math.PI * 2;
+                return (
+                  <circle key={i} cx={400 + 124 * Math.cos(a)} cy={265 + 99 * Math.sin(a)} r="4" fill="rgba(226,232,240,0.6)" />
+                );
+              })}
+            </g>
+            {/* DNA loops */}
+            <g opacity={detailVis} {...h("dna")}>
+              <g className="lab-spin">
+                <circle cx="350" cy="240" r="42" fill="none" stroke="#f43f5e" strokeWidth="2" strokeDasharray="6 4" />
+                <circle cx="350" cy="240" r="20" fill="none" stroke="#fb7185" strokeWidth="1.6" />
+                <circle cx="392" cy="240" r="4" fill="#f43f5e" />
+              </g>
+              <g className="lab-spin lab-spin--slow">
+                <circle cx="455" cy="300" r="36" fill="none" stroke="#f43f5e" strokeWidth="2" strokeDasharray="6 4" />
+                <circle cx="455" cy="300" r="17" fill="none" stroke="#fb7185" strokeWidth="1.6" />
+                <circle cx="419" cy="300" r="4" fill="#f43f5e" />
+              </g>
+            </g>
+            <circle cx="400" cy="250" r="30" fill="rgba(99,102,241,0.35)" stroke="rgba(165,180,252,0.7)" strokeWidth="2" {...h("nucleolus")} />
+          </g>
+
+          {/* mitochondria */}
+          <g {...h("mito")}>
+            <path
+              d="M 170 190 C 188 148, 258 142, 296 172 C 318 190, 304 232, 262 238 C 210 244, 176 226, 170 190 Z"
+              fill="rgba(248,113,113,0.16)"
+              stroke={hover === "mito" ? "#ff647c" : "rgba(251,113,133,0.6)"}
+              strokeWidth="2.6"
+            />
+            <g opacity={detailVis}>
+              {[
+                [192, 190, 268, 180],
+                [196, 205, 272, 196],
+                [200, 220, 262, 212],
+              ].map(([x1, y1, x2, y2], i) => (
+                <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(253,164,175,0.75)" strokeWidth="2" />
+              ))}
+            </g>
+            <path
+              d="M 545 395 C 558 362, 608 358, 634 380 C 650 392, 640 420, 610 424 C 574 428, 550 415, 545 395 Z"
+              fill="rgba(248,113,113,0.14)"
+              stroke={hover === "mito" ? "#ff647c" : "rgba(251,113,133,0.55)"}
+              strokeWidth="2.4"
+            />
+          </g>
+
+          {/* rough ER */}
+          <g {...h("er")}>
+            {[0, 1, 2, 3].map((i) => (
+              <path
+                key={i}
+                d={`M 268 ${305 + i * 16} C 240 ${295 + i * 16}, 210 ${315 + i * 16}, 178 ${300 + i * 16}`}
+                fill="none"
+                stroke={hover === "er" ? "#ff647c" : "rgba(129,140,248,0.7)"}
+                strokeWidth="4"
+              />
+            ))}
+            <g opacity={detailVis}>
+              {[0, 1, 2, 3].map((i) =>
+                [255, 225, 198].map((xx, j) => (
+                  <circle key={`${i}-${j}`} cx={xx} cy={299 + i * 16 + (j % 2 === 0 ? -5 : 5)} r="3.4" fill="rgba(165,180,252,0.85)" />
+                )),
+              )}
+            </g>
+          </g>
+
+          {/* golgi */}
+          <g {...h("golgi")}>
+            {[0, 1, 2, 3].map((i) => (
+              <path
+                key={i}
+                d={`M 570 ${250 - i * 14} C 590 ${242 - i * 14}, 620 ${242 - i * 14}, 640 ${252 - i * 14}`}
+                fill="none"
+                stroke={hover === "golgi" ? "#ff647c" : "rgba(45,212,191,0.7)"}
+                strokeWidth="5"
+                strokeLinecap="round"
+              />
+            ))}
+            <g opacity={detailVis}>
+              {[
+                [652, 240],
+                [660, 258],
+                [648, 272],
+              ].map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r="5" fill="rgba(45,212,191,0.6)" />
+              ))}
+            </g>
+          </g>
+
+          {/* lysosome */}
+          <circle cx="562" cy="520" r="21" fill="rgba(251,146,60,0.18)" stroke={hover === "lysosome" ? "#ff647c" : "rgba(251,146,60,0.7)"} strokeWidth="2.4" {...h("lysosome")} />
+
+          {/* ribosomes (detail) */}
+          <g opacity={detailVis} {...h("ribo")}>
+            {[
+              [150, 380],
+              [470, 480],
+              [620, 420],
+              [300, 470],
+              [520, 150],
+              [170, 140],
+              [640, 180],
+              [350, 520],
+            ].map(([x, y], i) => (
+              <g key={i}>
+                <circle cx={x - 4} cy={y - 2} r="4.5" fill="rgba(165,180,252,0.9)" />
+                <circle cx={x + 4} cy={y + 2} r="4.5" fill="rgba(129,140,248,0.9)" />
+              </g>
+            ))}
+          </g>
+
+          {/* vesicle + centrosome (detail) */}
+          <circle cx="190" cy="440" r="12" fill="rgba(103,232,249,0.2)" stroke="rgba(103,232,249,0.75)" strokeWidth="2" opacity={detailVis} {...h("vesicle")} />
+          <g opacity={detailVis} {...h("cent")}>
+            <rect x="452" y="122" width="30" height="12" rx="4" fill="rgba(232,121,249,0.4)" transform="rotate(-25 467 128)" />
+            <rect x="452" y="122" width="30" height="12" rx="4" fill="rgba(232,121,249,0.4)" transform="rotate(25 467 128)" />
+          </g>
+
+          {/* ---------- labels ---------- */}
+          {/* big labels — fade out while zooming */}
+          <g opacity={bigOp}>
+            <text x="400" y="40" fontSize="26" fontWeight="700" fill="rgba(226,232,240,0.92)" textAnchor="middle" fontFamily="'Space Grotesk', sans-serif">
+              Animal cell (eukaryote)
+            </text>
+            <text x="112" y="300" fontSize="13" fill="rgba(103,232,249,0.85)" textAnchor="end" fontFamily="monospace">plasma membrane</text>
+          </g>
+
+          {/* organelle labels */}
+          <g opacity={orgOp}>
+            <text x="400" y="186" fontSize="13" fill="rgba(165,180,252,0.95)" textAnchor="middle" fontFamily="monospace">nucleus</text>
+            <text x="400" y="300" fontSize="11" fill="rgba(165,180,252,0.8)" textAnchor="middle" fontFamily="monospace">nucleolus</text>
+            <text x="240" y="120" fontSize="12" fill="rgba(253,164,175,0.95)" textAnchor="middle" fontFamily="monospace">mitochondria</text>
+            <text x="210" y="372" fontSize="12" fill="rgba(165,180,252,0.9)" textAnchor="middle" fontFamily="monospace">rough ER</text>
+            <text x="640" y="220" fontSize="12" fill="rgba(45,212,191,0.95)" textAnchor="middle" fontFamily="monospace">golgi</text>
+            <text x="600" y="556" fontSize="12" fill="rgba(251,146,60,0.95)" textAnchor="middle" fontFamily="monospace">lysosome</text>
+          </g>
+
+          {/* detail labels */}
+          <g opacity={detOp}>
+            <text x="150" y="356" fontSize="10" fill="rgba(165,180,252,0.85)" textAnchor="middle" fontFamily="monospace">ribosomes</text>
+            <text x="350" y="180" fontSize="10" fill="rgba(251,113,133,0.95)" textAnchor="middle" fontFamily="monospace">DNA loops</text>
+            <text x="182" y="470" fontSize="10" fill="rgba(103,232,249,0.85)" textAnchor="middle" fontFamily="monospace">vesicle</text>
+            <text x="500" y="120" fontSize="10" fill="rgba(232,121,249,0.9)" textAnchor="middle" fontFamily="monospace">centrosome</text>
+            <text x="330" y="230" fontSize="10" fill="rgba(165,180,252,0.75)" textAnchor="middle" fontFamily="monospace">nuclear pores</text>
+          </g>
+        </svg>
+
+        {/* molecular mosaic overlay */}
+        <div className="pointer-events-none absolute inset-0 transition-opacity duration-300" style={{ opacity: molOp }}>
+          <ParticleMosaic />
+        </div>
+
+        {/* scale badge */}
+        <div className="pointer-events-none absolute left-3 top-3">
+          <span className="lab-chip border-white/20 bg-black/50 text-slate-300">
+            <Microscope className="h-3.5 w-3.5 text-[#ff647c]" />
+            {zoom <= 1.05 ? "Macro" : zoom <= 1.75 ? "Cellular" : zoom <= 2.45 ? "Organelle" : "Molecular"}
+            {" · "}
+            {Math.round(zoom * 100)}%
           </span>
         </div>
 
-        <div
-          ref={wrapRef}
-          className="relative overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_3%,transparent)]"
-          onPointerMove={(e) => {
-            if (!active || pointers.current.size > 0) return;
-            const rect = wrapRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            setTip({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-          }}
-          onPointerLeave={() => setTip(null)}
-        >
-          <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
-            <span className="w-fit rounded-full border border-[var(--signal)] bg-[var(--panel-bg)] px-3 py-1 font-mono text-[10px] font-semibold tracking-wider text-foreground backdrop-blur-md">
-              {Math.round(view.s * 100)}% · {scaleInfo.name}
-            </span>
-            <span className="w-fit rounded-full border border-[var(--card-border)] bg-[var(--panel-bg)] px-3 py-1 text-[9.5px] font-medium text-text-dim backdrop-blur-md">
-              {scaleInfo.detail}
-            </span>
-          </div>
-
-          <div
-            ref={stageRef}
-            className="flex h-full min-h-[440px] touch-none items-center justify-center p-5"
-            style={{
-              transform: `translate(${view.x}px, ${view.y}px) scale(${view.s})`,
-              transition: anim ? "transform 380ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
-              cursor: "grab",
-            }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          >
-            {kind === "cell" ? (
-              <CellDiagram zoomed={zoomed} hovered={hovered} onHover={setHovered} svgRef={svgRef} />
-            ) : (
-              <HeartDiagram zoomed={zoomed} hovered={hovered} onHover={setHovered} svgRef={svgRef} />
-            )}
-          </div>
-
-          {/* cursor tooltip (pointer devices) */}
-          {active && tip && pointers.current.size === 0 && (
-            <div
-              className="pointer-events-none absolute z-20 max-w-[220px] rounded-xl border border-[var(--signal)] bg-[var(--ink)]/95 px-3.5 py-2.5 shadow-xl backdrop-blur-md"
-              style={{
-                left: Math.min(tip.x + 14, (wrapRef.current?.clientWidth ?? 300) - 230),
-                top: Math.max(tip.y - 90, 8),
-              }}
-            >
-              <p className="font-display text-xs font-bold text-foreground">{active.name}</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-text-dim">{active.def}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Inspector */}
-      <div className="w-full shrink-0 lg:w-72">
-        <div className="glass-panel sticky top-24 flex min-h-52 flex-col p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-text-dim">
-            Structure inspector
-          </p>
-          {active ? (
-            <div key={active.id} className="mt-3">
-              <p className="font-display text-lg font-bold tracking-tight text-foreground">
-                {active.name}
-              </p>
-              <p className="mt-2 text-[13px] leading-relaxed text-text-dim">{active.def}</p>
-              {active.flow && (
-                <p className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)] px-2.5 py-2 text-[11px] leading-relaxed text-foreground">
-                  <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signal)]" />
-                  {active.flow}
-                </p>
-              )}
-            </div>
+        {/* hover inspector */}
+        <div className="pointer-events-none absolute bottom-3 left-3 right-3 rounded-xl border border-white/10 bg-black/60 p-3 backdrop-blur-md">
+          {hover ? (
+            <motion.div key={hover} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={SPRING}>
+              <p className="text-xs font-bold text-[#ff647c]">{STRUCTS[hover].name}</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">{STRUCTS[hover].def}</p>
+            </motion.div>
           ) : (
-            <div className="mt-6 flex flex-col items-center gap-2 text-center">
-              <Dna className="h-5 w-5 text-[var(--signal)]" />
-              <p className="text-sm font-medium text-foreground">
-                Hover or tap a structure
-              </p>
-              <p className="text-xs leading-relaxed text-text-dim">
-                Scroll to zoom, drag to pan, pinch on touch — move in close and the
-                fine detail (valves, cristae, DNA loops) appears.
-              </p>
-            </div>
+            <p className="text-[11px] text-slate-500">
+              Hover a structure to inspect it — zoom in to reveal ribosomes, DNA loops and the molecular membrane mosaic.
+            </p>
           )}
-          <div className="mt-auto border-t border-[var(--card-border)] pt-3">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-text-dim">Zoom level</span>
-              <span className="font-semibold tabular-nums text-foreground">
-                {Math.round(view.s * 100)}% · {scaleInfo.name}
-              </span>
-            </div>
-            <p className="mt-1 text-[10px] leading-relaxed text-text-dim">{scaleInfo.detail}</p>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
+/* ---------------- shell ---------------- */
 export default function BiologyExplorer() {
-  const [kind, setKind] = useState<"cell" | "heart">("cell");
-
+  const [tab, setTab] = useState<BioTab>("explorer");
   return (
-    <div className="flex flex-col gap-6">
-      <section className="glass-panel overflow-hidden">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--card-border)] px-5 py-4 sm:px-6">
-          <div>
-            <h2 className="flex items-center gap-2 font-display text-base font-bold tracking-tight">
-              <Heart className="h-4 w-4 text-[var(--signal)]" />
-              Structural explorer
-            </h2>
-            <p className="mt-0.5 text-xs text-text-dim">
-              Scalable diagrams — zoom in from macro to molecular and hover any part for its definition.
-            </p>
-          </div>
-          <div className="glass-chip flex items-center gap-1 p-1">
-            {(
-              [
-                { key: "cell", label: "Animal cell" },
-                { key: "heart", label: "Human heart" },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => {
-                  setKind(t.key);
-                }}
-                className={
-                  "rounded-full px-3.5 py-1.5 text-[11px] font-semibold transition-colors " +
-                  (kind === t.key
-                    ? "bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] text-foreground"
-                    : "text-text-dim hover:text-foreground")
-                }
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </header>
-        <div className="p-5 sm:p-6">
-          <Explorer key={kind} kind={kind} />
-        </div>
-      </section>
+    <div className="space-y-4">
+      <div className="lab-tabs">
+        {(
+          [
+            { key: "explorer", label: "Explorer", icon: Microscope },
+            { key: "dna", label: "DNA", icon: Dna },
+            { key: "heart", label: "Heart", icon: HeartPulse },
+          ] as const
+        ).map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
+            <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
+              {active && <motion.span layoutId="bio-sub-pill" className="lab-pill" transition={SPRING} />}
+              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#ff647c]" : "text-slate-500"}`} />
+              <span className="relative z-10">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {tab === "explorer" && (
+          <motion.div key="explorer" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+            <ExplorerTab />
+          </motion.div>
+        )}
+        {tab === "dna" && (
+          <motion.div key="dna" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+            <DnaSandbox />
+          </motion.div>
+        )}
+        {tab === "heart" && (
+          <motion.div key="heart" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+            <HeartAnatomy />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
