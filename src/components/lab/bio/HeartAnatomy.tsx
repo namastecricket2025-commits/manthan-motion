@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Activity, Pause, Play, RotateCcw } from "lucide-react";
+import { sfx } from "../lab-sound";
 import { SPRING, clamp } from "../use-canvas";
 
 const PARTS: Record<string, { name: string; def: string }> = {
@@ -27,6 +28,13 @@ export default function HeartAnatomy() {
 
   const cycle = 60 / bpm;
   const ps = paused ? "paused" : "running";
+
+  // lub-dub audio synced to the beat
+  useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(() => sfx.thump(), 60000 / bpm);
+    return () => window.clearInterval(id);
+  }, [bpm, paused]);
 
   const onWheel = (e: React.WheelEvent) => {
     const rect = wrapRef.current?.getBoundingClientRect();

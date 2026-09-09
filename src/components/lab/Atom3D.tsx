@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
 import { useCanvasSize, useRaf, useWheelZoom, clamp } from "./use-canvas";
 
 interface Atom3DProps {
@@ -8,191 +9,282 @@ interface Atom3DProps {
   orbitals: boolean;
 }
 
-interface Cam {
-  yaw: number;
-  pitch: number;
-  dist: number;
-  panX: number;
-  panY: number;
+const MAX_RINGS = 7;
+const POOL = 36; // max electrons per shell pool (N shell = 32)
+
+function makeGlowTexture(): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 64;
+  const ctx = c.getContext("2d")!;
+  const g = ctx.createRadialGradient(32, 32, 1, 32, 32, 32);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.55)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
 }
 
 /**
- * Interactive 3D atom — a lightweight canvas projection engine.
- * Left-drag rotates, wheel zooms, right-drag pans (two-finger pinch on touch).
- * Electrons orbit on tilted shells; a toggle overlays quantum probability
- * clouds (s-sphere + p-dumbbells) around the nucleus.
+ * Interactive 3D atom built on three.js — left-drag rotates, wheel zooms,
+ * right-drag pans, two-finger pinch zooms on touch. Electrons are additive
+ * glow sprites on tilted orbital rings; the quantum-orbital toggle overlays
+ * translucent s-spheres and p-dumbbell probability clouds.
  */
 export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
   const { ref, size } = useCanvasSize<HTMLCanvasElement>();
-  const cam = useRef<Cam>({ yaw: 0.65, pitch: 0.32, dist: 300, panX: 0, panY: 0 });
-  const props = useRef({ z, shells, orbitals });
-  props.current = { z, shells, orbitals };
+  const ren = useRef<THREE.WebGLRenderer | null>(null);
+  const scene = useRef<THREE.Scene | null>(null);
+  const camera = useRef<THREE.PerspectiveCamera | null>(null);
+  const atom = useRef<THREE.Group | null>(null);
+  const nucleus = useRef<THREE.Mesh | null>(null);
+  const rings = useRef<THREE.LineLoop[]>([]);
+  const electrons = useRef<THREE.Group[][]>([]);
+  const orbitalsG = useRef<THREE.Group | null>(null);
 
-  // pointer bookkeeping (multi-touch aware)
-  const pointers = useRef(new Map<number, { x: number; y: number; button: number }>());
-  const drag = useRef<{ mode: "rot" | "pan" | "pinch"; lastDist: number } | null>(null);
+  const cam = useRef({ yaw: 0.65, pitch: 0.32, dist: 340, panX: 0, panY: 0 });
+  const p = useRef({ z, shells, orbitals });
+  p.current = { z, shells, orbitals };
+  const dragging = useRef(false);
 
-  useWheelZoom(ref, (dy) => {
-    const c = cam.current;
-    c.dist = clamp(c.dist * (dy > 0 ? 1.09 : 0.92), 170, 560);
-  });
-
-  useRaf((dt, t) => {
+  /* ---------- scene setup (once) ---------- */
+  useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const { w, h, dpr } = size.current;
-    if (!w || !h) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const { z: Z, shells: SH, orbitals: orb } = props.current;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setClearColor(0x000000, 0);
+    const sc = new THREE.Scene();
+    const cam3 = new THREE.PerspectiveCamera(45, 1, 1, 2000);
+    cam3.position.set(0, 0, 340);
+    const grp = new THREE.Group();
+    grp.rotation.order = "YXZ";
+    sc.add(grp);
+    ren.current = renderer;
+    scene.current = sc;
+    camera.current = cam3;
+    atom.current = grp;
 
-    const c = cam.current;
-    if (!drag.current) c.yaw += dt * 0.1; // idle auto-rotate
+    sc.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const pl = new THREE.PointLight(0xff3b5c, 2.2, 420);
+    sc.add(pl);
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const cx = w / 2 + c.panX;
-    const cy = h / 2 + c.panY;
+    // nucleus
+    const nuc = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 32, 32),
+      new THREE.MeshStandardMaterial({ color: 0xff5c76, emissive: 0xff2e55, emissiveIntensity: 0.9, roughness: 0.25 }),
+    );
+    grp.add(nuc);
+    nucleus.current = nuc;
+    pl.position.copy(nuc.position);
 
-    const cosP = Math.cos(c.pitch);
-    const sinP = Math.sin(c.pitch);
-    const cosY = Math.cos(c.yaw);
-    const sinY = Math.sin(c.yaw);
-    const F = 640;
-
-    const project = (x: number, y: number, zz: number) => {
-      // pitch about X
-      const y1 = y * cosP - zz * sinP;
-      const z1 = y * sinP + zz * cosP;
-      // yaw about Y
-      const x2 = x * cosY + z1 * sinY;
-      const z2 = -x * sinY + z1 * cosY;
-      const s = F / (F + c.dist + z2);
-      return { x: cx + x2 * s, y: cy - y1 * s, s, z2 };
-    };
-
-    const p0 = project(0, 0, 0);
-
-    // ---- nucleus glow ----
-    const nucR = 12 + Math.min(5, Z * 0.035);
-    const grad = ctx.createRadialGradient(p0.x, p0.y, 1, p0.x, p0.y, nucR * 2.6);
-    grad.addColorStop(0, "rgba(255,255,255,0.95)");
-    grad.addColorStop(0.35, "rgba(255,100,124,0.9)");
-    grad.addColorStop(1, "rgba(255,59,92,0)");
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(p0.x, p0.y, nucR * 2.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    ctx.fillStyle = "#ffd9de";
-    ctx.beginPath();
-    ctx.arc(p0.x, p0.y, nucR, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ---- orbital rings (projected ellipses) ----
-    const ringPts: { x: number; y: number; s: number; z2: number }[][] = [];
-    SH.forEach((_, si) => {
-      const r = 42 + 26 * si;
-      const tilt = 0.55 * Math.sin(si * 2.35 + 0.7);
-      const pts: { x: number; y: number; s: number; z2: number }[] = [];
-      const N = 48;
-      for (let i = 0; i < N; i++) {
-        const th = (i / N) * Math.PI * 2;
-        const x = r * Math.cos(th);
-        const y = r * Math.sin(th) * Math.cos(tilt);
-        const zz = r * Math.sin(th) * Math.sin(tilt);
-        pts.push(project(x, y, zz));
-      }
-      ringPts.push(pts);
-    });
-    // draw rings far → near by average depth
-    const order = ringPts
-      .map((pts, i) => ({ i, z: pts.reduce((a, p) => a + p.z2, 0) / pts.length }))
-      .sort((a, b) => b.z - a.z);
-    for (const { i } of order) {
-      ctx.strokeStyle = "rgba(148,163,184,0.35)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      const pts = ringPts[i];
-      pts.forEach((p, j) => (j === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-      ctx.closePath();
-      ctx.stroke();
+    // shell rings
+    for (let i = 0; i < MAX_RINGS; i++) {
+      const r = 42 + 26 * i;
+      const geo = new THREE.BufferGeometry().setFromPoints(
+        Array.from({ length: 97 }, (_, k) => {
+          const th = (k / 96) * Math.PI * 2;
+          return new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), 0);
+        }),
+      );
+      const ring = new THREE.LineLoop(
+        geo,
+        new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.35 }),
+      );
+      ring.rotation.x = 0.55 * Math.sin(i * 2.35 + 0.7);
+      grp.add(ring);
+      rings.current.push(ring);
     }
 
-    // ---- electrons ----
-    const electrons: { x: number; y: number; s: number; z2: number }[] = [];
-    SH.forEach((count, si) => {
+    // electron pool: glow sprite + white core per ring
+    const glowTex = makeGlowTexture();
+    const ringsArr: THREE.Group[][] = [];
+    for (let i = 0; i < MAX_RINGS; i++) {
+      const pool: THREE.Group[] = [];
+      for (let j = 0; j < POOL; j++) {
+        const el = new THREE.Group();
+        const sprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: glowTex,
+            color: 0x67e8f9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            transparent: true,
+          }),
+        );
+        sprite.scale.setScalar(11);
+        el.add(sprite);
+        const core = new THREE.Mesh(
+          new THREE.SphereGeometry(1.5, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0xe0faff }),
+        );
+        el.add(core);
+        el.visible = false;
+        grp.add(el);
+        pool.push(el);
+      }
+      ringsArr.push(pool);
+    }
+    electrons.current = ringsArr;
+
+    // quantum orbital clouds (unit size; scaled per frame)
+    const og = new THREE.Group();
+    const sCloud = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 32, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0xa78bfa,
+        transparent: true,
+        opacity: 0.1,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    og.add(sCloud);
+    const lobeMat = new THREE.MeshBasicMaterial({
+      color: 0xff3b5c,
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+    const axes: [number, number, number][] = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ];
+    for (const [ax, ay, az] of axes) {
+      for (const sgn of [1, -1]) {
+        const lobe = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 24), lobeMat);
+        lobe.position.set(ax * sgn * 0.62, ay * sgn * 0.62, az * sgn * 0.62);
+        og.add(lobe);
+      }
+    }
+    og.visible = false;
+    grp.add(og);
+    orbitalsG.current = og;
+
+    return () => {
+      sc.traverse((obj) => {
+        if (obj instanceof THREE.Sprite) {
+          if (obj.material.map) obj.material.map.dispose();
+          obj.material.dispose();
+          return;
+        }
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+        if (mat) {
+          for (const m of Array.isArray(mat) ? mat : [mat]) {
+            if ("map" in m && (m as { map?: THREE.Texture }).map) {
+              (m as { map?: THREE.Texture }).map!.dispose();
+            }
+            m.dispose();
+          }
+        }
+      });
+      glowTex.dispose();
+      renderer.dispose();
+      ren.current = null;
+      scene.current = null;
+      camera.current = null;
+      atom.current = null;
+      nucleus.current = null;
+      rings.current = [];
+      electrons.current = [];
+      orbitalsG.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------- per-frame render ---------- */
+  useRaf((dt, t) => {
+    const renderer = ren.current;
+    const sc = scene.current;
+    const cam3 = camera.current;
+    const grp = atom.current;
+    if (!renderer || !sc || !cam3 || !grp) return;
+
+    const c = cam.current;
+    if (!dragging.current) c.yaw += dt * 0.1; // idle auto-rotate
+    grp.rotation.y = c.yaw;
+    grp.rotation.x = c.pitch;
+
+    const { w, h, dpr } = size.current;
+    const cssW = w / Math.max(1, dpr);
+    const cssH = h / Math.max(1, dpr);
+    if (cssW > 0 && cssH > 0) {
+      renderer.setSize(cssW, cssH, false);
+      cam3.aspect = cssW / cssH;
+      cam3.updateProjectionMatrix();
+    }
+    cam3.position.set(c.panX, c.panY, c.dist);
+
+    const P = p.current;
+    // nucleus
+    if (nucleus.current) nucleus.current.scale.setScalar(11 + Math.min(5, P.z * 0.03));
+
+    // rings + electrons
+    P.shells.forEach((count, si) => {
+      const ring = rings.current[si];
+      if (ring) ring.visible = true;
+      const pool = electrons.current[si];
+      if (!pool) return;
       const r = 42 + 26 * si;
       const tilt = 0.55 * Math.sin(si * 2.35 + 0.7);
       const dir = si % 2 === 0 ? 1 : -1;
       const speed = 0.9 + 0.28 * si;
-      for (let i = 0; i < count; i++) {
-        const th = (i / count) * Math.PI * 2 + t * speed * dir + si * 0.7;
-        const x = r * Math.cos(th);
-        const y = r * Math.sin(th) * Math.cos(tilt);
-        const zz = r * Math.sin(th) * Math.sin(tilt);
-        electrons.push(project(x, y, zz));
-      }
-    });
-    electrons.sort((a, b) => b.z2 - a.z2);
-    for (const e of electrons) {
-      const er = 3.4 * e.s;
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      const eg = ctx.createRadialGradient(e.x, e.y, 0.5, e.x, e.y, er * 3);
-      eg.addColorStop(0, "rgba(255,255,255,1)");
-      eg.addColorStop(0.4, "rgba(103,232,249,0.95)");
-      eg.addColorStop(1, "rgba(34,211,238,0)");
-      ctx.fillStyle = eg;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, er * 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // ---- quantum orbital clouds ----
-    if (orb && SH.length > 0) {
-      const rMax = 42 + 26 * (SH.length - 1);
-      // s-cloud: translucent sphere
-      const sc = project(0, 0, 0);
-      const sR = rMax * 0.46 * sc.s;
-      const sg = ctx.createRadialGradient(sc.x, sc.y, 1, sc.x, sc.y, sR);
-      sg.addColorStop(0, "rgba(167,139,250,0.28)");
-      sg.addColorStop(1, "rgba(167,139,250,0)");
-      ctx.fillStyle = sg;
-      ctx.beginPath();
-      ctx.arc(sc.x, sc.y, sR, 0, Math.PI * 2);
-      ctx.fill();
-
-      // p-dumbbells along x, y, z
-      const lobes: { ax: number; ay: number; az: number }[] = [
-        { ax: 1, ay: 0, az: 0 },
-        { ax: 0, ay: 1, az: 0 },
-        { ax: 0, ay: 0, az: 1 },
-      ];
-      const pR = rMax * 0.36;
-      for (const L of lobes) {
-        for (const sgn of [1, -1]) {
-          const pc = project(L.ax * pR * sgn, L.ay * pR * sgn, L.az * pR * sgn);
-          const lr = pR * 0.52 * pc.s;
-          const lg = ctx.createRadialGradient(pc.x, pc.y, 1, pc.x, pc.y, lr);
-          lg.addColorStop(0, "rgba(255,59,92,0.30)");
-          lg.addColorStop(1, "rgba(255,59,92,0)");
-          ctx.fillStyle = lg;
-          ctx.beginPath();
-          ctx.ellipse(pc.x, pc.y, lr, lr * 0.8, 0, 0, Math.PI * 2);
-          ctx.fill();
+      const n = Math.min(POOL, count);
+      for (let j = 0; j < POOL; j++) {
+        const el = pool[j];
+        if (j < n) {
+          const th = (j / n) * Math.PI * 2 + t * speed * dir + si * 0.7;
+          el.position.set(r * Math.cos(th), r * Math.sin(th) * Math.cos(tilt), r * Math.sin(th) * Math.sin(tilt));
+          el.visible = true;
+        } else {
+          el.visible = false;
         }
       }
+    });
+    for (let si = P.shells.length; si < MAX_RINGS; si++) {
+      if (rings.current[si]) rings.current[si].visible = false;
+      const pool = electrons.current[si];
+      if (pool) for (const el of pool) el.visible = false;
     }
 
-    // ---- label ----
-    ctx.fillStyle = "rgba(148,163,184,0.85)";
-    ctx.font = "600 12px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(`${symbol} · Z = ${Z} · scale ${Math.round((F / (F + c.dist)) * 100)}%`, cx, h - 10);
+    // orbitals
+    if (orbitalsG.current) {
+      orbitalsG.current.visible = P.orbitals && P.shells.length > 0;
+      const rMax = 42 + 26 * (P.shells.length - 1);
+      orbitalsG.current.children.forEach((child, i) => {
+        if (i === 0) {
+          child.scale.setScalar(rMax * 0.46);
+        } else {
+          const ax = (i - 1) % 3;
+          const sgn = (i - 1) % 2 === 0 ? 1 : -1;
+          const rl = rMax * 0.4;
+          const s = new THREE.Vector3(1, 1, 1);
+          s.setComponent(ax, 1.8);
+          child.scale.copy(s).multiplyScalar(rl);
+          const pos = new THREE.Vector3();
+          pos.setComponent(ax, sgn * rMax * 0.55);
+          child.position.copy(pos);
+        }
+      });
+    }
+
+    renderer.render(sc, cam3);
+  });
+
+  /* ---------- interaction ---------- */
+  const pointers = useRef(new Map<number, { x: number; y: number; button: number }>());
+  const pinch = useRef(0);
+
+  useWheelZoom(ref, (dy) => {
+    const c = cam.current;
+    c.dist = clamp(c.dist * (dy > 0 ? 1.09 : 0.92), 180, 620);
   });
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -200,13 +292,9 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
     if (pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
-      drag.current = {
-        mode: "pinch",
-        lastDist: Math.hypot(a.x - b.x, a.y - b.y),
-      };
-    } else {
-      drag.current = { mode: e.button === 2 ? "pan" : "rot", lastDist: 0 };
+      pinch.current = Math.hypot(a.x - b.x, a.y - b.y);
     }
+    dragging.current = true;
   };
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const prev = pointers.current.get(e.pointerId);
@@ -214,25 +302,23 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     const dx = e.clientX - prev.x;
     const dy = e.clientY - prev.y;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
-    const d = drag.current;
-    if (!d) return;
     const c = cam.current;
-    if (d.mode === "pinch" && pointers.current.size >= 2) {
+    if (pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      c.dist = clamp(c.dist * (d.lastDist > 0 ? dist / d.lastDist : 1), 170, 560);
-      d.lastDist = dist;
-    } else if (d.mode === "rot") {
+      if (pinch.current > 0) c.dist = clamp(c.dist * (dist / pinch.current), 180, 620);
+      pinch.current = dist;
+    } else if (prev.button === 2) {
+      c.panX += dx * 0.5;
+      c.panY -= dy * 0.5;
+    } else {
       c.yaw += dx * 0.008;
       c.pitch = clamp(c.pitch + dy * 0.008, -1.25, 1.25);
-    } else {
-      c.panX += dx;
-      c.panY += dy;
     }
   };
   const endPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) drag.current = null;
+    if (pointers.current.size === 0) dragging.current = false;
   };
 
   return (
@@ -247,7 +333,7 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
         onContextMenu={(e) => e.preventDefault()}
       />
       <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[9px] tracking-wide text-slate-400">
-        DRAG rotate · SCROLL zoom · RIGHT-DRAG pan
+        {symbol} · Z = {z} · DRAG rotate · SCROLL zoom · RIGHT-DRAG pan
       </span>
     </div>
   );

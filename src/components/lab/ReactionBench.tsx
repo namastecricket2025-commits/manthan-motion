@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Beaker as BeakerIcon, Droplets, Flame, FlaskConical, RefreshCw, TriangleAlert } from "lucide-react";
 import { REACTIONS, SUBSTANCES } from "./reactions";
 import type { Reaction, Substance } from "./reactions";
+import { sfx } from "./lab-sound";
 import { SPRING, useCanvasSize, useRaf } from "./use-canvas";
 
 /* ---------- formula rendering (digits → subscripts) ---------- */
@@ -49,9 +50,9 @@ const HAZARD: Record<string, { label: string; cls: string }> = {
 };
 const hazardOf = (id: string) => {
   if (["h2", "ch4"].includes(id)) return HAZARD.flammable;
-  if (["hcl", "naoh"].includes(id)) return HAZARD.corrosive;
-  if (["agno3", "cuso4"].includes(id)) return HAZARD.toxic;
-  if (["na", "mg", "fe", "c", "cao"].includes(id)) return HAZARD.reactive;
+  if (["hcl", "h2so4", "h2o2", "naoh"].includes(id)) return HAZARD.corrosive;
+  if (["agno3", "cuso4", "bacl2", "kmno4"].includes(id)) return HAZARD.toxic;
+  if (["na", "mg", "zn", "fe", "c", "cao"].includes(id)) return HAZARD.reactive;
   return HAZARD.inert;
 };
 
@@ -280,11 +281,13 @@ export default function ReactionBench() {
     if (!slotA || !slotB) return;
     setPhase("colliding");
     setResult(null);
+    sfx.whoosh();
     const key = [slotA.id, slotB.id].sort().join("|");
     const r = REACTIONS[key];
     timer.current = window.setTimeout(() => {
       setResult({ ok: !!r, r, a: slotA, b: slotB });
       setPhase("done");
+      sfx.pop();
     }, 3400);
   };
 
@@ -314,7 +317,7 @@ export default function ReactionBench() {
             </p>
           </div>
           <span className="lab-chip hidden sm:inline-flex">
-            <Flame className="h-3.5 w-3.5 text-orange-400" /> 20 reagents · curated pairs
+            <Flame className="h-3.5 w-3.5 text-orange-400" /> {SUBSTANCES.length} reagents · curated pairs
           </span>
         </div>
         <div className="lab-scroll flex gap-3 overflow-x-auto pb-2">
@@ -458,9 +461,21 @@ export default function ReactionBench() {
                         <div className="mt-3 rounded-lg border border-white/10 bg-black/25 p-3">
                           <Chem text={result.r.eq} />
                         </div>
-                        <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-[#ff647c]">
-                          {result.r.type}
-                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#ff647c]">
+                            {result.r.type}
+                          </p>
+                          {result.r.energy === "exo" && (
+                            <span className="lab-chip !border-orange-400/40 !text-orange-300">
+                              <Flame className="h-3 w-3" /> Exothermic · heat released
+                            </span>
+                          )}
+                          {result.r.energy === "endo" && (
+                            <span className="lab-chip !border-cyan-400/40 !text-cyan-300">
+                              <Droplets className="h-3 w-3" /> Endothermic · absorbs heat
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{result.r.note}</p>
                       </>
                     ) : (

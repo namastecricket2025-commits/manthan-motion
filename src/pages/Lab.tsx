@@ -4,7 +4,8 @@ import PhysicsSim from "@/components/lab/PhysicsSim";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { SPRING } from "@/components/lab/use-canvas";
-import { Atom, Beaker, Dna, FlaskConical, ArrowLeft, Radiation } from "lucide-react";
+import { isSoundEnabled, setSoundEnabled } from "@/components/lab/lab-sound";
+import { Atom, Beaker, Dna, FlaskConical, ArrowLeft, Radiation, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
@@ -35,6 +36,7 @@ const TABS: { key: LabTab; label: string; icon: typeof Atom; blurb: string }[] =
 
 export default function Lab() {
   const [tab, setTab] = useState<LabTab>("physics");
+  const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const active = TABS.find((t) => t.key === tab)!;
 
   return (
@@ -61,7 +63,21 @@ export default function Lab() {
                 sandboxed · no real chemicals
               </span>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !soundOn;
+                  setSoundOn(next);
+                  setSoundEnabled(next);
+                }}
+                className="lab-btn !rounded-full !p-2"
+                title={soundOn ? "Mute lab sounds" : "Unmute lab sounds"}
+              >
+                {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
+              <ThemeToggle />
+            </div>
           </div>
 
           {/* Tab bar */}

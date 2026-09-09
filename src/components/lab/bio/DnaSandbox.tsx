@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Dna, RotateCcw } from "lucide-react";
+import { sfx } from "../lab-sound";
 import { SPRING, useCanvasSize, useRaf, clamp } from "../use-canvas";
 
 const SLOTS = 8;
@@ -189,6 +190,7 @@ export default function DnaSandbox() {
       setSelectedTile(null);
     } else {
       setWrongSlot(slot);
+      sfx.buzz();
       window.setTimeout(() => setWrongSlot(null), 450);
     }
   };
@@ -255,10 +257,14 @@ export default function DnaSandbox() {
               animate={{ left: flyingFrom.current.tx - 16, top: flyingFrom.current.ty - 16, scale: 0.7 }}
               transition={SPRING}
               onAnimationComplete={() => {
+                sfx.snap();
                 setMatched((m) => {
                   const next = new Set(m);
                   next.add(flying.slot);
-                  if (next.size === SLOTS) setDone(true);
+                  if (next.size === SLOTS) {
+                    setDone(true);
+                    sfx.pop();
+                  }
                   return next;
                 });
                 setFlying(null);
