@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Activity, Pause, Play, RotateCcw } from "lucide-react";
 import { sfx } from "../lab-sound";
-import { SPRING, clamp } from "../use-canvas";
+import { SPRING, clamp, useNativeWheel } from "../use-canvas";
 
 const PARTS: Record<string, { name: string; def: string }> = {
   ra: { name: "Right atrium", def: "Receives deoxygenated blood from the venae cavae and pushes it into the right ventricle." },
@@ -17,17 +17,76 @@ const PARTS: Record<string, { name: string; def: string }> = {
   pulmVein: { name: "Pulmonary veins", def: "Bring oxygenated blood back from the lungs into the left atrium — the only veins carrying oxygenated blood." },
 };
 
+const QUESTIONS: { q: string; options: string[]; ok: number; why: string }[] = [
+  {
+    q: "Which chamber pumps deoxygenated blood to the lungs?",
+    options: ["Right atrium", "Right ventricle", "Left atrium", "Left ventricle"],
+    ok: 1,
+    why: "The right ventricle drives deoxygenated blood through the pulmonary artery to the lungs.",
+  },
+  {
+    q: "Which vessel is the only artery that carries deoxygenated blood?",
+    options: ["Aorta", "Vena cava", "Pulmonary artery", "Pulmonary vein"],
+    ok: 2,
+    why: "The pulmonary artery runs from the right ventricle to the lungs — arteries usually carry oxygenated blood, this one is the exception.",
+  },
+  {
+    q: "Oxygenated blood from the lungs first enters which chamber?",
+    options: ["Right atrium", "Right ventricle", "Left atrium", "Left ventricle"],
+    ok: 2,
+    why: "The pulmonary veins deliver oxygenated blood into the left atrium.",
+  },
+  {
+    q: "Which chamber has the thickest muscular wall?",
+    options: ["Right atrium", "Left atrium", "Right ventricle", "Left ventricle"],
+    ok: 3,
+    why: "The left ventricle must push blood through the entire body, so its wall is the thickest (~120 mmHg).",
+  },
+  {
+    q: "The 'lub' of the heartbeat is caused by…",
+    options: ["Semilunar valves snapping shut", "The AV valves (mitral + tricuspid) closing", "Blood hitting the aorta wall", "The atria contracting"],
+    ok: 1,
+    why: "At the start of systole the mitral and tricuspid (AV) valves slam shut — that's 'lub'.",
+  },
+  {
+    q: "Which valve lies between the left atrium and left ventricle?",
+    options: ["Tricuspid", "Aortic", "Pulmonary", "Mitral (bicuspid)"],
+    ok: 3,
+    why: "The two-flap mitral (bicuspid) valve guards the left atrioventricular opening.",
+  },
+  {
+    q: "Where does oxygenated blood leave the heart for the body?",
+    options: ["Pulmonary artery", "Aorta", "Vena cava", "Pulmonary vein"],
+    ok: 1,
+    why: "The left ventricle ejects into the aorta, the body's largest artery.",
+  },
+  {
+    q: "The vena cava returns blood from the body into…",
+    options: ["Left atrium", "Right ventricle", "Right atrium", "Left ventricle"],
+    ok: 2,
+    why: "Deoxygenated blood from the body empties into the right atrium via the venae cavae.",
+  },
+];
+
 export default function HeartAnatomy() {
   const [bpm, setBpm] = useState(72);
+  const [sv, setSv] = useState(70); // stroke volume, mL
   const [paused, setPaused] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [qIdx, setQIdx] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [quizDone, setQuizDone] = useState(false);
   const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  useNativeWheel(wrapRef); // keep the page from scrolling while zooming
 
   const cycle = 60 / bpm;
   const ps = paused ? "paused" : "running";
+  const cardiacOutput = (sv * bpm) / 1000;
+  const lvPeak = Math.round(80 + sv * 0.5);
 
   // lub-dub audio synced to the beat
   useEffect(() => {
@@ -104,6 +163,27 @@ export default function HeartAnatomy() {
                 <path d="M0,0 L7,3.5 L0,7 Z" fill="#38bdf8" />
               </marker>
             </defs>
+
+            {/* ECG trace — sweeps with the beat */}
+            <g opacity="0.85">
+              <path
+                d="M 58 40 L 120 40 L 130 40 L 135 30 L 141 50 L 147 40 L 170 40 L 178 40 L 184 36 L 190 44 L 196 40 L 360 40"
+                fill="none"
+                stroke="#22d3ee"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+              <circle r="3.5" fill="#22d3ee">
+                <animateMotion
+                  dur={`${cycle}s`}
+                  repeatCount="indefinite"
+                  path="M 58 40 L 120 40 L 130 40 L 135 30 L 141 50 L 147 40 L 170 40 L 178 40 L 184 36 L 190 44 L 196 40 L 360 40"
+                />
+              </circle>
+              <text x="30" y="44" fontSize="9" fill="rgba(34,211,238,0.9)" fontFamily="monospace" fontWeight="700">
+                ECG
+              </text>
+            </g>
 
             {/* ---- vessels (behind) ---- */}
             {/* aorta — oxygenated out */}
@@ -221,17 +301,17 @@ export default function HeartAnatomy() {
         {/* pressure gauges */}
         <div className="mt-4 grid grid-cols-2 gap-3">
           {[
-            { k: "Left ventricle", unit: "mmHg", color: "#ff647c", fill: "lab-gauge", end: "120" },
-            { k: "Aorta", unit: "mmHg", color: "#22d3ee", fill: "lab-gauge", end: "80" },
+            { k: "Left ventricle", unit: "mmHg", color: "#ff647c", end: String(lvPeak) },
+            { k: "Aorta", unit: "mmHg", color: "#22d3ee", end: "120" },
           ].map((g) => (
             <div key={g.k} className="rounded-xl border border-white/10 bg-black/20 p-3">
               <div className="flex items-center justify-between">
                 <p className="lab-label">{g.k} pressure</p>
-                <span className="lab-value text-xs" style={{ color: g.color }}>{g.end}/{g.end === "120" ? "5" : "80"}</span>
+                <span className="lab-value text-xs" style={{ color: g.color }}>{g.end}/{g.k === "Left ventricle" ? "5" : "80"}</span>
               </div>
               <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-800">
                 <div
-                  className={`${g.fill} h-full rounded-full`}
+                  className="lab-gauge h-full rounded-full"
                   style={{
                     background: `linear-gradient(90deg, ${g.color}66, ${g.color})`,
                     boxShadow: `0 0 12px ${g.color}88`,
@@ -241,7 +321,7 @@ export default function HeartAnatomy() {
                 />
               </div>
               <p className="mt-1.5 text-[9px] text-slate-500">
-                {g.k === "Left ventricle" ? "0 → 120 → 5 mmHg per beat" : "80 → 120 → 80 mmHg (systolic/diastolic)"}
+                {g.k === "Left ventricle" ? `0 → ${lvPeak} → 5 mmHg per beat (scales with stroke volume)` : "80 → 120 → 80 mmHg (systolic/diastolic)"}
               </p>
             </div>
           ))}
@@ -262,6 +342,18 @@ export default function HeartAnatomy() {
           <p className="mt-1 text-[10px] text-slate-500">cycle {cycle.toFixed(2)} s · systole ≈ 0.36 s</p>
         </div>
 
+        <div>
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Stroke volume</span>
+            <span className="lab-value text-slate-200">{sv} mL</span>
+          </div>
+          <input type="range" className="lab-range mt-1.5" min={40} max={120} step={1} value={sv} onChange={(e) => setSv(Number(e.target.value))} />
+          <p className="mt-1 text-[10px] text-slate-500">
+            Cardiac output = SV × HR = <span className="lab-value text-slate-300">{cardiacOutput.toFixed(1)} L/min</span>
+            {cardiacOutput > 8 && " — that's an exercising heart!"}
+          </p>
+        </div>
+
         <div className="lab-rule" />
 
         <div>
@@ -280,6 +372,97 @@ export default function HeartAnatomy() {
             <p className="flex items-center gap-2"><span className="inline-block h-[3px] w-6 rounded-full" style={{ background: "linear-gradient(90deg, #ff647c, #ff3b5c)", boxShadow: "0 0 6px rgba(255,59,92,0.8)" }} /> Oxygenated — pulmonary veins → LA → LV → aorta → body</p>
             <p className="flex items-center gap-2"><span className="inline-block h-[3px] w-6 rounded-full" style={{ background: "linear-gradient(90deg, #38bdf8, #0ea5e9)", boxShadow: "0 0 6px rgba(56,189,248,0.8)" }} /> Deoxygenated — vena cava → RA → RV → pulmonary artery → lungs</p>
           </div>
+        </div>
+
+        <div className="lab-rule" />
+
+        {/* quick quiz */}
+        <div>
+          <p className="lab-label mb-2">Student check — quick quiz</p>
+          {!quizDone ? (
+            <>
+              <p className="mb-2 rounded-lg border border-white/10 bg-black/25 p-2.5 text-[12px] font-semibold leading-snug text-slate-100">
+                Q{qIdx + 1}/{QUESTIONS.length} · {QUESTIONS[qIdx].q}
+              </p>
+              <div className="space-y-1.5">
+                {QUESTIONS[qIdx].options.map((opt, oi) => {
+                  const isPicked = picked === oi;
+                  const isRight = oi === QUESTIONS[qIdx].ok;
+                  const show = picked !== null;
+                  return (
+                    <button
+                      key={oi}
+                      type="button"
+                      disabled={show}
+                      onClick={() => {
+                        setPicked(oi);
+                        if (oi === QUESTIONS[qIdx].ok) {
+                          setScore((s) => s + 1);
+                          sfx.snap();
+                        } else {
+                          sfx.buzz();
+                        }
+                      }}
+                      className={`w-full rounded-lg border px-3 py-2 text-left text-[11px] transition-all ${
+                        show && isRight
+                          ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-300"
+                          : show && isPicked
+                            ? "border-red-400/60 bg-red-400/10 text-red-300"
+                            : "border-white/10 bg-black/20 text-slate-300 hover:border-[#ff3b5c]/50 hover:text-slate-100"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {picked !== null && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={SPRING} className="mt-2">
+                  <p className="text-[10px] leading-relaxed text-slate-400">{QUESTIONS[qIdx].why}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (qIdx + 1 >= QUESTIONS.length) {
+                        setQuizDone(true);
+                        sfx.pop();
+                      } else {
+                        setQIdx((i) => i + 1);
+                        setPicked(null);
+                      }
+                    }}
+                    className="lab-btn lab-btn-neon mt-2 w-full"
+                  >
+                    {qIdx + 1 >= QUESTIONS.length ? "See score" : "Next question"}
+                  </button>
+                </motion.div>
+              )}
+            </>
+          ) : (
+            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={SPRING} className="rounded-xl border border-white/10 bg-black/25 p-3 text-center">
+              <p className="font-display text-2xl font-bold text-[#ff647c]">
+                {score}/{QUESTIONS.length}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-400">
+                {score === QUESTIONS.length
+                  ? "Perfect — you know this heart inside out."
+                  : score >= 5
+                    ? "Solid! Re-watch the cycle once more for the rest."
+                    : "Hover the chambers and vessels, then try again."}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setQIdx(0);
+                  setPicked(null);
+                  setScore(0);
+                  setQuizDone(false);
+                }}
+                className="lab-btn mt-2 w-full"
+              >
+                Retry quiz
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

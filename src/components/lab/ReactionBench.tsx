@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Beaker as BeakerIcon, Droplets, Flame, FlaskConical, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowLeftRight, Beaker as BeakerIcon, Droplets, Flame, FlaskConical, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import { REACTIONS, SUBSTANCES } from "./reactions";
 import type { Reaction, Substance } from "./reactions";
 import { sfx } from "./lab-sound";
@@ -49,12 +49,33 @@ const HAZARD: Record<string, { label: string; cls: string }> = {
   inert: { label: "Inert", cls: "border-slate-400/30 text-slate-400 bg-slate-400/10" },
 };
 const hazardOf = (id: string) => {
-  if (["h2", "ch4"].includes(id)) return HAZARD.flammable;
+  if (["h2", "ch4", "s"].includes(id)) return HAZARD.flammable;
   if (["hcl", "h2so4", "h2o2", "naoh"].includes(id)) return HAZARD.corrosive;
-  if (["agno3", "cuso4", "bacl2", "kmno4"].includes(id)) return HAZARD.toxic;
-  if (["na", "mg", "zn", "fe", "c", "cao"].includes(id)) return HAZARD.reactive;
+  if (["agno3", "cuso4", "bacl2", "kmno4", "pbno3", "h2s", "so2"].includes(id)) return HAZARD.toxic;
+  if (["na", "mg", "zn", "fe", "c", "cao", "k", "al", "ca"].includes(id)) return HAZARD.reactive;
   return HAZARD.inert;
 };
+
+/* ---------- shelf groups ---------- */
+const GROUPS: { key: string; label: string; ids: string[] }[] = [
+  {
+    key: "metals",
+    label: "Metals & elemental",
+    ids: ["na", "k", "ca", "mg", "al", "zn", "fe", "cu", "pb", "c", "s"],
+  },
+  { key: "acids", label: "Acids", ids: ["hcl", "h2so4"] },
+  {
+    key: "bases",
+    label: "Bases & carbonates",
+    ids: ["naoh", "nh3", "na2co3", "nahco3", "cao", "fe2o3", "caco3"],
+  },
+  {
+    key: "solutions",
+    label: "Solutions",
+    ids: ["h2o", "h2o2", "nacl", "cuso4", "agno3", "bacl2", "na2so4", "ki", "pbno3", "nabr", "kmno4"],
+  },
+  { key: "gases", label: "Gases", ids: ["h2", "o2", "n2", "cl2", "co2", "ch4", "h2s", "so2"] },
+];
 
 /* ---------- particle collision screen ---------- */
 function CollisionScreen({ a, b, temp, running }: { a: Substance; b: Substance; temp: number; running: boolean }) {
@@ -122,7 +143,6 @@ function CollisionScreen({ a, b, temp, running }: { a: Substance; b: Substance; 
             const rel = Math.hypot(A.vx - B.vx, A.vy - B.vy);
             stats.current.hits++;
             if (A.c !== B.c && rel > 200) stats.current.sparks++;
-            // elastic-ish swap
             const nx = dx / dist;
             const ny = dy / dist;
             const vRel = (A.vx - B.vx) * nx + (A.vy - B.vy) * ny;
@@ -142,7 +162,6 @@ function CollisionScreen({ a, b, temp, running }: { a: Substance; b: Substance; 
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    // sparks
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (const m of mols) {
@@ -212,7 +231,6 @@ function Beaker({
               transition={SPRING}
               className="relative flex w-full flex-col items-center"
             >
-              {/* liquid */}
               <motion.div
                 className="w-full rounded-b-xl border border-t-0"
                 style={{
@@ -224,7 +242,6 @@ function Beaker({
                 animate={{ height: 74 }}
                 transition={SPRING}
               />
-              {/* bubble */}
               {substance.state === "gas" && (
                 <span className="lab-float absolute -top-1 text-sm text-slate-300">◌◌◌</span>
               )}
@@ -273,6 +290,8 @@ export default function ReactionBench() {
   const [phase, setPhase] = useState<"idle" | "colliding" | "done">("idle");
   const [result, setResult] = useState<{ ok: boolean; r?: Reaction; a: Substance; b: Substance } | null>(null);
   const [over, setOver] = useState<"A" | "B" | null>(null);
+  const [group, setGroup] = useState<string>("all");
+  const [query, setQuery] = useState("");
   const timer = useRef<number | null>(null);
 
   const canReact = slotA && slotB && phase !== "colliding";
@@ -299,29 +318,82 @@ export default function ReactionBench() {
     setPhase("idle");
   };
 
+  const swap = () => {
+    setSlotA(slotB);
+    setSlotB(slotA);
+    setResult(null);
+    setPhase("idle");
+  };
+
   const addToSlot = (s: Substance) => {
     if (!slotA) setSlotA(s);
     else if (!slotB) setSlotB(s);
     else if (slotA.id !== s.id) setSlotB(s);
+    else if (slotB.id !== s.id) setSlotB(s);
+  };
+
+  const q = query.trim().toLowerCase();
+  const visible = (id: string) => {
+    if (group !== "all" && !GROUPS.find((g) => g.key === group)?.ids.includes(id)) return false;
+    if (!q) return true;
+    const s = SUBSTANCES.find((x) => x.id === id)!;
+    return s.name.toLowerCase().includes(q) || s.formula.toLowerCase().includes(q);
   };
 
   return (
     <div className="space-y-5">
       {/* shelf */}
       <div className="lab-glass p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-bold text-slate-100">Reagent shelf</p>
             <p className="text-[11px] text-slate-500">
-              Drag a substance into a beaker, or tap to load the next empty one.
+              {SUBSTANCES.length} reagents · drag into a beaker, or tap to load the next empty one.
             </p>
           </div>
-          <span className="lab-chip hidden sm:inline-flex">
-            <Flame className="h-3.5 w-3.5 text-orange-400" /> {SUBSTANCES.length} reagents · curated pairs
-          </span>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find a reagent…"
+                className="lab-search"
+                style={{ width: 150 }}
+              />
+            </div>
+            <span className="lab-chip hidden sm:inline-flex">
+              <Flame className="h-3.5 w-3.5 text-orange-400" /> {SUBSTANCES.length} reagents
+            </span>
+          </div>
         </div>
-        <div className="lab-scroll flex gap-3 overflow-x-auto pb-2">
-          {SUBSTANCES.map((s) => {
+
+        {/* group filter */}
+        <div className="lab-scroll mb-3 flex gap-1.5 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setGroup("all")}
+            className={`lab-chip shrink-0 !cursor-pointer ${group === "all" ? "!border-[#ff3b5c]/60 !text-[#ff647c]" : ""}`}
+          >
+            All
+          </button>
+          {GROUPS.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setGroup(group === g.key ? "all" : g.key)}
+              className={`lab-chip shrink-0 !cursor-pointer ${group === g.key ? "!border-[#ff3b5c]/60 !text-[#ff647c]" : ""}`}
+            >
+              {g.label}
+              <span className="text-slate-500">{g.ids.length}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* shelf grid */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-3">
+          {SUBSTANCES.filter((s) => visible(s.id)).map((s) => {
             const hz = hazardOf(s.id);
             const inSlot = slotA?.id === s.id || slotB?.id === s.id;
             return (
@@ -333,19 +405,17 @@ export default function ReactionBench() {
                   e.dataTransfer.effectAllowed = "copy";
                 }}
                 onClick={() => addToSlot(s)}
-                className="lab-tile h-[104px] w-[86px] shrink-0"
+                className="lab-tile h-[108px] shrink-0"
                 style={{ ["--tile-c" as string]: s.color }}
                 title={`${s.name} (${s.state})`}
               >
-                <span
-                  className={`rounded-full border px-1.5 py-px text-[8px] font-bold ${hz.cls}`}
-                >
+                <span className={`rounded-full border px-1.5 py-px text-[8px] font-bold ${hz.cls}`}>
                   {hz.label}
                 </span>
                 <span className="font-display text-xl font-bold text-slate-50">
                   {s.formula}
                 </span>
-                <span className="max-w-[72px] truncate text-[9px] text-slate-400">{s.name}</span>
+                <span className="max-w-[76px] truncate text-[9px] text-slate-400">{s.name}</span>
                 <span className="text-[8px] uppercase tracking-widest text-slate-500">{s.state}</span>
                 {inSlot && (
                   <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#ff3b5c] shadow-[0_0_8px_rgba(255,59,92,0.9)]" />
@@ -362,9 +432,12 @@ export default function ReactionBench() {
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-bold text-slate-100">Workbench</p>
             <div className="flex items-center gap-2">
-              <span className="lab-chip">
+              <span className="lab-chip hidden sm:inline-flex">
                 <TriangleAlert className="h-3 w-3 text-amber-400" /> Safety goggles on
               </span>
+              <button type="button" onClick={swap} className="lab-btn" disabled={!slotA && !slotB} title="Swap beakers">
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+              </button>
               <button type="button" onClick={reset} className="lab-btn">
                 <RefreshCw className="h-3.5 w-3.5" /> Reset
               </button>
@@ -406,6 +479,9 @@ export default function ReactionBench() {
               value={temp}
               onChange={(e) => setTemp(Number(e.target.value))}
             />
+            <p className="mt-1 text-[10px] text-slate-500">
+              Higher temperature = faster molecular motion = more energetic collisions (but never invents a reaction that doesn't exist).
+            </p>
           </div>
         </div>
 

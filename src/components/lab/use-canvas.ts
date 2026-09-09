@@ -63,5 +63,23 @@ export function useWheelZoom(
   }, [ref, onZoom]);
 }
 
+/**
+ * Native non-passive wheel listener on any element — prevents the page
+ * from scrolling while a diagram zooms (React's synthetic onWheel is
+ * attached passively and cannot call preventDefault).
+ */
+export function useNativeWheel<T extends HTMLElement>(ref: RefObject<T | null>, onWheel?: (e: WheelEvent) => void) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fn = (e: WheelEvent) => {
+      e.preventDefault();
+      onWheel?.(e);
+    };
+    el.addEventListener("wheel", fn, { passive: false });
+    return () => el.removeEventListener("wheel", fn);
+  }, [ref, onWheel]);
+}
+
 export const clamp = (v: number, min: number, max: number) =>
   Math.min(max, Math.max(min, v));

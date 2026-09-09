@@ -133,11 +133,16 @@ export default function ACCircuit() {
     const I = V / Z;
     const phi = Math.atan2(net, R);
     const f0 = hasL && hasC ? 1 / (2 * Math.PI * Math.sqrt((Lm / 1000) * (Cu * 1e-6))) : null;
-    return { XL, XC, net, Z, I, phi, f0, pf: Z > 0 ? R / Z : 0 };
+    const pf = Z > 0 ? R / Z : 0;
+    const S = V * I; // apparent power (VA)
+    const P = S * pf; // real power (W)
+    const Q = S * Math.sin(phi); // reactive power (VAR)
+    return { XL, XC, net, Z, I, phi, f0, pf, S, P, Q };
   }, [V, f, R, Lm, Cu, hasL, hasC]);
 
   const path = "M 60 44 H 300 V 240 H 60 Z";
   const flowDur = clamp(0.9 / (math.I * 60 + 0.05), 0.35, 4);
+  const f0 = math.f0;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
@@ -223,29 +228,78 @@ export default function ACCircuit() {
 
       {/* controls */}
       <div className="lab-glass-deep h-fit space-y-4 p-4">
-        <div className="grid grid-cols-3 gap-2">
-          <Toggle on={hasR} onChange={setHasR} label="Resistor" />
-          <Toggle on={hasL} onChange={setHasL} label="Inductor" />
-          <Toggle on={hasC} onChange={setHasC} label="Capacitor" />
+        <div>
+          <p className="lab-label mb-2">Components in the loop</p>
+          <div className="grid grid-cols-3 gap-2">
+            <Toggle on={hasR} onChange={setHasR} label="Resistor" />
+            <Toggle on={hasL} onChange={setHasL} label="Inductor" />
+            <Toggle on={hasC} onChange={setHasC} label="Capacitor" />
+          </div>
+          <p className="mt-1.5 text-[10px] text-slate-500">
+            Short any component out to see how Z and φ react.
+          </p>
         </div>
 
-        <div className="space-y-4">
-          {[
-            { label: "Source voltage", v: `${V} V`, min: 1, max: 24, set: setV, get: V },
-            { label: "Frequency", v: `${f} Hz`, min: 50, max: 5000, set: setF, get: f },
-            { label: "Resistance R", v: `${R} Ω`, min: 10, max: 1000, set: setR, get: R },
-            { label: "Inductance L", v: `${Lm} mH`, min: 1, max: 500, set: setLm, get: Lm },
-            { label: "Capacitance C", v: `${Cu} μF`, min: 0.1, max: 100, step: 0.1, set: setCu, get: Cu },
-          ].map((s) => (
-            <div key={s.label}>
+        <div className="lab-rule" />
+
+        <div>
+          <p className="lab-label mb-2">Source</p>
+          <div className="space-y-3">
+            <div>
               <div className="flex justify-between text-[11px]">
-                <span className="text-slate-400">{s.label}</span>
-                <span className="lab-value text-slate-200">{s.v}</span>
+                <span className="text-slate-400">Peak voltage</span>
+                <span className="lab-value text-slate-200">{V} V</span>
               </div>
-              <input type="range" className="lab-range mt-1.5" min={s.min} max={s.max} step={s.step ?? 1} value={s.get} onChange={(e) => s.set(Number(e.target.value))} />
+              <input type="range" className="lab-range mt-1" min={1} max={24} step={0.5} value={V} onChange={(e) => setV(Number(e.target.value))} />
             </div>
-          ))}
+            <div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">Frequency</span>
+                <span className="lab-value text-slate-200">{f} Hz</span>
+              </div>
+              <input type="range" className="lab-range mt-1" min={50} max={5000} step={10} value={f} onChange={(e) => setF(Number(e.target.value))} />
+            </div>
+          </div>
         </div>
+
+        <div className="lab-rule" />
+
+        <div>
+          <p className="lab-label mb-2">Component values</p>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">Resistance R</span>
+                <span className="lab-value text-slate-200">{R} Ω</span>
+              </div>
+              <input type="range" className="lab-range mt-1" min={10} max={1000} step={5} value={R} onChange={(e) => setR(Number(e.target.value))} />
+            </div>
+            <div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">Inductance L</span>
+                <span className="lab-value text-slate-200">{Lm} mH</span>
+              </div>
+              <input type="range" className="lab-range mt-1" min={1} max={500} step={1} value={Lm} onChange={(e) => setLm(Number(e.target.value))} />
+            </div>
+            <div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">Capacitance C</span>
+                <span className="lab-value text-slate-200">{Cu} μF</span>
+              </div>
+              <input type="range" className="lab-range mt-1" min={0.1} max={100} step={0.1} value={Cu} onChange={(e) => setCu(Number(e.target.value))} />
+            </div>
+          </div>
+        </div>
+
+        {f0 !== null && f0 > 0 && (
+          <button
+            type="button"
+            onClick={() => setF(Math.round(f0))}
+            className="lab-btn lab-btn-neon w-full"
+          >
+            <Activity className="h-3.5 w-3.5" /> Set frequency to resonance ({(f0 / 1000).toFixed(1)} kHz)
+          </button>
+        )}
 
         <div className="lab-rule" />
 
@@ -255,7 +309,7 @@ export default function ACCircuit() {
             { k: "X_L = 2πfL", v: math.XL.toFixed(1) + " Ω" },
             { k: "X_C = 1/(2πfC)", v: math.XC.toFixed(1) + " Ω" },
             { k: "Impedance Z", v: math.Z.toFixed(1) + " Ω" },
-            { k: "Current I", v: (math.I * 1000).toFixed(1) + " mA" },
+            { k: "Current I (peak)", v: (math.I * 1000).toFixed(1) + " mA" },
             { k: "Phase φ", v: `${(math.phi * 180 / Math.PI).toFixed(1)}°` },
             { k: "Power factor", v: math.pf.toFixed(2) },
           ].map((r) => (
@@ -264,12 +318,23 @@ export default function ACCircuit() {
               <span className="lab-value text-slate-200">{r.v}</span>
             </div>
           ))}
-          {math.f0 && (
-            <p className="mt-2 rounded-lg border border-cyan-400/20 bg-cyan-400/5 p-2 text-[10px] leading-relaxed text-cyan-300">
-              Resonance at f₀ = {(math.f0 / 1000).toFixed(1)} kHz — set the frequency there and the
-              impedance bottoms out at R.
-            </p>
-          )}
+        </div>
+
+        <div>
+          <p className="lab-label mb-2">Power</p>
+          {[
+            { k: "Real P = V·I·cosφ", v: math.P.toFixed(2) + " W" },
+            { k: "Reactive Q = V·I·sinφ", v: math.Q.toFixed(2) + " VAR" },
+            { k: "Apparent S = V·I", v: math.S.toFixed(2) + " VA" },
+          ].map((r) => (
+            <div key={r.k} className="flex items-center justify-between py-1 text-[11px]">
+              <span className="text-slate-500">{r.k}</span>
+              <span className="lab-value text-slate-200">{r.v}</span>
+            </div>
+          ))}
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+            At resonance φ = 0 and Q collapses to ~0 — all apparent power becomes real work.
+          </p>
         </div>
       </div>
     </div>

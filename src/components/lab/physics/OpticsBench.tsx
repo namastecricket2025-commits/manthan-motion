@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Focus, MousePointerClick, Zap } from "lucide-react";
+import { Focus, MousePointerClick, Trash2, Zap } from "lucide-react";
 import { SPRING, clamp } from "../use-canvas";
 
 type Optic = "convex" | "concave" | "mirror" | "prism" | "block";
@@ -48,12 +48,13 @@ function traceRays(angleDeg: number, slots: Slot[]): { rays: Ray[]; foci: { x: n
     if (!active || !slot.type) continue;
     if (ddx <= 0) break;
     const t = (slot.x - cx0) / ddx;
-    if (t < 0) continue;
+    if (t <= 1) continue; // optic behind the source (or exactly at it)
     const yE = cy0 + ddy * t;
 
-    if (cx0 > start.x + 2) {
-      rays.push({ pts: [start, { x: slot.x, y: yE }], color: "#ff647c" });
-    }
+    // every segment from the previous point to this optic is drawn — the
+    // source-to-first-optic ray used to be skipped, which made the laser
+    // look dead.
+    rays.push({ pts: [start, { x: slot.x, y: yE }], color: "#ff647c" });
     start = { x: slot.x, y: yE };
 
     switch (slot.type) {
@@ -180,6 +181,18 @@ export default function OpticsBench() {
   const { rays, foci } = useMemo(() => traceRays(angle, slots), [angle, slots]);
   const activeOptic = slots.find((s) => s.type)?.type;
 
+  // where the surviving beam hits the screen at the right edge (if it does)
+  const landing = useMemo(() => {
+    let best: { x: number; y: number } | null = null;
+    for (const r of rays) {
+      const e = r.pts[r.pts.length - 1];
+      if (e.x >= 855 && (!best || e.x > best.x)) best = e;
+    }
+    return best;
+  }, [rays]);
+
+  const incidence = Math.abs(angle);
+
   const place = (idx: number) => {
     if (!pending) return;
     setSlots((ss) => ss.map((s, i) => (i === idx ? { ...s, type: pending } : s)));
@@ -273,6 +286,27 @@ export default function OpticsBench() {
             </g>
           ))}
 
+          {/* target screen */}
+          <g>
+            <rect x="858" y="96" width="10" height="208" rx="3" fill="rgba(30,41,59,0.85)" stroke="rgba(148,163,184,0.35)" strokeWidth="1.2" />
+            {Array.from({ length: 20 }, (_, i) => (
+              <line key={i} x1="858" y1={100 + i * 10} x2="868" y2={100 + i * 10} stroke="rgba(148,163,184,0.14)" strokeWidth="1" />
+            ))}
+            {landing && (
+              <>
+                <circle cx="860" cy={landing.y} r="6" fill="url(#laser-dot)">
+                  <animate attributeName="r" values="5;8;5" dur="1.6s" repeatCount="indefinite" />
+                </circle>
+                <text x="876" y={landing.y + 4} fontSize="10" fill="#ff647c" fontFamily="monospace" fontWeight="700">
+                  {Math.round(landing.y)}
+                </text>
+              </>
+            )}
+            <text x="863" y="90" fontSize="8" fill="rgba(148,163,184,0.7)" textAnchor="middle" fontFamily="monospace">
+              SCREEN
+            </text>
+          </g>
+
           {/* mounts */}
           {slots.map((s, i) => (
             <g key={`${i}-${s.type ?? "empty"}`}>
@@ -325,6 +359,16 @@ export default function OpticsBench() {
               {p.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setSlots((ss) => ss.map((s) => ({ ...s, type: null })));
+              setPending(null);
+            }}
+            className="lab-btn ml-auto"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Clear bench
+          </button>
         </div>
 
         {/* angle control */}
@@ -378,13 +422,30 @@ export default function OpticsBench() {
           {[
             { k: "Ray segments", v: rays.length },
             { k: "Focal points", v: foci.length },
-            { k: "Incidence on rail", v: `${angle}° from axis` },
+            { k: "Incidence angle", v: `${incidence}° from axis` },
+            {
+              k: "Screen hit",
+              v: landing ? `y = ${Math.round(landing.y)} px` : "misses screen",
+            },
+            {
+              k: "Reflection rule",
+              v: activeOptic === "mirror" ? "θᵢ = θᵣ" : activeOptic === "convex" ? `f = 90 px` : "—",
+            },
           ].map((r) => (
             <div key={r.k} className="flex items-center justify-between py-1 text-[11px]">
               <span className="text-slate-500">{r.k}</span>
               <span className="lab-value text-slate-200">{r.v}</span>
             </div>
           ))}
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+          <p className="lab-label mb-1.5">How to use</p>
+          <ol className="space-y-1.5 text-[11px] leading-relaxed text-slate-400">
+            <li>1 · Pick an optic from the palette.</li>
+            <li>2 · Tap an empty mount to place it.</li>
+            <li>3 · Drag the optic along the rail — the beam re-traces live.</li>
+            <li>4 · Double-click an optic to remove it.</li>
+          </ol>
         </div>
       </div>
     </div>

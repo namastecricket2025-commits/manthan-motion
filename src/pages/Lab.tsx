@@ -43,7 +43,7 @@ export default function Lab() {
     <div className="lab-root">
       <div className="relative z-10">
         {/* Header */}
-        <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0b1120]/80 backdrop-blur-xl">
+        <header className="lab-header sticky top-0 z-40">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
               <Link

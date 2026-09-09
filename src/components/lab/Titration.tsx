@@ -1,49 +1,74 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Droplets, FlaskConical, RefreshCw, RotateCcw } from "lucide-react";
+import { Droplets, FlaskConical, Gauge, Play, RefreshCw, RotateCcw } from "lucide-react";
 import { sfx } from "./lab-sound";
 import { SPRING, useCanvasSize, useRaf, clamp } from "./use-canvas";
 
-const EQUIV = 25;
 const PKA = 4.76;
 
 /**
- * pH of 25 mL of 0.1 M titrand after adding `vol` mL of 0.1 M titrant.
- * `weak` selects acetic acid (pKa 4.76) instead of HCl; the equivalence pH
- * is then 8.73 (conjugate-base salt) instead of 7.00.
+ * pH of `V0` mL of C0 M titrand after adding `vol` mL of Ct M titrant.
+ * `weak` selects acetic acid (pKa 4.76) instead of HCl; the equivalence
+ * pH is then the conjugate-base salt value instead of 7.00.
  */
-function phAt(vol: number, mode: "acid-into-base" | "base-into-acid", weak: boolean): number {
-  const v = clamp(vol, 0, 50);
-  const V = 25 + v;
-  const eq = weak ? 8.73 : 7;
+function phAt(
+  vol: number,
+  mode: "acid-into-base" | "base-into-acid",
+  weak: boolean,
+  C0: number,
+  Ct: number,
+  V0: number,
+): number {
+  const v = clamp(vol, 0, 60);
+  const V = V0 + v;
+  const nFlask = C0 * V0; // mmol of base (or acid) in the flask
+  const nAdd = Ct * v; // mmol of titrant added
+  const Veq = nFlask / Ct;
+  const saltC = nFlask / (V0 + Veq);
+  const eq = weak ? 7 + 0.5 * (PKA + Math.log10(saltC)) : 7;
 
   if (mode === "acid-into-base") {
-    const excessOH = 2.5 - 0.1 * v;
-    if (v < 25) return 14 + Math.log10(excessOH / V);
-    if (v === 25) return eq;
-    // after equivalence
-    if (weak) return PKA + Math.log10(2.5 / (0.1 * v - 2.5)); // acetate buffer vs excess acetic acid
-    return -Math.log10((0.1 * v - 2.5) / V);
+    // flask holds base; titrant is the acid
+    const excessOH = nFlask - nAdd;
+    if (v < Veq - 1e-9) return 14 + Math.log10(excessOH / V);
+    if (Math.abs(v - Veq) <= 1e-9) return eq;
+    // after equivalence: excess weak acid buffers the flask
+    if (weak) return PKA + Math.log10(nFlask / (nAdd - nFlask));
+    return -Math.log10((nAdd - nFlask) / V);
   }
 
   // base-into-acid: flask holds the acid
-  const excessH = 2.5 - 0.1 * v;
-  if (v < 25) {
+  const excessH = nFlask - nAdd;
+  if (v < Veq - 1e-9) {
     if (weak) {
-      // buffer region: pH = pKa + log([Ac⁻]/[HAc]); before any base, use weak-acid formula
-      if (v < 0.05) return 0.5 * (PKA - Math.log10(0.1));
-      return PKA + Math.log10((0.1 * v) / excessH);
+      // buffer region: pH = pKa + log([Ac⁻]/[HAc])
+      if (v < 0.05) return 0.5 * (PKA - Math.log10(C0));
+      return PKA + Math.log10(nAdd / excessH);
     }
     return -Math.log10(excessH / V);
   }
-  if (v === 25) return eq;
-  return 14 + Math.log10((0.1 * v - 2.5) / V);
+  if (Math.abs(v - Veq) <= 1e-9) return eq;
+  return 14 + Math.log10((nAdd - nFlask) / V);
 }
 
-function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "base-into-acid"; weak: boolean }) {
+function Curve({
+  vol,
+  mode,
+  weak,
+  C0,
+  Ct,
+  V0,
+}: {
+  vol: number;
+  mode: "acid-into-base" | "base-into-acid";
+  weak: boolean;
+  C0: number;
+  Ct: number;
+  V0: number;
+}) {
   const { ref, size } = useCanvasSize<HTMLCanvasElement>();
-  const state = useRef({ vol, mode, weak });
-  state.current = { vol, mode, weak };
+  const state = useRef({ vol, mode, weak, C0, Ct, V0 });
+  state.current = { vol, mode, weak, C0, Ct, V0 };
 
   useRaf(() => {
     const canvas = ref.current;
@@ -52,10 +77,12 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
     if (!w || !h) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const S = state.current;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const X = (v: number) => (v / 50) * (w - 24) + 12;
+    const Veq = (S.C0 * S.V0) / S.Ct;
+    const X = (v: number) => (v / 60) * (w - 24) + 12;
     const Y = (p: number) => h - 14 - (clamp(p, 0, 14) / 14) * (h - 30);
 
     // grid
@@ -70,7 +97,7 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
       ctx.stroke();
       ctx.fillText(String(p), 2, Y(p) + 3);
     }
-    for (let v = 0; v <= 50; v += 10) {
+    for (let v = 0; v <= 60; v += 10) {
       ctx.beginPath();
       ctx.moveTo(X(v), 8);
       ctx.lineTo(X(v), h - 8);
@@ -82,8 +109,8 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
     ctx.strokeStyle = "rgba(148,163,184,0.35)";
     ctx.lineWidth = 1.4;
     ctx.beginPath();
-    for (let v = 0; v <= 50; v += 0.25) {
-      const p = phAt(v, state.current.mode, state.current.weak);
+    for (let v = 0; v <= 60; v += 0.25) {
+      const p = phAt(v, S.mode, S.weak, S.C0, S.Ct, S.V0);
       const x = X(v);
       const y = Y(p);
       if (v === 0) ctx.moveTo(x, y);
@@ -92,7 +119,7 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
     ctx.stroke();
 
     // equivalence marker
-    const ex = X(EQUIV);
+    const ex = X(Veq);
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = "rgba(255,59,92,0.5)";
     ctx.beginPath();
@@ -102,10 +129,11 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
     ctx.setLineDash([]);
     ctx.fillStyle = "#ff647c";
     ctx.font = "bold 10px ui-monospace, monospace";
-    ctx.fillText(`EQ pH ${state.current.weak ? "8.73" : "7.00"}`, ex + 5, 18);
+    const eqPh = phAt(Veq, S.mode, S.weak, S.C0, S.Ct, S.V0);
+    ctx.fillText(`EQ ${Veq.toFixed(1)} mL · pH ${eqPh.toFixed(2)}`, ex + 5, 18);
 
     // live segment
-    const vNow = state.current.vol;
+    const vNow = S.vol;
     ctx.strokeStyle = "#ff647c";
     ctx.lineWidth = 2.2;
     ctx.shadowColor = "rgba(255,59,92,0.8)";
@@ -113,7 +141,7 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
     ctx.beginPath();
     let started = false;
     for (let v = 0; v <= vNow; v += 0.25) {
-      const p = phAt(v, state.current.mode, state.current.weak);
+      const p = phAt(v, S.mode, S.weak, S.C0, S.Ct, S.V0);
       const x = X(v);
       const y = Y(p);
       if (!started) {
@@ -126,7 +154,7 @@ function Curve({ vol, mode, weak }: { vol: number; mode: "acid-into-base" | "bas
 
     // current point
     const cx = X(vNow);
-    const cy = Y(phAt(vNow, state.current.mode, state.current.weak));
+    const cy = Y(phAt(vNow, S.mode, S.weak, S.C0, S.Ct, S.V0));
     ctx.fillStyle = "#fff";
     ctx.beginPath();
     ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
@@ -144,11 +172,17 @@ export default function Titration() {
   const [weak, setWeak] = useState(false);
   const [vol, setVol] = useState(0);
   const [angle, setAngle] = useState(0); // 0 closed → π/2 fully open
+  const [C0, setC0] = useState(0.1); // flask concentration (M)
+  const [Ct, setCt] = useState(0.1); // titrant concentration (M)
+  const [flowRate, setFlowRate] = useState(1); // 0.5 – 3 × base drip speed
+  const [indicator, setIndicator] = useState<"pp" | "mo">("pp");
+  const [auto, setAuto] = useState(false);
   const [dropTick, setDropTick] = useState(0);
   const lastTick = useRef(0);
 
+  const Veq = (C0 * 25) / Ct;
   const open = angle > 0.06;
-  const flowing = open && vol < 50;
+  const flowing = (open || auto) && vol < 60;
 
   // valve click on open/close + drip per drop
   const wasOpen = useRef(false);
@@ -161,41 +195,46 @@ export default function Titration() {
   }, [dropTick]);
 
   useRaf((dt, t) => {
-    if (flowing) {
-      setVol((v) => Math.min(50, v + 1.7 * (angle / (Math.PI / 2)) * dt));
-      if (t - lastTick.current > 0.45) {
-        lastTick.current = t;
-        setDropTick((k) => k + 1);
-      }
+    if (!flowing) return;
+    const rate = (auto ? 4.2 : 1.7 * (angle / (Math.PI / 2))) * flowRate;
+    setVol((v) => Math.min(60, v + rate * dt));
+    const interval = 0.5 / flowRate;
+    if (t - lastTick.current > interval) {
+      lastTick.current = t;
+      setDropTick((k) => k + 1);
     }
   });
 
-  const ph = phAt(vol, mode, weak);
-  const pink = clamp((ph - 8.2) / 2.8, 0, 1);
-  const excessOH = mode === "acid-into-base" ? 2.5 - 0.1 * vol : 0.1 * vol - 2.5;
-  const inBuffer = weak && mode === "base-into-acid" && vol > 0.1 && vol < 24.9;
+  const ph = phAt(vol, mode, weak, C0, Ct, 25);
+  const eqPh = phAt(Veq, mode, weak, C0, Ct, 25);
+
+  // indicator colour
+  const ppPink = clamp((ph - 8.2) / 2.3, 0, 1); // phenolphthalein: colourless < 8.2 → pink > 10.5
+  const moTint = clamp((ph - 3.1) / 1.3, 0, 1); // methyl orange: red < 3.1 → yellow > 4.4
+  const liquidColor =
+    indicator === "pp"
+      ? `rgba(244,114,182,${0.1 + ppPink * 0.85})`
+      : `rgba(251,146,60,${0.12 + (1 - moTint) * 0.55})`;
+
+  const excessOH = mode === "acid-into-base" ? C0 * 25 - Ct * vol : Ct * vol - C0 * 25;
+  const inBuffer = weak && mode === "base-into-acid" && vol > 0.1 && vol < Veq - 0.1;
   const status = inBuffer
     ? "Buffer region — the CH₃COOH / CH₃COO⁻ pair resists pH change (Henderson–Hasselbalch)"
-    : vol < EQUIV - 0.05
+    : vol < Veq - 0.05
       ? mode === "acid-into-base"
         ? "Before equivalence — excess OH⁻ keeps the flask basic"
         : weak
           ? "Before equivalence — partial neutralisation forms the acetate buffer"
           : "Before equivalence — excess H⁺ keeps the flask acidic"
-      : vol > EQUIV + 0.05
+      : vol > Veq + 0.05
         ? mode === "acid-into-base"
           ? weak
             ? "After equivalence — excess weak acid buffers the flask near pH 4.8"
             : "After equivalence — excess H⁺ turns the flask acidic"
           : "After equivalence — excess OH⁻ turns the flask basic"
         : weak
-          ? "At equivalence — all acid neutralised; the acetate salt solution is mildly basic (pH 8.73)"
+          ? `At equivalence — all acid neutralised; the salt solution sits at pH ${eqPh.toFixed(2)}`
           : "At equivalence — acid and base are exactly neutralised (pH 7)";
-
-  const liquidColor =
-    mode === "acid-into-base"
-      ? `rgba(244,114,182,${0.1 + pink * 0.85})`
-      : `rgba(244,114,182,${0.08 + pink * 0.8})`;
 
   const handleRotate = (e: React.PointerEvent) => {
     const rect = (e.currentTarget as SVGGElement).ownerSVGElement!.getBoundingClientRect();
@@ -210,9 +249,14 @@ export default function Titration() {
   const reset = () => {
     setVol(0);
     setAngle(0);
+    setAuto(false);
   };
 
-  const level = 252 - (vol / 50) * 238;
+  const level = 252 - (vol / 60) * 238;
+
+  const acidFormula = weak ? "CH₃COOH" : "HCl";
+  const flaskLabel = mode === "acid-into-base" ? `NaOH · ${C0.toFixed(2)} M` : `${acidFormula} · ${C0.toFixed(2)} M`;
+  const titrantLabel = mode === "acid-into-base" ? `${acidFormula} · ${Ct.toFixed(2)} M` : `NaOH · ${Ct.toFixed(2)} M`;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
@@ -222,7 +266,7 @@ export default function Titration() {
           <p className="text-sm font-bold text-slate-100">Apparatus</p>
           <span className="lab-chip">
             <Droplets className="h-3 w-3 text-cyan-300" />
-            {mode === "acid-into-base" ? `${weak ? "CH3COOH" : "HCl"} → NaOH` : `NaOH → ${weak ? "CH3COOH" : "HCl"}`}
+            {mode === "acid-into-base" ? `${acidFormula} → NaOH` : `NaOH → ${acidFormula}`}
           </span>
         </div>
 
@@ -261,14 +305,14 @@ export default function Titration() {
             <rect x="42" y="8" width="36" height="252" rx="5" fill="url(#bur-glass)" stroke="rgba(148,163,184,0.4)" strokeWidth="1" />
             <rect x="44" y={level} width="32" height={252 - level + 4} rx="3" fill="rgba(103,232,249,0.18)" />
             <line x1="44" y1={level} x2="76" y2={level} stroke="rgba(165,243,252,0.6)" strokeWidth="1.4" />
-            {Array.from({ length: 11 }, (_, i) => {
-              const y = 8 + (i * 238) / 10;
+            {Array.from({ length: 13 }, (_, i) => {
+              const y = 8 + (i * 238) / 12;
               return (
                 <g key={i}>
                   <line x1="36" y1={y} x2="42" y2={y} stroke="rgba(148,163,184,0.5)" />
                   {i % 2 === 0 && (
                     <text x="30" y={y + 3} fontSize="8" fill="rgba(148,163,184,0.8)" textAnchor="end" fontFamily="monospace">
-                      {i * 5}
+                      {Math.round((i * 60) / 12)}
                     </text>
                   )}
                 </g>
@@ -298,7 +342,7 @@ export default function Titration() {
           {/* flask */}
           <div className="flex flex-col items-center">
             <span className="mb-1 text-[9px] uppercase tracking-widest text-slate-500">
-              Flask · 25 mL {mode === "acid-into-base" ? "NaOH" : weak ? "CH₃COOH" : "HCl"}
+              Flask · 25 mL {flaskLabel}
             </span>
             <svg viewBox="0 0 110 150" className="w-[110px]">
               <defs>
@@ -317,30 +361,85 @@ export default function Titration() {
                 strokeWidth="1.6"
               />
               <line x1="40" y1="52" x2="70" y2="52" stroke="rgba(226,232,240,0.35)" strokeWidth="1" />
-              <text x="55" y="120" textAnchor="middle" fontSize="10" fill={pink > 0.3 ? "#f9a8d4" : "rgba(226,232,240,0.75)"} fontFamily="monospace">
+              <text x="55" y="120" textAnchor="middle" fontSize="10" fill={indicator === "pp" ? (ppPink > 0.3 ? "#f9a8d4" : "rgba(226,232,240,0.75)") : "rgba(226,232,240,0.85)"} fontFamily="monospace">
                 pH {ph.toFixed(2)}
               </text>
             </svg>
-            <span className="lab-chip mt-1">Phenolphthalein</span>
+            <span className="lab-chip mt-1">
+              {indicator === "pp" ? "Phenolphthalein" : "Methyl orange"}
+            </span>
           </div>
+        </div>
+
+        {/* indicator choice */}
+        <div className="lab-tabs mt-3 self-start">
+          {(
+            [
+              { key: "pp", label: "Phenolphthalein" },
+              { key: "mo", label: "Methyl orange" },
+            ] as const
+          ).map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              onClick={() => setIndicator(a.key)}
+              className={`lab-tab !py-1.5 !text-[11px] ${indicator === a.key ? "lab-tab--on" : ""}`}
+            >
+              {a.label}
+            </button>
+          ))}
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-2">
           <button type="button" onClick={() => { setMode((m) => (m === "acid-into-base" ? "base-into-acid" : "acid-into-base")); reset(); }} className="lab-btn">
             <RotateCcw className="h-3.5 w-3.5" /> Swap roles
           </button>
+          <button type="button" onClick={() => { setAuto((a) => !a); if (!auto) setAngle(0); }} className={`lab-btn ${auto ? "lab-btn--active" : ""}`}>
+            {auto ? <Play className="h-3.5 w-3.5" /> : <Gauge className="h-3.5 w-3.5" />}
+            {auto ? "Stop auto" : "Auto-titrate"}
+          </button>
           <button type="button" onClick={reset} className="lab-btn">
             <RefreshCw className="h-3.5 w-3.5" /> Refill
           </button>
         </div>
-        <p className="mt-2 text-center text-[10px] text-slate-500">
-          {open ? "Valve open — drag the handle to control the drip." : "Grab the red handle and pull it downward to open the valve."}
-        </p>
-        {weak && (
-          <p className="mt-2 rounded-lg border border-violet-400/20 bg-violet-400/5 p-2 text-[10px] leading-relaxed text-violet-300">
-            Acetic acid pKa = 4.76 · equivalence pH 8.73 — phenolphthalein flips exactly there.
+
+        {/* concentrations */}
+        <div className="mt-3 space-y-3 rounded-xl border border-white/10 bg-black/20 p-3">
+          <div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Flask conc. ({mode === "acid-into-base" ? "NaOH" : acidFormula})</span>
+              <span className="lab-value text-slate-200">{C0.toFixed(2)} M</span>
+            </div>
+            <input type="range" className="lab-range mt-1" min={0.02} max={0.5} step={0.01} value={C0} onChange={(e) => { setC0(Number(e.target.value)); reset(); }} />
+          </div>
+          <div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Titrant conc. ({mode === "acid-into-base" ? acidFormula : "NaOH"})</span>
+              <span className="lab-value text-slate-200">{Ct.toFixed(2)} M</span>
+            </div>
+            <input type="range" className="lab-range mt-1" min={0.02} max={0.5} step={0.01} value={Ct} onChange={(e) => { setCt(Number(e.target.value)); reset(); }} />
+          </div>
+          <p className="text-[10px] leading-relaxed text-slate-500">
+            Equivalence volume = C·V/c = <span className="lab-value text-slate-300">{Veq.toFixed(1)} mL</span> — it moves when you change the concentrations.
           </p>
-        )}
+        </div>
+
+        {/* flow rate */}
+        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Drip speed</span>
+            <span className="lab-value text-slate-200">{flowRate.toFixed(1)}×</span>
+          </div>
+          <input type="range" className="lab-range mt-1" min={0.5} max={3} step={0.1} value={flowRate} onChange={(e) => setFlowRate(Number(e.target.value))} />
+        </div>
+
+        <p className="mt-2 text-center text-[10px] text-slate-500">
+          {auto
+            ? "Auto-titrating at 4.2 mL/s — watch the curve sweep to equivalence."
+            : open
+              ? "Valve open — drag the handle to control the drip."
+              : "Grab the red handle and pull it downward to open the valve."}
+        </p>
       </div>
 
       {/* readouts + curve */}
@@ -349,16 +448,11 @@ export default function Titration() {
           {[
             { k: "Titrant added", v: `${vol.toFixed(1)} mL` },
             { k: "pH", v: ph.toFixed(2) },
+            { k: "Equivalence", v: `${Veq.toFixed(1)} mL` },
             {
-              k: "Excess",
-              v:
-                Math.abs(excessOH) < 0.01
-                  ? "—"
-                  : excessOH > 0
-                    ? `${(excessOH / (25 + vol)).toExponential(1)} mol/L OH⁻`
-                    : `${(-excessOH / (25 + vol)).toExponential(1)} mol/L H⁺`,
+              k: "Indicator",
+              v: indicator === "pp" ? (ppPink > 0.5 ? "Pink" : "Colourless") : moTint > 0.5 ? "Yellow" : moTint > 0.15 ? "Orange" : "Red",
             },
-            { k: "Indicator", v: pink > 0.5 ? "Pink" : "Colourless" },
           ].map((r) => (
             <motion.div
               key={r.k}
@@ -378,14 +472,19 @@ export default function Titration() {
             <p className="text-sm font-bold text-slate-100">pH titration curve</p>
             <span className="lab-chip">
               <FlaskConical className="h-3 w-3 text-violet-300" />
-              {weak ? "weak acid · buffer region visible" : "strong acid · sharp endpoint"}
+              {weak ? `weak acid · buffer region · EQ pH ${eqPh.toFixed(2)}` : "strong acid · sharp endpoint"}
             </span>
           </div>
-          <Curve vol={vol} mode={mode} weak={weak} />
+          <Curve vol={vol} mode={mode} weak={weak} C0={C0} Ct={Ct} V0={25} />
           <p className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
             <span className="lab-pulse inline-block h-1.5 w-1.5 rounded-full bg-[#ff3b5c]" />
             {status}
           </p>
+          {indicator === "mo" && (
+            <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+              Methyl orange flips red → yellow between pH 3.1–4.4 — it suits the strong-acid endpoint but would change colour before a weak-acid equivalence (pH {eqPh.toFixed(2)}).
+            </p>
+          )}
         </div>
       </div>
     </div>

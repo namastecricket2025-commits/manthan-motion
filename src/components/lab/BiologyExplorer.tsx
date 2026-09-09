@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Dna, Focus, HeartPulse, Microscope } from "lucide-react";
-import { SPRING, clamp, useCanvasSize, useRaf } from "./use-canvas";
+import { Dna, Droplets, Focus, HeartPulse, Microscope, Wind } from "lucide-react";
+import { SPRING, clamp, useCanvasSize, useNativeWheel, useRaf } from "./use-canvas";
 import DnaSandbox from "./bio/DnaSandbox";
 import HeartAnatomy from "./bio/HeartAnatomy";
+import Respiratory from "./bio/Respiratory";
+import Excretory from "./bio/Excretory";
 
-type BioTab = "explorer" | "dna" | "heart";
+type BioTab = "explorer" | "resp" | "excrete" | "dna" | "heart";
 
 /* ---------------- molecular particle mosaic ---------------- */
 function ParticleMosaic() {
@@ -121,6 +123,7 @@ function ExplorerTab() {
   const [hover, setHover] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  useNativeWheel(wrapRef); // keep the page from scrolling while zooming
 
   const onWheel = (e: React.WheelEvent) => {
     const rect = wrapRef.current?.getBoundingClientRect();
@@ -148,9 +151,15 @@ function ExplorerTab() {
   const molOp = clamp((zoom - 2.45) / 0.3, 0, 1);
   const detailVis = clamp((zoom - 1.35) / 0.35, 0, 1);
 
+  // Hover only engages when the user isn't dragging — otherwise panning
+  // over structures flickers the inspector.
   const h = (id: string) => ({
-    onMouseEnter: () => setHover(id),
-    onMouseLeave: () => setHover(null),
+    onMouseEnter: () => {
+      if (!dragRef.current) setHover(id);
+    },
+    onMouseLeave: () => {
+      if (!dragRef.current) setHover(null);
+    },
     style: { cursor: "help" as const },
   });
 
@@ -415,7 +424,9 @@ export default function BiologyExplorer() {
       <div className="lab-tabs">
         {(
           [
-            { key: "explorer", label: "Explorer", icon: Microscope },
+            { key: "explorer", label: "Cell", icon: Microscope },
+            { key: "resp", label: "Respiratory", icon: Wind },
+            { key: "excrete", label: "Excretory", icon: Droplets },
             { key: "dna", label: "DNA", icon: Dna },
             { key: "heart", label: "Heart", icon: HeartPulse },
           ] as const
@@ -436,6 +447,16 @@ export default function BiologyExplorer() {
         {tab === "explorer" && (
           <motion.div key="explorer" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
             <ExplorerTab />
+          </motion.div>
+        )}
+        {tab === "resp" && (
+          <motion.div key="resp" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+            <Respiratory />
+          </motion.div>
+        )}
+        {tab === "excrete" && (
+          <motion.div key="excrete" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+            <Excretory />
           </motion.div>
         )}
         {tab === "dna" && (

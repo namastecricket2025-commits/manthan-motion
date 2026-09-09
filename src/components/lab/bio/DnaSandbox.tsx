@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Dna, RotateCcw } from "lucide-react";
+import { Dna, Minus, Plus, RotateCcw } from "lucide-react";
 import { sfx } from "../lab-sound";
 import { SPRING, useCanvasSize, useRaf, clamp } from "../use-canvas";
 
@@ -24,21 +24,21 @@ const F = 620;
 
 const yawOf = (twist: number) => YAW + twist * 0.35;
 
-function strandPoints(twist: number) {
+function strandPoints(twist: number, z: number, ox: number, oy: number, cw: number, ch: number) {
   const yaw = yawOf(twist);
   const cy = Math.cos(yaw);
   const sy = Math.sin(yaw);
-  return (phase: number, cssW: number, cssH: number) => {
+  return (phase: number) => {
     const pts: { x: number; y: number; z: number; s: number }[] = [];
     for (let i = 0; i < SLOTS; i++) {
       const th = i * 0.85 + phase;
       const x = R * Math.cos(th);
-      const z = R * Math.sin(th);
+      const zz = R * Math.sin(th);
       const y = Y0 + i * PITCH;
-      const x1 = x * cy + z * sy;
-      const z1 = -x * sy + z * cy;
+      const x1 = x * cy + zz * sy;
+      const z1 = -x * sy + zz * cy;
       const s = F / (F + DIST + z1);
-      pts.push({ x: cssW / 2 + x1 * s, y: cssH / 2 + y * s, z: z1, s });
+      pts.push({ x: cw / 2 + x1 * s * z + ox, y: ch / 2 + y * s * z + oy, z: z1, s });
     }
     return pts;
   };
@@ -48,26 +48,34 @@ export default function DnaSandbox() {
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
   const [mode, setMode] = useState<"explore" | "transcribe">("explore");
   const [twist, setTwist] = useState(0);
-  const [selectedTile, setSelectedTile] = useState<number | null>(null); // index into tiles
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [selectedTile, setSelectedTile] = useState<number | null>(null);
   const [matched, setMatched] = useState<Set<number>>(new Set());
   const [wrongSlot, setWrongSlot] = useState<number | null>(null);
   const [flying, setFlying] = useState<{ tileIdx: number; slot: number } | null>(null);
   const [done, setDone] = useState(false);
 
-  const dragRef = useRef<{ x: number; twist0: number } | null>(null);
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    twist0: number;
+    px: number;
+    py: number;
+    kind: "twist" | "pan";
+  } | null>(null);
   const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const st = useRef({ twist, mode, matched });
-  st.current = { twist, mode, matched };
+  const st = useRef({ twist, mode, matched, zoom, pan });
+  st.current = { twist, mode, matched, zoom, pan };
   const cssW = size.current.w / Math.max(1, size.current.dpr);
   const cssH = size.current.h / Math.max(1, size.current.dpr);
 
   const tiles = useMemo(() => {
     const list = SEQ.map((b) => COMPL[b]);
-    // deterministic shuffle
     return [...list].sort(() => 0.45 - Math.random() * 0.9);
   }, []);
 
-  useRaf(() => {
+  useRaf((_dt, t) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const { w, h, dpr } = size.current;
@@ -80,9 +88,11 @@ export default function DnaSandbox() {
 
     const cw = w / dpr;
     const ch = h / dpr;
-    const ptsA = strandPoints(S.twist)(0, cw, ch);
+    // idle auto-twist: the helix slowly rotates when you aren't dragging it
+    const effTwist = dragRef.current?.kind === "twist" ? S.twist : S.twist + Math.sin(t * 0.45) * 0.42;
+    const ptsA = strandPoints(effTwist, S.zoom, S.pan.x, S.pan.y, cw, ch)(0);
 
-    // backbone A
+    // backbone A: thick stroke + phosphate beads + sugar pentagons
     ctx.lineWidth = 4;
     ctx.strokeStyle = "rgba(100,116,139,0.85)";
     ctx.lineJoin = "round";
@@ -90,51 +100,119 @@ export default function DnaSandbox() {
     ptsA.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
     ctx.stroke();
 
+    for (const p of ptsA) {
+      // phosphate bead (outer)
+      ctx.fillStyle = "rgba(148,163,184,0.9)";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.6 * p.s + 1, 0, Math.PI * 2);
+      ctx.fill();
+      // sugar pentagon (inner)
+      ctx.fillStyle = "rgba(203,213,225,0.35)";
+      ctx.strokeStyle = "rgba(203,213,225,0.5)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const rp = 6.5 * p.s + 1.5;
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * Math.PI * 2 - Math.PI / 2;
+        const px = p.x + Math.cos(a) * rp;
+        const py = p.y + Math.sin(a) * rp;
+        if (k === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
     if (S.mode === "explore") {
-      const ptsB = strandPoints(S.twist)(Math.PI, cw, ch);
-      // rungs
-      ptsA.forEach((p, i) => {
-        const q = ptsB[i];
-        ctx.strokeStyle = COLORS[SEQ[i]];
-        ctx.lineWidth = 2.4;
-        ctx.globalAlpha = 0.75;
+      const ptsB = strandPoints(effTwist, S.zoom, S.pan.x, S.pan.y, cw, ch)(Math.PI);
+      // rungs sorted far → near for proper depth
+      const pairs = ptsA.map((p, i) => ({ p, q: ptsB[i], i }));
+      pairs.sort((a, b) => b.p.z - a.p.z);
+      for (const { p, q, i } of pairs) {
+        const base = SEQ[i];
+        const depth = clamp(0.35 + (p.z + R) / (2 * R), 0.3, 1);
+        // rung line
+        ctx.strokeStyle = COLORS[base];
+        ctx.globalAlpha = depth;
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(q.x, q.y);
         ctx.stroke();
-        ctx.globalAlpha = 1;
-        // bases
-        for (const pt of [p, q]) {
-          ctx.fillStyle = COLORS[SEQ[i]];
+
+        // bases as rounded labels
+        const mx = (p.x + q.x) / 2;
+        const my = (p.y + q.y) / 2;
+        // hydrogen bonds between the bases
+        const hb = HBONDS[base];
+        ctx.strokeStyle = "rgba(226,232,240,0.7)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([2.5, 3]);
+        for (let k = 0; k < hb; k++) {
+          const off = (k - (hb - 1) / 2) * 6;
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 5.5 * pt.s + 1.5, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.moveTo(mx - 8, my + off);
+          ctx.lineTo(mx + 8, my + off);
+          ctx.stroke();
         }
-      });
+        ctx.setLineDash([]);
+
+        for (const pt of [p, q]) {
+          ctx.fillStyle = COLORS[base];
+          ctx.globalAlpha = depth;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 6.5 * pt.s + 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#0b1120";
+          ctx.font = `700 ${Math.max(7, 9 * pt.s)}px ui-monospace, monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(base, pt.x, pt.y + 0.5);
+        }
+      }
+      ctx.globalAlpha = 1;
       // backbone B
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3.4;
       ctx.strokeStyle = "rgba(100,116,139,0.6)";
       ctx.beginPath();
       ptsB.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
       ctx.stroke();
+      for (const p of ptsB) {
+        ctx.fillStyle = "rgba(148,163,184,0.7)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3.4 * p.s + 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
       // transcribe: slots + growing strand
       ptsA.forEach((p, i) => {
         const m = S.matched.has(i);
-        ctx.fillStyle = m ? COLORS[COMPL[SEQ[i]]] : "rgba(148,163,184,0.4)";
-        ctx.strokeStyle = m ? COLORS[COMPL[SEQ[i]]] : "rgba(148,163,184,0.5)";
+        const c = COLORS[COMPL[SEQ[i]]];
+        ctx.fillStyle = m ? c : "rgba(148,163,184,0.4)";
+        ctx.strokeStyle = m ? c : "rgba(148,163,184,0.5)";
         ctx.lineWidth = 1.6;
         ctx.beginPath();
         ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        if (m) {
+          // matched pulse glow
+          const glow = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 24);
+          glow.addColorStop(0, c + "aa");
+          glow.addColorStop(1, c + "00");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 24, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.fillStyle = "#0b1120";
         ctx.font = "700 10px ui-monospace, monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(m ? COMPL[SEQ[i]] : "?", p.x, p.y + 0.5);
         // growing strand offset
-        ctx.strokeStyle = COLORS[COMPL[SEQ[i]]];
+        ctx.strokeStyle = c;
         ctx.lineWidth = 2.6;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
@@ -142,7 +220,7 @@ export default function DnaSandbox() {
         ctx.stroke();
         ctx.beginPath();
         ctx.arc(p.x + 120, p.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = COLORS[COMPL[SEQ[i]]];
+        ctx.fillStyle = c;
         ctx.fill();
       });
     }
@@ -158,19 +236,35 @@ export default function DnaSandbox() {
   });
 
   const slotScreen = (i: number) => {
-    const pts = strandPoints(twist)(0, cssW, cssH);
+    const pts = strandPoints(twist, zoom, pan.x, pan.y, cssW, cssH)(0);
     return pts[i];
   };
 
   const onCanvasDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (mode !== "explore") return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = { x: e.clientX, twist0: twist };
+    const panMode = e.button === 2 || e.ctrlKey;
+    dragRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      twist0: twist,
+      px: pan.x,
+      py: pan.y,
+      kind: panMode ? "pan" : "twist",
+    };
   };
   const onCanvasMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d) return;
-    setTwist(clamp(d.twist0 + (e.clientX - d.x) * 0.014, -1.6, 1.6));
+    if (d.kind === "twist") {
+      setTwist(clamp(d.twist0 + (e.clientX - d.x) * 0.014, -1.6, 1.6));
+    } else {
+      setPan({ x: d.px + (e.clientX - d.x), y: d.py + (e.clientY - d.y) });
+    }
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    setZoom(clamp(zoom * (e.deltaY > 0 ? 0.92 : 1.09), 0.6, 2.4));
   };
 
   const snapTile = (tileIdx: number, slot: number) => {
@@ -184,7 +278,6 @@ export default function DnaSandbox() {
         const cr = canvas.getBoundingClientRect();
         const target = slotScreen(slot);
         setFlying({ tileIdx, slot });
-        // store travel for the flying element (fixed coords)
         flyingFrom.current = { x: br.left + br.width / 2, y: br.top + br.height / 2, tx: cr.left + target.x, ty: cr.top + target.y };
       }
       setSelectedTile(null);
@@ -200,6 +293,8 @@ export default function DnaSandbox() {
   const startTranscribe = () => {
     setMode("transcribe");
     setTwist(0);
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
     setMatched(new Set());
     setDone(false);
     setFlying(null);
@@ -214,6 +309,8 @@ export default function DnaSandbox() {
     setFlying(null);
     setSelectedTile(null);
     setTwist(0);
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
   };
 
   return (
@@ -224,17 +321,26 @@ export default function DnaSandbox() {
             <p className="text-sm font-bold text-slate-100">DNA transcription sandbox</p>
             <p className="text-[11px] text-slate-500">
               {mode === "explore"
-                ? "Drag horizontally to twist the double helix. Antiparallel strands pair A–T (2 H-bonds) and G–C (3 H-bonds)."
+                ? "Drag to twist the double helix · wheel to zoom · right-drag to pan. Pairs are A–T (2 H-bonds) and G–C (3 H-bonds)."
                 : "The helix is split — click a floating nucleotide, then tap a slot to snap it onto the growing strand."}
             </p>
           </div>
-          <div className="lab-tabs">
-            <button type="button" className={`lab-tab ${mode === "explore" ? "lab-tab--on" : ""}`} onClick={() => setMode("explore")}>
-              Explore helix
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setZoom(clamp(zoom * 1.15, 0.6, 2.4))} className="lab-btn !px-2" title="Zoom in">
+              <Plus className="h-3.5 w-3.5" />
             </button>
-            <button type="button" className={`lab-tab ${mode === "transcribe" ? "lab-tab--on" : ""}`} onClick={startTranscribe}>
-              Transcribe
+            <button type="button" onClick={() => setZoom(clamp(zoom * 0.87, 0.6, 2.4))} className="lab-btn !px-2" title="Zoom out">
+              <Minus className="h-3.5 w-3.5" />
             </button>
+            <span className="lab-chip">{Math.round(zoom * 100)}%</span>
+            <div className="lab-tabs">
+              <button type="button" className={`lab-tab ${mode === "explore" ? "lab-tab--on" : ""}`} onClick={() => setMode("explore")}>
+                Explore helix
+              </button>
+              <button type="button" className={`lab-tab ${mode === "transcribe" ? "lab-tab--on" : ""}`} onClick={startTranscribe}>
+                Transcribe
+              </button>
+            </div>
           </div>
         </div>
 
@@ -244,13 +350,16 @@ export default function DnaSandbox() {
           onPointerDown={onCanvasDown}
           onPointerMove={onCanvasMove}
           onPointerUp={() => (dragRef.current = null)}
+          onPointerCancel={() => (dragRef.current = null)}
+          onContextMenu={(e) => e.preventDefault()}
+          onWheel={onWheel}
         />
 
         {/* flying tile */}
         <AnimatePresence>
           {flying && (
-          <motion.button
-            key={`fly-${flying.tileIdx}-${flying.slot}`}
+            <motion.button
+              key={`fly-${flying.tileIdx}-${flying.slot}`}
               className="pointer-events-none fixed z-50 flex h-8 w-8 items-center justify-center rounded-full font-bold text-[#0b1120]"
               style={{ background: COLORS[tiles[flying.tileIdx]] }}
               initial={{ left: flyingFrom.current.x - 16, top: flyingFrom.current.y - 16, scale: 1 }}
