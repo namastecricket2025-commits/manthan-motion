@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Dna, Minus, Plus, RotateCcw } from "lucide-react";
 import { sfx } from "../lab-sound";
-import { SPRING, useCanvasSize, useRaf, clamp } from "../use-canvas";
+import { SPRING, clamp, useCanvasSize, useNativeWheel, useRaf } from "../use-canvas";
 
 const SLOTS = 8;
 const SEQ = ["A", "T", "G", "C", "A", "T", "G", "C"]; // 5' → 3' template strand
@@ -56,6 +56,7 @@ export default function DnaSandbox() {
   const [flying, setFlying] = useState<{ tileIdx: number; slot: number } | null>(null);
   const [done, setDone] = useState(false);
 
+  useNativeWheel(canvasRef); // keep the page from scrolling while zooming
   const dragRef = useRef<{
     x: number;
     y: number;
