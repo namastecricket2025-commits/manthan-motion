@@ -708,13 +708,35 @@ html:not(.dark) .lab-root .bg-black\/20 {
 html:not(.dark) .lab-root .bg-black\/25 {
   background-color: rgba(255, 255, 255, 0.68);
 }
+/* overlay strips over 3D canvases must flip too, else dark text lands on dark glass */
+html:not(.dark) .lab-root .bg-black\/30 {
+  background-color: rgba(255, 255, 255, 0.72);
+}
+html:not(.dark) .lab-root .bg-black\/40,
+html:not(.dark) .lab-root .bg-black\/45 {
+  background-color: rgba(255, 255, 255, 0.78);
+}
 html:not(.dark) .lab-root .bg-black\/50,
+html:not(.dark) .lab-root .bg-black\/55,
 html:not(.dark) .lab-root .bg-black\/60,
 html:not(.dark) .lab-root .bg-black\/70 {
   background-color: rgba(255, 255, 255, 0.88);
 }
+html:not(.dark) .lab-root .bg-black\/75 {
+  background-color: rgba(255, 255, 255, 0.94);
+}
+html:not(.dark) .lab-root .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.16);
+}
+html:not(.dark) .lab-root .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05);
+}
 html:not(.dark) .lab-root .bg-white\/10 {
   background-color: rgba(15, 23, 42, 0.07);
+}
+/* neon accents read fine on light frosted glass, but pure red text needs darkening */
+html:not(.dark) .lab-root .text-\[\#ff8a9a\] {
+  color: #e11d48;
 }
 
 /* Instrument screens keep light type even in light theme — never flip them */
