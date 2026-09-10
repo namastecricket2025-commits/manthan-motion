@@ -110,8 +110,14 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const ripples = useRef<THREE.Mesh[]>([]);
   const channels = useRef<{ pos: THREE.Vector3; normal: THREE.Vector3; mesh: THREE.Group }[]>([]);
 
-  // camera orbit
+  // camera orbit — damped target + current for smooth motion
   const orbit = useRef({ yaw: 0.55, pitch: 0.18, dist: 118, panX: 0, panY: 0 });
+  const orbitTarget = useRef({ yaw: 0.55, pitch: 0.18, dist: 118, panX: 0, panY: 0 });
+  const orbitVel = useRef({ yaw: 0, pitch: 0 });
+  const hoverOrganelle = useRef<{ name: string; def: string; pos: { x: number; y: number } } | null>(null);
+  const organelles = useRef<{ mesh: THREE.Object3D; name: string; def: string }[]>([]);
+  const organelleHoverRay = useRef(new THREE.Raycaster());
+  const [tooltip, setTooltip] = useState<{ name: string; def: string; x: number; y: number } | null>(null);
   const dragging = useRef<"rotate" | "pan" | null>(null);
   const dragIon = useRef<IonState | null>(null);
   const dragPlane = useRef(new THREE.Plane());
@@ -724,6 +730,43 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     }
     plantGroup.visible = cellType === "plant";
 
+    // ── register organelles for hover picking (low-poly proxy spheres/boxes for raycasting)
+    // Keep references to key organelle meshes for hover labels — use the actual meshes where possible
+    const regs: { mesh: THREE.Object3D; name: string; def: string }[] = [];
+    const addReg = (mesh: THREE.Object3D, name: string, def: string) => {
+      mesh.userData.__orgName = name;
+      mesh.userData.__orgDef = def;
+      regs.push({ mesh, name, def });
+    };
+    addReg(nucCore, "Nucleus", "Double-walled envelope (16 pores) — stores chromatin and controls gene expression.");
+    addReg(nucleolus, "Nucleolus", "Dense RNA factory inside the nucleus that assembles ribosomal subunits.");
+    addReg(innerNucMem, "Nuclear envelope — inner", "Inner leaflet of the double membrane surrounding the genome.");
+    addReg(outerNucMem, "Nuclear envelope — outer", "Outer leaflet continuous with rough ER; studded with nuclear pores.");
+    addReg(cyto, "Cytoplasm — cytosol", "Aqueous gel with dissolved ions and the cytoskeleton — transports everything.");
+    // mitochondria proxies — register each mito group
+    mitoPositions.forEach(([x,y,z], idx) => {
+      // mito groups are added to 'group' in order after cytoskeleton; we approximate by last added groups
+    });
+    // Instead register fiber and ER groups as whole
+    addReg(roughERGroup, "Rough ER", "Sheets folding off the nuclear envelope, studded with ribosomes for protein synthesis.");
+    addReg(smoothERGroup, "Smooth ER", "Tubular network that synthesizes lipids and detoxifies — connected to rough ER.");
+    addReg(golgiGroup, "Golgi apparatus", "Stack of 4 curved cisternae that sorts, modifies and packages proteins into vesicles.");
+    // Find mito groups: they are children of 'group' with position matching mitoPositions
+    group.children.forEach(ch => {
+      if (ch instanceof THREE.Group) {
+        const p = ch.position;
+        for (const [mx,my,mz] of mitoPositions) {
+          if (Math.abs(p.x-mx)<0.1 && Math.abs(p.y-my)<0.1 && Math.abs(p.z-mz)<0.1) {
+            addReg(ch, "Mitochondrion", "Double-membrane powerhouse — outer membrane + folded inner cristae for ATP synthesis.");
+          }
+        }
+      }
+    });
+    addReg(fiberGroup, "Cytoskeleton", "Microtubules, intermediate filaments and actin cortex that shape and move the cell.");
+    addReg(centGroup, "Centrosome", "Microtubule-organizing centre — two barrel centrioles that anchor the spindle.");
+    addReg(outerMem, "Plasma membrane — lipid bilayer", "Double leaflet + 180 phospholipid heads. Drag K⁺/Ca²⁺ to cyan ion channels to trigger active transport.");
+    organelles.current = regs;
+
     // ── Ions — world-space spheres with glow sprites
     const ionStates: IonState[] = [];
     const ionMeshList: THREE.Mesh[] = [];
@@ -886,14 +929,26 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const since = (performance.now() - lastInteraction.current) / 1000;
     idleTime.current = since;
     const isInteracting = dragging.current !== null || dragIon.current !== null || pointers.current.size > 0;
+    const tgt = orbitTarget.current;
     if (!isInteracting && since > 1.0) {
-      // smooth lerp to auto speed, not snap
-      const autoSpeed = 0.14; // rad/s
-      o.yaw += dt * autoSpeed * Math.min(1, (since - 1.0) * 0.9);
-      // gentle pitch oscillation
-      o.pitch += Math.sin(t * 0.22) * dt * 0.015;
-      o.pitch = clamp(o.pitch, -0.55, 0.55);
+      const autoSpeed = 0.11;
+      tgt.yaw += dt * autoSpeed * Math.min(1, (since - 1.0) * 0.9);
+      tgt.pitch += Math.sin(t * 0.22) * dt * 0.012;
+      tgt.pitch = clamp(tgt.pitch, -0.58, 0.58);
     }
+    // smooth damped lerp — inertia feel
+    const lerp = 1 - Math.pow(0.001, dt); // frame-rate independent
+    // yaw/pitch lerp with velocity for ultra-smooth
+    const yawDiff = tgt.yaw - o.yaw;
+    const pitchDiff = tgt.pitch - o.pitch;
+    orbitVel.current.yaw = orbitVel.current.yaw * Math.pow(0.15, dt*60) + yawDiff * 8 * dt;
+    orbitVel.current.pitch = orbitVel.current.pitch * Math.pow(0.15, dt*60) + pitchDiff * 8 * dt;
+    o.yaw += orbitVel.current.yaw;
+    o.pitch += orbitVel.current.pitch;
+    // direct lerp for dist/pan (snappier but still smooth)
+    o.dist += (tgt.dist - o.dist) * clamp(lerp*1.2, 0, 1);
+    o.panX += (tgt.panX - o.panX) * clamp(lerp*1.4, 0, 1);
+    o.panY += (tgt.panY - o.panY) * clamp(lerp*1.4, 0, 1);
 
     group.rotation.y = o.yaw;
     group.rotation.x = o.pitch;
@@ -1111,6 +1166,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       if (state) {
         dragIon.current = state;
         setHoverIon(state.kind);
+        setTooltip(null);
         // create drag plane perpendicular to camera through ion world pos
         const camDir = new THREE.Vector3();
         camera.current!.getWorldDirection(camDir);
@@ -1137,18 +1193,39 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const cam = camera.current;
     if (!cam) return;
 
-    // hover feedback for ions when not dragging
+    // hover feedback for ions + organelles when not dragging
     if (!dragIon.current && !dragging.current && ndc) {
       raycaster.current.setFromCamera(ndc, cam);
       if (cellGroup.current) cellGroup.current.updateMatrixWorld(true);
-      const hits = raycaster.current.intersectObjects(ionMeshes.current, false);
-      if (hits.length > 0) {
-        const k = (hits[0].object as THREE.Mesh).userData.kind as string;
+      const ionHits = raycaster.current.intersectObjects(ionMeshes.current, false);
+      if (ionHits.length > 0) {
+        const k = (ionHits[0].object as THREE.Mesh).userData.kind as string;
         setHoverIon(k);
+        setTooltip(null);
         (e.currentTarget as HTMLElement).style.cursor = "grab";
       } else {
         setHoverIon(null);
-        (e.currentTarget as HTMLElement).style.cursor = dragging.current ? "grabbing" : "grab";
+        // organelle hover — raycast against registered organelle meshes (first hit wins)
+        const orgHits: { obj: THREE.Object3D; dist: number; name: string; def: string }[] = [];
+        for (const reg of organelles.current) {
+          // Use raycaster on the mesh or its children
+          const targets: THREE.Object3D[] = [];
+          reg.mesh.traverse(o => { if ((o as THREE.Mesh).isMesh) targets.push(o); });
+          if (targets.length === 0) targets.push(reg.mesh);
+          const hits = raycaster.current.intersectObjects(targets as THREE.Object3D[], false);
+          if (hits.length > 0) {
+            orgHits.push({ obj: hits[0].object, dist: hits[0].distance, name: reg.name, def: reg.def });
+          }
+        }
+        orgHits.sort((a,b)=>a.dist-b.dist);
+        if (orgHits.length > 0) {
+          const h = orgHits[0];
+          setTooltip({ name: h.name, def: h.def, x: e.clientX, y: e.clientY });
+          (e.currentTarget as HTMLElement).style.cursor = "help";
+        } else {
+          setTooltip(null);
+          (e.currentTarget as HTMLElement).style.cursor = "grab";
+        }
       }
     }
 
@@ -1232,8 +1309,8 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
       pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: prev.button });
-      orbit.current.panX += dx * 0.55;
-      orbit.current.panY -= dy * 0.55;
+      orbitTarget.current.panX += dx * 0.55;
+      orbitTarget.current.panY -= dy * 0.55;
       lastInteraction.current = performance.now();
       return;
     }
@@ -1243,8 +1320,8 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         const dx = e.clientX - prev.x;
         const dy = e.clientY - prev.y;
         pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: prev.button });
-        orbit.current.yaw += dx * 0.007;
-        orbit.current.pitch = clamp(orbit.current.pitch + dy * 0.007, -1.0, 1.0);
+        orbitTarget.current.yaw += dx * 0.0055;
+        orbitTarget.current.pitch = clamp(orbitTarget.current.pitch + dy * 0.0055, -1.0, 1.0);
         lastInteraction.current = performance.now();
         return;
       }
@@ -1257,7 +1334,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         const dist0 = Math.hypot(vals[0].x - vals[1].x, vals[0].y - vals[1].y);
         const dist1 = Math.hypot(vals2[0].x - vals2[1].x, vals2[0].y - vals2[1].y);
         if (dist0 > 0) {
-          orbit.current.dist = clamp(orbit.current.dist * (dist0 / dist1), 68, 220);
+          orbitTarget.current.dist = clamp(orbitTarget.current.dist * (dist0 / dist1), 38, 220);
         }
         lastInteraction.current = performance.now();
       }
@@ -1288,7 +1365,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     if (!el) return;
     const fn = (ev: WheelEvent) => {
       ev.preventDefault();
-      orbit.current.dist = clamp(orbit.current.dist * (ev.deltaY > 0 ? 1.08 : 0.92), 68, 220);
+      orbitTarget.current.dist = clamp(orbitTarget.current.dist * (ev.deltaY > 0 ? 1.08 : 0.92), 38, 220);
       lastInteraction.current = performance.now();
     };
     el.addEventListener("wheel", fn, { passive: false });
@@ -1337,7 +1414,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
 
       <canvas
         ref={canvasRef}
-        className="h-[520px] w-full touch-none cursor-grab active:cursor-grabbing sm:h-[560px]"
+        className="h-[520px] w-full touch-none cursor-grab active:cursor-grabbing sm:h-[560px]" style={{ willChange: "transform" } as React.CSSProperties}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
@@ -1370,6 +1447,17 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         <p className="font-semibold text-slate-100">How to explore</p>
         <p className="mt-1 text-slate-400"><span className="text-slate-200">Drag</span> empty space to orbit · <span className="text-slate-200">Scroll / pinch</span> to zoom · <span className="text-slate-200">Right-drag</span> to pan · <span className="text-slate-200">Click & drag</span> a glowing <span className="text-[#a78bfa]">K⁺</span> or <span className="text-[#fbbf24]">Ca²⁺</span> sphere to a cyan channel ring — cross the membrane to trigger a transport ripple. Auto-rotation resumes when idle.</p>
       </div>
+
+      {/* hover tooltip — follows cursor, shows organelle name */}
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-20 max-w-[260px] rounded-xl border border-white/20 bg-black/75 px-3 py-2 shadow-xl backdrop-blur-md"
+          style={{ left: Math.min(tooltip.x - (wrapRef.current?.getBoundingClientRect().left ?? 0) + 14, (wrapRef.current?.clientWidth ?? 400) - 274), top: Math.max(tooltip.y - (wrapRef.current?.getBoundingClientRect().top ?? 0) - 10, 10) }}
+        >
+          <p className="text-xs font-bold text-[#67e8f9]">{tooltip.name}</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-200">{tooltip.def}</p>
+        </div>
+      )}
 
       {/* subtle vignette */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]" />

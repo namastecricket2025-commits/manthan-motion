@@ -5,6 +5,14 @@
    Global site theme files are untouched.
    ============================================================ */
 
+
+.lab-root, .lab-root button, .lab-root p, .lab-root span {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.lab-root .font-display, .lab-root h1, .lab-root h2, .lab-root h3 {
+  font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
 .lab-root {
   --lab-ink: #0b1120;
   --lab-bg: #0f172a;
@@ -437,7 +445,15 @@ input[type="range"].lab-range::-moz-range-thumb {
    dark — like real instrument displays. Everything is scoped to .lab-root
    so the global theme files are untouched. */
 
-html:not(.dark) .lab-root {
+html:not(.dark) 
+.lab-root, .lab-root button, .lab-root p, .lab-root span {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.lab-root .font-display, .lab-root h1, .lab-root h2, .lab-root h3 {
+  font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+.lab-root {
   --lab-cell-ink: #0f172a;
   background:
     radial-gradient(1100px 640px at 12% -8%, rgba(255, 255, 255, 0.95), transparent 60%),
@@ -445,6 +461,14 @@ html:not(.dark) .lab-root {
     linear-gradient(180deg, #f8fafc 0%, #eef2f7 46%, #e4eaf2 100%);
   color: #0f172a;
 }
+
+.lab-root, .lab-root button, .lab-root p, .lab-root span {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.lab-root .font-display, .lab-root h1, .lab-root h2, .lab-root h3 {
+  font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
 .lab-root { --lab-cell-ink: #e2e8f0; }
 
 html:not(.dark) .lab-root .lab-header {
@@ -465,7 +489,12 @@ html:not(.dark) .lab-root .lab-btn {
   color: #334155;
 }
 html:not(.dark) .lab-root .lab-btn:hover { color: #0f172a; }
-html:not(.dark) .lab-root .lab-btn--active { color: #fff; }
+html:not(.dark) .lab-root .lab-btn--active {
+  color: #fff;
+  background: linear-gradient(135deg, #ff2e55, #e11d48);
+  border-color: rgba(255, 59, 92, 0.55);
+  box-shadow: 0 0 16px rgba(255, 59, 92, 0.22);
+}
 html:not(.dark) .lab-root .lab-btn-neon,
 html:not(.dark) .lab-root .lab-btn-neon:hover { color: #fff; }
 html:not(.dark) .lab-root .lab-chip {
@@ -515,6 +544,49 @@ html:not(.dark) .lab-root .bg-black\/50,
 html:not(.dark) .lab-root .bg-black\/60,
 html:not(.dark) .lab-root .bg-black\/70 { background-color: rgba(255, 255, 255, 0.88); }
 html:not(.dark) .lab-root .bg-white\/10 { background-color: rgba(15, 23, 42, 0.07); }
+
+
+/* --- instrument screens keep light type even in light theme --- */
+html:not(.dark) .lab-root .lab-screen,
+html:not(.dark) .lab-root .lab-dark-surface,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"],
+html:not(.dark) .lab-root [class*="bg-[#04120e]"] {
+  color: #e2e8f0;
+}
+html:not(.dark) .lab-root .lab-screen .text-slate-50,
+html:not(.dark) .lab-root .lab-screen .text-slate-100,
+html:not(.dark) .lab-root .lab-screen .text-slate-200,
+html:not(.dark) .lab-root .lab-dark-surface .text-slate-50,
+html:not(.dark) .lab-root .lab-dark-surface .text-slate-100,
+html:not(.dark) .lab-root .lab-dark-surface .text-slate-200,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] .text-slate-50,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] .text-slate-100,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] .text-slate-200 {
+  color: #f1f5f9 !important;
+}
+html:not(.dark) .lab-root .lab-screen .text-slate-300,
+html:not(.dark) .lab-root .lab-dark-surface .text-slate-300,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+html:not(.dark) .lab-root .lab-screen .text-slate-400,
+html:not(.dark) .lab-root .lab-dark-surface .text-slate-400,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] .text-slate-400 {
+  color: #94a3b8 !important;
+}
+html:not(.dark) .lab-root .lab-screen .text-slate-500,
+html:not(.dark) .lab-root .lab-dark-surface .text-slate-500,
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+html:not(.dark) .lab-root .lab-screen .lab-label,
+html:not(.dark) .lab-root .lab-dark-surface .lab-label {
+  color: #94a3b8 !important;
+}
+html:not(.dark) .lab-root .lab-screen .lab-value,
+html:not(.dark) .lab-root .lab-dark-surface .lab-value {
+  color: #e2e8f0 !important;
+}
 
 /* Page-level scanline/grid texture for canvases (both themes) */
 .lab-root .lab-screen {

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Dna, Droplets, HeartPulse, Leaf, Microscope, PawPrint, Wind } from "lucide-react";
 import { SPRING } from "./use-canvas";
 import Cell3D from "./bio/Cell3D";
-import DnaSandbox from "./bio/DnaSandbox";
+import DnaHelix3D from "./bio/DnaHelix3D";
 import HeartAnatomy from "./bio/HeartAnatomy";
 import Respiratory from "./bio/Respiratory";
 import Excretory from "./bio/Excretory";
@@ -188,7 +188,7 @@ export default function BiologyExplorer() {
             exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
             transition={{ duration: 0.28, ease: "easeOut" }}
           >
-            <DnaSandbox />
+            <DnaHelix3D />
           </motion.div>
         )}
         {tab === "heart" && (
