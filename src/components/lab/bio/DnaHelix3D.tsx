@@ -59,8 +59,8 @@ export default function DnaHelix3D() {
   const [playing, setPlaying] = useState(false);
   const [hoverInfo, setHoverInfo] = useState<{ label: string; x: number; y: number } | null>(null);
 
-  const orbit = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0 });
-  const target = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0 });
+  const orbit = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0, panZ: 0 });
+  const target = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0, panZ: 0 });
   const vel = useRef({ yaw: 0, pitch: 0 });
   const lastInteract = useRef(performance.now());
   const pointers = useRef(new Map<number, { x: number; y: number; button: number }>());
@@ -113,10 +113,10 @@ export default function DnaHelix3D() {
     // backbone tubes (initial)
     const curveA = new THREE.CatmullRomCurve3(makeBackbonePoints(0, 0, null, 0, 0));
     const curveB = new THREE.CatmullRomCurve3(makeBackbonePoints(Math.PI, 0, null, 0, 0));
-    const matA = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.35, metalness: 0.12 });
-    const matB = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.35, metalness: 0.12 });
-    const tubeA = new THREE.Mesh(new THREE.TubeGeometry(curveA, 96, 0.38, 14, false), matA);
-    const tubeB = new THREE.Mesh(new THREE.TubeGeometry(curveB, 96, 0.38, 14, false), matB);
+    const matA = new THREE.MeshStandardMaterial({ color: 0x8fa3bd, roughness: 0.28, metalness: 0.32, emissive: 0x334155, emissiveIntensity: 0.25 });
+    const matB = new THREE.MeshStandardMaterial({ color: 0xd7e0ec, roughness: 0.28, metalness: 0.32, emissive: 0x475569, emissiveIntensity: 0.25 });
+    const tubeA = new THREE.Mesh(new THREE.TubeGeometry(curveA, 120, 0.44, 16, false), matA);
+    const tubeB = new THREE.Mesh(new THREE.TubeGeometry(curveB, 120, 0.44, 16, false), matB);
     hg.add(tubeA);
     hg.add(tubeB);
     backboneA.current = tubeA;
@@ -308,7 +308,7 @@ export default function DnaHelix3D() {
       cam.aspect = cssW / cssH;
       cam.updateProjectionMatrix();
     }
-    const lookAt = new THREE.Vector3(o.panX * 0.12, o.panY * 0.12, 0);
+    const lookAt = new THREE.Vector3(o.panX * 0.3, o.panY * 0.3, 0);
     const cosP = Math.cos(o.pitch);
     const sinP = Math.sin(o.pitch);
     const cosY = Math.cos(o.yaw);
@@ -394,7 +394,7 @@ export default function DnaHelix3D() {
     if (!el) return;
     const fn = (e: WheelEvent) => {
       e.preventDefault();
-      target.current.dist = clamp(target.current.dist * (e.deltaY > 0 ? 1.08 : 0.92), 18, 82);
+      target.current.dist = clamp(target.current.dist * (e.deltaY > 0 ? 1.08 : 0.92), 12, 90);
       lastInteract.current = performance.now();
     };
     el.addEventListener("wheel", fn, { passive: false });
@@ -443,7 +443,12 @@ export default function DnaHelix3D() {
                 const h = hits[0].object as THREE.Mesh;
                 const base = h.userData.base as string;
                 const pair = h.userData.pair as string;
-                setHoverInfo({ label: `${base} — ${pair} · ${base === "G" || base === "C" ? "3" : "2"} H-bonds · ${Math.round(((h.userData.y as number) + TOTAL_H / 2) / RISE)}`, x: e.clientX, y: e.clientY });
+                setHoverInfo({ label: `${base} — ${pair} · ${base === "G" || base === "C" ? "3" : "2"} H-bonds · bp ${Math.round(((h.userData.y as number) + TOTAL_H / 2) / RISE)}`, x: e.clientX, y: e.clientY });
+                // hover glow
+                baseMeshes.current.forEach((m) => {
+                  const mat = m.material as THREE.MeshStandardMaterial;
+                  mat.emissiveIntensity = m === h ? 0.6 : 0.12;
+                });
                 (e.currentTarget as HTMLElement).style.cursor = "help";
               } else {
                 // groove hover
@@ -454,7 +459,7 @@ export default function DnaHelix3D() {
                     const g = gHits[0].object as THREE.Mesh;
                     setHoverInfo({ label: g.userData.label as string, x: e.clientX, y: e.clientY });
                     (e.currentTarget as HTMLElement).style.cursor = "help";
-                  } else setHoverInfo(null);
+                  } else { setHoverInfo(null); baseMeshes.current.forEach((m) => { (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.12; }); }
                 }
               }
             }
@@ -465,11 +470,13 @@ export default function DnaHelix3D() {
           const dy = e.clientY - prev.y;
           pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
           if (dragging.current === "pan") {
-            target.current.panX += dx * 0.45;
-            target.current.panY -= dy * 0.45;
+            const sp = target.current.dist * 0.0022;
+            const yw = target.current.yaw;
+            target.current.panX += (Math.cos(yw) * dx - Math.sin(yw) * dy) * sp;
+            target.current.panY += (Math.sin(yw) * dx + Math.cos(yw) * dy) * sp;
           } else if (dragging.current === "rotate") {
             target.current.yaw += dx * 0.006;
-            target.current.pitch = clamp(target.current.pitch + dy * 0.006, -0.9, 0.9);
+            target.current.pitch = clamp(target.current.pitch + dy * 0.0062, -Math.PI / 2 + 0.03, Math.PI / 2 - 0.03);
           }
         }}
         onPointerUp={(e) => {

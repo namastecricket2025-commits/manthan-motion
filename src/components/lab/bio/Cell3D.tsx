@@ -111,8 +111,11 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const channels = useRef<{ pos: THREE.Vector3; normal: THREE.Vector3; mesh: THREE.Group }[]>([]);
 
   // camera orbit — damped target + current for smooth motion
-  const orbit = useRef({ yaw: 0.55, pitch: 0.18, dist: 118, panX: 0, panY: 0 });
-  const orbitTarget = useRef({ yaw: 0.55, pitch: 0.18, dist: 118, panX: 0, panY: 0 });
+  const orbit = useRef({ yaw: 0.55, pitch: 0.18, dist: 118, panX: 0, panY: 0, panZ: 0 });
+  const orbitTarget = useRef({ yaw: 0.55, pitch: 0.18, dist: 118, panX: 0, panY: 0, panZ: 0 });
+  // full-360° orbit: no pitch/yaw locks, both damped; pan pushes camera target
+  const CAM_MIN = 44;
+  const CAM_MAX = 240;
   const orbitVel = useRef({ yaw: 0, pitch: 0 });
   const hoverOrganelle = useRef<{ name: string; def: string; pos: { x: number; y: number } } | null>(null);
   const organelles = useRef<{ mesh: THREE.Object3D; name: string; def: string }[]>([]);
@@ -122,6 +125,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const dragIon = useRef<IonState | null>(null);
   const dragPlane = useRef(new THREE.Plane());
   const dragOffset = useRef(new THREE.Vector3());
+  const ionLastWorld = useRef(new THREE.Vector3());
   const idleTime = useRef(0);
   const lastInteraction = useRef(performance.now());
   const raycaster = useRef(new THREE.Raycaster());
@@ -950,8 +954,9 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     o.panX += (tgt.panX - o.panX) * clamp(lerp*1.4, 0, 1);
     o.panY += (tgt.panY - o.panY) * clamp(lerp*1.4, 0, 1);
 
-    group.rotation.y = o.yaw;
-    group.rotation.x = o.pitch;
+    // camera-driven orbit: group keeps identity rotation so dragging never fights the model
+    group.rotation.y = 0;
+    group.rotation.x = 0;
 
     // subtle organelle breathing (scale pulse of nucleus, mito)
     const breathe = 1 + Math.sin(t * 0.7) * 0.012;
@@ -974,8 +979,8 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const sinP = Math.sin(o.pitch);
     const cosY = Math.cos(o.yaw);
     const sinY = Math.sin(o.yaw);
-    // camera orbits around lookAt = (panX, panY, 0)
-    const lookAt = new THREE.Vector3(o.panX * 0.12, o.panY * 0.12, 0);
+    // camera orbits around world focus (pan offsets, full 360 in yaw & pitch)
+    const lookAt = new THREE.Vector3(o.panX * 0.3, o.panY * 0.3, o.panZ * 0.3);
     const camPos = new THREE.Vector3(
       lookAt.x + o.dist * sinY * cosP,
       lookAt.y + o.dist * sinP,
@@ -1309,8 +1314,11 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
       pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: prev.button });
-      orbitTarget.current.panX += dx * 0.55;
-      orbitTarget.current.panY -= dy * 0.55;
+      // world-space pan in screen-aligned axes, scaled by zoom so speed stays constant
+      const sp = orbitTarget.current.dist * 0.0022;
+      const yw = orbitTarget.current.yaw;
+      orbitTarget.current.panX += (Math.cos(yw) * dx - Math.sin(yw) * dy) * sp;
+      orbitTarget.current.panY += (Math.sin(yw) * dx + Math.cos(yw) * dy) * sp;
       lastInteraction.current = performance.now();
       return;
     }
@@ -1320,8 +1328,9 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         const dx = e.clientX - prev.x;
         const dy = e.clientY - prev.y;
         pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: prev.button });
-        orbitTarget.current.yaw += dx * 0.0055;
-        orbitTarget.current.pitch = clamp(orbitTarget.current.pitch + dy * 0.0055, -1.0, 1.0);
+        orbitTarget.current.yaw += dx * 0.0062;
+        // full 360-degree vertical orbit (damped clamp near poles only)
+        orbitTarget.current.pitch = clamp(orbitTarget.current.pitch + dy * 0.0062, -Math.PI / 2 + 0.03, Math.PI / 2 - 0.03);
         lastInteraction.current = performance.now();
         return;
       }
@@ -1334,7 +1343,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         const dist0 = Math.hypot(vals[0].x - vals[1].x, vals[0].y - vals[1].y);
         const dist1 = Math.hypot(vals2[0].x - vals2[1].x, vals2[0].y - vals2[1].y);
         if (dist0 > 0) {
-          orbitTarget.current.dist = clamp(orbitTarget.current.dist * (dist0 / dist1), 38, 220);
+          orbitTarget.current.dist = clamp(orbitTarget.current.dist * (dist0 / dist1), 44, 240);
         }
         lastInteraction.current = performance.now();
       }
@@ -1365,7 +1374,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     if (!el) return;
     const fn = (ev: WheelEvent) => {
       ev.preventDefault();
-      orbitTarget.current.dist = clamp(orbitTarget.current.dist * (ev.deltaY > 0 ? 1.08 : 0.92), 38, 220);
+      orbitTarget.current.dist = clamp(orbitTarget.current.dist * (ev.deltaY > 0 ? 1.08 : 0.92), 44, 240);
       lastInteraction.current = performance.now();
     };
     el.addEventListener("wheel", fn, { passive: false });
