@@ -157,10 +157,10 @@ function ElementProfile({
             style={{ borderColor: `${color}77`, background: `linear-gradient(160deg, ${color}33, ${color}11)` }}
           >
             <span className="text-[9px] text-slate-400">{el.n}</span>
-            <span className="font-display text-lg font-bold text-white">{el.sym}</span>
+            <span className="font-display text-lg font-bold text-slate-100">{el.sym}</span>
           </div>
           <div>
-            <h3 className="font-display text-lg font-bold text-white">{el.name}</h3>
+            <h3 className="font-display text-lg font-bold text-slate-100">{el.name}</h3>
             <p className="text-[11px] text-slate-400">
               {CAT_LABEL[el.cat]} · {el.phase === "synthetic" ? "synthetic" : `${el.phase} at STP`}
             </p>

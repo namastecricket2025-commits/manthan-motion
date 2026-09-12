@@ -514,8 +514,7 @@ input[type="range"].lab-range::-moz-range-thumb {
   .lab-valve,
   .lab-spin,
   .lab-flow,
-  .lab-breathe,
-  .lab-fill {
+  .lab-breathe {
     animation: none;
   }
 }
@@ -553,18 +552,10 @@ input[type="range"].lab-range::-moz-range-thumb {
     transform: translateY(10px);
   }
 }
-.lab-fill {
-  animation: lab-fill 4s ease-in-out infinite;
-}
-@keyframes lab-fill {
-  0%,
-  100% {
-    transform: scaleY(0.72);
-  }
-  45% {
-    transform: scaleY(1);
-  }
-}
+/* NOTE: `.lab-fill` is the lab's workspace wrapper class (see the compact
+   stage/deck rules below). It must never carry an animation — a scaleY
+   "fill" keyframe here used to squash the entire workspace, which read as
+   the parent wrapper bouncing up and down. Keep this class layout-only. */
 
 /* ---------- Header + extra helpers ---------- */
 .lab-header {
@@ -664,6 +655,14 @@ html:not(.dark) .lab-root .lab-tabs {
 }
 html:not(.dark) .lab-root .lab-tab:hover {
   color: #0f172a;
+}
+/* an active tab is white-on-neon in the dark bench; on light glass that
+   white label disappears, so flip it to the signal red instead */
+html:not(.dark) .lab-root .lab-tab--on {
+  color: #b3163c;
+  background: linear-gradient(135deg, rgba(255, 59, 92, 0.24), rgba(255, 59, 92, 0.08));
+  border-color: rgba(225, 29, 72, 0.4);
+  box-shadow: 0 0 14px rgba(255, 59, 92, 0.16);
 }
 html:not(.dark) .lab-root .lab-input,
 html:not(.dark) .lab-root .lab-search {
