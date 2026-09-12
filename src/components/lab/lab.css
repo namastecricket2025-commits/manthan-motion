@@ -785,3 +785,211 @@ html:not(.dark) .lab-root .lab-dark-surface .lab-value {
 .lab-root .lab-screen {
   background-image: radial-gradient(circle at 50% 30%, rgba(22, 35, 59, 0.9), transparent 80%), linear-gradient(#0b1120, #0b1120);
 }
+
+/* ============================================================
+   Cursor / touch anchored tooltip — replaces the old static
+   legends that sat under every 3D canvas.
+   ============================================================ */
+.lab-tip {
+  position: absolute;
+  z-index: 40;
+  pointer-events: none;
+  border-radius: 14px;
+  padding: 9px 11px 10px 12px;
+  background: rgba(8, 13, 26, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.lab-tip__dot {
+  position: absolute;
+  left: 11px;
+  top: 13px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+.lab-tip__title {
+  padding-left: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.lab-tip__body {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+html:not(.dark) .lab-root .lab-tip {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(15, 23, 42, 0.16);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.2);
+}
+html:not(.dark) .lab-root .lab-tip__body {
+  color: #334155;
+}
+html:not(.dark) .lab-root .lab-tip__title {
+  color: #b3163c;
+}
+
+/* ============================================================
+   Compact stage / deck layout.
+   Desktop  → interactive canvas beside a side control deck.
+   ≤1023px  → the whole lab locks to ONE viewport: canvas pinned
+              to the top half, controls in a deck underneath that
+              scrolls internally. The page itself never scrolls and
+              a control change repaints the canvas in place.
+   ============================================================ */
+.lab-root .lab-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.lab-root .lab-shell__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+.lab-root .lab-split {
+  display: grid;
+  gap: 14px;
+}
+.lab-root .lab-split > * {
+  min-width: 0;
+}
+/* the interactive canvas block */
+.lab-root .lab-stage {
+  height: 400px;
+}
+@media (min-width: 1024px) {
+  .lab-root .lab-split {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+  .lab-root .lab-split--wide {
+    grid-template-columns: minmax(0, 1fr) 330px;
+  }
+  .lab-root .lab-split--side-left {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .lab-root .lab-stage {
+    height: 520px;
+  }
+  .lab-root .lab-stage--tall {
+    height: 600px;
+  }
+}
+
+@media (max-width: 1023px) {
+  /* the lab owns the viewport on small screens: zero page scroll */
+  .lab-root {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .lab-root .lab-shell {
+    height: 100%;
+    overflow: hidden;
+  }
+  .lab-root .lab-shell__main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+  }
+  /* the animated workspace wrapper has to fill its flex parent */
+  .lab-root .lab-shell__main > .lab-fill,
+  .lab-root .lab-fill {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .lab-root .lab-split {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: 8px;
+  }
+  /* the interactive stage never grows past the top half of the screen —
+     it scrolls internally instead of pushing the controls off-screen */
+  .lab-root .lab-split > .lab-stage-pane {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 46dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* controls / data meters always keep the bottom half */
+  .lab-root .lab-split > .lab-deck-pane {
+    flex: 1 1 50%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  /* when the visual sits second in the DOM, float it to the top on phones */
+  .lab-root .lab-split--side-left > .lab-stage-pane {
+    order: -1;
+  }
+  .lab-root .lab-stage {
+    height: 34dvh;
+    min-height: 178px;
+  }
+  .lab-root .lab-header {
+    padding-top: env(safe-area-inset-top);
+  }
+  .lab-root .lab-header .lab-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lab-root .lab-header .lab-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .lab-root .lab-tab {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  /* overlays inside the stage stay small so the model keeps the space */
+  .lab-root .lab-stage .lab-stage-hint {
+    display: none;
+  }
+}
+
+/* the model canvas itself always fills its stage box */
+.lab-root .lab-stage > canvas,
+.lab-root .lab-stage > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Vertical column host: a normal block on desktop, a constrained flex
+   column on mobile so a section + its split can fill the locked viewport. */
+@media (max-width: 1023px) {
+  .lab-root .lab-col {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .lab-root .lab-col > .lab-split {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* compact section headers on small screens */
+  .lab-root .lab-col > .lab-tabs {
+    flex: 0 0 auto;
+  }
+}

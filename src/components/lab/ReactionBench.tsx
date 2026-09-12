@@ -341,7 +341,7 @@ export default function ReactionBench() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="lab-col space-y-5">
       {/* shelf */}
       <div className="lab-glass p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -427,8 +427,8 @@ export default function ReactionBench() {
       </div>
 
       {/* bench */}
-      <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
-        <div className="lab-glass p-4 sm:p-5">
+      <div className="lab-split">
+        <div className="lab-stage-pane lab-glass p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-bold text-slate-100">Workbench</p>
             <div className="flex items-center gap-2">
@@ -486,7 +486,7 @@ export default function ReactionBench() {
         </div>
 
         {/* split-screen collision + result */}
-        <div className="lab-glass-deep flex flex-col overflow-hidden p-4 sm:p-5">
+        <div className="lab-deck-pane lab-glass-deep flex flex-col overflow-hidden p-4 sm:p-5">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-bold text-slate-100">
               {phase === "colliding" ? "Particle chamber — collision view" : "Reaction chamber"}

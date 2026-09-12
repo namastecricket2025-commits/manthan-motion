@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { CursorTip } from "../CursorTip";
 
 const BP = 22;
 const RISE = 1.35;
@@ -408,6 +409,44 @@ export default function DnaHelix3D() {
     return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   };
 
+  /** Raycast probe shared by mouse hover and mobile tap. */
+  const probe = (clientX: number, clientY: number) => {
+    const ndc = getNDC(clientX, clientY);
+    if (!ndc || !camera.current) return;
+    raycaster.current.setFromCamera(ndc, camera.current);
+    const hits = raycaster.current.intersectObjects(baseMeshes.current, false);
+    if (hits.length > 0) {
+      const h = hits[0].object as THREE.Mesh;
+      const base = h.userData.base as string;
+      const pair = h.userData.pair as string;
+      const bp = Math.round(((h.userData.y as number) + TOTAL_H / 2) / RISE);
+      setHoverInfo({
+        label: `${base} — ${pair} · ${base === "G" || base === "C" ? "3" : "2"} H-bonds · bp ${bp}`,
+        x: clientX,
+        y: clientY,
+      });
+      baseMeshes.current.forEach((m) => {
+        (m.material as THREE.MeshStandardMaterial).emissiveIntensity = m === h ? 0.6 : 0.12;
+      });
+      if (canvasRef.current) canvasRef.current.style.cursor = "help";
+      return;
+    }
+    if (grooveMarks.current) {
+      raycaster.current.setFromCamera(ndc, camera.current);
+      const gHits = raycaster.current.intersectObjects(grooveMarks.current.children, false);
+      if (gHits.length > 0) {
+        const g = gHits[0].object as THREE.Mesh;
+        setHoverInfo({ label: g.userData.label as string, x: clientX, y: clientY });
+        if (canvasRef.current) canvasRef.current.style.cursor = "help";
+        return;
+      }
+    }
+    setHoverInfo(null);
+    baseMeshes.current.forEach((m) => {
+      (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.12;
+    });
+  };
+
   return (
     <div ref={wrapRef} className="relative overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_50%_30%,#16233b_0%,#0b1120_78%)]">
       <div className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/35 px-3 py-2 backdrop-blur-md">
@@ -425,7 +464,7 @@ export default function DnaHelix3D() {
 
       <canvas
         ref={canvasRef}
-        className="h-[520px] w-full touch-none cursor-grab active:cursor-grabbing sm:h-[560px]"
+        className="lab-stage w-full touch-none cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => {
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
           pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
@@ -434,36 +473,7 @@ export default function DnaHelix3D() {
           lastInteract.current = performance.now();
         }}
         onPointerMove={(e) => {
-          const ndc = getNDC(e.clientX, e.clientY);
-          if (!dragging.current) {
-            if (ndc && camera.current) {
-              raycaster.current.setFromCamera(ndc, camera.current);
-              const hits = raycaster.current.intersectObjects(baseMeshes.current, false);
-              if (hits.length > 0) {
-                const h = hits[0].object as THREE.Mesh;
-                const base = h.userData.base as string;
-                const pair = h.userData.pair as string;
-                setHoverInfo({ label: `${base} — ${pair} · ${base === "G" || base === "C" ? "3" : "2"} H-bonds · bp ${Math.round(((h.userData.y as number) + TOTAL_H / 2) / RISE)}`, x: e.clientX, y: e.clientY });
-                // hover glow
-                baseMeshes.current.forEach((m) => {
-                  const mat = m.material as THREE.MeshStandardMaterial;
-                  mat.emissiveIntensity = m === h ? 0.6 : 0.12;
-                });
-                (e.currentTarget as HTMLElement).style.cursor = "help";
-              } else {
-                // groove hover
-                if (grooveMarks.current && camera.current) {
-                  raycaster.current.setFromCamera(ndc!, camera.current);
-                  const gHits = raycaster.current.intersectObjects(grooveMarks.current.children, false);
-                  if (gHits.length > 0) {
-                    const g = gHits[0].object as THREE.Mesh;
-                    setHoverInfo({ label: g.userData.label as string, x: e.clientX, y: e.clientY });
-                    (e.currentTarget as HTMLElement).style.cursor = "help";
-                  } else { setHoverInfo(null); baseMeshes.current.forEach((m) => { (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.12; }); }
-                }
-              }
-            }
-          }
+          if (!dragging.current) probe(e.clientX, e.clientY);
           const prev = pointers.current.get(e.pointerId);
           if (!prev) return;
           const dx = e.clientX - prev.x;
@@ -480,6 +490,7 @@ export default function DnaHelix3D() {
           }
         }}
         onPointerUp={(e) => {
+          if (e.pointerType === "touch") probe(e.clientX, e.clientY);
           pointers.current.delete(e.pointerId);
           if (pointers.current.size === 0) dragging.current = null;
           (e.currentTarget as HTMLElement).style.cursor = "grab";
@@ -489,18 +500,13 @@ export default function DnaHelix3D() {
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {hoverInfo && (
-        <div className="pointer-events-none absolute z-20 rounded-xl border border-white/15 bg-black/75 px-3 py-2 text-xs font-medium text-slate-100 shadow-xl backdrop-blur-md" style={{ left: Math.min(hoverInfo.x - (wrapRef.current?.getBoundingClientRect().left ?? 0) + 12, (wrapRef.current?.clientWidth ?? 500) - 220), top: Math.max(hoverInfo.y - (wrapRef.current?.getBoundingClientRect().top ?? 0) - 34, 8) }}>
-          {hoverInfo.label}
-        </div>
-      )}
+      <CursorTip
+        tip={hoverInfo ? { title: hoverInfo.label, accent: "#fbbf24", x: hoverInfo.x, y: hoverInfo.y } : null}
+        hostRef={wrapRef}
+        width={252}
+      />
 
       <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-xs text-slate-300 backdrop-blur">
-          <span className="h-2 w-2 rounded-full" style={{ background: "#fbbf24" }} /> Major groove
-          <span className="mx-1 h-3 w-px bg-white/15" />
-          <span className="h-2 w-2 rounded-full" style={{ background: "#67e8f9" }} /> Minor groove — alternating every base pair
-        </div>
         <div className="flex items-center gap-1.5">
           {modeState === "explore" ? (
             <>
@@ -517,7 +523,7 @@ export default function DnaHelix3D() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-3 top-[52px] hidden max-w-[240px] rounded-xl border border-white/10 bg-black/50 p-2.5 text-[11px] leading-relaxed text-slate-300 backdrop-blur-md sm:block">
+      <div className="lab-stage-hint pointer-events-none absolute right-3 top-[52px] hidden max-w-[240px] rounded-xl border border-white/10 bg-black/50 p-2.5 text-[11px] leading-relaxed text-slate-300 backdrop-blur-md lg:block">
         <p className="font-semibold text-slate-100">How to explore</p>
         <p className="mt-1 text-slate-400">
           <b className="text-slate-200">Drag</b> to orbit · <b className="text-slate-200">Scroll / pinch</b> to zoom (to 18 units) · <b className="text-slate-200">Right-drag</b> to pan · Hover a base for its pair &amp; H-bonds. In <b className="text-[#ff8a9a]">Transcribe</b>, RNA Polymerase (red) splits the duplex and extrudes pink mRNA 5′→3′.

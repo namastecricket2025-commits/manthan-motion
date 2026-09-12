@@ -41,11 +41,11 @@ export default function Lab() {
 
   return (
     <div className="lab-root">
-      <div className="relative z-10">
+      <div className="lab-shell relative z-10">
         {/* Header */}
-        <header className="lab-header sticky top-0 z-40">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-            <div className="flex items-center gap-3">
+        <header className="lab-header z-40 shrink-0 lg:sticky lg:top-0">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3">
+            <div className="flex min-w-0 items-center gap-3">
               <Link
                 to="/dashboard"
                 className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-[#ff3b5c] hover:text-[#ff647c]"
@@ -81,40 +81,30 @@ export default function Lab() {
           </div>
 
           {/* Tab bar */}
-          <div className="mx-auto flex max-w-7xl items-end justify-between gap-4 px-4 pb-3 sm:px-6">
+          <div className="mx-auto flex max-w-7xl items-end justify-between gap-4 px-3 pb-2.5 sm:px-6 sm:pb-3">
             <div className="lab-tabs">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const isActive = tab === t.key;
                 return (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setTab(t.key)}
-                    className="lab-tab"
-                  >
-                    {isActive && (
-                      <motion.span layoutId="lab-tab-pill" className="lab-pill" transition={SPRING} />
-                    )}
-                    <Icon
-                      className={`relative z-10 h-4 w-4 ${isActive ? "text-[#ff647c]" : "text-slate-500"}`}
-                    />
+                  <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
+                    {isActive && <motion.span layoutId="lab-tab-pill" className="lab-pill" transition={SPRING} />}
+                    <Icon className={`relative z-10 h-4 w-4 ${isActive ? "text-[#ff647c]" : "text-slate-500"}`} />
                     <span className="relative z-10">{t.label}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="hidden pb-2 text-right text-[11px] leading-snug text-slate-500 md:block">
-              {active.blurb}
-            </p>
+            <p className="hidden pb-2 text-right text-[11px] leading-snug text-slate-500 md:block">{active.blurb}</p>
           </div>
         </header>
 
-        {/* Workspace */}
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-10">
+        {/* Workspace — on phones this is the only surface, and it never scrolls */}
+        <main className="lab-shell__main mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 md:py-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
+              className="lab-fill"
               initial={{ opacity: 0, y: 22, filter: "blur(8px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, y: -16, filter: "blur(8px)" }}
@@ -126,7 +116,7 @@ export default function Lab() {
             </motion.div>
           </AnimatePresence>
 
-          <p className="mt-8 flex items-center justify-center gap-2 text-center text-[11px] text-slate-500">
+          <p className="mt-8 hidden items-center justify-center gap-2 text-center text-[11px] text-slate-500 lg:flex">
             <Beaker className="h-3.5 w-3.5 text-[#ff647c]" />
             Manthan STEM Lab — interactive models for revision, not substitutes for a teacher.
           </p>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { CursorTip } from "../CursorTip";
 
 // ─── ion defs
 type IonKind = "K+" | "Ca2+";
@@ -1423,7 +1424,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
 
       <canvas
         ref={canvasRef}
-        className="h-[520px] w-full touch-none cursor-grab active:cursor-grabbing sm:h-[560px]" style={{ willChange: "transform" } as React.CSSProperties}
+        className="lab-stage w-full touch-none cursor-grab active:cursor-grabbing" style={{ willChange: "transform" } as React.CSSProperties}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
@@ -1432,41 +1433,19 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         onContextMenu={e => e.preventDefault()}
       />
 
-      {/* bottom legend */}
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap gap-1.5">
-        {[
-          { c: "#67e8f9", l: "Plasma membrane — phospholipid bilayer" },
-          { c: "#a78bfa", l: "Nucleus — pores 16×" },
-          { c: "#818cf8", l: "Rough ER + ribosomes" },
-          { c: "#34d399", l: "Golgi + vesicles" },
-          { c: "#f87171", l: "Mitochondrion — cristae lamellae" },
-          { c: "#cbd5e1", l: "Cytoskeleton — MT + filaments" },
-          { c: "#a78bfa", l: "K⁺ violet" },
-          { c: "#fbbf24", l: "Ca²⁺ amber" },
-        ].map(i => (
-          <span key={i.l} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[10px] font-medium text-slate-300 backdrop-blur">
-            <span className="h-2.5 w-2.5 rounded-full border border-white/20" style={{ background: i.c }} />
-            {i.l}
-          </span>
-        ))}
-      </div>
 
-      {/* interaction hint */}
-      <div className="pointer-events-none absolute right-3 top-[52px] hidden max-w-[220px] rounded-xl border border-white/10 bg-black/45 p-2.5 text-[11px] leading-relaxed text-slate-300 backdrop-blur-md sm:block">
+      {/* interaction hint — desktop only, the stage owns the screen on phones */}
+      <div className="lab-stage-hint pointer-events-none absolute right-3 top-[52px] hidden max-w-[220px] rounded-xl border border-white/10 bg-black/45 p-2.5 text-[11px] leading-relaxed text-slate-300 backdrop-blur-md lg:block">
         <p className="font-semibold text-slate-100">How to explore</p>
         <p className="mt-1 text-slate-400"><span className="text-slate-200">Drag</span> empty space to orbit · <span className="text-slate-200">Scroll / pinch</span> to zoom · <span className="text-slate-200">Right-drag</span> to pan · <span className="text-slate-200">Click & drag</span> a glowing <span className="text-[#a78bfa]">K⁺</span> or <span className="text-[#fbbf24]">Ca²⁺</span> sphere to a cyan channel ring — cross the membrane to trigger a transport ripple. Auto-rotation resumes when idle.</p>
       </div>
 
-      {/* hover tooltip — follows cursor, shows organelle name */}
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-20 max-w-[260px] rounded-xl border border-white/20 bg-black/75 px-3 py-2 shadow-xl backdrop-blur-md"
-          style={{ left: Math.min(tooltip.x - (wrapRef.current?.getBoundingClientRect().left ?? 0) + 14, (wrapRef.current?.clientWidth ?? 400) - 274), top: Math.max(tooltip.y - (wrapRef.current?.getBoundingClientRect().top ?? 0) - 10, 10) }}
-        >
-          <p className="text-xs font-bold text-[#67e8f9]">{tooltip.name}</p>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-200">{tooltip.def}</p>
-        </div>
-      )}
+      {/* hover / touch tooltip — anchored to the cursor or finger */}
+      <CursorTip
+        tip={tooltip ? { title: tooltip.name, body: tooltip.def, accent: "#67e8f9", x: tooltip.x, y: tooltip.y } : null}
+        hostRef={wrapRef}
+        width={268}
+      />
 
       {/* subtle vignette */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]" />

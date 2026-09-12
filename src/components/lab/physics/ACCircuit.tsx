@@ -145,8 +145,8 @@ export default function ACCircuit() {
   const f0 = math.f0;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-      <div className="lab-glass p-3 sm:p-4">
+    <div className="lab-col lab-split">
+      <div className="lab-stage-pane lab-glass p-3 sm:p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-bold text-slate-100">AC circuit laboratory</p>
@@ -227,7 +227,7 @@ export default function ACCircuit() {
       </div>
 
       {/* controls */}
-      <div className="lab-glass-deep h-fit space-y-4 p-4">
+      <div className="lab-deck-pane lab-glass-deep space-y-4 p-4">
         <div>
           <p className="lab-label mb-2">Components in the loop</p>
           <div className="grid grid-cols-3 gap-2">

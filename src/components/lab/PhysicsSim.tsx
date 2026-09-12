@@ -96,8 +96,8 @@ function MotionLab() {
   }, [t]); // recompute when t changes (frame updates)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-      <div className="space-y-4">
+    <div className="lab-col lab-split">
+      <div className="lab-stage-pane space-y-4">
         {/* track */}
         <div className="lab-glass p-3 sm:p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -276,7 +276,7 @@ function MotionLab() {
       </div>
 
       {/* controls */}
-      <div className="lab-glass-deep h-fit space-y-4 p-4">
+      <div className="lab-deck-pane lab-glass-deep space-y-4 p-4">
         <p className="lab-label">Setup</p>
 
         <div>
@@ -466,7 +466,7 @@ function Graph({
 export default function PhysicsSim() {
   const [tab, setTab] = useState<PhysTab>("motion");
   return (
-    <div className="space-y-4">
+    <div className="lab-col">
       <div className="lab-tabs">
         {(
           [
@@ -490,22 +490,22 @@ export default function PhysicsSim() {
 
       <AnimatePresence mode="wait">
         {tab === "motion" && (
-          <motion.div key="motion" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+          <motion.div key="motion" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <MotionLab />
           </motion.div>
         )}
         {tab === "optics" && (
-          <motion.div key="optics" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+          <motion.div key="optics" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <OpticsBench />
           </motion.div>
         )}
         {tab === "waves" && (
-          <motion.div key="waves" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+          <motion.div key="waves" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <WaveTank />
           </motion.div>
         )}
         {tab === "circuits" && (
-          <motion.div key="circuits" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }}>
+          <motion.div key="circuits" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <ACCircuit />
           </motion.div>
         )}

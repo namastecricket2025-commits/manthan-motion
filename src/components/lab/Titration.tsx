@@ -259,9 +259,9 @@ export default function Titration() {
   const titrantLabel = mode === "acid-into-base" ? `${acidFormula} · ${Ct.toFixed(2)} M` : `NaOH · ${Ct.toFixed(2)} M`;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+    <div className="lab-col lab-split lab-split--side-left">
       {/* apparatus */}
-      <div className="lab-glass flex flex-col p-4">
+      <div className="lab-stage-pane lab-glass flex flex-col p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-sm font-bold text-slate-100">Apparatus</p>
           <span className="lab-chip">
@@ -443,7 +443,7 @@ export default function Titration() {
       </div>
 
       {/* readouts + curve */}
-      <div className="lab-glass flex flex-col gap-4 p-4 sm:p-5">
+      <div className="lab-deck-pane lab-glass flex flex-col gap-4 p-4 sm:p-5">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { k: "Titrant added", v: `${vol.toFixed(1)} mL` },

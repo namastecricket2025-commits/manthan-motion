@@ -1,66 +1,120 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "motion/react";
-import { Wind, RotateCcw, Play, Pause } from "lucide-react";
+import { Eye, EyeOff, RotateCcw, Wind } from "lucide-react";
 import { SPRING, clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { CursorTip, useCursorTip } from "../CursorTip";
+import { cartilageMaps, disposeSurfaceMaps, lungMaps, tissueMaterial, vesselMaps } from "../lab-textures";
 
-const PARTS: Record<string, { name: string; def: string }> = {
-  trachea: { name: "Trachea — C-shaped cartilage", def: "Anterior C-rings (hyaline cartilage, ~16) keep it patent. Posterior trachealis muscle gap faces esophagus. Rigid yet flexible." },
-  carina: { name: "Carina", def: "Keel-shaped spur at T4/T5 where trachea bifurcates. Highly sensitive — cough reflex trigger." },
-  bronchusR: { name: "Right main bronchus", def: "Shorter, wider, more vertical (25°) — aspiration favors right lung. Leads to 3 lobar bronchi." },
-  bronchusL: { name: "Left main bronchus", def: "Longer, narrower, more horizontal (45°) — passes under aortic arch. Leads to 2 lobar bronchi." },
-  lobeRsup: { name: "Right superior lobe", def: "Upper right lobe — separated by horizontal fissure above. Apical, posterior, anterior segments." },
-  lobeRmid: { name: "Right middle lobe", def: "Wedge between horizontal & oblique fissures — lateral and medial segments. Unique to right lung." },
-  lobeRinf: { name: "Right inferior lobe", def: "Largest, diaphragmatic. 5 segments — superior, basal groups." },
-  lobeLsup: { name: "Left superior lobe (with lingula)", def: "Upper left lobe — includes lingula (tongue) homologous to middle lobe. Borders cardiac notch." },
-  lobeLinf: { name: "Left inferior lobe", def: "Lower left lobe — larger, similar to right inferior but with cardiac notch neighbor." },
-  notch: { name: "Cardiac notch", def: "Concave shelter on anteromedial left lung (superior lobe) cradling the heart — why left lung has 2 lobes, not 3." },
-  fissureH: { name: "Horizontal fissure", def: "Separates right superior & middle lobes — only on right." },
-  fissureO: { name: "Oblique fissure", def: "Major fissure separating upper/middle from lower lobes bilaterally." },
-  alveoli: { name: "Alveolar sacs (→300M)", def: "Respiratory bronchioles → alveolar ducts → alveoli — 70 m² diffusion surface." },
-  diaphragm: { name: "Diaphragm", def: "Domed musculotendinous sheet — contracts flattens → inspiration. Central tendon." },
-  pleura: { name: "Pleura", def: "Visceral + parietal layers with pleural fluid. Negative pressure couples lung to chest wall." },
+const PARTS: Record<string, { name: string; def: string; accent: string }> = {
+  trachea: { name: "Trachea (windpipe)", def: "A rigid tube held open by 16–20 C-shaped rings of hyaline cartilage. The rings are incomplete at the back so a swallowed bolus can bulge into the oesophagus.", accent: "#67e8f9" },
+  mucosa: { name: "Tracheal mucosa", def: "Ciliated, mucus-secreting lining inside the rings. The cilia sweep trapped dust upward toward the throat in the 'mucociliary escalator'.", accent: "#f9a8d4" },
+  trachealis: { name: "Trachealis muscle", def: "Smooth muscle bridging the open back of each cartilage ring. It narrows the airway slightly during coughing to increase air speed.", accent: "#fca5a5" },
+  carina: { name: "Carina", def: "The keel-shaped ridge where the trachea splits into the two main bronchi. It is highly sensitive — touching it triggers a cough reflex.", accent: "#fbbf24" },
+  bronchusR: { name: "Right primary bronchus", def: "Wider, shorter and steeper (~25° from vertical) than the left. Because it is so steep, inhaled objects usually lodge in the right lung.", accent: "#fbbf24" },
+  bronchusL: { name: "Left primary bronchus", def: "Narrower and more horizontal (~45°) because it must clear the aortic arch and the heart as it enters the left hilum.", accent: "#fbbf24" },
+  rSup: { name: "Right superior lobe", def: "The upper lobe of the right lung — the only lobe that extends above the first rib into the neck. Split from the middle lobe by the horizontal fissure.", accent: "#fda4af" },
+  rMid: { name: "Right middle lobe", def: "A small wedge-shaped lobe on the front of the right lung, unique to the right side. It is separated by the horizontal fissure above and the oblique fissure behind.", accent: "#fb7185" },
+  rInf: { name: "Right inferior lobe", def: "The largest lobe, sitting behind and below the oblique fissure and resting on the diaphragm. Its base is the lowest point of the lung.", accent: "#f43f5e" },
+  lSup: { name: "Left superior lobe", def: "Upper-left lobe plus the lingula — a tongue-like projection that is the left equivalent of the right middle lobe.", accent: "#f9a8d4" },
+  lInf: { name: "Left inferior lobe", def: "Lower-left lobe below the oblique fissure, resting on the left dome of the diaphragm.", accent: "#db2777" },
+  notch: { name: "Cardiac notch", def: "A deep concave cut-out on the front edge of the left lung where the heart presses in. The lingula below it wraps partly around the heart.", accent: "#a78bfa" },
+  pleura: { name: "Visceral pleura", def: "A glistening serous membrane glued to the lung surface. It slides on the parietal pleura with a film of fluid so the lungs move without friction.", accent: "#a5b4fc" },
+  diaphragm: { name: "Diaphragm", def: "The dome-shaped muscle that does most of the work of breathing. When it contracts the dome flattens and air is drawn in.", accent: "#22d3ee" },
+  fissure: { name: "Oblique & horizontal fissures", def: "Deep grooves on the lung surface that divide it into lobes, letting each lobe slide independently during breathing. The right lung has both; the left only an oblique fissure.", accent: "#94a3b8" },
 };
 
-function cRingMesh(y: number): THREE.Group {
-  const g = new THREE.Group();
-  // C-shaped cartilage: torus arc ~290°, gap posterior (facing -Z)
-  const torus = new THREE.Mesh(
-    new THREE.TorusGeometry(1.55, 0.22, 12, 24, Math.PI * 1.62),
-    new THREE.MeshStandardMaterial({ color: 0xfde68a, emissive: 0xb45309, emissiveIntensity: 0.08, roughness: 0.45 }),
-  );
-  torus.rotation.x = Math.PI / 2;
-  torus.rotation.z = Math.PI * 0.19; // gap posterior
-  torus.position.set(0, y, 0);
-  g.add(torus);
-  // trachealis membrane (posterior gap fill — smooth muscle)
-  const membr = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.35, 0.42),
-    new THREE.MeshStandardMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.85, side: THREE.DoubleSide, roughness: 0.6 }),
-  );
-  membr.position.set(0, y, -1.22);
-  membr.rotation.y = Math.PI;
-  g.add(membr);
-  return g;
+interface LobeSpec {
+  radius: number;
+  sy: number;
+  sx?: number;
+  sz?: number;
+  flatten?: number;
+  sign: 1 | -1;
+  notch?: { center: [number, number, number]; radius: number; depth: number };
+  bands?: { y: number; band: number; strength: number }[];
+  seed: number;
+}
+
+/**
+ * Organic lung lobe: stretched ellipsoid with a flattened mediastinal face,
+ * optional cardiac-notch carve, lobular surface ripple and dark fissure
+ * bands baked into vertex colours.
+ */
+function lobeGeometry(spec: LobeSpec) {
+  const { radius, sy, sx = 1, sz = 1, flatten = 0.55, sign, notch, bands = [], seed } = spec;
+  const geo = new THREE.SphereGeometry(radius, 40, 40);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const colors = new Float32Array(pos.count * 3);
+  const v = new THREE.Vector3();
+  const n = new THREE.Vector3();
+
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    n.copy(v).normalize();
+    const ripple = 1 + 0.035 * Math.sin(n.x * 7.5 + seed) * Math.cos(n.y * 6.2 - seed) + 0.02 * Math.sin(n.z * 9.1 + seed * 1.7);
+    v.set(v.x * sx * ripple, v.y * sy * ripple, v.z * sz * ripple);
+
+    // flatten the mediastinal face so the two lungs face each other cleanly
+    const mv = sign * v.x;
+    const lim = radius * sx * flatten;
+    if (mv > lim) v.x = sign * (lim + (mv - lim) * 0.22);
+
+    // cardiac notch / mediastinal carve
+    if (notch) {
+      const c = new THREE.Vector3(...notch.center);
+      const d = v.distanceTo(c);
+      if (d < notch.radius) {
+        const t = 1 - d / notch.radius;
+        const dir = v.clone().sub(c).normalize();
+        v.addScaledVector(dir, -notch.depth * Math.pow(t, 1.5));
+      }
+    }
+    pos.setXYZ(i, v.x, v.y, v.z);
+
+    // fissure shadow bands (fissures look like dark grooves)
+    let shade = 1;
+    for (const b of bands) {
+      shade -= b.strength * Math.exp(-Math.pow((v.y - b.y) / b.band, 2));
+    }
+    shade = clamp(shade, 0.45, 1);
+    colors[i * 3] = shade;
+    colors[i * 3 + 1] = shade * 0.97;
+    colors[i * 3 + 2] = shade * 0.96;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  return geo;
 }
 
 export default function Respiratory() {
+  const [breathing, setBreathing] = useState(true);
+  const [rate, setRate] = useState(14);
+  const [view, setView] = useState<"both" | "right" | "left">("both");
+  const [hover, setHover] = useState<string | null>(null);
+  const { tip, show: showTip, hide: hideTip } = useCursorTip();
+
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const ren = useRef<THREE.WebGLRenderer | null>(null);
   const scene = useRef<THREE.Scene | null>(null);
   const camera = useRef<THREE.PerspectiveCamera | null>(null);
   const root = useRef<THREE.Group | null>(null);
-  const [breathing, setBreathing] = useState(true);
-  const [hover, setHover] = useState<string | null>(null);
-  const orbit = useRef({ yaw: -0.18, pitch: 0.08, dist: 28, panX: 0, panY: 0 });
-  const target = useRef({ yaw: -0.18, pitch: 0.08, dist: 28, panX: 0, panY: 0 });
+  const lungGroup = useRef<THREE.Group | null>(null);
+  const rightGroup = useRef<THREE.Group | null>(null);
+  const leftGroup = useRef<THREE.Group | null>(null);
+  const diaphragm = useRef<THREE.Mesh | null>(null);
+  const orbit = useRef({ yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 });
+  const target = useRef({ yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 });
   const vel = useRef({ yaw: 0, pitch: 0 });
   const lastInteract = useRef(performance.now());
-  const pointers = useRef(new Map<number, { x: number; y: number; button: number }>());
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
   const dragging = useRef<"rotate" | "pan" | null>(null);
+  const pinch = useRef<number | null>(null);
   const raycaster = useRef(new THREE.Raycaster());
   const pickables = useRef<{ mesh: THREE.Object3D; id: string }[]>([]);
+  const hoverId = useRef<string | null>(null);
+  const tipClock = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,11 +122,13 @@ export default function Respiratory() {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.02;
+
     const sc = new THREE.Scene();
-    sc.background = new THREE.Color(0x0b1120);
-    sc.fog = new THREE.Fog(0x0b1120, 28, 72);
-    const cam = new THREE.PerspectiveCamera(44, 1, 1, 200);
-    cam.position.set(0, 0, 28);
+    sc.background = new THREE.Color(0x080d18);
+    sc.fog = new THREE.Fog(0x080d18, 46, 104);
+    const cam = new THREE.PerspectiveCamera(42, 1, 1, 240);
     const rootG = new THREE.Group();
     sc.add(rootG);
     ren.current = renderer;
@@ -80,369 +136,502 @@ export default function Respiratory() {
     camera.current = cam;
     root.current = rootG;
 
-    sc.add(new THREE.AmbientLight(0xffffff, 0.92));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.95);
-    dir.position.set(20, 30, 20);
-    sc.add(dir);
-    const rim = new THREE.DirectionalLight(0x67e8f9, 0.45);
-    rim.position.set(-25, -15, -20);
+    sc.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const key = new THREE.DirectionalLight(0xffffff, 1.5);
+    key.position.set(22, 30, 26);
+    sc.add(key);
+    const fill = new THREE.DirectionalLight(0xbae6fd, 0.45);
+    fill.position.set(-26, -6, 18);
+    sc.add(fill);
+    const rim = new THREE.DirectionalLight(0x67e8f9, 0.5);
+    rim.position.set(-18, 18, -24);
     sc.add(rim);
-    sc.add(new THREE.HemisphereLight(0xcbd5e1, 0x0f172a, 0.45));
+    sc.add(new THREE.HemisphereLight(0xcbd5e1, 0x111827, 0.4));
+
+    const cartilage = cartilageMaps(1.4);
+    const lung = lungMaps(1.6);
+    const mucosa = vesselMaps("#e8a0ad", 2);
+    const cut = vesselMaps("#f6c6cc", 2);
 
     const hg = new THREE.Group();
     rootG.add(hg);
 
-    // --- trachea: 14 C-rings from y=9 to y=1.2 (spacing ~0.58)
+    const ringMat = tissueMaterial(cartilage, { color: 0xe8eef6, roughness: 0.55, bumpScale: 0.05, clearcoat: 0.25 });
+    const mucosaMat = tissueMaterial(mucosa, { color: 0xf3b8c2, roughness: 0.35, bumpScale: 0.02, emissive: 0x2a0d14, emissiveIntensity: 0.15 });
+    const lungMat = tissueMaterial(lung, { color: 0xffffff, roughness: 0.66, bumpScale: 0.05, clearcoat: 0.12 });
+    lungMat.vertexColors = true; // fissure grooves are baked into vertex colours
+    const bronchusMat = tissueMaterial(cut, { color: 0xf1c9b5, roughness: 0.5, bumpScale: 0.03 });
+
+    /* ── trachea: 15 C-shaped hyaline rings + posterior trachealis gap ── */
     const tracheaG = new THREE.Group();
+    const TOP = 8.6;
+    const RINGS = 15;
+    const membMat = new THREE.MeshPhysicalMaterial({ color: 0xf5b8c4, roughness: 0.45, transparent: true, opacity: 0.75, side: THREE.DoubleSide, clearcoat: 0.3 });
+    for (let i = 0; i < RINGS; i++) {
+      const y = TOP - i * 0.62;
+      // a carrier group rotates the ring into the horizontal plane, then the
+      // torus spins inside it so the C-gap always faces posterior (−z)
+      const ringGroup = new THREE.Group();
+      ringGroup.position.y = y;
+      ringGroup.rotation.x = Math.PI / 2;
+      const torus = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.24, 16, 34, Math.PI * 1.66), ringMat);
+      torus.rotation.z = -Math.PI * 0.33; // centres the 60° gap at the back
+      ringGroup.add(torus);
+      if (i === 6) {
+        torus.userData.id = "trachea";
+        pickables.current.push({ mesh: torus, id: "trachea" });
+      }
+      // trachealis membrane spanning the open back of the C
+      const memb = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.52), membMat);
+      memb.rotation.x = -Math.PI / 2;
+      memb.position.set(0, -1.06, 0);
+      if (i === 7) {
+        memb.userData.id = "trachealis";
+        pickables.current.push({ mesh: memb, id: "trachealis" });
+      }
+      ringGroup.add(memb);
+      tracheaG.add(ringGroup);
+    }
+    // inner mucosa tube (ciliated lining)
+    const muc = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, TOP - 0.2, 26, 1, true), mucosaMat);
+    muc.position.y = (TOP + 0.4) / 2;
+    muc.userData.id = "mucosa";
+    tracheaG.add(muc);
+    pickables.current.push({ mesh: muc, id: "mucosa" });
     hg.add(tracheaG);
-    const ringYs: number[] = [];
-    for (let i = 0; i < 14; i++) {
-      const y = 9.2 - i * 0.58;
-      ringYs.push(y);
-      const ring = cRingMesh(y);
-      ring.userData.id = "trachea";
-      tracheaG.add(ring);
-      pickables.current.push({ mesh: ring.children[0] as THREE.Mesh, id: "trachea" });
-    }
-    // carina spur at bottom
-    const carina = new THREE.Mesh(
-      new THREE.ConeGeometry(0.55, 1.0, 16),
-      new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0x92400e, emissiveIntensity: 0.15 }),
-    );
-    carina.position.set(0, 0.45, 0.12);
-    carina.rotation.x = Math.PI;
-    carina.userData.id = "carina";
-    hg.add(carina);
-    pickables.current.push({ mesh: carina, id: "carina" });
 
-    // helper to make tube with shared mat
-    const tube = (pts: THREE.Vector3[], radius: number, color: number) => {
-      const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.45);
-      const geo = new THREE.TubeGeometry(curve, 28, radius, 14, false);
-      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.52, metalness: 0.04 });
-      return { mesh: new THREE.Mesh(geo, mat), curve };
+    /* ── carina + primary bronchi ── */
+    const carinaOuter = new THREE.Mesh(new THREE.SphereGeometry(0.62, 22, 22), ringMat);
+    carinaOuter.position.set(0, 0.35, 0);
+    carinaOuter.scale.set(1.5, 0.9, 1.2);
+    carinaOuter.userData.id = "carina";
+    hg.add(carinaOuter);
+    pickables.current.push({ mesh: carinaOuter, id: "carina" });
+
+    const bronchiTube = (pts: [number, number, number][], r: number, id: string) => {
+      const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.4);
+      const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 36, r, 16, false), bronchusMat);
+      mesh.userData.id = id;
+      hg.add(mesh);
+      pickables.current.push({ mesh, id });
+      return mesh;
     };
+    bronchiTube([[0.15, 0.5, 0], [1.3, -0.3, 0.35], [2.5, -0.85, 0.6], [3.3, -1.1, 0.5]], 0.5, "bronchusR");
+    bronchiTube([[-0.15, 0.5, 0], [-1.35, -0.45, 0.2], [-2.6, -1.0, 0.35], [-3.3, -1.15, 0.25]], 0.5, "bronchusL");
 
-    // primary bronchi
-    const bronchusR = tube(
-      [new THREE.Vector3(0, 0.7, 0), new THREE.Vector3(1.2, -0.4, 0.4), new THREE.Vector3(2.6, -1.2, 0.9)],
-      0.62,
-      0xfde68a,
+    /* ── lungs ── */
+    const lungs = new THREE.Group();
+    lungs.position.set(0, -1.2, 0);
+    hg.add(lungs);
+    lungGroup.current = lungs;
+
+    // right: 3 lobes separated by the horizontal and oblique fissures
+    const right = new THREE.Group();
+    right.position.set(2.05, 0, 0.5);
+    lungs.add(right);
+    rightGroup.current = right;
+
+    const rSup = new THREE.Mesh(
+      lobeGeometry({ radius: 2.5, sy: 1.15, sx: 1.0, sz: 0.92, flatten: 0.5, sign: -1, seed: 3, bands: [{ y: -1.95, band: 0.9, strength: 0.3 }] }),
+      lungMat,
     );
-    bronchusR.mesh.userData.id = "bronchusR";
-    hg.add(bronchusR.mesh);
-    pickables.current.push({ mesh: bronchusR.mesh, id: "bronchusR" });
+    rSup.position.set(0.15, 3.1, -0.2);
+    rSup.userData.id = "rSup";
+    right.add(rSup);
+    pickables.current.push({ mesh: rSup, id: "rSup" });
 
-    const bronchusL = tube(
-      [new THREE.Vector3(0, 0.7, 0), new THREE.Vector3(-1.1, -0.35, 0.2), new THREE.Vector3(-2.4, -0.9, 0.6)],
-      0.58,
-      0xfde68a,
+    const rMid = new THREE.Mesh(
+      lobeGeometry({ radius: 1.75, sy: 0.95, sx: 0.92, sz: 0.86, flatten: 0.52, sign: -1, seed: 7, bands: [{ y: 1.2, band: 0.7, strength: 0.34 }, { y: -1.15, band: 0.7, strength: 0.34 }] }),
+      lungMat,
     );
-    bronchusL.mesh.userData.id = "bronchusL";
-    hg.add(bronchusL.mesh);
-    pickables.current.push({ mesh: bronchusL.mesh, id: "bronchusL" });
+    rMid.position.set(0.3, 1.15, 1.15);
+    rMid.userData.id = "rMid";
+    right.add(rMid);
+    pickables.current.push({ mesh: rMid, id: "rMid" });
 
-    // secondary bronchi hints (thin)
-    const secR = tube(
-      [new THREE.Vector3(2.6, -1.2, 0.9), new THREE.Vector3(3.4, -2.0, 1.6), new THREE.Vector3(3.8, -3.2, 2.0)],
-      0.26,
-      0xfbbf24,
+    const rInf = new THREE.Mesh(
+      lobeGeometry({ radius: 2.85, sy: 1.2, sx: 1.0, sz: 0.95, flatten: 0.52, sign: -1, seed: 11, bands: [{ y: 2.1, band: 1.1, strength: 0.32 }] }),
+      lungMat,
     );
-    hg.add(secR.mesh);
-    const secL = tube(
-      [new THREE.Vector3(-2.4, -0.9, 0.6), new THREE.Vector3(-3.2, -1.8, 1.2), new THREE.Vector3(-3.6, -3.0, 1.7)],
-      0.24,
-      0xfbbf24,
+    rInf.position.set(0.15, -1.9, -0.35);
+    rInf.userData.id = "rInf";
+    right.add(rInf);
+    pickables.current.push({ mesh: rInf, id: "rInf" });
+
+    // left: 2 lobes + the cardiac notch carved out of the superior lobe
+    const left = new THREE.Group();
+    left.position.set(-2.05, 0, 0.5);
+    lungs.add(left);
+    leftGroup.current = left;
+
+    const lSup = new THREE.Mesh(
+      lobeGeometry({
+        radius: 2.65,
+        sy: 1.18,
+        sx: 1.0,
+        sz: 0.92,
+        flatten: 0.5,
+        sign: 1,
+        seed: 17,
+        notch: { center: [0.35, -1.5, 2.0], radius: 2.15, depth: 1.15 },
+        bands: [{ y: -2.4, band: 0.95, strength: 0.34 }],
+      }),
+      lungMat,
     );
-    hg.add(secL.mesh);
+    lSup.position.set(-0.3, 2.9, -0.1);
+    lSup.userData.id = "lSup";
+    left.add(lSup);
+    pickables.current.push({ mesh: lSup, id: "lSup" });
 
-    // --- lungs: right 3 lobes, left 2 lobes with cardiac notch
-    // Use shared lung material variants (pinkish)
-    const lobeMat = (color: number, opacity = 0.92) =>
-      new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.02, transparent: opacity < 1, opacity, side: THREE.DoubleSide });
-
-    // Right lung group
-    const rightLung = new THREE.Group();
-    rightLung.position.set(4.8, -2.2, 0.8);
-    hg.add(rightLung);
-    // Superior lobe
-    const rSup = new THREE.Mesh(new THREE.SphereGeometry(2.4, 22, 22), lobeMat(0xfda4af));
-    rSup.scale.set(1.0, 0.95, 0.85);
-    rSup.position.set(0.2, 2.6, 0.3);
-    rSup.userData.id = "lobeRsup";
-    rightLung.add(rSup);
-    pickables.current.push({ mesh: rSup, id: "lobeRsup" });
-    // Middle lobe (wedge)
-    const rMid = new THREE.Mesh(new THREE.SphereGeometry(1.55, 20, 20), lobeMat(0xfb7185));
-    rMid.scale.set(1.25, 0.62, 0.92);
-    rMid.position.set(0.45, 0.55, 0.55);
-    rMid.rotation.z = -0.12;
-    rMid.userData.id = "lobeRmid";
-    rightLung.add(rMid);
-    pickables.current.push({ mesh: rMid, id: "lobeRmid" });
-    // Inferior lobe
-    const rInf = new THREE.Mesh(new THREE.SphereGeometry(2.85, 22, 22), lobeMat(0xe11d48, 0.88));
-    rInf.scale.set(1.08, 1.25, 0.95);
-    rInf.position.set(0.0, -2.15, 0.2);
-    rInf.userData.id = "lobeRinf";
-    rightLung.add(rInf);
-    pickables.current.push({ mesh: rInf, id: "lobeRinf" });
-
-    // fissures on right: horizontal (between sup/mid) and oblique (between mid+sup vs inf)
-    const fissH = new THREE.Mesh(new THREE.CircleGeometry(1.9, 22), new THREE.MeshBasicMaterial({ color: 0x881337, transparent: true, opacity: 0.22, side: THREE.DoubleSide }));
-    fissH.position.set(0.45, 1.45, 1.35);
-    fissH.rotation.x = Math.PI / 2 - 0.18;
-    fissH.rotation.y = -0.15;
-    fissH.userData.id = "fissureH";
-    rightLung.add(fissH);
-    pickables.current.push({ mesh: fissH, id: "fissureH" });
-
-    const fissO_R = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.8), new THREE.MeshBasicMaterial({ color: 0x881337, transparent: true, opacity: 0.18, side: THREE.DoubleSide }));
-    fissO_R.position.set(0.35, -0.75, 1.35);
-    fissO_R.rotation.x = 0.55;
-    fissO_R.rotation.y = -0.2;
-    fissO_R.userData.id = "fissureO";
-    rightLung.add(fissO_R);
-
-    // Left lung group
-    const leftLung = new THREE.Group();
-    leftLung.position.set(-4.6, -2.0, 0.6);
-    hg.add(leftLung);
-    const lSup = new THREE.Mesh(new THREE.SphereGeometry(2.65, 22, 22), lobeMat(0xf9a8d4));
-    lSup.scale.set(1.05, 1.08, 0.88);
-    lSup.position.set(-0.15, 2.25, 0.25);
-    lSup.userData.id = "lobeLsup";
-    leftLung.add(lSup);
-    pickables.current.push({ mesh: lSup, id: "lobeLsup" });
-
-    const lInf = new THREE.Mesh(new THREE.SphereGeometry(2.95, 22, 22), lobeMat(0xbe185d, 0.88));
-    lInf.scale.set(1.1, 1.28, 0.95);
-    lInf.position.set(-0.05, -2.05, 0.18);
-    lInf.userData.id = "lobeLinf";
-    leftLung.add(lInf);
-    pickables.current.push({ mesh: lInf, id: "lobeLinf" });
-
-    // oblique fissure left
-    const fissO_L = fissO_R.clone();
-    fissO_L.position.set(-0.05, -0.55, 1.32);
-    fissO_L.rotation.y = 0.12;
-    fissO_L.userData.id = "fissureO";
-    leftLung.add(fissO_L);
-
-    // Cardiac notch: indentation on anteromedial left superior lobe — visualize as dark carved sphere intersecting lobe edge
-    const notchCarve = new THREE.Mesh(
-      new THREE.SphereGeometry(1.55, 18, 18),
-      new THREE.MeshStandardMaterial({ color: 0x0b1120, roughness: 0.9, transparent: true, opacity: 0.96 }),
+    const lInf = new THREE.Mesh(
+      lobeGeometry({ radius: 2.9, sy: 1.18, sx: 1.0, sz: 0.95, flatten: 0.52, sign: 1, seed: 23, bands: [{ y: 2.4, band: 1.05, strength: 0.32 }] }),
+      lungMat,
     );
-    notchCarve.position.set(1.05, 0.85, 0.95); // medial border
-    notchCarve.scale.set(1.0, 1.15, 0.75);
-    notchCarve.userData.id = "notch";
-    leftLung.add(notchCarve);
-    pickables.current.push({ mesh: notchCarve, id: "notch" });
-    // notch rim highlight
-    const notchRim = new THREE.Mesh(
-      new THREE.TorusGeometry(1.15, 0.07, 10, 18, Math.PI * 1.2),
-      new THREE.MeshBasicMaterial({ color: 0x881337, transparent: true, opacity: 0.5 }),
-    );
-    notchRim.position.copy(notchCarve.position);
-    notchRim.rotation.y = 0.35;
-    notchRim.rotation.x = 0.25;
-    leftLung.add(notchRim);
+    lInf.position.set(-0.3, -2.1, -0.3);
+    lInf.userData.id = "lInf";
+    left.add(lInf);
+    pickables.current.push({ mesh: lInf, id: "lInf" });
 
-    // alveoli clusters (small bubbly instanced spheres near inferior lobes)
-    const alveoGeo = new THREE.SphereGeometry(0.14, 8, 8);
-    const alveoMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0x7f1d1d, emissiveIntensity: 0.12, transparent: true, opacity: 0.7 });
-    const alveoCount = 90;
-    const alveoMesh = new THREE.InstancedMesh(alveoGeo, alveoMat, alveoCount);
-    alveoMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < alveoCount; i++) {
-      const side = i % 2 === 0 ? 1 : -1;
-      const base = side === 1 ? new THREE.Vector3(4.8, -4.8, 0.8) : new THREE.Vector3(-4.6, -4.7, 0.6);
-      const off = new THREE.Vector3((Math.random() - 0.5) * 3.2, (Math.random() - 0.5) * 2.2, (Math.random() - 0.5) * 1.6);
-      dummy.position.copy(base).add(off);
-      dummy.scale.setScalar(0.85 + Math.random() * 0.55);
-      dummy.updateMatrix();
-      alveoMesh.setMatrixAt(i, dummy.matrix);
-    }
-    alveoMesh.userData.id = "alveoli";
-    hg.add(alveoMesh);
-    pickables.current.push({ mesh: alveoMesh, id: "alveoli" });
+    // cardiac notch marker (pickable ring on the left lung's front edge)
+    const notchMark = new THREE.Mesh(
+      new THREE.TorusGeometry(1.15, 0.09, 8, 34, Math.PI * 1.35),
+      new THREE.MeshPhysicalMaterial({ color: 0xc4b5fd, emissive: 0x4c1d95, emissiveIntensity: 0.5, roughness: 0.35, transparent: true, opacity: 0.9, clearcoat: 0.4 }),
+    );
+    notchMark.position.set(-0.4, 0.9, 2.55);
+    notchMark.rotation.set(0.35, 0.5, 0.4);
+    notchMark.userData.id = "notch";
+    left.add(notchMark);
+    pickables.current.push({ mesh: notchMark, id: "notch" });
+
+    // visceral pleura sheen over both lungs
+    const pleuraMat = new THREE.MeshPhysicalMaterial({
+      color: 0xc7d2fe,
+      roughness: 0.18,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide,
+      clearcoat: 1,
+      clearcoatRoughness: 0.1,
+      depthWrite: false,
+    });
+    [rSup, rMid, rInf, lSup, lInf].forEach((lobe) => {
+      const shell = new THREE.Mesh(lobe.geometry.clone(), pleuraMat);
+      shell.position.copy(lobe.position);
+      shell.scale.setScalar(1.018);
+      shell.userData.id = "pleura";
+      shell.raycast = () => undefined; // never steal the lobe's hover
+      lobe.parent?.add(shell);
+    });
+
+    // fissure groove markers
+    const fissureMat = new THREE.MeshStandardMaterial({ color: 0x7c2d3a, roughness: 0.85, transparent: true, opacity: 0.75 });
+    const fissGeo = new THREE.TorusGeometry(2.6, 0.05, 6, 40, Math.PI * 0.95);
+    const fissR = new THREE.Mesh(fissGeo, fissureMat);
+    fissR.position.set(2.2, 0.35, 0.4);
+    fissR.rotation.set(1.25, 0.2, -0.35);
+    fissR.userData.id = "fissure";
+    hg.add(fissR);
+    pickables.current.push({ mesh: fissR, id: "fissure" });
+
+    const fissL = new THREE.Mesh(fissGeo, fissureMat);
+    fissL.position.set(-2.25, 0.25, 0.4);
+    fissL.rotation.set(1.2, -0.2, 0.35);
+    fissL.userData.id = "fissure";
+    hg.add(fissL);
+    pickables.current.push({ mesh: fissL, id: "fissure" });
 
     // diaphragm dome
-    const diaphragm = new THREE.Mesh(
-      new THREE.SphereGeometry(7.2, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.38),
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.55, transparent: true, opacity: 0.52, side: THREE.DoubleSide }),
+    const dia = new THREE.Mesh(
+      new THREE.SphereGeometry(6.2, 40, 20, 0, Math.PI * 2, 0, Math.PI * 0.42),
+      new THREE.MeshPhysicalMaterial({ color: 0xb45309, roughness: 0.6, transparent: true, opacity: 0.4, side: THREE.DoubleSide, clearcoat: 0.2 }),
     );
-    diaphragm.position.set(0, -7.6, 0);
-    diaphragm.rotation.x = Math.PI;
-    diaphragm.scale.set(1.15, 0.65, 0.9);
-    diaphragm.userData.id = "diaphragm";
-    hg.add(diaphragm);
-    pickables.current.push({ mesh: diaphragm, id: "diaphragm" });
-
-    // pleura outline faint
-    const pleuraMat = new THREE.MeshBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.08, side: THREE.DoubleSide, wireframe: false });
-    const pleuraR = new THREE.Mesh(new THREE.SphereGeometry(4.1, 18, 18), pleuraMat);
-    pleuraR.scale.set(1.05, 1.35, 0.92);
-    pleuraR.position.copy(rightLung.position);
-    hg.add(pleuraR);
-    const pleuraL = pleuraR.clone();
-    pleuraL.position.copy(leftLung.position);
-    pleuraL.scale.set(1.08, 1.38, 0.95);
-    hg.add(pleuraL);
-
-    // store lung groups for breathing
-    (hg.userData as Record<string, unknown>).rightLung = rightLung;
-    (hg.userData as Record<string, unknown>).leftLung = leftLung;
-    (hg.userData as Record<string, unknown>).diaphragm = diaphragm;
-
-    // gas flow spheres
-    const flows: THREE.Mesh[] = [];
-    for (let i = 0; i < 6; i++) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xff647c : 0x38bdf8 }));
-      hg.add(s);
-      flows.push(s);
-    }
-    (hg.userData as Record<string, unknown>).flows = flows;
-    (hg.userData as Record<string, unknown>).brR = bronchusR.curve;
-    (hg.userData as Record<string, unknown>).brL = bronchusL.curve;
+    dia.position.set(0, -6.1, 0);
+    dia.rotation.x = Math.PI;
+    dia.userData.id = "diaphragm";
+    hg.add(dia);
+    pickables.current.push({ mesh: dia, id: "diaphragm" });
+    diaphragm.current = dia;
 
     return () => {
+      disposeSurfaceMaps(sc);
       sc.traverse((obj) => {
         const m = obj as THREE.Mesh;
         if (m.geometry) m.geometry.dispose();
-        const mat = (m as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
-        if (mat) (Array.isArray(mat) ? mat : [mat]).forEach((mm) => { const any = mm as unknown as { map?: THREE.Texture }; if (any.map) any.map.dispose(); mm.dispose(); });
-        if ((obj as THREE.InstancedMesh).isInstancedMesh) {
-          // disposed above
-        }
+        const mat = m.material as THREE.Material | THREE.Material[] | undefined;
+        if (mat) (Array.isArray(mat) ? mat : [mat]).forEach((mm) => mm.dispose());
       });
       renderer.dispose();
-      ren.current = null; scene.current = null; camera.current = null; root.current = null;
+      ren.current = null;
+      scene.current = null;
+      camera.current = null;
+      root.current = null;
+      pickables.current = [];
     };
-  }, []);
+  }, [canvasRef]);
+
+  /* side isolation */
+  useEffect(() => {
+    if (rightGroup.current) rightGroup.current.visible = view !== "left";
+    if (leftGroup.current) leftGroup.current.visible = view !== "right";
+  }, [view]);
+
+  const setHoverFromRay = (clientX: number, clientY: number) => {
+    const c = canvasRef.current;
+    if (!c || !camera.current || !root.current) return;
+    const r = c.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    root.current.updateMatrixWorld(true);
+    raycaster.current.setFromCamera(ndc, camera.current);
+    const hits = raycaster.current.intersectObjects(pickables.current.map((p) => p.mesh), false);
+    if (hits.length > 0) {
+      const id = ((hits[0].object as THREE.Mesh).userData.id as string) || "";
+      const part = PARTS[id];
+      if (!part) return;
+      const same = id === hoverId.current;
+      hoverId.current = id;
+      setHover(id);
+      const now = performance.now();
+      if (same && now - tipClock.current < 45) return;
+      tipClock.current = now;
+      showTip({ title: part.name, body: part.def, accent: part.accent }, clientX, clientY);
+    } else if (hoverId.current) {
+      hoverId.current = null;
+      setHover(null);
+      hideTip();
+    }
+  };
 
   useRaf((dt, t) => {
-    const renderer = ren.current; const sc = scene.current; const cam = camera.current; const grp = root.current;
+    const renderer = ren.current;
+    const sc = scene.current;
+    const cam = camera.current;
+    const grp = root.current;
     if (!renderer || !sc || !cam || !grp) return;
-    const hg = grp.children[0] as THREE.Group | undefined;
-    const tgt = target.current; const o = orbit.current;
+
+    const tgt = target.current;
+    const o = orbit.current;
     const since = (performance.now() - lastInteract.current) / 1000;
-    const isInteracting = dragging.current !== null || pointers.current.size > 0;
-    if (!isInteracting && since > 1.1) tgt.yaw += dt * 0.08;
-    const lerp = 1 - Math.pow(0.001, dt);
-    const yd = tgt.yaw - o.yaw, pd = tgt.pitch - o.pitch;
-    vel.current.yaw = vel.current.yaw * Math.pow(0.16, dt * 60) + yd * 7 * dt;
-    vel.current.pitch = vel.current.pitch * Math.pow(0.16, dt * 60) + pd * 7 * dt;
-    o.yaw += vel.current.yaw; o.pitch += vel.current.pitch;
-    o.dist += (tgt.dist - o.dist) * clamp(lerp * 1.1, 0, 1);
-    o.panX += (tgt.panX - o.panX) * clamp(lerp * 1.25, 0, 1);
-    o.panY += (tgt.panY - o.panY) * clamp(lerp * 1.25, 0, 1);
-    grp.rotation.y = o.yaw; grp.rotation.x = o.pitch;
+    if (dragging.current === null && since > 1.4) tgt.yaw += dt * 0.1;
+    const yd = tgt.yaw - o.yaw;
+    const pd = tgt.pitch - o.pitch;
+    vel.current.yaw = vel.current.yaw * Math.pow(0.05, dt) + yd * 8 * dt;
+    vel.current.pitch = vel.current.pitch * Math.pow(0.05, dt) + pd * 8 * dt;
+    o.yaw += vel.current.yaw;
+    o.pitch = clamp(o.pitch + vel.current.pitch, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
+    const lerp = 1 - Math.pow(0.0015, dt);
+    o.dist += (tgt.dist - o.dist) * lerp;
+    o.panX += (tgt.panX - o.panX) * lerp;
+    o.panY += (tgt.panY - o.panY) * lerp;
+    grp.rotation.y = o.yaw;
+    grp.rotation.x = o.pitch;
+
     const { w, h, dpr } = size.current;
-    const cssW = w / Math.max(1, dpr); const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) { renderer.setSize(cssW, cssH, false); cam.aspect = cssW / cssH; cam.updateProjectionMatrix(); }
-    const lookAt = new THREE.Vector3(o.panX * 0.08, o.panY * 0.08, 0);
-    cam.position.set(lookAt.x + o.dist * Math.sin(o.yaw) * Math.cos(o.pitch), lookAt.y + o.dist * Math.sin(o.pitch), lookAt.z + o.dist * Math.cos(o.yaw) * Math.cos(o.pitch));
-    cam.lookAt(lookAt);
-
-    if (hg) {
-      const br = breathing ? 1 + Math.sin(t * 0.9) * 0.025 : 1;
-      const rl = (hg.userData as Record<string, unknown>).rightLung as THREE.Group | undefined;
-      const ll = (hg.userData as Record<string, unknown>).leftLung as THREE.Group | undefined;
-      const di = (hg.userData as Record<string, unknown>).diaphragm as THREE.Mesh | undefined;
-      if (rl) rl.scale.setScalar(br);
-      if (ll) ll.scale.setScalar(br);
-      if (di) di.position.y = -7.6 + (breathing ? Math.sin(t * 0.9) * 0.22 : 0);
-
-      const flows = (hg.userData as Record<string, unknown>).flows as THREE.Mesh[] | undefined;
-      const brR = (hg.userData as Record<string, unknown>).brR as THREE.Curve<THREE.Vector3> | undefined;
-      const brL = (hg.userData as Record<string, unknown>).brL as THREE.Curve<THREE.Vector3> | undefined;
-      if (flows && brR && brL) {
-        flows.forEach((s, i) => {
-          const curve = i % 2 === 0 ? brR : brL;
-          const u = (t * 0.14 + i * 0.17) % 1;
-          s.position.copy(curve.getPointAt(u));
-          s.visible = true;
-        });
-      }
+    const cssW = w / Math.max(1, dpr);
+    const cssH = h / Math.max(1, dpr);
+    if (cssW > 0 && cssH > 0) {
+      renderer.setSize(cssW, cssH, false);
+      cam.aspect = cssW / cssH;
+      cam.updateProjectionMatrix();
     }
+    const look = new THREE.Vector3(o.panX * 0.07, o.panY * 0.07, 0);
+    cam.position.set(
+      look.x + o.dist * Math.sin(o.yaw) * Math.cos(o.pitch),
+      look.y + o.dist * Math.sin(o.pitch),
+      look.z + o.dist * Math.cos(o.yaw) * Math.cos(o.pitch),
+    );
+    cam.lookAt(look);
+
+    // breathing: lungs expand, diaphragm flattens
+    const breath = breathing ? (t % (60 / rate)) / (60 / rate) : 0.5;
+    const inhale = 0.5 - 0.5 * Math.cos(breath * Math.PI * 2);
+    const lg = lungGroup.current;
+    if (lg) {
+      const s = 1 + inhale * 0.05;
+      lg.scale.set(s, 1 + inhale * 0.028, s);
+    }
+    if (diaphragm.current) {
+      diaphragm.current.position.y = -6.1 + inhale * 0.42;
+      diaphragm.current.scale.set(1 + inhale * 0.03, 1 - inhale * 0.07, 1 + inhale * 0.03);
+    }
+
     renderer.render(sc, cam);
   });
 
   useEffect(() => {
-    const el = wrapRef.current; if (!el) return;
-    const fn = (e: WheelEvent) => { e.preventDefault(); target.current.dist = clamp(target.current.dist * (e.deltaY > 0 ? 1.08 : 0.92), 14, 52); lastInteract.current = performance.now(); };
+    const el = wrapRef.current;
+    if (!el) return;
+    const fn = (e: WheelEvent) => {
+      e.preventDefault();
+      target.current.dist = clamp(target.current.dist * (e.deltaY > 0 ? 1.08 : 0.92), 12, 56);
+      lastInteract.current = performance.now();
+    };
     el.addEventListener("wheel", fn, { passive: false });
     return () => el.removeEventListener("wheel", fn);
   }, []);
 
-  const getNDC = (x: number, y: number) => {
-    const c = canvasRef.current; if (!c) return null;
-    const r = c.getBoundingClientRect();
-    return new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  const onDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragging.current = e.button === 2 ? "pan" : "rotate";
+    lastInteract.current = performance.now();
+    if (e.pointerType === "touch") setHoverFromRay(e.clientX, e.clientY);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (!dragging.current) setHoverFromRay(e.clientX, e.clientY);
+    const prev = pointers.current.get(e.pointerId);
+    if (!prev) return;
+    const dx = e.clientX - prev.x;
+    const dy = e.clientY - prev.y;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    lastInteract.current = performance.now();
+    if (pointers.current.size >= 2) {
+      const vals = [...pointers.current.values()];
+      const d = Math.hypot(vals[0].x - vals[1].x, vals[0].y - vals[1].y);
+      if (pinch.current != null) target.current.dist = clamp(target.current.dist * (pinch.current / Math.max(1, d)), 12, 56);
+      pinch.current = d;
+      return;
+    }
+    if (dragging.current === "pan") {
+      const sp = target.current.dist * 0.0022;
+      const yw = target.current.yaw;
+      target.current.panX += (Math.cos(yw) * dx - Math.sin(yw) * dy) * sp;
+      target.current.panY += (Math.sin(yw) * dx + Math.cos(yw) * dy) * sp;
+    } else {
+      target.current.yaw += dx * 0.0065;
+      target.current.pitch = clamp(target.current.pitch + dy * 0.0062, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
+    }
+  };
+  const onUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size === 0) dragging.current = null;
   };
 
-  const setHoverFromRay = (cx: number, cy: number) => {
-    const ndc = getNDC(cx, cy);
-    if (!ndc || !camera.current) return;
-    if (root.current) root.current.updateMatrixWorld(true);
-    raycaster.current.setFromCamera(ndc, camera.current);
-    const meshes = pickables.current.map((p) => p.mesh);
-    const hits = raycaster.current.intersectObjects(meshes as THREE.Object3D[], true);
-    // find closest pickable via traversing parents
-    for (const h of hits) {
-      let obj: THREE.Object3D | null = h.object;
-      while (obj) {
-        const found = pickables.current.find((p) => p.mesh === obj);
-        if (found) { setHover(found.id); return; }
-        // also check userData.id propagation
-        if ((obj as THREE.Mesh).userData?.id) { setHover((obj as THREE.Mesh).userData.id as string); return; }
-        obj = obj.parent;
-      }
-    }
-    setHover(null);
-  };
+  const hoverPart = hover ? PARTS[hover] : null;
 
   return (
-    <div className="lab-glass p-3 sm:p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="lab-split">
+      <div className="lab-stage-pane lab-glass p-2.5 sm:p-4">
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-100">Respiratory system — lobes &amp; cartilaginous airway</p>
+            <p className="hidden text-[11px] text-slate-500 sm:block">
+              Tap any lobe, ring or vessel for a 2-sentence explanation · drag to orbit · pinch or scroll to zoom
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={() => setBreathing((v) => !v)} className={`lab-btn !px-2.5 ${breathing ? "lab-btn--active" : ""}`}>
+              <Wind className="h-3.5 w-3.5" />
+              {breathing ? "Breathing" : "Held"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                target.current = { yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 };
+                orbit.current = { ...target.current };
+              }}
+              className="lab-btn !px-2.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Fit</span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={wrapRef}
+          className="relative cursor-grab touch-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_50%_35%,#152036_0%,#080d18_78%)] active:cursor-grabbing"
+        >
+          <canvas
+            ref={canvasRef}
+            className="lab-stage w-full"
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            onPointerLeave={() => {
+              hideTip();
+              setHover(null);
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+          <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
+            {view === "both" && (
+              <span className="lab-chip border-white/15 bg-black/55 text-[10px]">
+                Right 3 lobes · left 2 lobes + cardiac notch
+              </span>
+            )}
+            {view === "right" && <span className="lab-chip border-[#ff647c]/30 bg-black/55 text-[10px] text-[#ff8a9a]">Right lung — 3 lobes</span>}
+            {view === "left" && <span className="lab-chip border-[#a78bfa]/30 bg-black/55 text-[10px] text-[#c4b5fd]">Left lung — 2 lobes + notch</span>}
+          </div>
+          <CursorTip tip={tip} hostRef={wrapRef} width={268} />
+        </div>
+      </div>
+
+      <div className="lab-deck-pane lab-glass-deep space-y-3.5 p-3.5">
+        {hoverPart && (
+          <motion.div key={hover} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={SPRING} className="rounded-xl border p-2.5" style={{ borderColor: `${hoverPart.accent}55`, background: `${hoverPart.accent}12` }}>
+            <p className="text-xs font-bold" style={{ color: hoverPart.accent }}>
+              {hoverPart.name}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-300">{hoverPart.def}</p>
+          </motion.div>
+        )}
+
         <div>
-          <p className="text-sm font-bold text-slate-100">Respiratory — trachea, bronchi &amp; 3/2 lobes</p>
-          <p className="text-[11px] text-slate-500">C-rings with posterior gap · carina at T4/T5 · right 3 lobes vs left 2 + cardiac notch. Drag to orbit, scroll to zoom.</p>
+          <p className="lab-label mb-2">
+            <Eye className="mr-1 inline h-3 w-3" /> Isolation view
+          </p>
+          <div className="lab-tabs">
+            {(
+              [
+                { key: "both", label: "Both" },
+                { key: "right", label: "Right" },
+                { key: "left", label: "Left" },
+              ] as const
+            ).map((v) => (
+              <button key={v.key} type="button" onClick={() => setView(v.key)} className={`lab-tab text-xs ${view === v.key ? "lab-tab--on" : ""}`}>
+                {v.key !== "both" && (view === v.key ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />)}
+                {v.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+            {view === "both" && "The right lung carries three lobes (superior, middle, inferior); the left has only two because the heart takes the space."}
+            {view === "right" && "Horizontal fissure separates superior from middle; the oblique fissure separates middle from inferior."}
+            {view === "left" && "The cardiac notch is cut into the superior lobe's front edge — feel the concave dip with the lingula below it."}
+          </p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button type="button" onClick={() => setBreathing((v) => !v)} className={`lab-btn !px-2 text-xs ${breathing ? "lab-btn--active" : ""}`}>{breathing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}{breathing ? "Breathing" : "Paused"}</button>
-          <button type="button" onClick={() => { target.current = { yaw: -0.18, pitch: 0.08, dist: 28, panX: 0, panY: 0 }; orbit.current = { ...target.current }; }} className="lab-btn !px-2"><RotateCcw className="h-3.5 w-3.5" /> Fit</button>
+
+        <div className="lab-rule" />
+
+        <div>
+          <p className="lab-label mb-2">
+            <Wind className="mr-1 inline h-3 w-3 text-[#22d3ee]" /> Breathing
+          </p>
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Rate</span>
+            <span className="lab-value text-slate-200">{rate} /min</span>
+          </div>
+          <input type="range" className="lab-range mt-1.5" min={8} max={30} step={1} value={rate} onChange={(e) => setRate(Number(e.target.value))} />
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+            <span>Tidal volume ≈ 500 mL</span>
+            <span>Rings in model: 15 C-shaped</span>
+            <span>Bronchus angle R 25° / L 45°</span>
+            <span>Alveoli ≈ 480 million</span>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+          <p className="lab-label mb-1.5">Exam hooks</p>
+          <ul className="space-y-1 text-[11px] leading-relaxed text-slate-400">
+            <li>• Right main bronchus is wider and more vertical — aspirated objects land here.</li>
+            <li>• The carina is the last cartilage: it splits the airway at the level of T4/T5.</li>
+            <li>• Only the left lung has a cardiac notch and lingula.</li>
+          </ul>
         </div>
       </div>
-      <div ref={wrapRef} className="relative h-[540px] cursor-grab touch-none overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_50%_30%,#16233b_0%,#0b1120_80%)] active:cursor-grabbing">
-        <canvas
-          ref={canvasRef}
-          className="h-full w-full"
-          onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button }); dragging.current = e.button === 2 ? "pan" : "rotate"; lastInteract.current = performance.now(); }}
-          onPointerMove={(e) => {
-            if (!dragging.current && pointers.current.size === 0) setHoverFromRay(e.clientX, e.clientY);
-            const prev = pointers.current.get(e.pointerId); if (!prev) return;
-            const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
-            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
-            if (dragging.current === "pan") { target.current.panX += dx * 0.45; target.current.panY -= dy * 0.45; }
-            else if (dragging.current === "rotate") { target.current.yaw += dx * 0.006; target.current.pitch = clamp(target.current.pitch + dy * 0.006, -0.95, 0.95); }
-          }}
-          onPointerUp={(e) => { pointers.current.delete(e.pointerId); if (pointers.current.size === 0) dragging.current = null; (e.currentTarget as HTMLElement).style.cursor = "grab"; }}
-          onPointerCancel={(e) => { pointers.current.delete(e.pointerId); dragging.current = null; }}
-          onContextMenu={(e) => e.preventDefault()}
-        />
-        <div className="pointer-events-none absolute left-3 top-3 flex gap-1.5">
-          <span className="lab-chip border-white/15 bg-black/50 text-slate-300"><Wind className="h-3 w-3 text-[#fbbf24]" /> C-rings · carina</span>
-          <span className="hidden lab-chip bg-black/40 text-slate-400 sm:inline-flex">R: 3 lobes · L: 2 + notch</span>
-        </div>
-        <div className="pointer-events-none absolute bottom-3 left-3 right-3 rounded-xl border border-white/10 bg-black/60 p-3 backdrop-blur-md">
-          {hover ? (<motion.div key={hover} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={SPRING}><p className="text-xs font-bold text-[#fbbf24]">{PARTS[hover]?.name ?? hover}</p><p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">{PARTS[hover]?.def ?? ""}</p></motion.div>) : (<p className="text-[11px] text-slate-500">Hover a ring, lobe, or fissure for its anatomical name. Scroll to get close — see the posterior trachealis gap.</p>)}
-        </div>
-      </div>
-      <p className="mt-2 text-center text-[10px] text-slate-500">Anatomy: right lung horizontal + oblique fissures = 3 lobes; left lung oblique fissure only = 2 lobes + cardiac notch for heart.</p>
     </div>
   );
 }

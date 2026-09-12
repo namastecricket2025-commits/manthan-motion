@@ -482,7 +482,7 @@ export default function ChemistryWorkspace() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="lab-col">
       {/* sub-tabs */}
       <div className="lab-tabs">
         {(
@@ -508,6 +508,7 @@ export default function ChemistryWorkspace() {
         {tab === "table" && (
           <motion.div
             key="table"
+            className="lab-col"
             initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
