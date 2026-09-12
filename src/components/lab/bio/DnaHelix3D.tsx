@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import { CursorTip } from "../CursorTip";
+import { sfx } from "../lab-sound";
+import { SPRING } from "../use-canvas";
+import { AnimatePresence, motion } from "motion/react";
 
 const BP = 22;
 const RISE = 1.35;
@@ -13,6 +16,8 @@ type Base = "A" | "T" | "G" | "C";
 const COLORS: Record<Base, number> = { A: 0xff6b6b, T: 0x60a5fa, G: 0x4ade80, C: 0xfbbf24 };
 const PAIR: Record<Base, Base> = { A: "T", T: "A", G: "C", C: "G" };
 const SEQ: Base[] = Array.from({ length: BP }, (_, i) => (["A", "T", "G", "C"] as Base[])[i % 4]);
+const BASES: Base[] = ["A", "T", "G", "C"];
+const hex = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
 
 function makeBackbonePoints(
   offsetAngle: number,
@@ -45,6 +50,7 @@ function makeBackbonePoints(
 
 export default function DnaHelix3D() {
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
+  const vp = useViewport();
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   const ren = useRef<THREE.WebGLRenderer | null>(null);
@@ -53,10 +59,18 @@ export default function DnaHelix3D() {
   const group = useRef<THREE.Group | null>(null);
   const helixGroup = useRef<THREE.Group | null>(null);
 
-  const mode = useRef<"explore" | "transcribe">("explore");
-  const [modeState, setModeState] = useState<"explore" | "transcribe">("explore");
+  const mode = useRef<"explore" | "transcribe" | "build">("explore");
+  const [modeState, setModeState] = useState<"explore" | "transcribe" | "build">("explore");
   const [autoRotate, setAutoRotate] = useState(true);
   const [polProgress, setPolProgress] = useState(0.22);
+  // ── build-the-helix micro-game
+  const [gameIdx, setGameIdx] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [wrongPick, setWrongPick] = useState<Base | null>(null);
+  const gameIdxRef = useRef(0);
+  const buildAnim = useRef(new Map<number, number>());
+  const popAt = useRef(new Map<number, number>());
+  gameIdxRef.current = gameIdx;
   const [playing, setPlaying] = useState(false);
   const [hoverInfo, setHoverInfo] = useState<{ label: string; x: number; y: number } | null>(null);
 
@@ -156,7 +170,7 @@ export default function DnaHelix3D() {
       const axisDir = dir.clone();
       const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), axisDir);
       rung.quaternion.copy(quat);
-      rung.userData = { kind: "base", index: i, base: SEQ[i], pair: PAIR[SEQ[i]], y };
+      rung.userData = { kind: "base", index: i, base: SEQ[i], pair: PAIR[SEQ[i]], y, centerX: rung.position.x, centerZ: rung.position.z };
       hg.add(rung);
       bases.push(rung);
 
@@ -304,11 +318,8 @@ export default function DnaHelix3D() {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) {
-      renderer.setSize(cssW, cssH, false);
-      cam.aspect = cssW / cssH;
-      cam.updateProjectionMatrix();
-    }
+    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
+    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null);
     const lookAt = new THREE.Vector3(o.panX * 0.3, o.panY * 0.3, 0);
     const cosP = Math.cos(o.pitch);
     const sinP = Math.sin(o.pitch);
@@ -318,7 +329,12 @@ export default function DnaHelix3D() {
     cam.lookAt(lookAt);
 
     // update backbone splay for transcribe bubble
-    const bubbleY = mode.current === "transcribe" ? (polProgress - 0.5) * TOTAL_H * 0.85 : null;
+    const bubbleY =
+      mode.current === "transcribe"
+        ? (polProgress - 0.5) * TOTAL_H * 0.85
+        : mode.current === "build"
+          ? (gameIdxRef.current / BP - 0.5) * TOTAL_H * 0.94
+          : null;
     const bubbleHalf = 3.8;
     if (backboneA.current && backboneB.current) {
       const ptsA = makeBackbonePoints(0, 0, bubbleY, bubbleHalf, 3.2);
@@ -331,20 +347,33 @@ export default function DnaHelix3D() {
       backboneA.current.geometry = new THREE.TubeGeometry(curveA, 96, 0.38, 12, false);
       backboneB.current.geometry = new THREE.TubeGeometry(curveB, 96, 0.38, 12, false);
     }
-    // nudge base pairs inside bubble to splay as well
+    // base pairs: splay around the fork (absolute, never accumulated) and, in
+    // build mode, zip the strand together one pair at a time as the player answers
+    const building = mode.current === "build";
     baseMeshes.current.forEach((m, i) => {
-      const y = (i - BP / 2) * RISE;
+      const cx = (m.userData.centerX as number) ?? m.position.x;
+      const cz = (m.userData.centerZ as number) ?? m.position.z;
+      let splay = 0;
       if (bubbleY !== null) {
-        const d = Math.abs(y - bubbleY);
-        if (d < bubbleHalf) {
-          const t = 1 - d / bubbleHalf;
-          m.position.x *= 1 + t * 0.18;
-          m.position.z *= 1 + t * 0.18;
-          (m.material as THREE.MeshStandardMaterial).opacity = 1 - t * 0.22;
-        } else {
-          m.position.x = m.userData.centerX ?? m.position.x;
-          (m.material as THREE.MeshStandardMaterial).opacity = 1;
-        }
+        const d = Math.abs((i - BP / 2) * RISE - bubbleY);
+        if (d < bubbleHalf) splay = 1 - d / bubbleHalf;
+      }
+      m.position.x = cx * (1 + splay * 0.16);
+      m.position.z = cz * (1 + splay * 0.16);
+
+      if (building) {
+        const answered = i < gameIdxRef.current;
+        const prev = buildAnim.current.get(i) ?? (answered ? 1 : 0);
+        const val = prev + ((answered ? 1 : 0) - prev) * Math.min(1, dt * 9);
+        buildAnim.current.set(i, val);
+        const pop = popAt.current.get(i);
+        const since = pop ? (performance.now() - pop) / 1000 : 9;
+        const popScale = since < 0.5 ? 1 + Math.sin((since / 0.5) * Math.PI) * 0.65 : 1;
+        m.scale.setScalar(Math.max(0.0001, val) * popScale);
+        m.visible = val > 0.02;
+      } else if (m.scale.x !== 1) {
+        m.scale.setScalar(1);
+        m.visible = true;
       }
     });
 
@@ -402,6 +431,30 @@ export default function DnaHelix3D() {
     return () => el.removeEventListener("wheel", fn);
   }, []);
 
+  const answerBase = (b: Base) => {
+    if (modeState !== "build" || gameIdx >= BP) return;
+    if (PAIR[SEQ[gameIdx]] === b) {
+      popAt.current.set(gameIdx, performance.now());
+      sfx.snap();
+      setWrongPick(null);
+      setStreak((s) => s + 1);
+      setGameIdx((i) => i + 1);
+    } else {
+      sfx.buzz();
+      setWrongPick(b);
+      setStreak(0);
+      window.setTimeout(() => setWrongPick(null), 360);
+    }
+  };
+
+  const resetBuild = () => {
+    popAt.current.clear();
+    buildAnim.current.clear();
+    setGameIdx(0);
+    setStreak(0);
+    setWrongPick(null);
+  };
+
   const getNDC = (x: number, y: number) => {
     const c = canvasRef.current;
     if (!c) return null;
@@ -458,6 +511,7 @@ export default function DnaHelix3D() {
           <div className="lab-tabs !p-1">
             <button type="button" onClick={() => setModeState("explore")} className={`lab-tab !px-3 !py-1 text-xs ${modeState === "explore" ? "lab-tab--on" : ""}`}>Explore Helix 360°</button>
             <button type="button" onClick={() => { setModeState("transcribe"); setPlaying(false); }} className={`lab-tab !px-3 !py-1 text-xs ${modeState === "transcribe" ? "lab-tab--on" : ""}`}>Transcribe</button>
+            <button type="button" onClick={() => { setModeState("build"); setPlaying(false); }} className={`lab-tab !px-3 !py-1 text-xs ${modeState === "build" ? "lab-tab--on" : ""}`}>Build pairs</button>
           </div>
         </div>
       </div>
@@ -500,6 +554,67 @@ export default function DnaHelix3D() {
         onContextMenu={(e) => e.preventDefault()}
       />
 
+      {/* build-the-helix micro-game: floating tiles snap a base pair into the split strand */}
+      <AnimatePresence>
+        {modeState === "build" && (
+          <motion.div
+            key="build-hud"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={SPRING}
+            className="absolute inset-x-3 bottom-14 z-20 lg:inset-x-auto lg:right-3 lg:w-[302px]"
+          >
+            <div className="lab-screen lab-dark-surface rounded-2xl p-3">
+              {gameIdx < BP ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="lab-label">Pair the strand</p>
+                    <span className="lab-chip text-[10px]">streak {streak}</span>
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+                    Template base{" "}
+                    <b style={{ color: hex(COLORS[SEQ[gameIdx]]) }}>{SEQ[gameIdx]}</b> — tap the base that pairs with it to snap it in.
+                  </p>
+                  <div className="mt-2 grid grid-cols-4 gap-1.5">
+                    {BASES.map((b) => (
+                      <motion.button
+                        key={b}
+                        type="button"
+                        whileTap={{ scale: 0.93 }}
+                        animate={wrongPick === b ? { x: [0, -6, 6, -3, 0] } : { x: 0 }}
+                        transition={wrongPick === b ? { duration: 0.34 } : SPRING}
+                        onClick={() => answerBase(b)}
+                        className="rounded-xl border py-2.5 text-sm font-bold"
+                        style={{ borderColor: `${hex(COLORS[b])}66`, background: `${hex(COLORS[b])}1f`, color: hex(COLORS[b]) }}
+                      >
+                        {b}
+                      </motion.button>
+                    ))}
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#22d3ee] to-[#ff3b5c]" style={{ width: `${(gameIdx / BP) * 100}%`, transition: "width .3s ease" }} />
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-slate-500">
+                    {gameIdx}/{BP} base pairs zipped · A pairs with T, G pairs with C
+                  </p>
+                </>
+              ) : (
+                <div className="text-center">
+                  <p className="font-display text-lg font-bold text-[#67e8f9]">Helix complete</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                    All {BP} base pairs snapped in — one full turn every 10 pairs, right-handed. Final streak {streak}.
+                  </p>
+                  <button type="button" onClick={resetBuild} className="lab-btn lab-btn-neon mt-2 w-full">
+                    Rebuild the helix
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <CursorTip
         tip={hoverInfo ? { title: hoverInfo.label, accent: "#fbbf24", x: hoverInfo.x, y: hoverInfo.y } : null}
         hostRef={wrapRef}
@@ -513,13 +628,13 @@ export default function DnaHelix3D() {
               <button type="button" onClick={() => setAutoRotate((v) => !v)} className={`lab-btn !px-3 !py-1 text-xs ${autoRotate ? "lab-btn--active" : ""}`}>{autoRotate ? "Auto 360° on" : "Auto off"}</button>
               <button type="button" onClick={() => { target.current.dist = 42; target.current.panX = 0; target.current.panY = 0; }} className="lab-btn !px-2 !py-1 text-xs">Reset view</button>
             </>
-          ) : (
+          ) : modeState === "transcribe" ? (
             <>
               <button type="button" onClick={() => setPlaying((p) => !p)} className="lab-btn lab-btn-neon !px-3 !py-1 text-xs">{playing ? "Pause polymerase" : "Play polymerase 5′→3′"}</button>
               <input type="range" min={0.06} max={0.92} step={0.01} value={polProgress} onChange={(e) => setPolProgress(Number(e.target.value))} className="lab-range w-28" />
               <span className="lab-chip text-xs">{Math.round(polProgress * 100)}%</span>
             </>
-          )}
+          ) : null}
         </div>
       </div>
 

@@ -118,9 +118,9 @@ export default function BiologyExplorer() {
             <motion.div
               key={t.key}
               className="lab-col"
-              initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.26, ease: "easeOut" }}
             >
               {tab === "explorer" && <ExplorerTab />}

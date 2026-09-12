@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "motion/react";
-import { Activity, Info, Pause, Play, RotateCcw } from "lucide-react";
+import { Activity, Info, Pause, Play, RotateCcw, PenLine } from "lucide-react";
 import { sfx } from "../lab-sound";
-import { SPRING, clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import { CursorTip, useCursorTip } from "../CursorTip";
+import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { disposeSurfaceMaps, muscleMaps, vesselMaps, tissueMaterial } from "../lab-textures";
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
@@ -32,6 +33,16 @@ const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   aorticValve: { name: "Aortic valve", def: "Three-cusped valve at the exit of the left ventricle. It opens when the ventricle contracts and snaps shut to keep blood in the aorta.", accent: "#a78bfa" },
   pulmValve: { name: "Pulmonary valve", def: "Three-cusped valve guarding the exit of the right ventricle into the pulmonary trunk. It prevents backflow from the pulmonary artery.", accent: "#a78bfa" },
 };
+
+const EXAM_STEPS: ExamStep[] = [
+  { t: "Block in the ventricles", d: "Draw one large tilted oval leaning about 30° to the right — that is the ventricular mass, and the apex points down-left." },
+  { t: "Add both atria", d: "Sketch two smaller rounded lobes sitting on top of the oval — right atrium on your left as you look at it, left atrium behind it." },
+  { t: "Mark the interventricular groove", d: "One line down the front of the oval separates the two ventricles. The left side of that line is the thick-walled left ventricle." },
+  { t: "Draw the aorta and its arch", d: "A wide tube leaves the centre and arches to the LEFT over everything else. Three short upward strokes on top of the arch are its branches." },
+  { t: "Put the pulmonary trunk in front", d: "A second wide tube starts from the right ventricle and crosses IN FRONT of the aorta before splitting — shade it darker to show it is nearer." },
+  { t: "Add the venae cavae", d: "Two vertical tubes enter the right atrium: the superior vena cava from above and the inferior vena cava from below." },
+  { t: "Shade and label", d: "Shade the left ventricle wall thickest, then label the four valves: tricuspid, mitral, pulmonary and aortic." },
+];
 
 const QUESTIONS: { q: string; options: string[]; ok: number; why: string }[] = [
   { q: "Which chamber pumps deoxygenated blood to the lungs?", options: ["Right atrium", "Right ventricle", "Left atrium", "Left ventricle"], ok: 1, why: "Right ventricle → pulmonary trunk → lungs." },
@@ -102,13 +113,16 @@ export default function HeartAnatomy() {
   const [score, setScore] = useState(0);
   const [quizDone, setQuizDone] = useState(false);
   const { tip, show: showTip, hide: hideTip } = useCursorTip();
+  const [exam, setExam] = useState(false);
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
+  const vp = useViewport();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const ren = useRef<THREE.WebGLRenderer | null>(null);
   const scene = useRef<THREE.Scene | null>(null);
   const camera = useRef<THREE.PerspectiveCamera | null>(null);
   const rootGroup = useRef<THREE.Group | null>(null);
+  useExamSketch(rootGroup, exam, canvasRef);
   const beatParts = useRef<{ lv: THREE.Object3D; rv: THREE.Object3D; la: THREE.Object3D; ra: THREE.Object3D; valves: THREE.Object3D[] } | null>(null);
   const orbit = useRef({ yaw: 0.5, pitch: -0.06, dist: 32, panX: 0, panY: 0 });
   const target = useRef({ yaw: 0.5, pitch: -0.06, dist: 32, panX: 0, panY: 0 });
@@ -428,11 +442,8 @@ export default function HeartAnatomy() {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) {
-      renderer.setSize(cssW, cssH, false);
-      cam.aspect = cssW / cssH;
-      cam.updateProjectionMatrix();
-    }
+    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
+    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null);
     const look = new THREE.Vector3(o.panX * 0.07, o.panY * 0.07, 0);
     cam.position.set(
       look.x + o.dist * Math.sin(o.yaw) * Math.cos(o.pitch),
@@ -543,6 +554,15 @@ export default function HeartAnatomy() {
             <button type="button" onClick={() => setPaused(!paused)} className="lab-btn !px-2.5">
               {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">{paused ? "Play" : "Pause"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setExam((v) => !v)}
+              className={`lab-btn !px-2.5 ${exam ? "lab-btn--active" : ""}`}
+              title="Ghost the model and overlay ink outlines you can copy by hand"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Exam Sketch</span>
             </button>
             <button type="button" onClick={resetView} className="lab-btn !px-2.5">
               <RotateCcw className="h-3.5 w-3.5" />
@@ -725,6 +745,8 @@ export default function HeartAnatomy() {
           )}
         </div>
       </div>
-    </div>
+    
+      <ExamSketchPanel open={exam} title="Human heart — how to draw it" steps={EXAM_STEPS} onClose={() => setExam(false)} />
+</div>
   );
 }

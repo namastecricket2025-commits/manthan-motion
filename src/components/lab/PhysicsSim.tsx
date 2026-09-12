@@ -490,22 +490,22 @@ export default function PhysicsSim() {
 
       <AnimatePresence mode="wait">
         {tab === "motion" && (
-          <motion.div key="motion" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
+          <motion.div key="motion" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <MotionLab />
           </motion.div>
         )}
         {tab === "optics" && (
-          <motion.div key="optics" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
+          <motion.div key="optics" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <OpticsBench />
           </motion.div>
         )}
         {tab === "waves" && (
-          <motion.div key="waves" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
+          <motion.div key="waves" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <WaveTank />
           </motion.div>
         )}
         {tab === "circuits" && (
-          <motion.div key="circuits" initial={{ opacity: 0, y: 14, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(4px)" }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
+          <motion.div key="circuits" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: "easeOut" }} className="lab-col">
             <ACCircuit />
           </motion.div>
         )}

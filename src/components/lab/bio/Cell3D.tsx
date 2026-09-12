@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import { CursorTip } from "../CursorTip";
 
 // ─── ion defs
@@ -11,6 +11,16 @@ interface IonState {
   glow: THREE.Sprite;
   pos: THREE.Vector3;
   vel: THREE.Vector3;
+}
+
+/** A single free ion in the molecular-scale flux cloud. */
+interface FluxParticle {
+  pos: THREE.Vector3;
+  vel: THREE.Vector3;
+  /** channel index it is currently threading, or -1 when free. */
+  ch: number;
+  /** true = exiting the cell, false = entering. */
+  out: boolean;
 }
 
 const ION_COLOR: Record<IonKind, number> = {
@@ -94,8 +104,19 @@ const memFragment = `
   }
 `;
 
+/** Shells that must never win a pick — the ray looks straight through them. */
+const SHELL_NAMES = new Set([
+  "Plasma membrane — lipid bilayer",
+  "Cytoplasm — cytosol",
+  "Nuclear envelope — inner",
+  "Nuclear envelope — outer",
+]);
+
+const SCALE_BANDS = ["Macro view", "Cellular scale", "Organelle scale", "Molecular scale"];
+
 export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
+  const vp = useViewport();
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   // renderer / scene refs
@@ -122,8 +143,23 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const organelles = useRef<{ mesh: THREE.Object3D; name: string; def: string }[]>([]);
   const organelleHoverRay = useRef(new THREE.Raycaster());
   const [tooltip, setTooltip] = useState<{ name: string; def: string; x: number; y: number } | null>(null);
+  const [lookInside, setLookInside] = useState(false);
+  const [selected, setSelected] = useState<{ name: string; def: string } | null>(null);
+  const selectedMesh = useRef<THREE.Object3D | null>(null);
+  const activeMesh = useRef<THREE.Object3D | null>(null);
+  const shellMats = useRef<THREE.Material[]>([]);
+  const cellPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
+  const organellePick = useRef<{ flat: THREE.Object3D[]; owner: Map<THREE.Object3D, { name: string; def: string; mesh: THREE.Object3D; shell: boolean }> }>({ flat: [], owner: new Map() });
+  const arrowRef = useRef<SVGPathElement | null>(null);
+  const arrowDotRef = useRef<SVGCircleElement | null>(null);
+  const badgeRef = useRef<HTMLDivElement | null>(null);
+  const downAt = useRef<{ x: number; y: number } | null>(null);
+  const lookInsideRef = useRef(false);
+  const [band, setBand] = useState(0);
+  const bandRef = useRef(0);
   const dragging = useRef<"rotate" | "pan" | null>(null);
   const dragIon = useRef<IonState | null>(null);
+  const flux = useRef<{ mesh: THREE.InstancedMesh; parts: FluxParticle[]; dummy: THREE.Object3D; op: number } | null>(null);
   const dragPlane = useRef(new THREE.Plane());
   const dragOffset = useRef(new THREE.Vector3());
   const ionLastWorld = useRef(new THREE.Vector3());
@@ -142,6 +178,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.localClippingEnabled = true;
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.setClearColor(0x000000, 0);
     // better sorting for transparent cytoplasm
@@ -772,6 +809,33 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     addReg(outerMem, "Plasma membrane — lipid bilayer", "Double leaflet + 180 phospholipid heads. Drag K⁺/Ca²⁺ to cyan ion channels to trigger active transport.");
     organelles.current = regs;
 
+    // "Look Inside" slices exactly these shells; they are also excluded from
+    // picking so a click always reaches the organelle behind them.
+    const shellList: THREE.Material[] = [];
+    [cyto, memGroup].forEach((node) => {
+      node.traverse((o) => {
+        const m = (o as THREE.Mesh).material;
+        if (!m) return;
+        (Array.isArray(m) ? m : [m]).forEach((x) => shellList.push(x));
+      });
+    });
+    shellMats.current = shellList;
+
+    // one flat vertex list + owner map, so a single ray can look deep inside
+    const flat: THREE.Object3D[] = [];
+    const owner = new Map<THREE.Object3D, { name: string; def: string; mesh: THREE.Object3D; shell: boolean }>();
+    for (const reg of regs) {
+      const shell = SHELL_NAMES.has(reg.name);
+      const entry = { name: reg.name, def: reg.def, mesh: reg.mesh, shell };
+      reg.mesh.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) {
+          flat.push(o);
+          owner.set(o, entry);
+        }
+      });
+    }
+    organellePick.current = { flat, owner };
+
     // ── Ions — world-space spheres with glow sprites
     const ionStates: IonState[] = [];
     const ionMeshList: THREE.Mesh[] = [];
@@ -856,6 +920,39 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     ions.current = ionStates;
     ionMeshes.current = ionMeshList;
 
+    // ── molecular-scale ion flux (the fluid-mosaic cloud)
+    // Hidden until the camera is genuinely close, then it fades in and the
+    // cytoplasm reads as a living solution: dozens of ions Brownian-drift,
+    // get captured by a channel protein, thread the pore, and ripple out.
+    // One InstancedMesh = one draw call, so 60 FPS is untouched.
+    const FLUX_N = 30;
+    const fluxGeo = new THREE.SphereGeometry(0.6, 8, 8);
+    const fluxMat = new THREE.MeshBasicMaterial({
+      color: 0x9ae6ff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const fluxMesh = new THREE.InstancedMesh(fluxGeo, fluxMat, FLUX_N);
+    fluxMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    fluxMesh.frustumCulled = false;
+    fluxMesh.visible = false;
+    fluxMesh.renderOrder = 6;
+    group.add(fluxMesh);
+    const fluxParts: FluxParticle[] = [];
+    for (let i = 0; i < FLUX_N; i++) {
+      // seed in the cortical band just inside the membrane
+      const dir = fibonacciSphere(FLUX_N, 1)[i].clone().multiplyScalar(28 + Math.random() * 8);
+      fluxParts.push({
+        pos: dir,
+        vel: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(2.4),
+        ch: -1,
+        out: Math.random() < 0.5,
+      });
+    }
+    flux.current = { mesh: fluxMesh, parts: fluxParts, dummy: new THREE.Object3D(), op: 0 };
+
     // ── ripples pool (rings expanding at channels)
     const ripplePool: THREE.Mesh[] = [];
     for (let ri = 0; ri < 6; ri++) {
@@ -908,6 +1005,9 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       ionMeshes.current = [];
       channels.current = [];
       ripples.current = [];
+      flux.current?.mesh.geometry.dispose();
+      (flux.current?.mesh.material as THREE.Material | undefined)?.dispose();
+      flux.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -970,11 +1070,8 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) {
-      renderer.setSize(cssW, cssH, false);
-      cam.aspect = cssW / cssH;
-      cam.updateProjectionMatrix();
-    }
+    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
+    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null);
     // camera orbit: spherical + pan
     const cosP = Math.cos(o.pitch);
     const sinP = Math.sin(o.pitch);
@@ -994,6 +1091,81 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const nucCenter = new THREE.Vector3(-4, -3, 2);
     // apply world matrix to get group rotation for collision checks? Ions are children of group, so their positions are local.
     // For simplicity, check local distance from origin (cell center local 0,0,0) — group rotation doesn't affect local distances.
+    // ── progressive multi-scale streaming ──────────────────────────────
+    // As the camera closes in, big text labels retire, organelle detail takes
+    // over, and at maximum zoom the ion flux through the channel proteins
+    // becomes the star (glow + scale + channel pulse).
+    const zoomT = clamp((150 - orbit.current.dist) / 100, 0, 1);
+    const showLabels = zoomT < 0.42;
+    const molecular = zoomT > 0.8; // >250% zoom — the molecular band
+    const nextBand = zoomT > 0.8 ? 3 : zoomT > 0.55 ? 2 : zoomT > 0.25 ? 1 : 0;
+    if (nextBand !== bandRef.current) {
+      bandRef.current = nextBand;
+      setBand(nextBand);
+    }
+
+    // ── molecular band: the fluid-mosaic ion flux through channel proteins
+    const fx = flux.current;
+    if (fx) {
+      fx.op += ((molecular ? 1 : 0) - fx.op) * Math.min(1, dt * 2.6);
+      fx.mesh.visible = fx.op > 0.03;
+      if (fx.mesh.visible) {
+        (fx.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * fx.op;
+        const RR = 36.4;
+        const scratch = new THREE.Vector3();
+        for (let i = 0; i < fx.parts.length; i++) {
+          const q = fx.parts[i];
+          const chan = q.ch >= 0 ? channels.current[q.ch] : undefined;
+          if (chan) {
+            scratch.copy(chan.pos).addScaledVector(chan.normal, q.out ? 9 : -9);
+            q.pos.lerp(scratch, Math.min(1, dt * 5.5));
+            if (q.pos.distanceTo(scratch) < 0.9) {
+              triggerRipple(q.pos.clone(), chan.normal);
+              q.ch = -1;
+              q.vel.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
+            }
+          } else {
+            q.vel.x += (Math.random() - 0.5) * 1.1 * dt;
+            q.vel.y += (Math.random() - 0.5) * 1.1 * dt;
+            q.vel.z += (Math.random() - 0.5) * 1.1 * dt;
+            q.vel.multiplyScalar(0.992);
+            const sp = q.vel.length();
+            if (sp > 4) q.vel.multiplyScalar(4 / sp);
+            q.pos.addScaledVector(q.vel, dt);
+            const dq = q.pos.length();
+            if (dq > RR) {
+              q.pos.multiplyScalar(RR / dq);
+              q.vel.multiplyScalar(-0.55);
+            }
+            scratch.copy(q.pos).sub(nucCenter);
+            const dn = scratch.length();
+            if (dn < 15.5 && dn > 0.001) q.pos.copy(nucCenter).addScaledVector(scratch.divideScalar(dn), 15.5);
+            if (Math.random() < 0.004 && channels.current.length) {
+              let best = 0;
+              let bd = Infinity;
+              for (let c = 0; c < channels.current.length; c++) {
+                const dd = q.pos.distanceToSquared(channels.current[c].pos);
+                if (dd < bd) {
+                  bd = dd;
+                  best = c;
+                }
+              }
+              q.ch = best;
+              q.out = q.pos.dot(channels.current[best].normal) < 0;
+            }
+          }
+          fx.dummy.position.copy(q.pos);
+          fx.dummy.updateMatrix();
+          fx.mesh.setMatrixAt(i, fx.dummy.matrix);
+        }
+        fx.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+    channels.current.forEach((ch, i) => {
+      const pulse = 1 + Math.sin(t * 3.1 + i) * 0.05 * zoomT;
+      ch.mesh.scale.setScalar(pulse);
+    });
+
     ions.current.forEach(st => {
       if (dragIon.current === st) return; // dragged ion follows pointer, no physics
       // brownian drift + slight velocity damping
@@ -1061,10 +1233,16 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       // sync glow sprite + label
       st.glow.position.copy(next);
       const lbl = (st.mesh.userData as Record<string, unknown>).labelSpr as THREE.Sprite | undefined;
-      if (lbl) lbl.position.copy(next).add(new THREE.Vector3(0, (st.kind==="Ca2+"?1.55:1.32)+1.05, 0));
-      // subtle glow pulse
+      if (lbl) {
+        lbl.visible = showLabels;
+        lbl.position.copy(next).add(new THREE.Vector3(0, (st.kind==="Ca2+"?1.55:1.32)+1.05, 0));
+      }
+      // subtle glow pulse — amplified as the molecular band engages
       const pulse = 0.55 + Math.sin(t * 2.1 + (st.kind==="Ca2+"?0:1.8)) * 0.12;
-      (st.glow.material as THREE.SpriteMaterial).opacity = pulse;
+      (st.glow.material as THREE.SpriteMaterial).opacity = pulse * (1 + zoomT * 0.85);
+      const baseGlow = st.kind === "Ca2+" ? 4.2 : 3.6;
+      st.glow.scale.setScalar(baseGlow * (1 + zoomT * 0.7));
+      void molecular;
       // depth sort glow behind/in front based on camera? sprite handles.
     });
 
@@ -1094,8 +1272,47 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     // apply subtle group breathing
     group.scale.setScalar(breathe);
 
+    // keep the Look-Inside slice aligned with the rotating cell
+    if (lookInsideRef.current && cellGroup.current) {
+      const q = new THREE.Quaternion();
+      const wp0 = new THREE.Vector3();
+      cellGroup.current.getWorldQuaternion(q);
+      cellGroup.current.getWorldPosition(wp0);
+      cellPlane.current.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1).applyQuaternion(q), wp0);
+    }
+
+    // anchored leader arrow: DOM writes only, never a React re-render per frame
+    const mesh = activeMesh.current;
+    const path = arrowRef.current;
+    const canvasEl = canvasRef.current;
+    if (mesh && path && canvasEl && badgeRef.current) {
+      const wp = new THREE.Vector3();
+      mesh.getWorldPosition(wp);
+      wp.project(cam);
+      const sx = (wp.x * 0.5 + 0.5) * canvasEl.clientWidth;
+      const sy = (-wp.y * 0.5 + 0.5) * canvasEl.clientHeight;
+      const badge = badgeRef.current;
+      const bx = badge.offsetLeft + badge.offsetWidth;
+      const by = badge.offsetTop + badge.offsetHeight / 2;
+      const elbow = bx + (sx - bx) * 0.42;
+      path.setAttribute("d", `M ${bx} ${by} C ${elbow} ${by} ${elbow} ${sy} ${sx} ${sy}`);
+      arrowDotRef.current?.setAttribute("cx", String(sx));
+      arrowDotRef.current?.setAttribute("cy", String(sy));
+    }
+
     renderer.render(sc, cam);
   });
+
+  // reflect the Look-Inside toggle into the clip planes the renderer reads
+  useEffect(() => {
+    lookInsideRef.current = lookInside;
+    const planes = lookInside ? [cellPlane.current] : [];
+    shellMats.current.forEach((m) => {
+      const mm = m as THREE.Material & { clippingPlanes: THREE.Plane[] | null };
+      mm.clippingPlanes = planes;
+      mm.needsUpdate = true;
+    });
+  }, [lookInside]);
 
   // ── trigger ripple helper (closure capturing ripples/channels)
   const triggerRipple = (worldPos: THREE.Vector3, _normal: THREE.Vector3) => {
@@ -1146,10 +1363,35 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     return new THREE.Vector2(x, y);
   };
 
+  /**
+   * Ray that looks *through* the translucent shells (membrane, cytosol,
+   * nuclear envelope) to the first real organelle underneath, so clicking
+   * deep inside the cell works.
+   */
+  const pickOrganelle = (clientX: number, clientY: number) => {
+    const ndc = getNDC(clientX, clientY);
+    const cam = camera.current;
+    if (!ndc || !cam || !cellGroup.current) return null;
+    cellGroup.current.updateMatrixWorld(true);
+    raycaster.current.setFromCamera(ndc, cam);
+    const { flat, owner } = organellePick.current;
+    const hits = raycaster.current.intersectObjects(flat, false);
+    for (const h of hits) {
+      const own = owner.get(h.object);
+      if (own && !own.shell) return own;
+    }
+    for (const h of hits) {
+      const own = owner.get(h.object);
+      if (own) return own;
+    }
+    return null;
+  };
+
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = e.currentTarget;
     (canvas as HTMLElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
+    downAt.current = { x: e.clientX, y: e.clientY };
     lastInteraction.current = performance.now();
 
     // right-click pan
@@ -1211,24 +1453,13 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         (e.currentTarget as HTMLElement).style.cursor = "grab";
       } else {
         setHoverIon(null);
-        // organelle hover — raycast against registered organelle meshes (first hit wins)
-        const orgHits: { obj: THREE.Object3D; dist: number; name: string; def: string }[] = [];
-        for (const reg of organelles.current) {
-          // Use raycaster on the mesh or its children
-          const targets: THREE.Object3D[] = [];
-          reg.mesh.traverse(o => { if ((o as THREE.Mesh).isMesh) targets.push(o); });
-          if (targets.length === 0) targets.push(reg.mesh);
-          const hits = raycaster.current.intersectObjects(targets as THREE.Object3D[], false);
-          if (hits.length > 0) {
-            orgHits.push({ obj: hits[0].object, dist: hits[0].distance, name: reg.name, def: reg.def });
-          }
-        }
-        orgHits.sort((a,b)=>a.dist-b.dist);
-        if (orgHits.length > 0) {
-          const h = orgHits[0];
-          setTooltip({ name: h.name, def: h.def, x: e.clientX, y: e.clientY });
+        const hit = pickOrganelle(e.clientX, e.clientY);
+        if (hit) {
+          activeMesh.current = hit.mesh;
+          setTooltip({ name: hit.name, def: hit.def, x: e.clientX, y: e.clientY });
           (e.currentTarget as HTMLElement).style.cursor = "help";
         } else {
+          activeMesh.current = selectedMesh.current;
           setTooltip(null);
           (e.currentTarget as HTMLElement).style.cursor = "grab";
         }
@@ -1352,7 +1583,22 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   };
 
   const endPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const down = downAt.current;
     pointers.current.delete(e.pointerId);
+    // a clean tap (no drag) selects the organelle under the finger / cursor
+    if (down && !dragIon.current && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) {
+      const hit = pickOrganelle(e.clientX, e.clientY);
+      if (hit) {
+        selectedMesh.current = hit.mesh;
+        activeMesh.current = hit.mesh;
+        setSelected({ name: hit.name, def: hit.def });
+      } else {
+        selectedMesh.current = null;
+        activeMesh.current = null;
+        setSelected(null);
+      }
+    }
+    downAt.current = null;
     if (dragIon.current) {
       // give it a little ejection velocity based on last movement? simple random
       dragIon.current.vel.set((Math.random()-0.5)*1.2, (Math.random()-0.5)*1.2, (Math.random()-0.5)*1.2);
@@ -1412,9 +1658,18 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         <div className="flex items-center gap-2">
           <span className="lab-chip border-[#ff3b5c]/30 bg-[#ff3b5c]/10 text-[#ff8a9a]">LIVE 3D</span>
           <span className="text-xs font-semibold text-slate-200">{cellType === "plant" ? "Plant cell — cross-section" : "Animal cell — cross-section"}</span>
+          <span className={`lab-chip text-[10px] ${band === 3 ? "border-[#22d3ee]/50 text-[#67e8f9]" : ""}`}>{SCALE_BANDS[band]}</span>
           <span className="hidden text-[11px] text-slate-500 sm:inline">· lipid bilayer · nuclear pores · ER · mitochondria cristae · cytoskeleton</span>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setLookInside((v) => !v)}
+            className={`lab-btn !px-2.5 !py-1 text-[11px] ${lookInside ? "lab-btn--active" : ""}`}
+            title="Slice the outer membrane away to look inside the cell"
+          >
+            {lookInside ? "Close cross-section" : "Look Inside Cell"}
+          </button>
           <button type="button" onClick={resetIons} className="lab-btn !px-2.5 !py-1 text-[11px]">Shuffle ions</button>
           <span className={`lab-chip text-[11px] transition ${membraneFlash ? "border-[#38bdf8] bg-[#38bdf8]/20 text-[#7dd3fc] shadow-[0_0_18px_rgba(56,189,248,0.45)]" : "border-white/10 bg-white/5 text-slate-400"}`}>
             {membraneFlash ? "Channel transport ●" : hoverIon ? `${hoverIon} — drag to channel` : "Drag ions to channels"}
@@ -1446,6 +1701,33 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         hostRef={wrapRef}
         width={268}
       />
+
+      {/* fixed sidebar badge + anchored leader arrow (desktop; no floating mouse cards) */}
+      <svg className="pointer-events-none absolute inset-0 z-30 hidden h-full w-full lg:block" aria-hidden>
+        <path ref={arrowRef} d="" fill="none" stroke="#22d3ee" strokeWidth="1.6" strokeDasharray="6 4" strokeLinecap="round" opacity="0.9" />
+        <circle ref={arrowDotRef} r="3.6" fill="#22d3ee" />
+      </svg>
+      {selected && (
+        <div
+          ref={badgeRef}
+          className="absolute left-3 top-1/2 z-30 hidden w-[206px] -translate-y-1/2 rounded-xl border border-[#22d3ee]/40 bg-black/70 p-2.5 backdrop-blur-md lg:block"
+        >
+          <p className="text-[9px] uppercase tracking-[0.18em] text-[#67e8f9]">Selected organelle</p>
+          <p className="mt-1 text-xs font-bold text-slate-100">{selected.name}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-300">{selected.def}</p>
+          <button
+            type="button"
+            onClick={() => {
+              selectedMesh.current = null;
+              activeMesh.current = null;
+              setSelected(null);
+            }}
+            className="lab-btn mt-2 w-full !py-1 text-[11px]"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
 
       {/* subtle vignette */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]" />

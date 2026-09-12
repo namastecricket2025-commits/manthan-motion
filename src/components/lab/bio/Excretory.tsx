@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "motion/react";
-import { Droplets, Eye, EyeOff, Gauge, RotateCcw } from "lucide-react";
-import { SPRING, clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { Droplets, Eye, EyeOff, Gauge, RotateCcw, PenLine } from "lucide-react";
+import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import { CursorTip, useCursorTip } from "../CursorTip";
+import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { disposeSurfaceMaps, kidneyCortexMaps, medullaMaps, tissueMaterial, vesselMaps } from "../lab-textures";
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
@@ -24,6 +25,16 @@ const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   ureter: { name: "Ureter", def: "A muscular tube that carries urine from the pelvis to the bladder. Peristaltic waves push it along about three times a minute.", accent: "#facc15" },
   bladder: { name: "Urinary bladder", def: "A detrusor-muscle sac that stores urine until micturition. It normally holds about 400–500 mL.", accent: "#facc15" },
 };
+
+const EXAM_STEPS: ExamStep[] = [
+  { t: "Two vertical vessels first", d: "Draw the abdominal aorta in the midline and the inferior vena cava just to its right — everything else hangs off these." },
+  { t: "Place the kidneys", d: "One bean each side at roughly L1–L2, and draw the RIGHT kidney noticeably LOWER to make room for the liver." },
+  { t: "Shape the beans", d: "Each kidney is a bean with a concave notch on its medial border — the hilum, where vessels enter." },
+  { t: "Attach the vessels", d: "A renal artery leaves the aorta and a renal vein joins the IVC. Make the right artery pass BEHIND the IVC; the left vein crosses IN FRONT of the aorta." },
+  { t: "Open the cross-section", d: "Draw a wedge cut: pale outer cortex, then 6–8 triangles with their points facing inwards — the pyramids." },
+  { t: "Funnel it out", d: "Cup each papilla with a minor calyx, merge them into the pelvis, then run the ureter down to the bladder." },
+  { t: "Label the asymmetry", d: "Write 'right lower (liver)' next to the right kidney — examiners look for exactly that fact." },
+];
 
 const CHECKS: { q: string; options: string[]; ok: number; why: string }[] = [
   { q: "Which kidney sits lower and why?", options: ["Left — spleen", "Right — liver", "Equal height", "Right — stomach"], ok: 1, why: "The liver occupies the right upper abdomen and physically displaces the right kidney downward." },
@@ -65,13 +76,16 @@ export default function Excretory() {
   const [cScore, setCScore] = useState(0);
   const [cDone, setCDone] = useState(false);
   const { tip, show: showTip, hide: hideTip } = useCursorTip();
+  const [exam, setExam] = useState(false);
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
+  const vp = useViewport();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const ren = useRef<THREE.WebGLRenderer | null>(null);
   const scene = useRef<THREE.Scene | null>(null);
   const camera = useRef<THREE.PerspectiveCamera | null>(null);
   const root = useRef<THREE.Group | null>(null);
+  useExamSketch(root, exam, canvasRef);
   const kidneyL = useRef<THREE.Group | null>(null);
   const kidneyR = useRef<THREE.Group | null>(null);
   const flareMats = useRef<THREE.Material[]>([]);
@@ -366,11 +380,8 @@ export default function Excretory() {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) {
-      renderer.setSize(cssW, cssH, false);
-      cam.aspect = cssW / cssH;
-      cam.updateProjectionMatrix();
-    }
+    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
+    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null);
     const look = new THREE.Vector3(o.panX * 0.07, o.panY * 0.07, 0);
     cam.position.set(
       look.x + o.dist * Math.sin(o.yaw) * Math.cos(o.pitch),
@@ -470,6 +481,15 @@ export default function Excretory() {
             </p>
           </div>
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setExam((v) => !v)}
+              className={`lab-btn !px-2.5 ${exam ? "lab-btn--active" : ""}`}
+              title="Ghost the model and overlay ink outlines you can copy by hand"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Exam Sketch</span>
+            </button>
             <button type="button" onClick={() => setCrossSection((v) => !v)} className={`lab-btn !px-2.5 ${crossSection ? "lab-btn--active" : ""}`}>
               {crossSection ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               {crossSection ? "Close cut" : "Cross-section"}
@@ -618,6 +638,8 @@ export default function Excretory() {
           )}
         </div>
       </div>
-    </div>
+    
+      <ExamSketchPanel open={exam} title="Kidneys — how to draw them" steps={EXAM_STEPS} onClose={() => setExam(false)} />
+</div>
   );
 }

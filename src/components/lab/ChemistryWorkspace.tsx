@@ -509,13 +509,13 @@ export default function ChemistryWorkspace() {
           <motion.div
             key="table"
             className="lab-col"
-            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-            transition={{ duration: 0.28, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className={selected ? "grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]" : ""}>
-              {table}
+            <div className="lab-morph" data-open={selected ? "1" : "0"}>
+              <div className="lab-morph__table">{table}</div>
 
               {/* desktop: morph-in side panel */}
               <AnimatePresence>
@@ -564,9 +564,9 @@ export default function ChemistryWorkspace() {
         {tab === "bench" && (
           <motion.div
             key="bench"
-            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.28, ease: "easeOut" }}
           >
             <ReactionBench />
@@ -576,9 +576,9 @@ export default function ChemistryWorkspace() {
         {tab === "titration" && (
           <motion.div
             key="titration"
-            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.28, ease: "easeOut" }}
           >
             <Titration />

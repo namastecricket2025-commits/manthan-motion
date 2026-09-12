@@ -18,6 +18,20 @@ interface Source {
   a: number;
 }
 
+/** Evenly stacked obstacle slabs with open water between them. */
+function obstacleBlocks(bars: number) {
+  const TOTAL = 0.55;
+  const GAP = 0.07;
+  const bh = (TOTAL - (bars - 1) * GAP) / bars;
+  const blocks: { v0: number; v1: number }[] = [];
+  let v = 0.5 - TOTAL / 2;
+  for (let i = 0; i < bars; i++) {
+    blocks.push({ v0: v, v1: v + bh });
+    v += bh + GAP;
+  }
+  return blocks;
+}
+
 /** Coherent-sum wave height at a normalised point of the tank. */
 function heightAt(u: number, v: number, sources: Source[], k: number, omega: number, time: number) {
   let s = 0;
@@ -36,12 +50,13 @@ export default function WaveTank() {
   const [amp, setAmp] = useState(1);
   const [speed, setSpeed] = useState(260);
   const [paused, setPaused] = useState(false);
+  const [bars, setBars] = useState(3);
 
   const lambda = speed / freq;
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
-  const st = useRef({ mode, freq, d, speed, amp, paused, view });
-  st.current = { mode, freq, d, speed, amp, paused, view };
+  const st = useRef({ mode, freq, d, speed, amp, paused, view, bars });
+  st.current = { mode, freq, d, speed, amp, paused, view, bars };
   /** reused per-quad height band buffer (keeps the render loop allocation-free) */
   const bands = useRef(new Uint8Array(64 * 64));
 
@@ -71,11 +86,12 @@ export default function WaveTank() {
       { u: 0.5, v: 0.5 + spacing / 2, a: 1 },
     ];
     else {
-      sources = [
-        { u: 0.18, v: 0.5, a: 1 },
-        { u: 0.55, v: 0.35, a: 0.45 },
-        { u: 0.55, v: 0.65, a: 0.45 },
-      ];
+      const blocks = obstacleBlocks(S.bars);
+      sources = [{ u: 0.18, v: 0.5, a: 1 }];
+      blocks.forEach((b) => {
+        sources.push({ u: 0.62, v: b.v0, a: 0.42 });
+        sources.push({ u: 0.62, v: b.v1, a: 0.42 });
+      });
     }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -134,6 +150,30 @@ export default function WaveTank() {
         ctx.fillStyle = "rgba(30,41,59,0.92)";
         ctx.fillRect(bx - 5, 0, 10, h * 0.5 - (S.d / 420) * h * 0.5 - 14);
         ctx.fillRect(bx - 5, h * 0.5 + (S.d / 420) * h * 0.5 + 14, 10, h);
+      }
+      if (S.mode === "obstacle") {
+        const ox = px(0.62);
+        const ow = 16;
+        obstacleBlocks(S.bars).forEach((b, i) => {
+          const y0 = b.v0 * h;
+          const y1 = b.v1 * h;
+          ctx.fillStyle = "rgba(30,41,59,0.95)";
+          ctx.fillRect(ox - ow / 2, y0, ow, y1 - y0);
+          ctx.strokeStyle = "rgba(148,163,184,0.65)";
+          ctx.lineWidth = 1.4;
+          ctx.strokeRect(ox - ow / 2, y0, ow, y1 - y0);
+          // soft pressure shadow downstream of each slab
+          const sh = ctx.createLinearGradient(ox + ow / 2, 0, ox + ow / 2 + 40, 0);
+          sh.addColorStop(0, "rgba(2,6,23,0.5)");
+          sh.addColorStop(1, "rgba(2,6,23,0)");
+          ctx.fillStyle = sh;
+          ctx.fillRect(ox + ow / 2, y0, 40, y1 - y0);
+          if (i === 0) {
+            ctx.fillStyle = "rgba(148,163,184,0.75)";
+            ctx.font = "9px ui-monospace, monospace";
+            ctx.fillText("slabs", ox + ow / 2 + 6, y0 + 12);
+          }
+        });
       }
       for (const s of srcPx) {
         if (s.a < 0.8) continue;
@@ -275,6 +315,28 @@ export default function WaveTank() {
       wall(0, 0, 1, 0);
       wall(1, 0, 1, 1);
 
+      const wallAbs = (u: number, v0: number, v1: number, fill: string) => {
+        const p0 = project(u, v0, hy(lo));
+        const p1 = project(u, v1, hy(lo));
+        const p2 = project(u, v1, hy(hi));
+        const p3 = project(u, v0, hy(hi));
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(203,213,225,0.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      };
+
+      if (S.mode === "obstacle") {
+        obstacleBlocks(S.bars).forEach((b) => wallAbs(0.62, b.v0, b.v1, "rgba(148,163,184,0.9)"));
+      }
+
       if (S.mode === "slit") {
         const bx = 0.5;
         const half = spacing / 2;
@@ -385,6 +447,23 @@ export default function WaveTank() {
                 <span className="lab-value text-slate-200">{freq.toFixed(1)} Hz</span>
               </div>
               <input type="range" className="lab-range mt-1.5" min={1} max={8} step={0.1} value={freq} onChange={(e) => setFreq(Number(e.target.value))} />
+            </div>
+            <div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">Obstacle slabs</span>
+                <span className="lab-value text-slate-200">{bars}</span>
+              </div>
+              <input
+                type="range"
+                className="lab-range mt-1.5 disabled:opacity-40"
+                min={1}
+                max={5}
+                step={1}
+                value={bars}
+                disabled={mode !== "obstacle"}
+                onChange={(e) => setBars(Number(e.target.value))}
+              />
+              {mode !== "obstacle" && <p className="mt-1 text-[9px] text-slate-500">applies to the obstacle-grid mode</p>}
             </div>
             <div>
               <div className="flex justify-between text-[11px]">

@@ -16,11 +16,12 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
         className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
         style={{ background: on ? "linear-gradient(135deg,#ff2e55,#e11d48)" : "rgba(51,65,85,0.9)", boxShadow: on ? "0 0 12px rgba(255,59,92,0.45)" : "none" }}
       >
+        {/* transform-only knob: a `layout` animation here would force Framer
+            to re-measure the probe each frame and jitter the whole panel. */}
         <motion.span
-          layout
+          animate={{ x: on ? 15 : 0 }}
           transition={SPRING}
-          className="absolute h-3.5 w-3.5 rounded-full bg-white shadow"
-          style={{ left: on ? 18 : 3 }}
+          className="absolute left-[3px] top-[3px] h-3.5 w-3.5 rounded-full bg-white shadow"
         />
       </span>
     </button>

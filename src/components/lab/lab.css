@@ -12,6 +12,14 @@
 .lab-root span {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+/* hyper-sharp type in both themes: antialiased edges + optical legibility */
+.lab-root {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11" 1, "ss01" 1;
+  -webkit-tap-highlight-color: transparent;
+}
 .lab-root .font-display,
 .lab-root h1,
 .lab-root h2,
@@ -29,8 +37,8 @@
   --lab-border: rgba(148, 163, 184, 0.16);
   --lab-border-strong: rgba(148, 163, 184, 0.3);
   --lab-text: #e2e8f0;
-  --lab-dim: #94a3b8;
-  --lab-faint: #64748b;
+  --lab-dim: #9fb0c6;
+  --lab-faint: #8296ae;
   --lab-neon: #ff3b5c;
   --lab-neon-2: #e11d48;
   --lab-neon-soft: rgba(255, 59, 92, 0.14);
@@ -54,6 +62,9 @@
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border-radius: 18px;
+  box-shadow:
+    0 18px 44px rgba(2, 6, 23, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .lab-glass-deep {
   background: linear-gradient(165deg, rgba(15, 23, 42, 0.82), rgba(11, 17, 32, 0.88));
@@ -61,6 +72,9 @@
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border-radius: 18px;
+  box-shadow:
+    0 18px 44px rgba(2, 6, 23, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
 }
 .lab-glass-hover {
   transition:
@@ -600,8 +614,8 @@ html:not(.dark) .lab-root {
   --lab-border: rgba(15, 23, 42, 0.1);
   --lab-border-strong: rgba(15, 23, 42, 0.18);
   --lab-text: #0f172a;
-  --lab-dim: #475569;
-  --lab-faint: #64748b;
+  --lab-dim: #41506a;
+  --lab-faint: #5b6b83;
   background:
     radial-gradient(1100px 640px at 12% -8%, rgba(255, 255, 255, 0.95), transparent 60%),
     radial-gradient(900px 560px at 108% 8%, rgba(203, 213, 225, 0.55), transparent 55%),
@@ -972,6 +986,41 @@ html:not(.dark) .lab-root .lab-tip__title {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* ============================================================
+   Layout-thrash guards.
+   Sub-panels expand/collapse inside these wrappers constantly; isolating
+   their layout means an expanding panel can never re-flow (and visually
+   bounce) an ancestor wrapper.
+   ============================================================ */
+.lab-root .lab-fill,
+.lab-root .lab-col {
+  contain: layout style;
+}
+.lab-root .lab-split > * {
+  contain: layout style;
+}
+
+/* Stable morph grid for the periodic-table ↔ element-dashboard reveal.
+   Column count switches, but the row box is pinned so the page never
+   jumps up and down while the profile panel springs in. */
+.lab-root .lab-morph {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+.lab-root .lab-morph[data-open="1"] > .lab-morph__table {
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .lab-root .lab-morph {
+    min-height: 648px;
+  }
+  .lab-root .lab-morph[data-open="1"] {
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
 }
 
 /* Vertical column host: a normal block on desktop, a constrained flex

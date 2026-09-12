@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { useCanvasSize, useRaf, useWheelZoom, clamp } from "./use-canvas";
+import { syncViewport, useCanvasSize, useRaf, useViewport, useWheelZoom, clamp } from "./use-canvas";
 
 interface Atom3DProps {
   z: number;
@@ -34,6 +34,7 @@ function makeGlowTexture(): THREE.CanvasTexture {
  */
 export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
   const { ref, size } = useCanvasSize<HTMLCanvasElement>();
+  const vp = useViewport();
   const ren = useRef<THREE.WebGLRenderer | null>(null);
   const scene = useRef<THREE.Scene | null>(null);
   const camera = useRef<THREE.PerspectiveCamera | null>(null);
@@ -215,11 +216,8 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) {
-      renderer.setSize(cssW, cssH, false);
-      cam3.aspect = cssW / cssH;
-      cam3.updateProjectionMatrix();
-    }
+    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
+    syncViewport(vp.current, renderer, cam3, cssW, cssH, dragging.current !== null);
     cam3.position.set(c.panX, c.panY, c.dist);
 
     const P = p.current;

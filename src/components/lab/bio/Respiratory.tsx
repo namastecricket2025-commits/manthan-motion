@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { motion } from "motion/react";
-import { Eye, EyeOff, RotateCcw, Wind } from "lucide-react";
-import { SPRING, clamp, useCanvasSize, useRaf } from "../use-canvas";
+import { Eye, EyeOff, RotateCcw, Wind, PenLine } from "lucide-react";
+import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import { CursorTip, useCursorTip } from "../CursorTip";
+import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { cartilageMaps, disposeSurfaceMaps, lungMaps, tissueMaterial, vesselMaps } from "../lab-textures";
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
@@ -23,6 +24,16 @@ const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   diaphragm: { name: "Diaphragm", def: "The dome-shaped muscle that does most of the work of breathing. When it contracts the dome flattens and air is drawn in.", accent: "#22d3ee" },
   fissure: { name: "Oblique & horizontal fissures", def: "Deep grooves on the lung surface that divide it into lobes, letting each lobe slide independently during breathing. The right lung has both; the left only an oblique fissure.", accent: "#94a3b8" },
 };
+
+const EXAM_STEPS: ExamStep[] = [
+  { t: "Draw the trachea", d: "A straight vertical tube. Mark 5–6 short horizontal double lines across it — those are the C-shaped cartilage rings." },
+  { t: "Split at the carina", d: "At the bottom the tube divides into two bronchi: the right one steeper (~25° from vertical), the left one flatter (~45°)." },
+  { t: "Right lung outline", d: "A tall curve bulging to the right, cut flat on the medial side against the trachea." },
+  { t: "Divide the right lung", d: "Two lines — a horizontal fissure and an oblique fissure — give you three lobes: superior, middle and inferior." },
+  { t: "Left lung outline", d: "Mirror the shape but make it slightly narrower and add a concave bite out of the front edge: the cardiac notch." },
+  { t: "One fissure on the left", d: "A single oblique fissure leaves two lobes, with the small lingula below the notch." },
+  { t: "Finish with the diaphragm", d: "Draw a dome under both lungs and label the pleura as the thin double line hugging each lung." },
+];
 
 interface LobeSpec {
   radius: number;
@@ -93,13 +104,16 @@ export default function Respiratory() {
   const [view, setView] = useState<"both" | "right" | "left">("both");
   const [hover, setHover] = useState<string | null>(null);
   const { tip, show: showTip, hide: hideTip } = useCursorTip();
+  const [exam, setExam] = useState(false);
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
+  const vp = useViewport();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const ren = useRef<THREE.WebGLRenderer | null>(null);
   const scene = useRef<THREE.Scene | null>(null);
   const camera = useRef<THREE.PerspectiveCamera | null>(null);
   const root = useRef<THREE.Group | null>(null);
+  useExamSketch(root, exam, canvasRef);
   const lungGroup = useRef<THREE.Group | null>(null);
   const rightGroup = useRef<THREE.Group | null>(null);
   const leftGroup = useRef<THREE.Group | null>(null);
@@ -429,11 +443,8 @@ export default function Respiratory() {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    if (cssW > 0 && cssH > 0) {
-      renderer.setSize(cssW, cssH, false);
-      cam.aspect = cssW / cssH;
-      cam.updateProjectionMatrix();
-    }
+    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
+    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null);
     const look = new THREE.Vector3(o.panX * 0.07, o.panY * 0.07, 0);
     cam.position.set(
       look.x + o.dist * Math.sin(o.yaw) * Math.cos(o.pitch),
@@ -521,6 +532,15 @@ export default function Respiratory() {
             </p>
           </div>
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setExam((v) => !v)}
+              className={`lab-btn !px-2.5 ${exam ? "lab-btn--active" : ""}`}
+              title="Ghost the model and overlay ink outlines you can copy by hand"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Exam Sketch</span>
+            </button>
             <button type="button" onClick={() => setBreathing((v) => !v)} className={`lab-btn !px-2.5 ${breathing ? "lab-btn--active" : ""}`}>
               <Wind className="h-3.5 w-3.5" />
               {breathing ? "Breathing" : "Held"}
@@ -632,6 +652,8 @@ export default function Respiratory() {
           </ul>
         </div>
       </div>
-    </div>
+    
+      <ExamSketchPanel open={exam} title="Lungs & airway — how to draw them" steps={EXAM_STEPS} onClose={() => setExam(false)} />
+</div>
   );
 }
