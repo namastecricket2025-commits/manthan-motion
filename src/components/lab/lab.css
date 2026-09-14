@@ -642,9 +642,25 @@ html:not(.dark) .lab-root .lab-btn--active {
   border-color: rgba(255, 59, 92, 0.55);
   box-shadow: 0 0 16px rgba(255, 59, 92, 0.22);
 }
+/* the Run action keeps a solid, high-contrast neon fill in light mode.
+   The generic light .lab-btn rule above has the same specificity but sits
+   earlier, so this later block wins — without it the translucent white
+   panel background swallows the red gradient and white text vanishes. */
 html:not(.dark) .lab-root .lab-btn-neon,
 html:not(.dark) .lab-root .lab-btn-neon:hover {
   color: #fff;
+  border: none;
+  background: linear-gradient(135deg, #ff2e55, #e11d48);
+}
+html:not(.dark) .lab-root .lab-btn-neon:hover {
+  box-shadow:
+    0 0 30px rgba(255, 59, 92, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.lab-btn-neon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 html:not(.dark) .lab-root .lab-chip {
   background: rgba(255, 255, 255, 0.7);

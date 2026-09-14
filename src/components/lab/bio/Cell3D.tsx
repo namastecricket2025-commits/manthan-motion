@@ -1041,13 +1041,15 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       tgt.pitch += Math.sin(t * 0.22) * dt * 0.012;
       tgt.pitch = clamp(tgt.pitch, -0.58, 0.58);
     }
-    // smooth damped lerp — inertia feel
+    // smooth damped lerp — inertia feel (velocity clamped so the chase can
+    // never overshoot the target and spring back — that was the drag jitter)
     const lerp = 1 - Math.pow(0.001, dt); // frame-rate independent
     // yaw/pitch lerp with velocity for ultra-smooth
     const yawDiff = tgt.yaw - o.yaw;
     const pitchDiff = tgt.pitch - o.pitch;
-    orbitVel.current.yaw = orbitVel.current.yaw * Math.pow(0.15, dt*60) + yawDiff * 8 * dt;
-    orbitVel.current.pitch = orbitVel.current.pitch * Math.pow(0.15, dt*60) + pitchDiff * 8 * dt;
+    const damp = isInteracting ? Math.pow(0.06, dt * 60) : Math.pow(0.15, dt * 60);
+    orbitVel.current.yaw = clamp(orbitVel.current.yaw * damp + yawDiff * 8 * dt, -Math.abs(yawDiff), Math.abs(yawDiff));
+    orbitVel.current.pitch = clamp(orbitVel.current.pitch * damp + pitchDiff * 8 * dt, -Math.abs(pitchDiff), Math.abs(pitchDiff));
     o.yaw += orbitVel.current.yaw;
     o.pitch += orbitVel.current.pitch;
     // direct lerp for dist/pan (snappier but still smooth)
@@ -1070,8 +1072,10 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const { w, h, dpr } = size.current;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
-    // size only on a real box change, never mid-drag (canvas.width resets the buffer)
-    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null);
+    // size only on a real box change, never mid-gesture (canvas.width resets
+    // the buffer) — ion drags count as gestures too, or the canvas swap
+    // vibrates the scene under the pointer
+    syncViewport(vp.current, renderer, cam, cssW, cssH, dragging.current !== null || dragIon.current !== null);
     // camera orbit: spherical + pan
     const cosP = Math.cos(o.pitch);
     const sinP = Math.sin(o.pitch);

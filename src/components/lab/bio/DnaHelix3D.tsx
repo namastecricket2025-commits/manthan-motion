@@ -76,7 +76,6 @@ export default function DnaHelix3D() {
 
   const orbit = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0, panZ: 0 });
   const target = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0, panZ: 0 });
-  const vel = useRef({ yaw: 0, pitch: 0 });
   const lastInteract = useRef(performance.now());
   const pointers = useRef(new Map<number, { x: number; y: number; button: number }>());
   const dragging = useRef<"rotate" | "pan" | null>(null);
@@ -298,14 +297,14 @@ export default function DnaHelix3D() {
       }
     }
 
-    // damped lerp
+    // damped lerp — exponential chase on rotation (no velocity integrator,
+    // so dragging can never overshoot and vibrate)
     const lerp = 1 - Math.pow(0.001, dt);
     const yawDiff = tgt.yaw - o.yaw;
     const pitchDiff = tgt.pitch - o.pitch;
-    vel.current.yaw = vel.current.yaw * Math.pow(0.14, dt * 60) + yawDiff * 7 * dt;
-    vel.current.pitch = vel.current.pitch * Math.pow(0.14, dt * 60) + pitchDiff * 7 * dt;
-    o.yaw += vel.current.yaw;
-    o.pitch += vel.current.pitch;
+    const follow = 1 - Math.pow(0.002, dt);
+    o.yaw += yawDiff * follow;
+    o.pitch += pitchDiff * follow;
     o.dist += (tgt.dist - o.dist) * clamp(lerp * 1.15, 0, 1);
     o.panX += (tgt.panX - o.panX) * clamp(lerp * 1.3, 0, 1);
     o.panY += (tgt.panY - o.panY) * clamp(lerp * 1.3, 0, 1);

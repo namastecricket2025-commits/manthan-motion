@@ -94,7 +94,6 @@ export default function Excretory() {
   const pulses = useRef<THREE.Mesh[]>([]);
   const orbit = useRef({ yaw: 0.08, pitch: 0.1, dist: 26, panX: 0, panY: 0 });
   const target = useRef({ yaw: 0.08, pitch: 0.1, dist: 26, panX: 0, panY: 0 });
-  const vel = useRef({ yaw: 0, pitch: 0 });
   const lastInteract = useRef(performance.now());
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const dragging = useRef<"rotate" | "pan" | null>(null);
@@ -366,10 +365,10 @@ export default function Excretory() {
     if (dragging.current === null && since > 1.4) tgt.yaw += dt * 0.1;
     const yd = tgt.yaw - o.yaw;
     const pd = tgt.pitch - o.pitch;
-    vel.current.yaw = vel.current.yaw * Math.pow(0.05, dt) + yd * 8 * dt;
-    vel.current.pitch = vel.current.pitch * Math.pow(0.05, dt) + pd * 8 * dt;
-    o.yaw += vel.current.yaw;
-    o.pitch = clamp(o.pitch + vel.current.pitch, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
+    // exponential chase (no velocity integrator → no overshoot/jitter)
+    const follow = 1 - Math.pow(0.002, dt);
+    o.yaw += yd * follow;
+    o.pitch = clamp(o.pitch + pd * follow, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
     const lerp = 1 - Math.pow(0.0015, dt);
     o.dist += (tgt.dist - o.dist) * lerp;
     o.panX += (tgt.panX - o.panX) * lerp;

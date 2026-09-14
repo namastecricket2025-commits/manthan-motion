@@ -218,54 +218,127 @@ export function cartilageMaps(repeat = 1.6): SurfaceMaps {
 }
 
 /* ------------------------------------------------------------------ *
- *  3. Lung parenchyma — fine alveolar stipple + lobular seams
+ *  3. Lung parenchyma — spongy, semi-porous, vascular tissue.
+ *     Alveolar pits + capillary web + a porosity roughness map so the
+ *     surface reads as soft respiratory tissue, not glossy plastic.
  * ------------------------------------------------------------------ */
 export function lungMaps(repeat = 2): SurfaceMaps {
-  const size = 512;
+  const size = 1024;
   const c = canvas(size);
   const ctx = c.getContext("2d")!;
   const r = rng(53);
   const g = ctx.createRadialGradient(size / 2, size / 2, size * 0.1, size / 2, size / 2, size * 0.75);
   g.addColorStop(0, "#f6b6bd");
-  g.addColorStop(0.6, "#e88b98");
+  g.addColorStop(0.55, "#e88b98");
   g.addColorStop(1, "#c76a7c");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
+  // sub-pleural capillary web (the vascular look of living lung)
+  for (let i = 0; i < 170; i++) {
+    const x0 = r() * size;
+    const y0 = r() * size;
+    ctx.strokeStyle = `rgba(${168 + Math.floor(r() * 40)},${44 + Math.floor(r() * 30)},${58 + Math.floor(r() * 24)},${0.1 + r() * 0.16})`;
+    ctx.lineWidth = 0.7 + r() * 1.7;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    // a branching crawl — capillaries fork as they run
+    let x = x0;
+    let y = y0;
+    let ang = r() * Math.PI * 2;
+    for (let s = 0; s < 5; s++) {
+      const len = 14 + r() * 34;
+      ang += (r() - 0.5) * 1.4;
+      x += Math.cos(ang) * len;
+      y += Math.sin(ang) * len;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
   // lobular seams (secondary lobules)
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 64; i++) {
     const x = r() * size;
     const y = r() * size;
-    const rad = 26 + r() * 54;
+    const rad = 34 + r() * 78;
     ctx.strokeStyle = `rgba(146,60,80,${0.1 + r() * 0.14})`;
-    ctx.lineWidth = 1 + r() * 2;
+    ctx.lineWidth = 1 + r() * 2.2;
     ctx.beginPath();
     ctx.arc(x, y, rad, 0, Math.PI * 2);
     ctx.stroke();
   }
-  // alveolar stipple
-  for (let i = 0; i < 5200; i++) {
+  // alveolar stipple — dense two-tone speckle
+  for (let i = 0; i < 15000; i++) {
     const x = r() * size;
     const y = r() * size;
     ctx.fillStyle = r() > 0.5 ? `rgba(255,220,224,${0.05 + r() * 0.14})` : `rgba(150,60,74,${0.04 + r() * 0.12})`;
     ctx.beginPath();
-    ctx.arc(x, y, 0.6 + r() * 1.9, 0, Math.PI * 2);
+    ctx.arc(x, y, 0.7 + r() * 2.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // alveolar pits — darker porous dimples (the spongy signature)
+  for (let i = 0; i < 1500; i++) {
+    const x = r() * size;
+    const y = r() * size;
+    const rad = 2.5 + r() * 6.5;
+    const pg = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    pg.addColorStop(0, `rgba(112,38,52,${0.2 + r() * 0.22})`);
+    pg.addColorStop(0.7, `rgba(150,70,84,${0.1 + r() * 0.1})`);
+    pg.addColorStop(1, "rgba(160,80,92,0)");
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
     ctx.fill();
   }
 
+  // bump: pitted surface — pits are craters, web is raised
   const bc = canvas(size);
   const bctx = bc.getContext("2d")!;
-  bctx.fillStyle = "#8e8e8e";
+  bctx.fillStyle = "#9a9a9a";
   bctx.fillRect(0, 0, size, size);
   const r2 = rng(97);
-  for (let i = 0; i < 4600; i++) {
+  for (let i = 0; i < 4200; i++) {
     const x = r2() * size;
     const y = r2() * size;
     bctx.fillStyle = r2() > 0.5 ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)";
     bctx.beginPath();
-    bctx.arc(x, y, 0.8 + r2() * 2.2, 0, Math.PI * 2);
+    bctx.arc(x, y, 0.9 + r2() * 2.4, 0, Math.PI * 2);
     bctx.fill();
   }
-  return { map: tex(c, repeat), bumpMap: tex(bc, repeat, { srgb: false }) };
+  for (let i = 0; i < 1300; i++) {
+    const x = r2() * size;
+    const y = r2() * size;
+    const rad = 2.5 + r2() * 6;
+    const dg = bctx.createRadialGradient(x, y, 0, x, y, rad);
+    dg.addColorStop(0, "rgba(0,0,0,0.34)");
+    dg.addColorStop(1, "rgba(0,0,0,0)");
+    bctx.fillStyle = dg;
+    bctx.beginPath();
+    bctx.arc(x, y, rad, 0, Math.PI * 2);
+    bctx.fill();
+  }
+
+  // roughness: pores are matt-rough, tissue between them slightly sheened
+  const rc = canvas(size);
+  const rctx = rc.getContext("2d")!;
+  rctx.fillStyle = "#c8c8c8";
+  rctx.fillRect(0, 0, size, size);
+  const r3 = rng(977);
+  for (let i = 0; i < 1300; i++) {
+    const x = r3() * size;
+    const y = r3() * size;
+    const rad = 2.5 + r3() * 6.5;
+    const rg = rctx.createRadialGradient(x, y, 0, x, y, rad);
+    rg.addColorStop(0, "rgba(255,255,255,0.55)");
+    rg.addColorStop(1, "rgba(255,255,255,0)");
+    rctx.fillStyle = rg;
+    rctx.beginPath();
+    rctx.arc(x, y, rad, 0, Math.PI * 2);
+    rctx.fill();
+  }
+  return {
+    map: tex(c, repeat),
+    bumpMap: tex(bc, repeat, { srgb: false }),
+    roughnessMap: tex(rc, repeat, { srgb: false }),
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -382,6 +455,7 @@ export function tissueMaterial(
   const mat = new THREE.MeshPhysicalMaterial({
     map: maps.map,
     bumpMap: maps.bumpMap,
+    roughnessMap: maps.roughnessMap,
     bumpScale: opts.bumpScale ?? 0.035,
     color: opts.color ?? 0xffffff,
     roughness: opts.roughness ?? 0.62,

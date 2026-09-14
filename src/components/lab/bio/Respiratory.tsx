@@ -63,7 +63,7 @@ function lobeGeometry(spec: LobeSpec) {
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
     n.copy(v).normalize();
-    const ripple = 1 + 0.035 * Math.sin(n.x * 7.5 + seed) * Math.cos(n.y * 6.2 - seed) + 0.02 * Math.sin(n.z * 9.1 + seed * 1.7);
+    const ripple = 1 + 0.05 * Math.sin(n.x * 8.5 + seed) * Math.cos(n.y * 7.4 - seed) + 0.028 * Math.sin(n.z * 10.3 + seed * 1.7);
     v.set(v.x * sx * ripple, v.y * sy * ripple, v.z * sz * ripple);
 
     // flatten the mediastinal face so the two lungs face each other cleanly
@@ -120,7 +120,6 @@ export default function Respiratory() {
   const diaphragm = useRef<THREE.Mesh | null>(null);
   const orbit = useRef({ yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 });
   const target = useRef({ yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 });
-  const vel = useRef({ yaw: 0, pitch: 0 });
   const lastInteract = useRef(performance.now());
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const dragging = useRef<"rotate" | "pan" | null>(null);
@@ -129,6 +128,9 @@ export default function Respiratory() {
   const pickables = useRef<{ mesh: THREE.Object3D; id: string }[]>([]);
   const hoverId = useRef<string | null>(null);
   const tipClock = useRef(0);
+  // volumetric breathing registry: each lobe expands outward along its own
+  // radial direction instead of one flat group scale (balloon look)
+  const breathers = useRef<{ mesh: THREE.Mesh; base: THREE.Vector3; dir: THREE.Vector3 }[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -188,8 +190,10 @@ export default function Respiratory() {
       const ringGroup = new THREE.Group();
       ringGroup.position.y = y;
       ringGroup.rotation.x = Math.PI / 2;
-      const torus = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.24, 16, 34, Math.PI * 1.66), ringMat);
-      torus.rotation.z = -Math.PI * 0.33; // centres the 60° gap at the back
+      // chunkier, higher-res C: solid hyaline cartilage with a bevelled lip
+      const torus = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.27, 20, 56, Math.PI * 1.62), ringMat);
+      torus.scale.set(1, 1, 1.18); // slightly proud front face, like real rings
+      torus.rotation.z = -Math.PI * 0.31; // centres the ~58° gap at the back
       ringGroup.add(torus);
       if (i === 6) {
         torus.userData.id = "trachea";
@@ -306,6 +310,23 @@ export default function Respiratory() {
     left.add(lInf);
     pickables.current.push({ mesh: lInf, id: "lInf" });
 
+    // register every lobe for outward volumetric expansion (fix #4 breathing)
+    breathers.current = [
+      [rSup, 3.1],
+      [rMid, 1.15],
+      [rInf, -1.9],
+      [lSup, 2.9],
+      [lInf, -2.1],
+    ].map(([mesh, y]) => ({
+      mesh: mesh as THREE.Mesh,
+      base: (mesh as THREE.Mesh).position.clone(),
+      dir: new THREE.Vector3(
+        (mesh as THREE.Mesh).position.x * 0.55,
+        (y as number) * 0.32,
+        (mesh as THREE.Mesh).position.z * 0.55,
+      ).normalize(),
+    }));
+
     // cardiac notch marker (pickable ring on the left lung's front edge)
     const notchMark = new THREE.Mesh(
       new THREE.TorusGeometry(1.15, 0.09, 8, 34, Math.PI * 1.35),
@@ -331,11 +352,12 @@ export default function Respiratory() {
     });
     [rSup, rMid, rInf, lSup, lInf].forEach((lobe) => {
       const shell = new THREE.Mesh(lobe.geometry.clone(), pleuraMat);
-      shell.position.copy(lobe.position);
+      // parent to the lobe itself so the sheen inherits every breathing
+      // move/scale — as a sibling it would lag behind the expanding lobe
       shell.scale.setScalar(1.018);
       shell.userData.id = "pleura";
       shell.raycast = () => undefined; // never steal the lobe's hover
-      lobe.parent?.add(shell);
+      lobe.add(shell);
     });
 
     // fissure groove markers
@@ -381,6 +403,7 @@ export default function Respiratory() {
       camera.current = null;
       root.current = null;
       pickables.current = [];
+      breathers.current = [];
     };
   }, [canvasRef]);
 
@@ -427,12 +450,13 @@ export default function Respiratory() {
     const o = orbit.current;
     const since = (performance.now() - lastInteract.current) / 1000;
     if (dragging.current === null && since > 1.4) tgt.yaw += dt * 0.1;
-    const yd = tgt.yaw - o.yaw;
-    const pd = tgt.pitch - o.pitch;
-    vel.current.yaw = vel.current.yaw * Math.pow(0.05, dt) + yd * 8 * dt;
-    vel.current.pitch = vel.current.pitch * Math.pow(0.05, dt) + pd * 8 * dt;
-    o.yaw += vel.current.yaw;
-    o.pitch = clamp(o.pitch + vel.current.pitch, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
+    // Exponential chase instead of a velocity integrator: the orbit state
+    // simply closes a frame-rate-independent fraction of the remaining error
+    // every frame, so pointer motion can never recurse through state and
+    // overshoot — rotation is perfectly fluid with zero spring-back jitter.
+    const follow = 1 - Math.pow(0.002, dt); // ≈11% of remaining error per 60fps frame
+    o.yaw += (tgt.yaw - o.yaw) * follow;
+    o.pitch = clamp(o.pitch + (tgt.pitch - o.pitch) * follow, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02);
     const lerp = 1 - Math.pow(0.0015, dt);
     o.dist += (tgt.dist - o.dist) * lerp;
     o.panX += (tgt.panX - o.panX) * lerp;
@@ -453,17 +477,33 @@ export default function Respiratory() {
     );
     cam.lookAt(look);
 
-    // breathing: lungs expand, diaphragm flattens
-    const breath = breathing ? (t % (60 / rate)) / (60 / rate) : 0.5;
-    const inhale = 0.5 - 0.5 * Math.cos(breath * Math.PI * 2);
+    // Natural breathing — NOT a linear balloon scale:
+    //  · asymmetric cycle (quick inhale, slower exhale, brief end-expiratory rest)
+    //  · each lobe expands volumetrically along its own outward vector
+    //  · rib flare (±z rotation), whole-chest lift, diaphragm descends & flattens
+    const period = 60 / rate;
+    const cyc = breathing ? (t % period) / period : 1;
+    const inhale = breathing
+      ? cyc < 0.42
+        ? 0.5 - 0.5 * Math.cos((cyc / 0.42) * Math.PI)
+        : cyc < 0.9
+          ? 0.5 + 0.5 * Math.cos(((cyc - 0.42) / 0.48) * Math.PI)
+          : 0
+      : 0.5; // held breath sits mid-tidal
     const lg = lungGroup.current;
-    if (lg) {
-      const s = 1 + inhale * 0.05;
-      lg.scale.set(s, 1 + inhale * 0.028, s);
+    if (lg) lg.scale.set(1 + inhale * 0.025, 1 + inhale * 0.012, 1 + inhale * 0.025);
+    for (const b of breathers.current) {
+      b.mesh.position.copy(b.base).addScaledVector(b.dir, inhale * 0.17);
+      b.mesh.scale.setScalar(1 + inhale * 0.05);
     }
+    if (rightGroup.current) rightGroup.current.rotation.z = -inhale * 0.022;
+    if (leftGroup.current) leftGroup.current.rotation.z = inhale * 0.022;
+    if (root.current) root.current.position.y = inhale * 0.1; // chest lift
     if (diaphragm.current) {
-      diaphragm.current.position.y = -6.1 + inhale * 0.42;
-      diaphragm.current.scale.set(1 + inhale * 0.03, 1 - inhale * 0.07, 1 + inhale * 0.03);
+      // contracting diaphragm flattens AND descends — that drop is what
+      // creates the negative pressure the lungs expand into
+      diaphragm.current.position.y = -6.1 - inhale * 0.4;
+      diaphragm.current.scale.set(1 + inhale * 0.05, 1 - inhale * 0.11, 1 + inhale * 0.05);
     }
 
     renderer.render(sc, cam);

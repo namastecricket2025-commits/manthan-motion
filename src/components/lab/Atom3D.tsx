@@ -44,10 +44,25 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
   const electrons = useRef<THREE.Group[][]>([]);
   const orbitalsG = useRef<THREE.Group | null>(null);
 
-  const cam = useRef({ yaw: 0.65, pitch: 0.32, dist: 340, panX: 0, panY: 0 });
+  const cam = useRef({ yaw: 0.65, pitch: 0.32, dist: 320, panX: 0, panY: 0 });
   const p = useRef({ z, shells, orbitals });
   p.current = { z, shells, orbitals };
   const dragging = useRef(false);
+
+  /* Frame the whole atom: pull the camera back far enough that the widest
+     orbital ring plus its electron glow never clips at the canvas edges. */
+  const fitCamera = () => {
+    const c = cam.current;
+    const maxR = 42 + 26 * Math.max(0, p.current.shells.length - 1);
+    c.dist = clamp(maxR / Math.tan((22.5 * Math.PI) / 180) + 26, 200, 660);
+    c.panX = 0;
+    c.panY = 0;
+  };
+  useEffect(() => {
+    fitCamera();
+    // re-fit whenever the element (and therefore shell count) changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shells.length]);
 
   /* ---------- scene setup (once) ---------- */
   useEffect(() => {
@@ -320,10 +335,13 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
   };
 
   return (
-    <div className="relative">
+    /* Square, centred and never clipped: a fixed-height strip cut the
+       orbital rings off at the left/right edges, so the canvas keeps a
+       1/1 aspect ratio and the wrapper explicitly allows overflow. */
+    <div className="relative mx-auto w-full max-w-[430px] overflow-visible">
       <canvas
         ref={ref}
-        className="h-64 w-full cursor-grab touch-none rounded-2xl bg-[radial-gradient(circle_at_50%_40%,#16233b_0%,#0b1120_75%)] ring-1 ring-white/5 active:cursor-grabbing sm:h-72"
+        className="aspect-square w-full cursor-grab touch-none overflow-visible rounded-2xl bg-[radial-gradient(circle_at_50%_40%,#16233b_0%,#0b1120_75%)] ring-1 ring-white/5 active:cursor-grabbing"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
