@@ -112,7 +112,7 @@
 /* ---------- Live telemetry sidebar (desktop only) ---------- */
 .lab-telemetry {
   position: fixed;
-  top: 92px;
+  top: 104px;
   right: 18px;
   bottom: 18px;
   z-index: 30;
@@ -129,10 +129,20 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
-@media (min-width: 1380px) {
-  /* only float over the page when the workspace can afford the width */
+@media (min-width: 1280px) {
+  /* reserve a right-hand column beside the max-w-7xl workspace so the
+     panel never covers the controls; ≥1820px the natural margin is wide
+     enough and the reservation is dropped (panel floats in the gutter) */
   .lab-telemetry {
     display: flex;
+  }
+  .lab-root .lab-shell__main {
+    padding-right: 284px;
+  }
+}
+@media (min-width: 1820px) {
+  .lab-root .lab-shell__main {
+    padding-right: 24px;
   }
 }
 .lab-telemetry__head {
@@ -221,7 +231,7 @@
 .lab-mobile-telemetry {
   display: none;
 }
-@media (max-width: 1379px) {
+@media (max-width: 1279px) {
   .lab-root .lab-mobile-telemetry {
     display: flex;
     flex: 0 0 auto;
