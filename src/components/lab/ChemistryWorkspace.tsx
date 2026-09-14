@@ -6,8 +6,34 @@ import Atom3D from "./Atom3D";
 import ReactionBench from "./ReactionBench";
 import Titration from "./Titration";
 import { SPRING } from "./use-canvas";
+import { useTelemetryPublisher } from "./PhysicsSim";
+import type { TelemetryFeed } from "./LiveTelemetry";
 import { CAT_COLOR, ELEMENTS, GROUP_NAMES, USES, configFor, gridPos, periodGroupOf, physFor, shellsFor } from "./periodic-data";
 import type { Category, ElementData, Phase } from "./periodic-data";
+
+/** Publishes element-level telemetry from inside the ElementProfile panel. */
+function TelemetryAtomStats({ z, shells }: { z: number; shells: number[] }) {
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    const maxR = 42 + 26 * Math.max(0, shells.length - 1);
+    publish({
+      subject: "Chemistry · Atom",
+      rows: [
+        { k: "Protons Z", v: String(z) },
+        { k: "Shells filled", v: String(shells.length) },
+        { k: "Outer e⁻", v: String(shells[shells.length - 1] ?? 0) },
+        { k: "Valence ring r", v: `${maxR} u` },
+      ],
+      equation: "2n² electrons per shell",
+      eqNote: "Shell K holds 2, L holds 8, M holds 18 — filling order follows the Aufbau principle.",
+      signal: clamp01(shells.length / 7),
+      accent: "#a78bfa",
+    });
+  }, [z, shells, publish]);
+  return null;
+}
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 type ChemTab = "table" | "bench" | "titration";
 
@@ -195,6 +221,7 @@ function ElementProfile({
             </button>
           </div>
           <Atom3D z={el.n} shells={shells} symbol={el.sym} orbitals={orbitals} />
+          <TelemetryAtomStats z={el.n} shells={shells} />
         </div>
 
         {/* properties */}

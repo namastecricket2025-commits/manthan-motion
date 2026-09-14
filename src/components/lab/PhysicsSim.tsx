@@ -1,10 +1,15 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Atom, Move, Pause, Play, RotateCcw, Waves, Zap } from "lucide-react";
 import { SPRING, useCanvasSize, useRaf, useWheelZoom, clamp } from "./use-canvas";
+import { useTelemetryPublisher } from "./LiveTelemetry";
+import type { TelemetryFeed } from "./LiveTelemetry";
 import OpticsBench from "./physics/OpticsBench";
 import WaveTank from "./physics/WaveTank";
 import ACCircuit from "./physics/ACCircuit";
+
+/* re-exported so sub-tabs keep importing from "../PhysicsSim" */
+export { useTelemetryPublisher, TelemetryProvider } from "./LiveTelemetry";
 
 type PhysTab = "motion" | "optics" | "waves" | "circuits";
 
@@ -33,6 +38,7 @@ function MotionLab() {
   const [v, setV] = useState(0);
   const [a, setA] = useState(0);
   const [ended, setEnded] = useState<"stopped" | "ran-off" | null>(null);
+  const publish = useTelemetryPublisher();
   const log = useRef<{ t: number; x: number; v: number; a: number }[]>([]);
   const [traces, setTraces] = useState({ pos: true, vel: true, acc: true });
   const state = useRef({ v0, mass, mu, running, g: 9.81, x0 });
@@ -44,10 +50,48 @@ function MotionLab() {
     return { ts: v0 / dec, ds: x0 + (v0 * v0) / (2 * dec) };
   }, [v0, mu, g, x0]);
 
+  const pubClock = useRef(0);
+  // mount publish so the sidebar is never empty before the first Run
+  useEffect(() => {
+    publish({
+      subject: "Physics · Motion",
+      rows: [
+        { k: "Velocity", v: `${v0.toFixed(2)} m/s` },
+        { k: "Distance", v: `${x0.toFixed(1)} m` },
+        { k: "Friction", v: `${(mu * 9.81 * mass).toFixed(1)} N` },
+        { k: "Kinetic E", v: `${(0.5 * mass * v0 * v0).toFixed(1)} J` },
+      ],
+      equation: "F = μ·N  ·  a = −μg",
+      eqNote: "Friction is mass-proportional but deceleration is not — everything falls at the same rate minus friction.",
+      signal: clamp(v0 / 20, 0, 1),
+      accent: "#22d3ee",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useRaf((dt) => {
     const st = state.current;
     if (!st.running) return;
     const dec = st.g * st.mu;
+    // throttle: the sim ticks at 60 fps, the sidebar only needs ~8 Hz —
+    // publishing every frame would re-render the shell every frame
+    const now = performance.now();
+    if (now - pubClock.current > 120) {
+      pubClock.current = now;
+      publish({
+        subject: "Physics · Motion",
+        rows: [
+          { k: "Velocity", v: `${v.toFixed(2)} m/s` },
+          { k: "Distance", v: `${x.toFixed(1)} m` },
+          { k: "Friction", v: `${(st.mu * st.g * mass).toFixed(1)} N` },
+          { k: "Kinetic E", v: `${(0.5 * mass * v * v).toFixed(1)} J` },
+        ],
+        equation: "F = μ·N  ·  a = −μg",
+        eqNote: "Friction is mass-proportional but deceleration is not — everything falls at the same rate minus friction.",
+        signal: clamp(v / Math.max(1, v0), 0, 1),
+        accent: "#22d3ee",
+      });
+    }
     let nv = v - dec * dt;
     let nx = x + ((v + nv) / 2) * dt;
     let nt = t + dt;

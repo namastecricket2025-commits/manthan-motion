@@ -1,12 +1,13 @@
 import BiologyExplorer from "@/components/lab/BiologyExplorer";
 import ChemistryWorkspace from "@/components/lab/ChemistryWorkspace";
 import PhysicsSim from "@/components/lab/PhysicsSim";
+import LiveTelemetry, { TelemetryProvider, useTelemetry } from "@/components/lab/LiveTelemetry";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { SPRING } from "@/components/lab/use-canvas";
 import { isSoundEnabled, setSoundEnabled } from "@/components/lab/lab-sound";
 import { Atom, Beaker, Dna, FlaskConical, ArrowLeft, Radiation, Volume2, VolumeX } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import "../components/lab/lab.css";
@@ -34,13 +35,61 @@ const TABS: { key: LabTab; label: string; icon: typeof Atom; blurb: string }[] =
   },
 ];
 
-export default function Lab() {
+/* per-tab ambient accent: drives the backdrop corner glows */
+const TAB_ACCENT: Record<LabTab, { hex: string; rgba: string }> = {
+  physics: { hex: "#38bdf8", rgba: "56, 189, 248" }, // deep sky — Snell/optics
+  chemistry: { hex: "#a78bfa", rgba: "167, 139, 250" }, // violet — reagents
+  biology: { hex: "#ff3b5c", rgba: "255, 59, 92" }, // signal red — living tissue
+};
+
+/* Mobile: one slim telemetry dock under the workspace — readouts + the
+   governing equation in a single non-scrolling strip. */
+function MobileTelemetry() {
+  const feed = useTelemetry();
+  if (!feed) return null;
+  return (
+    <div className="lab-mobile-telemetry">
+      <span className="lab-mobile-telemetry__dot" style={{ background: feed.accent, boxShadow: `0 0 8px ${feed.accent}` }} />
+      <span className="lab-mobile-telemetry__subject">{feed.subject}</span>
+      <span className="lab-mobile-telemetry__vals">
+        {feed.rows.slice(0, 3).map((r) => (
+          <span key={r.k} className="lab-mobile-telemetry__val">
+            {r.k} <b style={{ color: feed.accent }}>{r.v}</b>
+          </span>
+        ))}
+      </span>
+      <span className="lab-mobile-telemetry__eq">{feed.equation}</span>
+    </div>
+  );
+}
+
+function LabShell() {
   const [tab, setTab] = useState<LabTab>("physics");
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const active = TABS.find((t) => t.key === tab)!;
+  const feed = useTelemetry();
+  const accent = TAB_ACCENT[tab];
+
+  /* the publisher bus lives inside the sims; clear the readouts when a
+     workspace unmounts so the sidebar never shows stale data */
+  useEffect(() => {
+    const root = document.querySelector(".lab-root");
+    if (root) root.setAttribute("data-tab", tab);
+  }, [tab]);
 
   return (
-    <div className="lab-root">
+    <div className="lab-root" data-tab={tab}>
+      {/* scientific backdrop: blueprint matrix + ambient accent glows.
+          Fixed, pointer-transparent, static — sits entirely behind the shell. */}
+      <div className="lab-backdrop lab-backdrop--grid" aria-hidden />
+      <div className="lab-backdrop lab-backdrop--glow" aria-hidden>
+        <span
+          className="corner-glow corner-glow--tr"
+          style={{ background: `radial-gradient(circle, rgba(${accent.rgba},0.5), transparent 65%)` }}
+        />
+        <span className="corner-glow corner-glow--bl" />
+      </div>
+
       <div className="lab-shell relative z-10">
         {/* Header */}
         <header className="lab-header z-40 shrink-0 lg:sticky lg:top-0">
@@ -116,12 +165,26 @@ export default function Lab() {
             </motion.div>
           </AnimatePresence>
 
+          {/* phones/tablets: slim live dock — keeps the whole lab on one screen */}
+          <MobileTelemetry />
+
           <p className="mt-8 hidden items-center justify-center gap-2 text-center text-[11px] text-slate-500 lg:flex">
             <Beaker className="h-3.5 w-3.5 text-[#ff647c]" />
             Manthan STEM Lab — interactive models for revision, not substitutes for a teacher.
           </p>
         </main>
       </div>
+
+      {/* desktop: floating telemetry sidebar (≥1380px only, via CSS) */}
+      {feed && <LiveTelemetry feed={feed} />}
     </div>
+  );
+}
+
+export default function Lab() {
+  return (
+    <TelemetryProvider>
+      <LabShell />
+    </TelemetryProvider>
   );
 }

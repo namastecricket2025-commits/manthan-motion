@@ -6,6 +6,9 @@ import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from 
 import { CursorTip, useCursorTip } from "../CursorTip";
 import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { disposeSurfaceMaps, kidneyCortexMaps, medullaMaps, tissueMaterial, vesselMaps } from "../lab-textures";
+import { useTelemetryPublisher } from "../PhysicsSim";
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   aorta: { name: "Abdominal aorta", def: "The midline artery behind the kidneys. It gives off a renal artery to each kidney near the L1–L2 vertebrae.", accent: "#ff647c" },
@@ -77,6 +80,27 @@ export default function Excretory() {
   const [cDone, setCDone] = useState(false);
   const { tip, show: showTip, hide: hideTip } = useCursorTip();
   const [exam, setExam] = useState(false);
+
+  // publish live renal telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    // GFR ≈ 125 mL/min per kidney pair, scaled by the flow slider
+    const gfr = 125 * flow;
+    const filtrate = (gfr * 24 * 60) / 1000; // L/day
+    publish({
+      subject: "Biology · Excretory",
+      rows: [
+        { k: "GFR", v: `${gfr.toFixed(0)} mL/min`, accent: "#fb923c" },
+        { k: "Filtrate/day", v: `${filtrate.toFixed(0)} L` },
+        { k: "Urine output", v: `${(filtrate * 0.01).toFixed(2)} L/day` },
+        { k: "Cross-section", v: crossSection ? "open" : "closed" },
+      ],
+      equation: "GFR = K_f × NFP",
+      eqNote: "Glomerular filtration rides on net filtration pressure across the capillary wall — ~125 mL/min in a healthy adult.",
+      signal: clamp01(flow / 3),
+      accent: "#fb923c",
+    });
+  }, [flow, crossSection, publish]);
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
   const vp = useViewport();

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { useTelemetryPublisher } from "../PhysicsSim";
 import { CursorTip } from "../CursorTip";
 
 // ─── ion defs
@@ -157,6 +158,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const lookInsideRef = useRef(false);
   const [band, setBand] = useState(0);
   const bandRef = useRef(0);
+  bandRef.current = band;
   const dragging = useRef<"rotate" | "pan" | null>(null);
   const dragIon = useRef<IonState | null>(null);
   const flux = useRef<{ mesh: THREE.InstancedMesh; parts: FluxParticle[]; dummy: THREE.Object3D; op: number } | null>(null);
@@ -170,6 +172,29 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
 
   const [hoverIon, setHoverIon] = useState<string | null>(null);
   const [membraneFlash, setMembraneFlash] = useState(false);
+  const [transportCount, setTransportCount] = useState(0);
+  useEffect(() => {
+    if (!membraneFlash) return;
+    setTransportCount((n) => n + 1);
+  }, [membraneFlash]);
+
+  // publish live cell telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    publish({
+      subject: "Biology · Cell",
+      rows: [
+        { k: "Cell type", v: cellType, accent: "#67e8f9" },
+        { k: "Scale band", v: SCALE_BANDS[bandRef.current] ?? "—" },
+        { k: "Cross-section", v: lookInside ? "membrane open" : "intact" },
+        { k: "Ion transports", v: String(transportCount) },
+      ],
+      equation: "V = Q / C_mem",
+      eqNote: "Each ion crossing moves charge Q across the membrane capacitance — that is how neurons fire.",
+      signal: clamp(Math.min(1, transportCount / 10), 0, 1),
+      accent: "#67e8f9",
+    });
+  }, [cellType, lookInside, transportCount, publish]);
   const cellTypeRef = useRef(cellType);
   cellTypeRef.current = cellType;
 

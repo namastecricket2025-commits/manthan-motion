@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Grid2x2, Pause, Play, SlidersHorizontal, Waves } from "lucide-react";
 import { useCanvasSize, useRaf, clamp } from "../use-canvas";
+import { useTelemetryPublisher } from "../PhysicsSim";
 
 type Mode = "single" | "two" | "slit" | "obstacle";
 type View = "flat" | "topo";
@@ -53,6 +54,25 @@ export default function WaveTank() {
   const [bars, setBars] = useState(3);
 
   const lambda = speed / freq;
+
+  // publish live wave telemetry (v = f·λ and friends)
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    publish({
+      subject: "Physics · Waves",
+      rows: [
+        { k: "Frequency f", v: `${freq.toFixed(1)} Hz` },
+        { k: "Wavelength λ", v: `${lambda.toFixed(0)} px` },
+        { k: "Speed v", v: `${speed} px/s` },
+        { k: "Fringe Δy", v: `≈ ${((lambda * 380) / d).toFixed(0)} px` },
+        { k: "Sources", v: mode === "single" ? "1" : mode === "two" || mode === "slit" ? "2" : `grid ×${bars}` },
+      ],
+      equation: "v = f · λ",
+      eqNote: "Wave speed equals frequency times wavelength — change one and another must follow.",
+      signal: clamp(freq / 8, 0, 1),
+      accent: "#22d3ee",
+    });
+  }, [freq, lambda, speed, d, mode, bars, publish]);
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
   const st = useRef({ mode, freq, d, speed, amp, paused, view, bars });

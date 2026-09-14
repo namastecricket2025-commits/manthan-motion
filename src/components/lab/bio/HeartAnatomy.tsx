@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { useTelemetryPublisher } from "../PhysicsSim";
+import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import * as THREE from "three";
 import { motion } from "motion/react";
 import { Activity, Info, Pause, Play, RotateCcw, PenLine } from "lucide-react";
 import { sfx } from "../lab-sound";
-import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
 import { CursorTip, useCursorTip } from "../CursorTip";
 import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { disposeSurfaceMaps, muscleMaps, vesselMaps, tissueMaterial } from "../lab-textures";
@@ -536,6 +537,27 @@ export default function HeartAnatomy() {
     orbit.current = { ...target.current };
   };
   const ps = paused ? "paused" : "running";
+
+  // publish live cardiac telemetry
+  const publish = useTelemetryPublisher();
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  useEffect(() => {
+    const co = (bpm * sv) / 1000; // cardiac output L/min
+    publish({
+      subject: "Biology · Heart",
+      rows: [
+        { k: "Heart rate", v: `${bpm} bpm`, accent: "#ff647c" },
+        { k: "Stroke volume", v: `${sv} mL` },
+        { k: "Cardiac output", v: `${co.toFixed(2)} L/min` },
+        { k: "Systolic / diastolic", v: `${Math.round(80 + bpm * 0.55)}/${Math.round(58 + sv * 0.12)} mmHg` },
+        { k: "Beat cycle", v: `${(60 / bpm).toFixed(2)} s` },
+      ],
+      equation: "CO = HR × SV",
+      eqNote: "Cardiac output is heart rate times stroke volume — roughly 5 L/min at rest.",
+      signal: clamp01(Math.sin((performance.now() / 1000) * ((bpm / 60) * Math.PI * 2)) * 0.5 + 0.5),
+      accent: "#ff647c",
+    });
+  }, [bpm, sv, paused, publish]);
 
   const hoverPart = hover ? PARTS[hover] : null;
 

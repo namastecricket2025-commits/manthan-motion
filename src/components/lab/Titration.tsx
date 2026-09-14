@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTelemetryPublisher } from "./PhysicsSim";
 import { motion } from "motion/react";
 import { Droplets, FlaskConical, Gauge, Play, RefreshCw, RotateCcw } from "lucide-react";
 import { sfx } from "./lab-sound";
@@ -235,6 +236,26 @@ export default function Titration() {
         : weak
           ? `At equivalence — all acid neutralised; the salt solution sits at pH ${eqPh.toFixed(2)}`
           : "At equivalence — acid and base are exactly neutralised (pH 7)";
+
+  // publish live titration telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    publish({
+      subject: "Chemistry · Titration",
+      rows: [
+        { k: "pH", v: ph.toFixed(2), accent: "#ff8a9a" },
+        { k: "Titrant added", v: `${vol.toFixed(1)} mL` },
+        { k: "Equivalence", v: `${Veq.toFixed(1)} mL` },
+        { k: "OH⁻ excess", v: `${excessOH >= 0 ? "+" : ""}${(excessOH * 1000).toFixed(2)} mmol` },
+      ],
+      equation: weak ? "pH = pKa + log([A⁻]/[HA])" : "n(H⁺) = n(OH⁻)",
+      eqNote: weak
+        ? "Henderson–Hasselbalch governs the flat buffer region before equivalence."
+        : "At the endpoint the moles of acid and base neutralise exactly.",
+      signal: clamp(ph / 14, 0, 1),
+      accent: "#f472b6",
+    });
+  }, [ph, vol, Veq, excessOH, weak, publish]);
 
   const handleRotate = (e: React.PointerEvent) => {
     const rect = (e.currentTarget as SVGGElement).ownerSVGElement!.getBoundingClientRect();

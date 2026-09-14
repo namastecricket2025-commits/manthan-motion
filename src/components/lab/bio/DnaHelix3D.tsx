@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { useTelemetryPublisher } from "../PhysicsSim";
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 import { CursorTip } from "../CursorTip";
 import { sfx } from "../lab-sound";
 import { SPRING } from "../use-canvas";
@@ -77,6 +80,26 @@ export default function DnaHelix3D() {
   const orbit = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0, panZ: 0 });
   const target = useRef({ yaw: 0.45, pitch: 0.18, dist: 42, panX: 0, panY: 0, panZ: 0 });
   const lastInteract = useRef(performance.now());
+
+  // publish live helix telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    const BP_PER_TURN = 10.5;
+    publish({
+      subject: "Biology · DNA",
+      rows: [
+        { k: "Mode", v: modeState },
+        { k: "Twist", v: `${BP_PER_TURN} bp/turn` },
+        { k: "Rise", v: `0.34 nm/bp` },
+        { k: "Grooves", v: "major + minor" },
+        { k: "mRNA progress", v: modeState === "transcribe" ? `${Math.round(polProgress * 100)}%` : "—" },
+      ],
+      equation: "A=T · G≡C",
+      eqNote: "B-DNA: a right-handed helix, ~10.5 base pairs per turn, 2 nm wide — bases pair A–T (2 H-bonds) and G–C (3).",
+      signal: clamp01(modeState === "transcribe" ? polProgress : 0.5 + 0.5 * Math.sin(performance.now() / 2100)),
+      accent: "#34d399",
+    });
+  }, [modeState, polProgress, publish]);
   const pointers = useRef(new Map<number, { x: number; y: number; button: number }>());
   const dragging = useRef<"rotate" | "pan" | null>(null);
   const raycaster = useRef(new THREE.Raycaster());

@@ -55,6 +55,257 @@
   min-height: 100vh;
 }
 
+/* ---------- Backdrop: blueprint grid + ambient accent glow ----------
+   Two fixed, pointer-transparent layers sit behind the lab shell. The
+   grid is a faint mathematical matrix (~6% alpha); the glows pick up
+   --lab-accent so the backdrop breathes with the active subject tab.
+   Purely static — no animations, no cost. */
+.lab-root {
+  --lab-accent: #ff3b5c;
+  --lab-accent-2: rgba(255, 59, 92, 0.55);
+}
+.lab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.lab-backdrop--grid {
+  /* blueprint matrix: hairline grid every 44px, stronger line every 5th */
+  background-image:
+    linear-gradient(to right, rgba(103, 232, 249, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(103, 232, 249, 0.07) 1px, transparent 1px),
+    linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+  background-size:
+    44px 44px,
+    44px 44px,
+    220px 220px,
+    220px 220px;
+  mask-image: radial-gradient(ellipse 120% 90% at 50% 30%, #000 38%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 30%, #000 38%, transparent 78%);
+  opacity: 0.5;
+}
+.corner-glow {
+  position: absolute;
+  border-radius: 9999px;
+}
+.corner-glow--tr {
+  top: -14%;
+  right: -10%;
+  width: 560px;
+  height: 560px;
+  filter: blur(90px);
+  opacity: 0.16;
+  transition: opacity 0.8s ease, background 0.8s ease;
+}
+.corner-glow--bl {
+  bottom: -18%;
+  left: -12%;
+  width: 620px;
+  height: 620px;
+  filter: blur(100px);
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.5), transparent 65%);
+  opacity: 0.1;
+}
+
+/* ---------- Live telemetry sidebar (desktop only) ---------- */
+.lab-telemetry {
+  position: fixed;
+  top: 92px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 30;
+  width: 236px;
+  display: none;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid var(--lab-border);
+  background: linear-gradient(170deg, rgba(15, 23, 42, 0.66), rgba(11, 17, 32, 0.72));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 18px 44px rgba(2, 6, 23, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+@media (min-width: 1380px) {
+  /* only float over the page when the workspace can afford the width */
+  .lab-telemetry {
+    display: flex;
+  }
+}
+.lab-telemetry__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--lab-border);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-faint);
+}
+.lab-telemetry__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  scrollbar-width: thin;
+}
+.lab-telemetry__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.12);
+  font-size: 11px;
+}
+.lab-telemetry__row:last-of-type {
+  border-bottom: none;
+}
+.lab-telemetry__row .k {
+  color: var(--lab-faint);
+  font-size: 10px;
+}
+.lab-telemetry__row .v {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--lab-text);
+  font-size: 11.5px;
+  text-align: right;
+}
+.lab-telemetry__eq {
+  border-top: 1px solid var(--lab-border);
+  padding: 10px 12px;
+  background: rgba(255, 59, 92, 0.05);
+}
+.lab-telemetry__eq .eq {
+  display: block;
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ff8a9a;
+  text-shadow: 0 0 12px rgba(255, 59, 92, 0.3);
+  overflow-wrap: anywhere;
+}
+.lab-telemetry__eq .eq-note {
+  margin-top: 3px;
+  font-size: 9.5px;
+  line-height: 1.45;
+  color: var(--lab-faint);
+}
+/* embedded variant: the same panel docked inside the mobile control deck */
+.lab-telemetry-embedded {
+  border-radius: 14px;
+  border: 1px solid var(--lab-border);
+  background: linear-gradient(170deg, rgba(15, 23, 42, 0.5), rgba(11, 17, 32, 0.6));
+  overflow: hidden;
+}
+.lab-telemetry-embedded .lab-telemetry__body {
+  padding: 8px 10px 10px;
+  overflow: visible;
+}
+.lab-telemetry-embedded .lab-telemetry__eq {
+  padding: 8px 10px;
+}
+.lab-telemetry-embedded .lab-telemetry__head {
+  padding: 7px 10px;
+  font-size: 9px;
+}
+
+/* mobile telemetry dock: one slim strip below the workspace so the whole
+   lab still fits the locked phone viewport (readouts + equation inline) */
+.lab-mobile-telemetry {
+  display: none;
+}
+@media (max-width: 1379px) {
+  .lab-root .lab-mobile-telemetry {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 7px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--lab-border);
+    background: linear-gradient(170deg, rgba(15, 23, 42, 0.6), rgba(11, 17, 32, 0.68));
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .lab-root .lab-mobile-telemetry__dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+  }
+  .lab-root .lab-mobile-telemetry__subject {
+    flex: 0 0 auto;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--lab-faint);
+  }
+  .lab-root .lab-mobile-telemetry__vals {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .lab-root .lab-mobile-telemetry__val {
+    font-size: 10px;
+    color: var(--lab-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lab-root .lab-mobile-telemetry__val b {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 600;
+  }
+  .lab-root .lab-mobile-telemetry__eq {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-left: 10px;
+    border-left: 1px solid var(--lab-border);
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ff8a9a;
+  }
+}
+
+/* light theme: flip glass + ink */
+html:not(.dark) .lab-root .lab-telemetry,
+html:not(.dark) .lab-root .lab-mobile-telemetry {
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.88));
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+html:not(.dark) .lab-root .lab-telemetry,
+html:not(.dark) .lab-root .lab-telemetry-embedded {
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.88));
+}
+html:not(.dark) .lab-root .lab-telemetry__eq {
+  background: rgba(255, 59, 92, 0.06);
+}
+html:not(.dark) .lab-root .lab-mobile-telemetry {
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.86));
+}
+html:not(.dark) .lab-root .lab-mobile-telemetry__eq {
+  color: #b3163c;
+}
+html:not(.dark) .lab-root .lab-telemetry__eq .eq {
+  color: #b3163c;
+  text-shadow: none;
+}
+
 /* ---------- Glass panels ---------- */
 .lab-glass {
   background: linear-gradient(165deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.6));
@@ -679,6 +930,25 @@ html:not(.dark) .lab-root .lab-tab--on {
   background: linear-gradient(135deg, rgba(255, 59, 92, 0.24), rgba(255, 59, 92, 0.08));
   border-color: rgba(225, 29, 72, 0.4);
   box-shadow: 0 0 14px rgba(255, 59, 92, 0.16);
+}
+
+/* ---------- Backdrop: light-mode adaptation ----------
+   The bench is a dark instrument by design; on the light theme the
+   blueprint grid flips to ink-on-paper and the glows quiet down so the
+   grid stays 'barely visible' rather than noisy. */
+html:not(.dark) .lab-root .lab-backdrop--grid {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(to right, rgba(15, 23, 42, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 5, 0.05) 1px, transparent 1px);
+  opacity: 0.55;
+}
+html:not(.dark) .lab-root .corner-glow--tr {
+  opacity: 0.1;
+}
+html:not(.dark) .lab-root .corner-glow--bl {
+  opacity: 0.07;
 }
 html:not(.dark) .lab-root .lab-input,
 html:not(.dark) .lab-root .lab-search {

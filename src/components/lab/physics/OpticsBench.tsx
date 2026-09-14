@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Focus, Move, MousePointerClick, Trash2, Zap } from "lucide-react";
 import { SPRING, clamp } from "../use-canvas";
+import { useTelemetryPublisher } from "../PhysicsSim";
 
 type Optic = "convex" | "concave" | "mirror" | "prism" | "block";
 
@@ -174,6 +175,29 @@ export default function OpticsBench() {
   }, [rays]);
 
   const incidence = Math.abs(angle);
+
+  // publish live bench telemetry (Snell's-law / thin-lens readouts)
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    const first = slots.find((s) => s.type);
+    publish({
+      subject: "Physics · Optics",
+      rows: [
+        { k: "Beam angle", v: `${angle}°` },
+        { k: "Optic mounted", v: first && first.type ? OPTIC_LABEL[first.type] : "none" },
+        { k: "Ray segments", v: String(rays.length) },
+        { k: "Focal points", v: String(foci.length) },
+        { k: "Screen hit", v: landing ? `y ${Math.round(landing.y)}` : "miss" },
+      ],
+      equation: first?.type === "block" ? "n₁ sinθ₁ = n₂ sinθ₂" : "1/v − 1/u = 1/f",
+      eqNote:
+        first?.type === "block"
+          ? "Snell's law at the air–glass face; the exit face bends it back, shifting the beam sideways."
+          : "Thin-lens relation — parallel rays through a +90 px focal-length lens converge at F.",
+      signal: clamp(Math.abs(landing ? landing.y - 200 : 120) / 120, 0, 1),
+      accent: "#ff647c",
+    });
+  }, [angle, slots, rays, foci, landing, publish]);
 
   const place = (idx: number) => {
     if (!pending) return;

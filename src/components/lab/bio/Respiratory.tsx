@@ -6,6 +6,9 @@ import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from 
 import { CursorTip, useCursorTip } from "../CursorTip";
 import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { cartilageMaps, disposeSurfaceMaps, lungMaps, tissueMaterial, vesselMaps } from "../lab-textures";
+import { useTelemetryPublisher } from "../PhysicsSim";
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   trachea: { name: "Trachea (windpipe)", def: "A rigid tube held open by 16–20 C-shaped rings of hyaline cartilage. The rings are incomplete at the back so a swallowed bolus can bulge into the oesophagus.", accent: "#67e8f9" },
@@ -120,6 +123,7 @@ export default function Respiratory() {
   const diaphragm = useRef<THREE.Mesh | null>(null);
   const orbit = useRef({ yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 });
   const target = useRef({ yaw: -0.2, pitch: 0.06, dist: 28, panX: 0, panY: 0 });
+  const t0 = useRef(performance.now() / 1000);
   const lastInteract = useRef(performance.now());
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const dragging = useRef<"rotate" | "pan" | null>(null);
@@ -560,6 +564,26 @@ export default function Respiratory() {
   };
 
   const hoverPart = hover ? PARTS[hover] : null;
+
+  // publish live respiratory telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    const tidal = 500; // mL tidal volume
+    const minute = rate * (tidal / 1000); // minute ventilation L/min
+    publish({
+      subject: "Biology · Respiratory",
+      rows: [
+        { k: "Breath rate", v: `${rate} /min` },
+        { k: "Minute ventilation", v: `${minute.toFixed(1)} L/min` },
+        { k: "Tidal volume", v: `≈ ${tidal} mL` },
+        { k: "Alveolar O₂", v: breathing ? "exchanging" : "held", accent: breathing ? "#34d399" : "#fbbf24" },
+      ],
+      equation: "V̇ = f × V_T",
+      eqNote: "Minute ventilation is breaths per minute times tidal volume — about 6 L/min at rest.",
+      signal: clamp01(0.5 - 0.5 * Math.cos((t0.current / (60 / rate)) * Math.PI * 2)),
+      accent: "#67e8f9",
+    });
+  }, [rate, breathing, publish]);
 
   return (
     <div className="lab-split">

@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Activity, Zap } from "lucide-react";
 import { SPRING, useCanvasSize, useRaf, clamp } from "../use-canvas";
+import { useTelemetryPublisher } from "../PhysicsSim";
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -144,6 +145,25 @@ export default function ACCircuit() {
   const path = "M 60 44 H 300 V 240 H 60 Z";
   const flowDur = clamp(0.9 / (math.I * 60 + 0.05), 0.35, 4);
   const f0 = math.f0;
+
+  // publish live circuit telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    publish({
+      subject: "Physics · AC Circuits",
+      rows: [
+        { k: "Impedance Z", v: `${math.Z.toFixed(1)} Ω` },
+        { k: "Current I", v: `${(math.I * 1000).toFixed(1)} mA` },
+        { k: "Phase φ", v: `${((math.phi * 180) / Math.PI).toFixed(1)}°` },
+        { k: "Power factor", v: math.pf.toFixed(2) },
+        { k: "Real power P", v: `${math.P.toFixed(2)} W` },
+      ],
+      equation: "Z = √(R² + (X_L − X_C)²)",
+      eqNote: "Resonance when X_L = X_C: impedance collapses to R alone and the phase φ → 0.",
+      signal: clamp(math.I * 12, 0, 1),
+      accent: "#fbbf24",
+    });
+  }, [math, publish]);
 
   return (
     <div className="lab-col lab-split">

@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeftRight, Beaker as BeakerIcon, Droplets, Flame, FlaskConical, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import { REACTIONS, SUBSTANCES } from "./reactions";
 import type { Reaction, Substance } from "./reactions";
 import { sfx } from "./lab-sound";
 import { SPRING, useCanvasSize, useRaf } from "./use-canvas";
+import { useTelemetryPublisher } from "./PhysicsSim";
 
 /* ---------- formula rendering (digits → subscripts) ---------- */
 function Chem({ text }: { text: string }) {
@@ -293,6 +294,25 @@ export default function ReactionBench() {
   const [group, setGroup] = useState<string>("all");
   const [query, setQuery] = useState("");
   const timer = useRef<number | null>(null);
+
+  // publish live bench telemetry
+  const publish = useTelemetryPublisher();
+  useEffect(() => {
+    const celsius = Math.round(25 + temp * 575);
+    publish({
+      subject: "Chemistry · Reaction bench",
+      rows: [
+        { k: "Reagents loaded", v: `${slotA ? 1 : 0} + ${slotB ? 1 : 0}` },
+        { k: "Temperature", v: `${celsius} °C` },
+        { k: "Reaction phase", v: phase },
+        { k: "Outcome", v: result ? (result.ok ? result.r!.eq : "no reaction") : "—" },
+      ],
+      equation: "k = A·e^(−Ea/RT)",
+      eqNote: "Arrhenius: raise T and the collision-energy tail crosses the activation-energy barrier more often.",
+      signal: temp,
+      accent: "#ff8a9a",
+    });
+  }, [slotA, slotB, temp, phase, result, publish]);
 
   const canReact = slotA && slotB && phase !== "colliding";
 
