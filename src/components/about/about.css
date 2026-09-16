@@ -31,15 +31,15 @@ html:not(.dark) .about-root {
 
 /* ---------- 1. Authentic Apple glass ----------
    Smoky translucent glass (mirrors the locked spec in index.css):
-     dark   rgba(15,23,42,0.55)      light  rgba(255,255,255,0.45)
-     blur   blur(28px) saturate(130%)
+     dark   rgba(15,23,42,0.5)       light  rgba(255,255,255,0.45)
+     blur   blur(28px) saturate(135%)
      edge   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
-   Never a saturated or opaque panel — the pointer-tracked crimson backdrop
-   stays visible gliding underneath while the copy keeps full contrast. */
+   Never a saturated or opaque panel — the animated crimson blobs stay
+   visible drifting underneath while the copy keeps full contrast. */
 .apple-glass {
-  background: rgba(15, 23, 42, 0.55);
-  -webkit-backdrop-filter: blur(28px) saturate(130%);
-  backdrop-filter: blur(28px) saturate(130%);
+  background: rgba(15, 23, 42, 0.5);
+  -webkit-backdrop-filter: blur(28px) saturate(135%);
+  backdrop-filter: blur(28px) saturate(135%);
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4);
 }

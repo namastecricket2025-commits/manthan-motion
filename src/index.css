@@ -111,17 +111,16 @@
   --card-border: rgba(200, 31, 39, 0.22);
   --panel-bg: rgba(248, 250, 252, 0.6);
 
-  /* ---- BACKGROUND MESH (light) ----------------------------------------
-     The same canvas engine, with the paint strength roughly halved by the
-     engine so a pale canvas never turns pink. `--mesh-ceiling` is the hard
-     opacity cap the Ambient Intensity slider cannot exceed. */
-  --mesh-ceiling: 0.9;
+  /* ---- BACKGROUND BLOB FIELD (light) ---------------------------------
+     The same two animated blobs, re-declared below at roughly half strength
+     so a pale canvas picks up the ambient touch without turning pink. */
+  --mesh-ceiling: 1;
 
   /* ---- Frosted glass (light) ----------------------------------------- */
   --glass-fill: rgba(255, 255, 255, 0.45);
   --glass-fill-strong: rgba(255, 255, 255, 0.6);
   --glass-hairline: rgba(0, 0, 0, 0.04);
-  --glass-blur: blur(28px) saturate(130%);
+  --glass-blur: blur(28px) saturate(135%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.16);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
@@ -237,22 +236,21 @@
   --card-border: rgba(224, 50, 58, 0.2);
   --panel-bg: rgba(11, 15, 25, 0.62);
 
-  /* ---- BACKGROUND MESH (dark) ----------------------------------------
-     The canvas engine paints the deep-red atmosphere — a rgba(180,20,20,
-     0.16) core diffusing to rgba(130,10,10,0.04) at 50% and fully
-     transparent at 100% — behind the container's 140px blur. The layer's
-     own opacity is capped by `--mesh-ceiling`, so it glows like embers
-     behind the glass instead of becoming a bright wall. */
-  --mesh-ceiling: 0.85;
+  /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
+     Two CSS-animated crimson blobs (see `.mesh-field` / `@keyframes
+     fluidGlow`). Their alphas are already the low, readable values shipped
+     in the keyframe spec, so the ceiling sits at 1 and Ambient Intensity is
+     the only dimmer on top of them. */
+  --mesh-ceiling: 1;
 
   /* ---- Frosted glass (dark) — smoky neutral translucent canvas --------
-     The 55% slate scrim is what stops the restored crimson backdrop from
-     blinding the copy: the cursor-tracking glow still glides visibly under
-     the card, but it can never saturate the panel or swallow the text. */
-  --glass-fill: rgba(15, 23, 42, 0.55);
-  --glass-fill-strong: rgba(15, 23, 42, 0.68);
+     The 50% slate scrim is what stops the animated crimson backdrop from
+     blinding the copy: the blobs still drift visibly under the card, but
+     they can never saturate the panel or swallow the text. */
+  --glass-fill: rgba(15, 23, 42, 0.5);
+  --glass-fill-strong: rgba(15, 23, 42, 0.66);
   --glass-hairline: rgba(255, 255, 255, 0.06);
-  --glass-blur: blur(28px) saturate(130%);
+  --glass-blur: blur(28px) saturate(135%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
@@ -392,9 +390,9 @@
      everywhere else that shares these two classes). Both themes are driven by
      the tokens in :root / .dark:
 
-       fill      rgba(15,23,42,0.55)  dark  / rgba(255,255,255,0.45)  light
-       blur      blur(28px) saturate(130%) so the tracked crimson backdrop
-                 glides under every card without drowning the copy
+       fill      rgba(15,23,42,0.5)   dark  / rgba(255,255,255,0.45)  light
+       blur      blur(28px) saturate(135%) so the animated crimson backdrop
+                 drifts under every card without drowning the copy
        outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
        depth     one wide, soft ambient shadow (never a hard drop shadow)
      ------------------------------------------------ */
@@ -450,10 +448,12 @@
   .set-card,
   .set-block,
   .set-row {
-    background: rgba(15, 23, 42, 0.55) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(130%) !important;
-    backdrop-filter: blur(28px) saturate(130%) !important;
+    background: rgba(15, 23, 42, 0.5) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(135%) !important;
+    backdrop-filter: blur(28px) saturate(135%) !important;
     border-color: rgba(255, 255, 255, 0.06) !important;
+    /* soft ambient lift so every card floats above the animated canvas */
+    box-shadow: var(--glass-shadow) !important;
   }
   html:not(.dark) .glass-panel,
   html:not(.dark) .glass-chip,
@@ -763,22 +763,24 @@
   }
 
   /* ------------------------------------------------
-     THE MANTHAN BACKDROP ENGINE — a native HTML5 canvas.
+     THE MANTHAN BLOB FIELD — pure CSS keyframe engine.
 
-     One full-viewport container (`100vw × 100vh`, `position: fixed`,
-     `top/left: 0`, `z-index: 1`, `pointer-events: none`) holding a single
-     `<canvas>`. The massive organic crimson shapes are painted with the 2D
-     rendering context inside it (see MeshBackground.tsx); the container
-     carries the heavy `filter: blur(140px)` that smears them into ambient
-     light. Nothing here animates in CSS — every frame comes from the
-     engine's requestAnimationFrame loop, which is what makes the shapes
-     glide, expand and track the cursor with a liquid lag.
+     A permanent full-viewport layer (100vw × 100vh, fixed, top/left: 0,
+     z-index: 1, pointer-events: none, overflow: hidden) holding two large
+     crimson blobs. There is no JavaScript, no canvas and no pointer
+     tracking anywhere in this: the motion is one infinite `@keyframes
+     fluidGlow` loop per blob (25s, linear), which the compositor runs off
+     the main thread even while the page is scrolling.
 
-     Visibility is capped by `--mesh-ceiling` × Ambient Intensity, so even at
-     100% the field is atmosphere, never a solid wall. The smoky card glass
-     is what keeps the copy readable on top of it.
+     The keyframes animate *transform only* — never width, height, blur or
+     colour — so each blurred blob is rasterised once and only its
+     translation is composited per frame. That is what makes this cheap
+     enough to leave running on a mid-range phone.
+
+     Strength is capped by `--mesh-ceiling` × Ambient Intensity, so the
+     sliders in the settings dashboard still own the final opacity.
      ------------------------------------------------ */
-  .mesh-canvas-wrap {
+  .mesh-field {
     position: fixed;
     top: 0;
     left: 0;
@@ -788,22 +790,95 @@
     z-index: 1;
     pointer-events: none;
     overflow: hidden;
-    filter: blur(140px);
     opacity: min(
       1,
-      calc(var(--mesh-ceiling, 0.9) * var(--bg-glow-opacity, 1))
+      calc(var(--mesh-ceiling, 1) * var(--bg-glow-opacity, 1))
     );
     transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .mesh-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
+  .mesh-blob {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform;
+    animation: fluidGlow 25s linear infinite;
+  }
+  /* Blob 1 — anchored top-left, sweeping right and down across the canvas. */
+  .mesh-blob--a {
+    top: -10%;
+    left: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(
+      circle,
+      rgba(220, 38, 38, 0.14) 0%,
+      rgba(163, 22, 22, 0.04) 60%,
+      transparent 100%
+    );
+    filter: blur(130px);
+  }
+  /* Blob 2 — anchored bottom-right, running the same loop in reverse and
+     offset half a cycle so the two cross the middle out of phase. */
+  .mesh-blob--b {
+    bottom: -10%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(
+      circle,
+      rgba(200, 30, 30, 0.12) 0%,
+      rgba(130, 10, 10, 0.03) 60%,
+      transparent 100%
+    );
+    filter: blur(120px);
+    animation-direction: reverse;
+    animation-delay: -12s;
+  }
+  /* Light theme: the same two blobs at roughly half strength, so the pale
+     canvas picks up the ambient touch without ever turning pink. */
+  html:not(.dark) .mesh-blob--a {
+    background: radial-gradient(
+      circle,
+      rgba(220, 38, 38, 0.07) 0%,
+      rgba(163, 22, 22, 0.02) 60%,
+      transparent 100%
+    );
+  }
+  html:not(.dark) .mesh-blob--b {
+    background: radial-gradient(
+      circle,
+      rgba(200, 30, 30, 0.06) 0%,
+      rgba(130, 10, 10, 0.015) 60%,
+      transparent 100%
+    );
+  }
+  /* The infinite drift: translate up 20vh, right 26vw, then down and around,
+     circling back to the start. Linear easing + vw/vh units keep it perfectly
+     smooth at any viewport size, and because only `transform` changes the
+     browser never re-runs the blur. */
+  @keyframes fluidGlow {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    20% {
+      transform: translate3d(26vw, 14vh, 0);
+    }
+    40% {
+      transform: translate3d(56vw, 36vh, 0);
+    }
+    60% {
+      transform: translate3d(30vw, 58vh, 0);
+    }
+    80% {
+      transform: translate3d(-6vw, 26vh, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
   }
   /* The lab bench layers its own blueprint matrix and per-subject accent
      glows over this same atmosphere, so there the crimson sits one level
      down, exactly as it did before. */
-  .lab-root .mesh-canvas-wrap {
+  .lab-root .mesh-field {
     z-index: 0;
   }
 

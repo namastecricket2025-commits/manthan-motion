@@ -33,9 +33,9 @@ html[data-text="dyslexic"] {
   font-size: calc(16px * var(--text-scale, 1.06));
 }
 
-/* Ambient intensity — the global background-glow driver. The backdrop canvas
-   reads it (`.mesh-canvas-wrap`), so 0% is a completely flat page. */
-html[data-ambient="flat"] .mesh-canvas-wrap {
+/* Ambient intensity — the global background-glow driver. The animated blob
+   field reads it (`.mesh-field`), so 0% is a completely flat page. */
+html[data-ambient="flat"] .mesh-field {
   opacity: 0;
 }
 /* Dyslexic-friendly letterforms: wider tracking, generous word spacing and a
@@ -105,25 +105,25 @@ html:not(.dark) .set-root.set-root--bare {
   --set-bg: #0b0f19;
 
   /* ---- Apple-style glass tokens: one source of truth for every surface ----
-     Card fill   rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
-     Hairline    1px rgba(255,255,255,0.07) dark / rgba(0,0,0,0.05) light
-     Blur        blur(25px) saturate(145%)
+     Card fill   rgba(15,23,42,0.5) dark / rgba(255,255,255,0.45) light
+     Hairline    1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
+     Blur        blur(28px) saturate(135%)
      Ambient     0 30px 80px -20px rgba(0,0,0,0.25)
-     Deliberately translucent, never a slate/blue scrim: the crimson mesh
-     has to stay visible glinting underneath every panel. */
-  --set-glass: rgba(255, 255, 255, 0.02);
-  --set-glass-strong: rgba(255, 255, 255, 0.045);
-  --set-hairline: rgba(255, 255, 255, 0.07);
-  --set-blur: blur(25px) saturate(145%);
+     Deliberately translucent, never opaque: the animated crimson blobs have
+     to stay visible drifting underneath every panel. */
+  --set-glass: rgba(15, 23, 42, 0.5);
+  --set-glass-strong: rgba(15, 23, 42, 0.66);
+  --set-hairline: rgba(255, 255, 255, 0.06);
+  --set-blur: blur(28px) saturate(135%);
   --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.25);
   --set-ring: 0 0 12px rgba(200, 30, 30, 0.32);
   --set-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* legacy aliases now resolve to the glass spec, so no surface keeps a
      heavy fill or a thick solid border */
-  --set-panel: rgba(255, 255, 255, 0.03);
-  --set-panel-deep: rgba(255, 255, 255, 0.02);
-  --set-well: rgba(255, 255, 255, 0.03);
+  --set-panel: rgba(15, 23, 42, 0.5);
+  --set-panel-deep: rgba(15, 23, 42, 0.42);
+  --set-well: rgba(15, 23, 42, 0.5);
   --set-border: rgba(255, 255, 255, 0.07);
   --set-border-strong: rgba(255, 255, 255, 0.16);
   /* Readable ink: every body/secondary node clears contrast against the
@@ -1134,15 +1134,15 @@ html:not(.dark) .set-select-content [role="option"] {
    ------------------------------------------------------------ */
 
 html:not(.dark) .set-root {
-  /* light glass: rgba(0,0,0,0.015) fill + rgba(0,0,0,0.05) hairline */
-  --set-glass: rgba(0, 0, 0, 0.015);
-  --set-glass-strong: rgba(0, 0, 0, 0.035);
-  --set-hairline: rgba(0, 0, 0, 0.05);
+  /* light glass: translucent white base + rgba(0,0,0,0.04) hairline */
+  --set-glass: rgba(255, 255, 255, 0.45);
+  --set-glass-strong: rgba(255, 255, 255, 0.6);
+  --set-hairline: rgba(0, 0, 0, 0.04);
   --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.12);
   --set-ring: 0 0 12px rgba(200, 30, 30, 0.28);
-  --set-panel: rgba(0, 0, 0, 0.02);
-  --set-panel-deep: rgba(0, 0, 0, 0.03);
-  --set-well: rgba(0, 0, 0, 0.02);
+  --set-panel: rgba(255, 255, 255, 0.45);
+  --set-panel-deep: rgba(255, 255, 255, 0.35);
+  --set-well: rgba(255, 255, 255, 0.45);
   --set-border: rgba(0, 0, 0, 0.05);
   --set-border-strong: rgba(0, 0, 0, 0.1);
   /* High-contrast ink on pale glass: charcoal / deep slate for every
