@@ -8,11 +8,13 @@ import { settingsRuntime } from "@/lib/app-settings";
  *
  *  1. AMBIENT MESH — four oversized crimson/ruby radial shapes drifting on
  *     slow loops (CSS, see `.mesh-blob--*`). Pure atmosphere.
- *  2. CURSOR BLOB — one diffused crimson blob that glides after the pointer
- *     with spring + friction inertia (this file). It is deliberately *not*
- *     a solid bright red: a 120px blur over a translucent crimson gradient
- *     (0.15 → 0.05 → transparent), so it reads as a soft glint travelling
- *     under the frosted glass panels rather than a wall of colour.
+ *  2. CURSOR BLOB — one *giant* diffused crimson blob (a little wider than
+ *     the viewport) that glides after the pointer with spring + friction
+ *     inertia (this file). It is deliberately *not* a solid bright red: a
+ *     120px blur over a translucent crimson gradient (0.15 → 0.05 →
+ *     transparent), so the pointer drags a whole pool of ambient light
+ *     across the canvas and it glints under the frosted glass panels
+ *     rather than becoming a wall of colour.
  *
  * The follow maths is a damped spring integrated per frame with friction
  * decay, which is what gives the original floating, weighty feel:
@@ -29,10 +31,11 @@ import { settingsRuntime } from "@/lib/app-settings";
 
 /** Resting spot, as a fraction of the viewport, before the first pointer move. */
 const REST = { x: 0.3, y: 0.32 };
-/** Spring pull toward the pointer (lower = floatier, heavier). */
-const STIFFNESS = 0.0115;
+/** Spring pull toward the pointer (lower = floatier, heavier). Tuned low
+ *  because the shape is huge: a big mass should track lazily, not snap. */
+const STIFFNESS = 0.0095;
 /** Velocity retained per 60fps step — the "friction" that keeps it gliding. */
-const FRICTION = 0.9;
+const FRICTION = 0.93;
 /** How long the pointer must be still before the blob drifts on its own. */
 const IDLE_AFTER = 2.2;
 

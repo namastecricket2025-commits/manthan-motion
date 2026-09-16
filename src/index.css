@@ -120,12 +120,20 @@
   --mesh-hue-1: rgba(163, 22, 22, 0.07); /* deep ruby  */
   --mesh-hue-2: rgba(220, 38, 38, 0.03); /* crimson    */
   --mesh-hue-3: rgba(143, 29, 34, 0.05); /* oxblood    */
+  /* Cursor blob — halved in the day theme, or a shape wider than the
+     viewport would tint the whole pale canvas pink. */
+  --mesh-cursor-core: rgba(220, 38, 38, 0.06);
+  --mesh-cursor-tail: rgba(163, 22, 22, 0.02);
 
-  /* ---- Frosted glass (light) ----------------------------------------- */
-  --glass-fill: rgba(0, 0, 0, 0.015);
-  --glass-fill-strong: rgba(0, 0, 0, 0.035);
+  /* ---- Frosted glass (light) -----------------------------------------
+     A smoky, clear neutral base: 45% translucent white. This is what stops
+     the crimson blob behind a card from reading as a solid red panel — the
+     backdrop is mixed into a pale neutral scrim, while the mesh still
+     glints through as a soft bloom. */
+  --glass-fill: rgba(255, 255, 255, 0.45);
+  --glass-fill-strong: rgba(255, 255, 255, 0.62);
   --glass-hairline: rgba(0, 0, 0, 0.05);
-  --glass-blur: blur(25px) saturate(140%);
+  --glass-blur: blur(28px) saturate(140%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.16);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
@@ -246,12 +254,20 @@
   --mesh-hue-1: rgba(163, 22, 22, 0.18); /* deep ruby  */
   --mesh-hue-2: rgba(220, 38, 38, 0.1); /* crimson    */
   --mesh-hue-3: rgba(143, 29, 34, 0.14); /* oxblood    */
+  /* Cursor blob — the diffused crimson blend that follows the pointer. */
+  --mesh-cursor-core: rgba(220, 38, 38, 0.15);
+  --mesh-cursor-tail: rgba(163, 22, 22, 0.05);
 
-  /* ---- Frosted glass (dark) ------------------------------------------ */
-  --glass-fill: rgba(255, 255, 255, 0.02);
-  --glass-fill-strong: rgba(255, 255, 255, 0.045);
+  /* ---- Frosted glass (dark) ------------------------------------------
+     The smoky slate neutral base (55%) is deliberate: pure white-alpha glass
+     over a crimson blob lets the red straight through, which is what made
+     the cards look like solid red fills and buried the copy. Slate
+     neutralises the bleed while `saturate(140%)` keeps the mesh glowing
+     under the glass. */
+  --glass-fill: rgba(15, 23, 42, 0.55);
+  --glass-fill-strong: rgba(15, 23, 42, 0.7);
   --glass-hairline: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(25px) saturate(140%);
+  --glass-blur: blur(28px) saturate(140%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
@@ -387,9 +403,9 @@
      everywhere else that shares these two classes). Both themes are driven by
      the tokens in :root / .dark:
 
-       fill      rgba(15,23,42,0.45)  dark  / rgba(255,255,255,0.4)  light
-       blur      blur(30px) saturate(130%) so the mesh bleeds through softly
-                 without washing the content out
+       fill      rgba(15,23,42,0.55)  dark  / rgba(255,255,255,0.45)  light
+       blur      blur(28px) saturate(140%) so the mesh glints through as a
+                 soft bloom instead of reading as a solid red fill
        outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
        depth     one wide, soft ambient shadow (never a hard drop shadow)
      ------------------------------------------------ */
@@ -543,7 +559,7 @@
      conic ring keeps its crisp travelling border on top. */
   .moving-border > * {
     border-radius: calc(999px - 1.5px);
-    background: var(--glass-fill-strong);
+    background: var(--glass-fill);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
   }
@@ -576,10 +592,12 @@
   @media (prefers-reduced-motion: reduce) {
     .moving-border {
       animation: none;
+      /* a soft crimson hairline, never a solid red ring — the button keeps
+         its glass body in motionless mode too */
       background: linear-gradient(
         120deg,
-        var(--signal),
-        var(--signal-2)
+        color-mix(in srgb, var(--signal) 55%, transparent),
+        color-mix(in srgb, var(--signal-2) 45%, transparent)
       );
     }
     .moving-border:hover,
@@ -828,12 +846,16 @@
   .mesh-blob--cursor {
     top: 0;
     left: 0;
-    width: max(46vw, 44vh);
-    height: max(46vw, 44vh);
+    /* Majestic scale: one giant atmospheric shape, a touch wider than the
+       viewport, so the pointer drags a whole pool of light around rather
+       than a small spot. The smoky glass bases above keep the copy sharp
+       underneath it. */
+    width: max(105vw, 100vh);
+    height: max(105vw, 100vh);
     background: radial-gradient(
       circle,
-      rgba(220, 38, 38, 0.15) 0%,
-      rgba(163, 22, 22, 0.05) 50%,
+      var(--mesh-cursor-core, rgba(220, 38, 38, 0.15)) 0%,
+      var(--mesh-cursor-tail, rgba(163, 22, 22, 0.05)) 50%,
       transparent 100%
     );
     filter: blur(120px);
