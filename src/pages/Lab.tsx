@@ -1,3 +1,4 @@
+import MeshBackground from "@/components/MeshBackground";
 import BiologyExplorer from "@/components/lab/BiologyExplorer";
 import ChemistryWorkspace from "@/components/lab/ChemistryWorkspace";
 import PhysicsSim from "@/components/lab/PhysicsSim";
@@ -79,6 +80,9 @@ function LabShell() {
 
   return (
     <div className="lab-root" data-tab={tab}>
+      {/* the same crimson atmosphere the rest of the site runs on, behind
+          the lab's own blueprint matrix and per-subject accent glows */}
+      <MeshBackground />
       {/* scientific backdrop: blueprint matrix + ambient accent glows.
           Scoped to this section (absolute, pointer-transparent) so it never
           covers the settings dashboard underneath. */}

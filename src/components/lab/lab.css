@@ -50,10 +50,11 @@
   --lab-green: #34d399;
   --lab-violet: #a78bfa;
   --lab-cell-ink: #e2e8f0;
-  background:
-    radial-gradient(1100px 640px at 12% -8%, rgba(30, 41, 59, 0.9), transparent 60%),
-    radial-gradient(900px 560px at 108% 8%, rgba(51, 65, 85, 0.45), transparent 55%),
-    linear-gradient(180deg, #0b1120 0%, #0f172a 46%, #0a0f1e 100%);
+  /* No flat slate/purple-gray block: the page canvas is a deep warm base and
+     the shared crimson mesh (rendered inside .lab-root) supplies the depth,
+     exactly like the landing, dashboard and settings routes. The bench panels
+     keep their slate tokens so the instruments stay readable. */
+  background: linear-gradient(180deg, #12080a 0%, #0e0607 46%, #0a0506 100%);
   color: var(--lab-text);
   min-height: 100vh;
 }

@@ -141,7 +141,7 @@ export function applySettings(settings: AppSettings) {
   root.style.setProperty("--ambient-blur", (0.55 + 0.45 * ambient).toFixed(2));
   // Ambient Intensity -> the single global driver for every background glow.
   // 0% fades the blurred backdrop shapes out completely, 100% renders them
-  // at full softness. Read by `.blob-canvas` and the ambient glow layers.
+  // at full softness. Read by `.mesh-field` and the ambient glow layers.
   root.style.setProperty("--bg-glow-opacity", ambient.toFixed(3));
   // Text Comfort -> the typography scaling module (root rem size).
   root.style.setProperty("--text-scale", String(TEXT_SCALE[settings.textComfort] ?? 1));

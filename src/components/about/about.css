@@ -34,15 +34,15 @@ html:not(.dark) .about-root {
    blur(25px) saturate(140%), a 1px rgba(255,255,255,0.07) hairline and a
    wide ambient shadow. Never a flat opaque grey fill. */
 .apple-glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.02);
   -webkit-backdrop-filter: blur(25px) saturate(140%);
   backdrop-filter: blur(25px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.32);
 }
 html:not(.dark) .apple-glass {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.015);
+  border-color: rgba(0, 0, 0, 0.05);
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.14);
 }
 /* hover-lift variant: same glass, deepening ambient shadow */

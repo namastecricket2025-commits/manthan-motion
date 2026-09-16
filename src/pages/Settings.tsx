@@ -1,4 +1,4 @@
-import BlobBackground from "@/components/landing/BlobBackground";
+import MeshBackground from "@/components/MeshBackground";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { DashboardNav, type DashboardSection } from "@/components/dashboard/DashboardNav";
@@ -43,7 +43,7 @@ export default function Settings() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <BlobBackground />
+      <MeshBackground />
       <div className="relative z-10">
         {/* ---- Sidebar (desktop) ---- */}
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between border-r border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-5 backdrop-blur-xl min-[760px]:flex">

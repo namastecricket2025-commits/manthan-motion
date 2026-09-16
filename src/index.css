@@ -99,8 +99,9 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand palette (light) */
-  --ink: #f7f3f0;
+  /* Brand palette (light) — a crisp sand-white canvas so the crimson
+     ambient mesh reads as an elegant tint rather than a colour wash. */
+  --ink: #f8fafc;
   --signal: #c81f27;
   --signal-2: #8f1d22;
   --text-main: #0f172a;
@@ -108,27 +109,24 @@
      the diffused mesh behind it. */
   --text-dim: #1e293b;
   --card-border: rgba(200, 31, 39, 0.22);
-  --panel-bg: rgba(247, 243, 240, 0.55);
+  --panel-bg: rgba(248, 250, 252, 0.6);
 
   /* ---- BACKGROUND MESH (light) ----------------------------------------
-     Capped at a whisper: the blob shapes paint at 4% alpha and are smeared
-     behind a 200px blur, so "Max Glow" is a soft ambient wash — never a
-     solid red fill. */
-  --bg-canvas-a: #dc2626;
-  --bg-canvas-b: #b91c1c;
-  --bg-canvas-c: #f6f1ee;
-  --bg-canvas-alpha: 0.04;
-  /* The user's Ambient Intensity slider multiplies this (CSS side). */
-  --bg-canvas-opacity: 1;
-  --bg-mesh: rgba(220, 38, 38, 0.04);
-  --bg-mesh-blur: 200px;
+     Multi-layered crimson/ruby radial shapes behind a heavy 140px blur, so
+     the canvas keeps depth without ever tinting the copy. `--mesh-ceiling`
+     is the hard opacity cap the Ambient Intensity slider cannot exceed. */
+  --mesh-blur: 140px;
+  --mesh-ceiling: 0.9;
+  --mesh-hue-1: rgba(163, 22, 22, 0.07); /* deep ruby  */
+  --mesh-hue-2: rgba(220, 38, 38, 0.03); /* crimson    */
+  --mesh-hue-3: rgba(143, 29, 34, 0.05); /* oxblood    */
 
   /* ---- Frosted glass (light) ----------------------------------------- */
-  --glass-fill: rgba(255, 255, 255, 0.4);
-  --glass-fill-strong: rgba(255, 255, 255, 0.55);
-  --glass-hairline: rgba(0, 0, 0, 0.04);
-  --glass-blur: blur(30px) saturate(130%);
-  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
+  --glass-fill: rgba(0, 0, 0, 0.015);
+  --glass-fill-strong: rgba(0, 0, 0, 0.035);
+  --glass-hairline: rgba(0, 0, 0, 0.05);
+  --glass-blur: blur(25px) saturate(140%);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.16);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
@@ -239,23 +237,22 @@
   --panel-bg: rgba(21, 12, 11, 0.6);
 
   /* ---- BACKGROUND MESH (dark) ----------------------------------------
-     Same cap as light mode, one step richer: 12% alpha shapes behind the
-     same 200px blur. Even at 100% ambient this reads as soft ambient
-     lighting, never a saturated crimson slab over the copy. */
-  --bg-canvas-a: #dc2626;
-  --bg-canvas-b: #b91c1c;
-  --bg-canvas-c: #150c0b;
-  --bg-canvas-alpha: 0.12;
-  --bg-canvas-opacity: 1;
-  --bg-mesh: rgba(220, 38, 38, 0.12);
-  --bg-mesh-blur: 200px;
+     The signature deep-red atmosphere: large ruby and crimson radial shapes
+     under one heavy 140px blur. Alphas stay in the 10–18% band and the whole
+     field is capped by `--mesh-ceiling`, so it glows like embers behind the
+     glass instead of becoming a bright wall. */
+  --mesh-blur: 140px;
+  --mesh-ceiling: 0.85;
+  --mesh-hue-1: rgba(163, 22, 22, 0.18); /* deep ruby  */
+  --mesh-hue-2: rgba(220, 38, 38, 0.1); /* crimson    */
+  --mesh-hue-3: rgba(143, 29, 34, 0.14); /* oxblood    */
 
   /* ---- Frosted glass (dark) ------------------------------------------ */
-  --glass-fill: rgba(15, 23, 42, 0.45);
-  --glass-fill-strong: rgba(15, 23, 42, 0.6);
-  --glass-hairline: rgba(255, 255, 255, 0.06);
-  --glass-blur: blur(30px) saturate(130%);
-  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.5);
+  --glass-fill: rgba(255, 255, 255, 0.02);
+  --glass-fill-strong: rgba(255, 255, 255, 0.045);
+  --glass-hairline: rgba(255, 255, 255, 0.07);
+  --glass-blur: blur(25px) saturate(140%);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
      heading warm-white (`--text-main`) and holds it for just over half the
@@ -653,29 +650,6 @@
   }
 
   /* ------------------------------------------------
-     Manthan mark — exact shapes from the reference files
-     (red circle + thin connector + small light circle),
-     with the hero-sized orbit animation.
-     ------------------------------------------------ */
-  .logo-svg .big-circle {
-    fill: var(--signal);
-  }
-  .logo-svg .small-circle {
-    fill: var(--text-main);
-  }
-  .logo-svg .connector {
-    stroke: var(--text-dim);
-    stroke-width: 2;
-  }
-  /* NOTE: the hero mark's orbit is driven by GSAP in OrbitMark.tsx with an
-     svgOrigin pivot at the big circle's center. A CSS @keyframes orbit on
-     .orbit-group previously fought that transform every frame (last-in-DOM
-     wins), which visually detached the connector line from the circle. */
-  .logo-svg .orbit-group {
-    transform-origin: 200px 200px;
-  }
-
-  /* ------------------------------------------------
      "How it works" — sticky horizontal card track
      ------------------------------------------------ */
   .how-track {
@@ -738,43 +712,108 @@
   }
 
   /* ------------------------------------------------
-     Static ambient radial lighting — the second, fully controlled half of
-     the background mesh. Two diffused pools (warm red + cool slate) that
-     never exceed `--bg-mesh` (12% dark / 4% light) and fade with the
-     Ambient Intensity slider, so the canvas keeps depth without ever
-     becoming a solid colour behind the copy.
+     THE MANTHAN MESH — the signature background layer.
+
+     Four very large radial shapes (deep ruby, crimson, oxblood) drift on
+     slow, prime-length loops. Each blob carries its own `filter:
+     blur(140px)`, which is the cheap way to do this: the browser rasterises
+     the blurred shape once and then only composites a transform each frame,
+     so the motion stays smooth without re-blurring a full-viewport texture.
+
+     Visibility is double-clamped: the shape alphas live in the 3–18% band
+     per theme, and `.mesh-field` opacity is capped by `--mesh-ceiling` so
+     the Ambient Intensity slider (--bg-glow-opacity) can never push the
+     atmosphere into a bright wall behind the text.
      ------------------------------------------------ */
-  .mesh-glow {
+  .mesh-field {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background:
-      radial-gradient(1180px 620px at 76% -10%, var(--bg-mesh), transparent 68%),
-      radial-gradient(880px 520px at 4% 14%, var(--bg-mesh), transparent 70%),
-      radial-gradient(
-        980px 560px at 50% 118%,
-        color-mix(in srgb, #38bdf8 8%, transparent),
-        transparent 72%
-      );
-    opacity: var(--bg-glow-opacity, 1);
+    overflow: hidden;
+    opacity: min(
+      1,
+      calc(var(--mesh-ceiling, 0.85) * var(--bg-glow-opacity, 1))
+    );
     transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-
-  .blob-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    opacity: var(--bg-canvas-opacity);
-    pointer-events: none;
-    /* The mesh is capped twice: the shapes already paint at 4-12% alpha
-       (--bg-canvas-alpha), then this massive blur diffuses whatever is left
-       into soft ambient lighting. Text can never land on a solid red fill. */
-    filter: blur(var(--bg-mesh-blur));
-    will-change: filter, opacity;
+  .mesh-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(var(--mesh-blur, 140px));
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    animation: mesh-drift 46s ease-in-out infinite;
+  }
+  /* Each shape holds its hue across the core before fading out, which is what
+     gives the field body once the 140px blur has softened the edges. Sizing
+     is `max(vw, vh)` so tall, narrow phones get the same coverage as a wide
+     desktop — there is never a flat, empty quadrant left behind. */
+  .mesh-blob--a {
+    top: -24%;
+    left: -16%;
+    width: max(62vw, 58vh);
+    height: max(62vw, 58vh);
+    background: radial-gradient(
+      circle at 42% 42%,
+      var(--mesh-hue-1) 0%,
+      var(--mesh-hue-1) 42%,
+      transparent 78%
+    );
+    animation-duration: 54s;
+  }
+  .mesh-blob--b {
+    top: -18%;
+    right: -20%;
+    width: max(56vw, 52vh);
+    height: max(56vw, 52vh);
+    background: radial-gradient(
+      circle at 58% 46%,
+      var(--mesh-hue-2) 0%,
+      var(--mesh-hue-2) 38%,
+      transparent 74%
+    );
+    animation-duration: 46s;
+    animation-direction: reverse;
+  }
+  .mesh-blob--c {
+    bottom: -28%;
+    left: 4%;
+    width: max(66vw, 64vh);
+    height: max(66vw, 64vh);
+    background: radial-gradient(
+      circle at 50% 54%,
+      var(--mesh-hue-3) 0%,
+      var(--mesh-hue-3) 44%,
+      transparent 80%
+    );
+    animation-duration: 62s;
+  }
+  .mesh-blob--d {
+    top: 30%;
+    left: 36%;
+    width: max(44vw, 42vh);
+    height: max(44vw, 42vh);
+    background: radial-gradient(
+      circle at 50% 50%,
+      var(--mesh-hue-2) 0%,
+      var(--mesh-hue-2) 34%,
+      transparent 72%
+    );
+    animation-duration: 38s;
+    animation-direction: reverse;
+  }
+  @keyframes mesh-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    33% {
+      transform: translate3d(4%, -3%, 0) scale(1.08);
+    }
+    66% {
+      transform: translate3d(-3%, 4%, 0) scale(0.95);
+    }
   }
 
 }
