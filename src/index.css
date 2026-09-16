@@ -103,22 +103,39 @@
   --ink: #f7f3f0;
   --signal: #c81f27;
   --signal-2: #8f1d22;
-  --text-main: #1b1110;
-  /* Captions/labels sit over the red mesh — deep slate keeps them sharp. */
-  --text-dim: #374151;
+  --text-main: #0f172a;
+  /* Every paragraph, caption and label clears contrast on pale glass and on
+     the diffused mesh behind it. */
+  --text-dim: #1e293b;
   --card-border: rgba(200, 31, 39, 0.22);
   --panel-bg: rgba(247, 243, 240, 0.55);
-  --bg-canvas-a: #c81f27;
-  --bg-canvas-b: #8f1d22;
-  --bg-canvas-c: #f2ece8;
-  --bg-canvas-opacity: 0.65;
+
+  /* ---- BACKGROUND MESH (light) ----------------------------------------
+     Capped at a whisper: the blob shapes paint at 4% alpha and are smeared
+     behind a 200px blur, so "Max Glow" is a soft ambient wash — never a
+     solid red fill. */
+  --bg-canvas-a: #dc2626;
+  --bg-canvas-b: #b91c1c;
+  --bg-canvas-c: #f6f1ee;
+  --bg-canvas-alpha: 0.04;
+  /* The user's Ambient Intensity slider multiplies this (CSS side). */
+  --bg-canvas-opacity: 1;
+  --bg-mesh: rgba(220, 38, 38, 0.04);
+  --bg-mesh-blur: 200px;
+
+  /* ---- Frosted glass (light) ----------------------------------------- */
+  --glass-fill: rgba(255, 255, 255, 0.4);
+  --glass-fill-strong: rgba(255, 255, 255, 0.55);
+  --glass-hairline: rgba(0, 0, 0, 0.04);
+  --glass-blur: blur(30px) saturate(130%);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
      word, then blends through two warm oxide stops into the signal red on
      the final letters. The extra intermediate stops make the black→red
      sweep silky instead of a hard snap. */
-  --gt-head: #241412;
+  --gt-head: #0f172a;
   --gt-tail: #c81f27;
 
   /* Stroke-text display gradient (light): a golden-ember sweep that pops
@@ -214,15 +231,31 @@
   --ink: #150c0b;
   --signal: #e0323a;
   --signal-2: #8f1d22;
-  --text-main: #fdf8f6;
-  /* Bright grey rather than warm grey: legible on glass over the red mesh. */
-  --text-dim: #cbd5e1;
+  --text-main: #f8fafc;
+  /* Crisp off-white / silver: card copy and subtext stay fully legible on
+     the glass no matter what the mesh is doing behind it. */
+  --text-dim: #e2e8f0;
   --card-border: rgba(224, 50, 58, 0.2);
   --panel-bg: rgba(21, 12, 11, 0.6);
-  --bg-canvas-a: #e0323a;
-  --bg-canvas-b: #8f1d22;
+
+  /* ---- BACKGROUND MESH (dark) ----------------------------------------
+     Same cap as light mode, one step richer: 12% alpha shapes behind the
+     same 200px blur. Even at 100% ambient this reads as soft ambient
+     lighting, never a saturated crimson slab over the copy. */
+  --bg-canvas-a: #dc2626;
+  --bg-canvas-b: #b91c1c;
   --bg-canvas-c: #150c0b;
-  --bg-canvas-opacity: 0.9;
+  --bg-canvas-alpha: 0.12;
+  --bg-canvas-opacity: 1;
+  --bg-mesh: rgba(220, 38, 38, 0.12);
+  --bg-mesh-blur: 200px;
+
+  /* ---- Frosted glass (dark) ------------------------------------------ */
+  --glass-fill: rgba(15, 23, 42, 0.45);
+  --glass-fill-strong: rgba(15, 23, 42, 0.6);
+  --glass-hairline: rgba(255, 255, 255, 0.06);
+  --glass-blur: blur(30px) saturate(130%);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.5);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
      heading warm-white (`--text-main`) and holds it for just over half the
@@ -230,7 +263,7 @@
      final letters. Matching the heading colour exactly plus two intermediate
      stops keeps the word reading as heading text while the tail ignites
      smoothly. */
-  --gt-head: #f4ece9;
+  --gt-head: #f8fafc;
   --gt-tail: #ff4f58;
 
   /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
@@ -352,44 +385,33 @@
    ============================================================ */
 @layer components {
   /* ------------------------------------------------
-     Authentic Apple glass — the single surface language for every
-     card, grid item, pipeline card and CTA wrapper on the home page
-     (and everywhere else that shares these two classes).
+     Authentic Apple glass — the single surface language for every card, grid
+     item, pipeline block, stats module and CTA wrapper on the home page (and
+     everywhere else that shares these two classes). Both themes are driven by
+     the tokens in :root / .dark:
 
-       fill      rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
-       blur      blur(25px) saturate(160%)  so the red mesh bleeds through
+       fill      rgba(15,23,42,0.45)  dark  / rgba(255,255,255,0.4)  light
+       blur      blur(30px) saturate(130%) so the mesh bleeds through softly
+                 without washing the content out
        outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
        depth     one wide, soft ambient shadow (never a hard drop shadow)
      ------------------------------------------------ */
   .glass-panel {
-    background: rgba(255, 255, 255, 0.02);
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-hairline);
     border-radius: 18px;
-    box-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--glass-shadow);
   }
 
   .glass-chip {
-    background: rgba(255, 255, 255, 0.03);
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-hairline);
     border-radius: 999px;
-    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.4);
-  }
-
-  html:not(.dark) .glass-panel,
-  [data-theme="light"] .glass-panel {
-    background: rgba(0, 0, 0, 0.015);
-    border-color: rgba(0, 0, 0, 0.04);
-    box-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
-  }
-  html:not(.dark) .glass-chip,
-  [data-theme="light"] .glass-chip {
-    background: rgba(0, 0, 0, 0.02);
-    border-color: rgba(0, 0, 0, 0.04);
-    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--glass-shadow);
   }
 
   /* ------------------------------------------------
@@ -399,19 +421,11 @@
      `--text-dim` is scoped here so the muted copy stays legible.
      ------------------------------------------------ */
   .site-footer {
-    --text-dim: #cbd5e1;
-    background: rgba(255, 255, 255, 0.02);
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.5);
-  }
-  html:not(.dark) .site-footer,
-  [data-theme="light"] .site-footer {
-    --text-dim: #374151;
-    background: rgba(0, 0, 0, 0.015);
-    border-top-color: rgba(0, 0, 0, 0.04);
-    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.12);
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border-top: 1px solid var(--glass-hairline);
+    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.35);
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -532,13 +546,9 @@
      conic ring keeps its crisp travelling border on top. */
   .moving-border > * {
     border-radius: calc(999px - 1.5px);
-    background: rgba(255, 255, 255, 0.03);
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-  }
-  html:not(.dark) .moving-border > *,
-  [data-theme="light"] .moving-border > * {
-    background: rgba(0, 0, 0, 0.02);
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
   }
   .moving-border:hover,
   .moving-border:active,
@@ -562,7 +572,7 @@
     }
     .feature-card:active {
       border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--glass-fill-strong);
     }
   }
 
@@ -593,14 +603,10 @@
     .feature-card:hover {
       transform: translateY(-5px);
       border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--glass-fill-strong);
       box-shadow:
-        0 30px 80px -28px rgba(0, 0, 0, 0.5),
+        var(--glass-shadow),
         0 0 0 1px color-mix(in srgb, var(--signal) 14%, transparent);
-    }
-    html:not(.dark) .feature-card:hover,
-    [data-theme="light"] .feature-card:hover {
-      background: rgba(0, 0, 0, 0.035);
     }
     .btn-ghost {
       transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
@@ -732,8 +738,29 @@
   }
 
   /* ------------------------------------------------
-     Pixelated blob canvas
+     Static ambient radial lighting — the second, fully controlled half of
+     the background mesh. Two diffused pools (warm red + cool slate) that
+     never exceed `--bg-mesh` (12% dark / 4% light) and fade with the
+     Ambient Intensity slider, so the canvas keeps depth without ever
+     becoming a solid colour behind the copy.
      ------------------------------------------------ */
+  .mesh-glow {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(1180px 620px at 76% -10%, var(--bg-mesh), transparent 68%),
+      radial-gradient(880px 520px at 4% 14%, var(--bg-mesh), transparent 70%),
+      radial-gradient(
+        980px 560px at 50% 118%,
+        color-mix(in srgb, #38bdf8 8%, transparent),
+        transparent 72%
+      );
+    opacity: var(--bg-glow-opacity, 1);
+    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   .blob-canvas {
     position: fixed;
     inset: 0;
@@ -743,6 +770,11 @@
     image-rendering: pixelated;
     opacity: var(--bg-canvas-opacity);
     pointer-events: none;
+    /* The mesh is capped twice: the shapes already paint at 4-12% alpha
+       (--bg-canvas-alpha), then this massive blur diffuses whatever is left
+       into soft ambient lighting. Text can never land on a solid red fill. */
+    filter: blur(var(--bg-mesh-blur));
+    will-change: filter, opacity;
   }
 
 }

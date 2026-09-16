@@ -12,6 +12,7 @@ import { TextGenerate } from "@/components/landing/TextGenerate";
 import { useAuth } from "@/hooks/use-auth";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
+import { settingsRuntime } from "@/lib/app-settings";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -133,13 +134,16 @@ function Hero() {
 }
 
 export default function Landing() {
-  // Lenis glide-scrolling for the marketing page (reduced-motion falls back
-  // to native scrolling inside the hook).
-  useSmoothScroll();
+  // Lenis glide-scrolling for the marketing page (reduced-motion — OS or the
+  // app's Motionless Mode — falls back to native scrolling inside the hook).
+  useSmoothScroll(!settingsRuntime.reduceMotion);
 
   return (
     <div className="relative min-h-screen">
+      {/* Diluted, blurred mesh + its static ambient pools. Both are capped in
+          the stylesheet, so Max Glow stays a backdrop rather than a red fill. */}
       <BlobBackground />
+      <div className="mesh-glow" aria-hidden="true" />
       <div className="relative z-10">
         {/* Anchor target for the "Home" nav item — the header is fixed, so
             an anchor on it can't scroll the page; this spans the top. */}

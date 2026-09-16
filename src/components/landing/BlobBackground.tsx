@@ -1,16 +1,20 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Manthan background — "pixelated drifting blobs".
+ * Manthan background — a slowly drifting metaball mesh.
  *
- * A metaball field rendered to a low-resolution offscreen canvas, then
- * upscaled onto the visible canvas with `image-rendering: pixelated` for
- * the chunky retro-pixel look. Each blob random-walks its heading (±15–20°
- * every few seconds), soft-bounces at the viewport edges, gently repels
- * neighbours (so they never cluster), and drifts toward the cursor only on
+ * A metaball field rendered to a low-resolution offscreen canvas and upscaled
+ * onto the visible canvas. Each blob random-walks its heading (±15–20° every
+ * few seconds), soft-bounces at the viewport edges, gently repels neighbours
+ * (so they never cluster), and drifts toward the cursor only on
  * pointer-capable devices. The loop pauses when the tab is hidden or the
  * canvas scrolls out of view, mobile gets fewer blobs + coarser pixels, and
  * `prefers-reduced-motion` freezes a single static frame.
+ *
+ * Calibration: the shapes paint at `--bg-canvas-alpha` (4% light / 12% dark)
+ * and the whole layer sits behind a 200px `--bg-mesh-blur`, so the result is
+ * soft ambient lighting rather than a saturated red fill — at any Ambient
+ * Intensity, including 100%.
  */
 
 interface Drifter {
@@ -42,10 +46,31 @@ function hexToRgb(hex: string): RGB {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-function readCanvasColors(): { a: RGB; b: RGB; c: RGB } {
+interface MeshPalette {
+  a: RGB;
+  b: RGB;
+  c: RGB;
+  /** Per-pixel opacity cap for the mesh (4% light / 12% dark). */
+  alpha: number;
+}
+
+/**
+ * The mesh is deliberately capped at a whisper: the texture paints each pixel
+ * with `--bg-canvas-alpha` (0.04 light / 0.12 dark) instead of solid colour,
+ * and `--bg-mesh-blur` (200px) smears whatever remains into soft ambient
+ * lighting. Max Glow therefore stays a backdrop — never a red slab over the
+ * headline.
+ */
+function readMeshPalette(): MeshPalette {
   const cs = getComputedStyle(document.documentElement);
   const read = (name: string) => hexToRgb(cs.getPropertyValue(name).trim());
-  return { a: read("--bg-canvas-a"), b: read("--bg-canvas-b"), c: read("--bg-canvas-c") };
+  const raw = parseFloat(cs.getPropertyValue("--bg-canvas-alpha"));
+  return {
+    a: read("--bg-canvas-a"),
+    b: read("--bg-canvas-b"),
+    c: read("--bg-canvas-c"),
+    alpha: Number.isFinite(raw) ? clamp(raw, 0, 1) : 0.12,
+  };
 }
 
 export default function BlobBackground() {
@@ -70,7 +95,7 @@ export default function BlobBackground() {
     let width = 0;
     let height = 0;
     let pixel = 10;
-    let colors: { a: RGB; b: RGB; c: RGB } = readCanvasColors();
+    let colors: MeshPalette = readMeshPalette();
     let running = true;
     let visible = document.visibilityState === "visible";
     let raf = 0;
@@ -114,8 +139,8 @@ export default function BlobBackground() {
       canvas!.height = Math.ceil(height * pixel * dpr);
       canvas!.style.width = `${cssW}px`;
       canvas!.style.height = `${cssH}px`;
-      image = lowCtx!.createImageData(width, height);
-      colors = readCanvasColors();
+      image =      lowCtx!.createImageData(width, height);
+      colors = readMeshPalette();
       buildDrifters();
       // Freeze the first frame immediately (also covers reduced-motion)
       draw();
@@ -176,6 +201,8 @@ export default function BlobBackground() {
       const parY = curY * height * 0.07;
 
       const { a, b, c } = colors;
+      // One opacity byte for every shape pixel — the whole point of the cap.
+      const alphaByte = Math.max(0, Math.min(255, Math.round(colors.alpha * 255)));
       const data = image.data;
       const w = width;
       const h = height;
@@ -197,7 +224,7 @@ export default function BlobBackground() {
           data[p++] = col[0];
           data[p++] = col[1];
           data[p++] = col[2];
-          data[p++] = 255;
+          data[p++] = alphaByte;
         }
       }
       lowCtx!.putImageData(image, 0, 0);
@@ -272,9 +299,9 @@ export default function BlobBackground() {
       }
     }
 
-    // Re-read palette on theme change (data-theme / .dark)
+    // Re-read palette (including the alpha cap) on theme change
     const themeObserver = new MutationObserver(() => {
-      colors = readCanvasColors();
+      colors = readMeshPalette();
       if (reduced || !running) draw();
     });
     themeObserver.observe(document.documentElement, {
