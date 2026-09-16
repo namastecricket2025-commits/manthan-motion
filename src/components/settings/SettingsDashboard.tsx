@@ -51,7 +51,10 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { SPRING } from "@/lib/motion";
+/** Ultra-smooth spring for this surface: softer and better damped than the
+ *  lab's default so accordion cards and selection pills settle without any
+ *  visible overshoot wobble. */
+const SET_SPRING = { type: "spring", stiffness: 200, damping: 24 } as const;
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { FrameTarget, TextComfort, ThemeMode } from "@/lib/app-settings";
@@ -251,7 +254,7 @@ function FloatField({
 
 export default function SettingsDashboard({ bare = false }: { bare?: boolean } = {}) {
   const { settings, update, reset, systemReducedMotion } = useSettings();
-  const spring = settings.reduceMotion ? { duration: 0 } : SPRING;
+  const spring = settings.reduceMotion ? { duration: 0 } : SET_SPRING;
 
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
