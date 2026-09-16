@@ -5,6 +5,7 @@ import Footer from "@/components/landing/Footer";
 import HeroPreview from "@/components/landing/HeroPreview";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import Navbar from "@/components/landing/Navbar";
+import OrbitMark from "@/components/landing/OrbitMark";
 import Pipeline from "@/components/landing/Pipeline";
 import Stats from "@/components/landing/Stats";
 import { TextGenerate } from "@/components/landing/TextGenerate";
@@ -59,10 +60,20 @@ function Hero() {
 
   return (
     <div ref={ref}>
-      {/* Badge → headline → copy → CTAs. The hero opens the page directly:
-          no floating mark, no empty full-height screen — the headline leads
-          against the ambient mesh. */}
-      <section className="relative mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 md:pb-24 md:pt-36">
+      {/* Full-height mark — the landing page centrepiece: the large primary
+          circle anchored in the middle with the small light satellite
+          orbiting it on a continuous 360° loop. */}
+      <section
+        aria-label="Manthan"
+        className="relative flex min-h-[calc(100svh-72px)] items-center justify-center px-4 pb-10 pt-24"
+      >
+        <div data-hero-fade className="h-full w-full">
+          <OrbitMark />
+        </div>
+      </section>
+
+      {/* Badge → headline → copy → CTAs */}
+      <section className="relative mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:pb-24">
         <div className="grid items-center gap-12 min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,440px)] min-[900px]:gap-16">
           <div>
             <span data-hero-fade className="kicker">
