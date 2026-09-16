@@ -1,0 +1,444 @@
+/* ============================================================
+   About Us (/about)
+   Inherits the global Manthan theme — background, ink and signal
+   tokens — and layers authentic Apple-style glassmorphism on top.
+   No slate-charcoal: every colour here resolves from the theme.
+   ============================================================ */
+
+/* ---------- 1. Authentic Apple glass ----------
+   Exactly: rgba(255,255,255,0.03) in dark / rgba(0,0,0,0.02) in light,
+   blur(25px) saturate(180%), a 1px rgba(255,255,255,0.08) hairline and a
+   wide ambient shadow. Never a flat opaque grey fill. */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.03);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4);
+}
+html:not(.dark) .apple-glass {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.07);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.16);
+}
+/* hover-lift variant: same glass, deepening ambient shadow */
+.apple-glass--lift {
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.apple-glass--lift:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 40px 100px -20px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(224, 50, 58, 0.1);
+}
+html:not(.dark) .apple-glass--lift:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 40px 100px -20px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(200, 31, 39, 0.1);
+}
+
+/* ---------- 2. Page scaffolding ---------- */
+.about-root {
+  position: relative;
+  width: 100%;
+}
+.about-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1180px;
+  padding-inline: 1rem;
+}
+@media (min-width: 640px) {
+  .about-shell {
+    padding-inline: 1.5rem;
+  }
+}
+.about-section {
+  position: relative;
+  padding-block: clamp(72px, 12vw, 148px);
+}
+.about-section--last {
+  padding-bottom: clamp(88px, 14vw, 180px);
+}
+.about-rule {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--signal) 34%, transparent),
+    transparent
+  );
+  opacity: 0.7;
+}
+
+/* ---------- 3. Multi-axis fluid text ----------
+   Each word sits behind a clipping mask; the inner span flies in on three
+   axes (Y travel, X-rotation, Y-rotation) with a blur burn-off. */
+.axis-word {
+  display: inline-block;
+  overflow: clip;
+  vertical-align: bottom;
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+  perspective: 720px;
+}
+.axis-word__inner {
+  display: inline-block;
+  opacity: 0; /* GSAP flies it in; keeps the first paint clean */
+  transform-origin: 50% 100%;
+  will-change: transform, opacity, filter;
+}
+html[data-motion="reduced"] .axis-word__inner {
+  opacity: 1;
+}
+
+/* ---------- 4. Hero ---------- */
+.about-hero {
+  position: relative;
+  padding-top: clamp(120px, 20vh, 190px);
+  padding-bottom: clamp(48px, 8vw, 90px);
+}
+.about-hero__inner {
+  position: relative;
+  z-index: 1;
+}
+.about-hero__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+  color: var(--text-main);
+  font-size: clamp(2.9rem, 11vw, 7.4rem);
+}
+.about-hero__sub {
+  margin-top: clamp(20px, 3vw, 34px);
+  max-width: 46ch;
+  font-size: clamp(1rem, 2.1vw, 1.35rem);
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.about-hero__glow {
+  position: absolute;
+  inset-inline: 0;
+  top: -10%;
+  height: 70%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 60% 60% at 50% 40%,
+    color-mix(in srgb, var(--signal) 16%, transparent),
+    transparent 70%
+  );
+  filter: blur(30px);
+  opacity: calc(0.9 * var(--ambient, 1));
+}
+
+/* ---------- 5. The Grand Significance of Our Name ---------- */
+.about-split {
+  display: grid;
+  gap: 2.5rem;
+}
+@media (min-width: 900px) {
+  .about-split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+}
+/* pinned title column — sticks to the viewport while the right column flows */
+.about-split__pin {
+  position: static;
+}
+@media (min-width: 900px) {
+  .about-split__pin {
+    position: sticky;
+    top: clamp(120px, 18vh, 190px);
+  }
+}
+.about-split__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-size: clamp(2rem, 4.4vw, 3.4rem);
+  color: var(--text-main);
+}
+/* elements that start hidden and are flown in by GSAP */
+.about-pre {
+  opacity: 0;
+}
+html[data-motion="reduced"] .about-pre {
+  opacity: 1;
+}
+.about-split__rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  padding-block: clamp(0px, 4vh, 60px);
+}
+.about-line {
+  font-size: clamp(1.05rem, 2.2vw, 1.65rem);
+  line-height: 1.55;
+  letter-spacing: -0.012em;
+  color: var(--text-main);
+  opacity: 0.2; /* scrubbed up to 1 as each line crosses the viewport centre */
+  will-change: opacity;
+}
+html[data-motion="reduced"] .about-line {
+  opacity: 1;
+}
+
+/* ---------- 6. Visionary mission ---------- */
+.about-mission__intro {
+  max-width: 62ch;
+  margin-inline: auto;
+  text-align: center;
+}
+.about-mission__grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 2rem);
+  margin-top: clamp(2.5rem, 6vw, 4.5rem);
+}
+.about-pillar {
+  position: relative;
+  grid-column: 1 / -1;
+  border-radius: 26px;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+}
+@media (min-width: 900px) {
+  .about-pillar--left {
+    grid-column: 1 / span 6;
+  }
+  .about-pillar--right {
+    grid-column: 7 / span 6;
+    margin-top: clamp(2rem, 5vw, 4.5rem);
+  }
+  .about-pillar--float {
+    grid-column: 3 / span 8;
+    margin-top: clamp(1.5rem, 4vw, 3.5rem);
+  }
+}
+.about-pillar__icon {
+  display: inline-flex;
+  height: 46px;
+  width: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--signal);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+}
+html:not(.dark) .about-pillar__icon {
+  border-color: rgba(0, 0, 0, 0.07);
+  background: rgba(0, 0, 0, 0.02);
+}
+.about-pillar__title {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+}
+.about-pillar__body {
+  margin-top: 0.6rem;
+  font-size: clamp(0.95rem, 1.7vw, 1.05rem);
+  line-height: 1.62;
+  color: var(--text-dim);
+}
+.about-pillar__index {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+/* ---------- 7. Founder ---------- */
+.about-quote {
+  position: relative;
+  margin-inline: auto;
+  max-width: 60rem;
+  border-radius: 30px;
+  padding: clamp(1.75rem, 4vw, 3.25rem);
+  text-align: center;
+}
+/* glowing red accent frame */
+.about-quote::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--signal) 85%, transparent),
+    color-mix(in srgb, var(--signal) 6%, transparent) 42%,
+    color-mix(in srgb, var(--signal) 55%, transparent)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.about-quote__inner {
+  position: relative;
+  z-index: 1;
+}
+.about-quote__mark {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 5rem);
+  line-height: 0.6;
+  color: var(--signal);
+  opacity: 0.55;
+}
+.about-quote__text {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.4vw, 1.7rem);
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+.about-quote__glow {
+  position: absolute;
+  inset: 8% 12%;
+  border-radius: 999px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 70% 70% at 50% 50%,
+    color-mix(in srgb, var(--signal) 26%, transparent),
+    transparent 72%
+  );
+  filter: blur(46px);
+  opacity: calc(0.85 * var(--ambient, 1));
+}
+.about-founder__bio {
+  margin-inline: auto;
+  margin-top: clamp(2rem, 4vw, 3rem);
+  max-width: 66ch;
+  text-align: center;
+  font-size: clamp(0.95rem, 1.8vw, 1.08rem);
+  line-height: 1.75;
+  color: var(--text-dim);
+}
+
+/* ---------- 8. Why align ---------- */
+.about-why {
+  display: grid;
+  gap: 1rem;
+  margin-top: clamp(2.25rem, 5vw, 3.5rem);
+}
+.about-point {
+  display: flex;
+  gap: 1.1rem;
+  border-radius: 22px;
+  padding: clamp(1.15rem, 2.4vw, 1.6rem);
+}
+.about-point__n {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--signal);
+  padding-top: 0.2rem;
+}
+.about-point__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+.about-point__body {
+  margin-top: 0.35rem;
+  font-size: clamp(0.9rem, 1.6vw, 1rem);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.about-badge {
+  position: relative;
+  margin-top: clamp(2.25rem, 5vw, 3.5rem);
+  margin-inline: auto;
+  max-width: 64rem;
+  border-radius: 26px;
+  overflow: hidden;
+  padding: clamp(1.5rem, 3.4vw, 2.5rem);
+  text-align: center;
+}
+/* highlighted statement: a soft signal wash over the same glass */
+.about-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse 80% 130% at 50% 0%,
+    color-mix(in srgb, var(--signal) 22%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+.about-badge__text {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+.about-badge__text em {
+  font-style: normal;
+  color: var(--signal);
+}
+
+/* ---------- 9. Section headings ---------- */
+.about-h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  color: var(--text-main);
+  font-size: clamp(1.9rem, 4.6vw, 3.35rem);
+}
+.about-lede {
+  margin-top: 1.1rem;
+  font-size: clamp(0.98rem, 1.9vw, 1.12rem);
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+/* ---------- 10. Motion fallbacks ---------- */
+html[data-motion="reduced"] .about-pillar,
+html[data-motion="reduced"] .about-point,
+html[data-motion="reduced"] .about-quote,
+html[data-motion="reduced"] .about-badge {
+  transform: none !important;
+  opacity: 1 !important;
+}

@@ -166,6 +166,8 @@ export default function Dashboard() {
       navigate("/lab");
     } else if (key === "settings") {
       navigate("/settings");
+    } else if (key === "about") {
+      navigate("/about");
     } else {
       setView(key);
       navigate(key === "notebooks" ? "/dashboard?view=notebooks" : "/dashboard", {

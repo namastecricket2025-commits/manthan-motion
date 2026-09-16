@@ -1,13 +1,14 @@
-import { BookOpen, FlaskConical, LayoutDashboard, Settings2 } from "lucide-react";
+import { BookOpen, FlaskConical, Info, LayoutDashboard, Settings2 } from "lucide-react";
 
 /** Every destination reachable from the app sidebar. */
-export type DashboardSection = "dashboard" | "notebooks" | "lab" | "settings";
+export type DashboardSection = "dashboard" | "notebooks" | "lab" | "settings" | "about";
 
 const ITEMS: { key: DashboardSection; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "notebooks", label: "Notebooks", icon: BookOpen },
   { key: "lab", label: "STEM Lab", icon: FlaskConical },
   { key: "settings", label: "Settings", icon: Settings2 },
+  { key: "about", label: "About Us", icon: Info },
 ];
 
 /**

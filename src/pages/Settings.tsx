@@ -31,6 +31,7 @@ export default function Settings() {
     if (key === "dashboard") navigate("/dashboard");
     else if (key === "notebooks") navigate("/dashboard?view=notebooks");
     else if (key === "lab") navigate("/lab");
+    else if (key === "about") navigate("/about");
   };
 
   const handleSignOut = async () => {
