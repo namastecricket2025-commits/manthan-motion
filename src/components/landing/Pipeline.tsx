@@ -71,14 +71,16 @@ export default function Pipeline() {
         opacity: 1,
         y: 0,
         scale: 1,
+        clearProps: "transform",
       });
       return;
     }
 
     const ctx = gsap.context(() => {
-      // Entrance reveal for the heading block
+      // Entrance reveal for the heading block (the cards get their own
+      // scroll-driven glide below, so they are excluded here).
       gsap.fromTo(
-        root.querySelectorAll<HTMLElement>("[data-reveal]"),
+        root.querySelectorAll<HTMLElement>("[data-reveal]:not(.how-card)"),
         { opacity: 0, y: 24 },
         {
           opacity: 1,
@@ -102,15 +104,23 @@ export default function Pipeline() {
           end: () => `+=${distance() * 1.15}`,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
-            // Center-focus scaling: the card nearest the viewport center
-            // scales up slightly; neighbours ease back down.
+            // Scroll-delta glide: every card still waiting on the right of the
+            // viewport axis carries a horizontal offset that decays to zero as
+            // it reaches the focus line, so the row reads as a track sliding
+            // right-to-left under the pointer. The focused card also lifts
+            // (scale + shadow); cards already passed sit clean at rest.
             const x = gsap.getProperty(track, "x") as number;
             const center = viewport.clientWidth / 2 - x;
             for (const card of cards) {
               const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-              const delta = Math.abs(center - cardCenter);
-              const t = Math.min(1, delta / (card.offsetWidth * 0.85));
-              card.style.transform = `scale(${(1 + 0.06 * (1 - t)).toFixed(4)})`;
+              const ahead = (cardCenter - center) / (card.offsetWidth * 1.5);
+              const t = Math.min(1, Math.max(0, ahead));
+              const ease = t * t; // ease-out: the glide settles as it lands
+              const scale = 1 + 0.06 * (1 - Math.min(1, Math.abs(cardCenter - center) / (card.offsetWidth * 0.85)));
+              card.style.transform =
+                `translate3d(${(64 * ease).toFixed(2)}px, ${(10 * ease).toFixed(2)}px, 0) ` +
+                `scale(${scale.toFixed(4)})`;
+              card.style.opacity = (1 - 0.22 * t).toFixed(3);
             }
             if (progressRef.current) {
               progressRef.current.style.transform = `scaleX(${self.progress.toFixed(4)})`;
@@ -205,7 +215,7 @@ export default function Pipeline() {
                   <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
                     <step.icon className="h-5 w-5" />
                   </span>
-                  <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--signal)_38%,transparent)]">
+                  <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--signal)_58%,transparent)]">
                     {step.num}
                   </span>
                 </div>

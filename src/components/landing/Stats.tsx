@@ -77,17 +77,43 @@ export default function Stats() {
       return; // final values are already rendered in the JSX
     }
 
+    const heading = root.querySelectorAll<HTMLElement>("[data-reveal]:not(.feature-card)");
+    const cards = root.querySelectorAll<HTMLElement>(".feature-card");
+
     const ctx = gsap.context(() => {
-      // Card + heading entrance
       gsap.fromTo(
-        els,
+        heading,
         { opacity: 0, y: 26 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.65,
+          duration: 0.7,
           ease: "power3.out",
           stagger: 0.08,
+          scrollTrigger: { trigger: root, ...revealConfig },
+        },
+      );
+
+      // Alternating stagger: odd cards glide in from the left, even cards
+      // from the right, each settling on a spring overshoot so the grid
+      // assembles instead of appearing.
+      gsap.fromTo(
+        cards,
+        {
+          opacity: 0,
+          y: 22,
+          scale: 0.985,
+          x: (i: number) => (i % 2 === 0 ? -58 : 58),
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          x: 0,
+          duration: 0.9,
+          ease: "back.out(1.5)",
+          stagger: 0.09,
+          clearProps: "transform",
           scrollTrigger: { trigger: root, ...revealConfig },
         },
       );
@@ -140,7 +166,7 @@ export default function Stats() {
           <div
             key={stat.label}
             data-reveal
-            className="feature-card glass-panel p-6 text-center sm:text-left"
+            className="feature-card glass-panel will-change-transform p-6 text-center sm:text-left"
           >
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
               <stat.icon className="h-5 w-5" />

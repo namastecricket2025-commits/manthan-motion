@@ -1,11 +1,13 @@
-import { BookOpen, FlaskConical, Info, LayoutDashboard, Settings2 } from "lucide-react";
+import { FlaskConical, Info, LayoutDashboard, Settings2 } from "lucide-react";
 
-/** Every destination reachable from the app sidebar. */
-export type DashboardSection = "dashboard" | "notebooks" | "lab" | "settings" | "about";
+/**
+ * Every destination reachable from the app sidebar.
+ * The workspace path runs Dashboard -> STEM Lab -> Settings -> About Us.
+ */
+export type DashboardSection = "dashboard" | "lab" | "settings" | "about";
 
 const ITEMS: { key: DashboardSection; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { key: "notebooks", label: "Notebooks", icon: BookOpen },
   { key: "lab", label: "STEM Lab", icon: FlaskConical },
   { key: "settings", label: "Settings", icon: Settings2 },
   { key: "about", label: "About Us", icon: Info },

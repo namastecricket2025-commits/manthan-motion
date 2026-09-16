@@ -103,8 +103,9 @@
   --ink: #f7f3f0;
   --signal: #c81f27;
   --signal-2: #8f1d22;
-  --text-main: #241412;
-  --text-dim: #6f5b56;
+  --text-main: #1b1110;
+  /* Captions/labels sit over the red mesh — deep slate keeps them sharp. */
+  --text-dim: #374151;
   --card-border: rgba(200, 31, 39, 0.22);
   --panel-bg: rgba(247, 243, 240, 0.55);
   --bg-canvas-a: #c81f27;
@@ -213,8 +214,9 @@
   --ink: #150c0b;
   --signal: #e0323a;
   --signal-2: #8f1d22;
-  --text-main: #f4ece9;
-  --text-dim: #b9aca7;
+  --text-main: #fdf8f6;
+  /* Bright grey rather than warm grey: legible on glass over the red mesh. */
+  --text-dim: #cbd5e1;
   --card-border: rgba(224, 50, 58, 0.2);
   --panel-bg: rgba(21, 12, 11, 0.6);
   --bg-canvas-a: #e0323a;
@@ -349,20 +351,45 @@
    Manthan surface language
    ============================================================ */
 @layer components {
+  /* ------------------------------------------------
+     Authentic Apple glass — the single surface language for every
+     card, grid item, pipeline card and CTA wrapper on the home page
+     (and everywhere else that shares these two classes).
+
+       fill      rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
+       blur      blur(25px) saturate(160%)  so the red mesh bleeds through
+       outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
+       depth     one wide, soft ambient shadow (never a hard drop shadow)
+     ------------------------------------------------ */
   .glass-panel {
-    background: var(--panel-bg);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-    border: 1px solid var(--card-border);
+    background: rgba(255, 255, 255, 0.02);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 18px;
+    box-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
   }
 
   .glass-chip {
-    background: var(--panel-bg);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-    border: 1px solid var(--card-border);
+    background: rgba(255, 255, 255, 0.03);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 999px;
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.4);
+  }
+
+  html:not(.dark) .glass-panel,
+  [data-theme="light"] .glass-panel {
+    background: rgba(0, 0, 0, 0.015);
+    border-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
+  }
+  html:not(.dark) .glass-chip,
+  [data-theme="light"] .glass-chip {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.12);
   }
 
   /* ------------------------------------------------
@@ -372,17 +399,19 @@
      `--text-dim` is scoped here so the muted copy stays legible.
      ------------------------------------------------ */
   .site-footer {
-    --text-dim: #94a3b8;
-    background: rgba(255, 255, 255, 0.03);
-    -webkit-backdrop-filter: blur(25px) saturate(140%);
-    backdrop-filter: blur(25px) saturate(140%);
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    --text-dim: #cbd5e1;
+    background: rgba(255, 255, 255, 0.02);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.5);
   }
   html:not(.dark) .site-footer,
   [data-theme="light"] .site-footer {
     --text-dim: #374151;
-    background: rgba(0, 0, 0, 0.02);
-    border-top-color: rgba(0, 0, 0, 0.06);
+    background: rgba(0, 0, 0, 0.015);
+    border-top-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.12);
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -453,15 +482,21 @@
      without becoming a heavy solid pill. */
   .kicker {
     @apply inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em];
-    color: var(--signal);
-    border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+    color: color-mix(in srgb, var(--signal) 88%, var(--text-main));
+    border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
+    /* A firmer ink scrim: the chip can sit directly over a bright red blob,
+       so the label needs its own contrast floor to stay sharp. */
     background: color-mix(
       in srgb,
-      var(--signal) 8%,
-      color-mix(in srgb, var(--ink) 55%, transparent)
+      var(--signal) 6%,
+      color-mix(in srgb, var(--ink) 78%, transparent)
     );
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+  }
+  html:not(.dark) .kicker,
+  [data-theme="light"] .kicker {
+    color: color-mix(in srgb, var(--signal) 92%, #000);
   }
   .kicker::before {
     content: "";
@@ -492,8 +527,18 @@
     );
     animation: border-rotate 8s linear infinite;
   }
+  /* The primary CTA is the same frosted glass as the cards, so it sits in
+     the moving mesh instead of reading as an opaque dark pill. The 1.5px
+     conic ring keeps its crisp travelling border on top. */
   .moving-border > * {
     border-radius: calc(999px - 1.5px);
+    background: rgba(255, 255, 255, 0.03);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
+  }
+  html:not(.dark) .moving-border > *,
+  [data-theme="light"] .moving-border > * {
+    background: rgba(0, 0, 0, 0.02);
   }
   .moving-border:hover,
   .moving-border:active,
@@ -516,8 +561,8 @@
       transform: scale(0.985);
     }
     .feature-card:active {
-      border-color: var(--signal);
-      background: color-mix(in srgb, var(--signal) 6%, var(--panel-bg));
+      border-color: color-mix(in srgb, var(--signal) 45%, transparent);
+      background: rgba(255, 255, 255, 0.05);
     }
   }
 
@@ -547,9 +592,15 @@
     }
     .feature-card:hover {
       transform: translateY(-5px);
-      border-color: var(--signal);
-      background: color-mix(in srgb, var(--signal) 5%, var(--panel-bg));
-      box-shadow: 0 18px 44px -18px color-mix(in srgb, var(--signal) 38%, transparent);
+      border-color: color-mix(in srgb, var(--signal) 45%, transparent);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow:
+        0 30px 80px -28px rgba(0, 0, 0, 0.5),
+        0 0 0 1px color-mix(in srgb, var(--signal) 14%, transparent);
+    }
+    html:not(.dark) .feature-card:hover,
+    [data-theme="light"] .feature-card:hover {
+      background: rgba(0, 0, 0, 0.035);
     }
     .btn-ghost {
       transition: color 200ms ease, background 200ms ease, border-color 200ms ease;

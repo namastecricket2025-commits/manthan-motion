@@ -5,8 +5,9 @@ import {
   IconHome,
   IconLayoutDashboard,
   IconLogin,
-  IconNotebook,
+  IconSettings,
   IconSparkles,
+  IconUser,
   IconWand,
 } from "@tabler/icons-react";
 import { Logo } from "./Logo";
@@ -25,6 +26,7 @@ const AUTH_URL = "/auth?returnTo=%2Fdashboard";
  * the same links out downward.
  *
  * Hash targets scroll to landing sections; route targets use the SPA router.
+ * The workspace path is Dashboard -> STEM Lab -> Settings -> About Us.
  */
 const DOCK_LINKS: DockItem[] = [
   {
@@ -47,15 +49,21 @@ const DOCK_LINKS: DockItem[] = [
     icon: <IconBolt className="h-full w-full" strokeWidth={1.7} />,
     href: "#stats",
   },
-  {
-    title: "Notebooks",
-    icon: <IconNotebook className="h-full w-full" strokeWidth={1.7} />,
-    href: "#notebooks",
-  },
+  // The workspace path runs Dashboard -> STEM Lab -> Settings -> About Us.
   {
     title: "STEM Lab",
     icon: <IconAtom className="h-full w-full" strokeWidth={1.7} />,
     href: "/lab",
+  },
+  {
+    title: "Settings",
+    icon: <IconSettings className="h-full w-full" strokeWidth={1.7} />,
+    href: "/settings",
+  },
+  {
+    title: "About Us",
+    icon: <IconUser className="h-full w-full" strokeWidth={1.7} />,
+    href: "/about",
   },
   {
     title: "Dashboard",

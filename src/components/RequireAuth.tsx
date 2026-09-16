@@ -16,7 +16,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    const returnTo = `${location.pathname}${location.search}`;
+    // Keep the hash too: deep links like /settings#legal must still land on
+    // their panel after the sign-in round trip.
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
     return (
       <Navigate
         to={`/auth?returnTo=${encodeURIComponent(returnTo)}`}

@@ -26,8 +26,10 @@ export function MovingBorderButton({
   target?: string;
   rel?: string;
 }) {
+  // No opaque fill here: the frosted glass comes from `.moving-border > *`
+  // in the global stylesheet, so the button blends into the moving mesh.
   const inner = cn(
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-6 py-3 font-display text-sm font-semibold tracking-wide text-foreground transition-colors duration-300",
+    "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-display text-sm font-semibold tracking-wide text-foreground transition-colors duration-300",
     "hover:text-[var(--signal)] active:text-[var(--signal)]",
     innerClassName,
   );

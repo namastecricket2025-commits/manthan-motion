@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
@@ -83,6 +83,22 @@ const FRAME_OPTIONS: { value: FrameTarget; label: string; hint: string }[] = [
   { value: "60", label: "60 FPS", hint: "Balanced" },
   { value: "uncapped", label: "Uncapped", hint: "Maximum smoothness" },
 ];
+
+/** The four accordion panels, addressable as `/settings#<key>`. */
+const PANEL_KEYS = ["accessibility", "theme", "account", "legal"] as const;
+type PanelKey = (typeof PANEL_KEYS)[number];
+
+/**
+ * Which panel a location hash should reveal. The footer's policy links point
+ * at `/settings#legal`; the older `/terms` + `/privacy` anchors are accepted
+ * too so both spellings land on the same Legal category.
+ */
+function panelsFromHash(hash: string): PanelKey[] {
+  const key = hash.replace(/^#/, "").toLowerCase();
+  if (key === "terms" || key === "privacy" || key === "cookies") return ["legal"];
+  const hit = PANEL_KEYS.find((p) => p === key);
+  return hit ? [hit] : [];
+}
 
 function scorePassword(pw: string) {
   let raw = 0;
@@ -416,6 +432,31 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
   const comfortIndex = Math.max(0, COMFORT.findIndex((c) => c.key === settings.textComfort));
 
+  /* ---- panel state (deep-linkable) ---- */
+  const location = useLocation();
+  const [openPanels, setOpenPanels] = useState<string[]>(() => [
+    "accessibility",
+    "theme",
+    ...panelsFromHash(typeof window === "undefined" ? "" : window.location.hash),
+  ]);
+
+  /**
+   * Deep link: a hash like `#legal` opens that panel and brings it into view.
+   * Runs for both a fresh navigation and an in-page hash change (e.g. the
+   * footer's policy link while already on /settings).
+   */
+  useEffect(() => {
+    const wanted = panelsFromHash(location.hash);
+    if (!wanted.length) return;
+    setOpenPanels((prev) => Array.from(new Set([...prev, ...wanted])));
+    const timer = window.setTimeout(() => {
+      document
+        .getElementById(`set-panel-${wanted[0]}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 140);
+    return () => window.clearTimeout(timer);
+  }, [location.hash]);
+
   return (
     <section
       id="settings"
@@ -443,9 +484,18 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           </button>
         </header>
 
-        <Accordion type="multiple" defaultValue={["accessibility", "theme"]} className="set-acc">
+        <Accordion
+          type="multiple"
+          value={openPanels}
+          onValueChange={setOpenPanels}
+          className="set-acc"
+        >
           {/* ============ 1. ACCESSIBILITY & MOTION CONTROL ============ */}
-          <AccordionItem value="accessibility" className="set-item">
+          <AccordionItem
+            id="set-panel-accessibility"
+            value="accessibility"
+            className="set-item"
+          >
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={Accessibility}
@@ -521,7 +571,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           </AccordionItem>
 
           {/* ============ 2. APP THEME & MODES ============ */}
-          <AccordionItem value="theme" className="set-item">
+          <AccordionItem id="set-panel-theme" value="theme" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={SunMoon}
@@ -621,7 +671,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           </AccordionItem>
 
           {/* ============ 3. ACCOUNT SECURITY & PROFILE ============ */}
-          <AccordionItem value="account" className="set-item">
+          <AccordionItem id="set-panel-account" value="account" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={ShieldCheck}
@@ -834,7 +884,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           </AccordionItem>
 
           {/* ============ 4. TRUST & LEGAL TRANSPARENCY ============ */}
-          <AccordionItem value="legal" className="set-item">
+          <AccordionItem id="set-panel-legal" value="legal" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={Scale}

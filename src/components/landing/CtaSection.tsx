@@ -44,7 +44,7 @@ export default function CtaSection() {
         {/* soft signal glow behind the card content */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[130%] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] blur-3xl"
+          className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[130%] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--signal)_12%,transparent)] blur-3xl"
         />
         <div className="relative">
           <span className="kicker">Start churning</span>
@@ -72,7 +72,7 @@ export default function CtaSection() {
             </MovingBorderButton>
             <a
               href="#features"
-              className="btn-ghost inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] px-6 py-3 text-sm font-semibold text-foreground"
+              className="btn-ghost glass-chip inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-foreground"
             >
               Explore features
             </a>

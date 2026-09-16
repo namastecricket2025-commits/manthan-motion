@@ -26,10 +26,15 @@ export function TextGenerate({
   segments,
   className,
   delay = 0.1,
+  spring = false,
 }: {
   segments: { text: string; className?: string }[];
   className?: string;
   delay?: number;
+  /** Spring physics instead of an ease-out: each word rides a slight
+   *  overshoot on the way up, which is what gives the hero its fluid,
+   *  Apple-like settle. */
+  spring?: boolean;
 }) {
   const ref = useRef<HTMLHeadingElement | null>(null);
 
@@ -44,20 +49,21 @@ export function TextGenerate({
     const ctx = gsap.context(() => {
       gsap.fromTo(
         words,
-        { opacity: 0, y: 18, filter: "blur(6px)" },
+        { opacity: 0, y: spring ? 34 : 18, rotate: spring ? 1.5 : 0, filter: "blur(6px)" },
         {
           opacity: 1,
           y: 0,
+          rotate: 0,
           filter: "blur(0px)",
-          duration: 0.55,
-          ease: "power3.out",
-          stagger: 0.045,
+          duration: spring ? 0.85 : 0.55,
+          ease: spring ? "back.out(1.7)" : "power3.out",
+          stagger: spring ? 0.06 : 0.045,
           delay,
         },
       );
     }, el);
     return () => ctx.revert();
-  }, [delay]);
+  }, [delay, spring]);
 
   return (
     <h1 ref={ref} className={className}>

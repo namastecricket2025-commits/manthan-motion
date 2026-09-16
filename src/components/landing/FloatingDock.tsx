@@ -150,7 +150,7 @@ function FloatingDockMobile({
                   <DockAnchor
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--card-border)] bg-[var(--panel-bg)] text-foreground backdrop-blur-md transition-colors duration-200 hover:border-[var(--signal)] hover:text-[var(--signal)]"
+                    className="glass-chip flex h-10 w-10 items-center justify-center text-foreground transition-colors duration-200 hover:text-[var(--signal)]"
                   >
                     <div className="h-4 w-4">{item.icon}</div>
                   </DockAnchor>
@@ -271,7 +271,7 @@ function IconContainer({
         style={{ width, height }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="relative flex items-center justify-center rounded-full border border-transparent bg-[var(--panel-bg)] text-text-dim transition-colors duration-300 hover:border-[var(--card-border)] hover:text-[var(--signal)]"
+        className="relative flex items-center justify-center rounded-full border border-transparent text-text-dim transition-colors duration-300 hover:border-[var(--card-border)] hover:text-[var(--signal)]"
       >
         <AnimatePresence>
           {hovered && (
@@ -279,7 +279,7 @@ function IconContainer({
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="absolute left-1/2 top-full z-50 mt-2 w-fit -translate-x-1/2 whitespace-nowrap rounded-full border border-[var(--card-border)] bg-[var(--panel-bg)] px-2.5 py-1 font-display text-xs font-semibold text-foreground backdrop-blur-md"
+              className="glass-chip absolute left-1/2 top-full z-50 mt-2 w-fit -translate-x-1/2 whitespace-nowrap px-2.5 py-1 font-display text-xs font-semibold text-foreground"
             >
               {title}
             </motion.div>

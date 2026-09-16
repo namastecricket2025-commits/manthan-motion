@@ -66,17 +66,9 @@ html:not(.dark) .apple-glass--lift:hover {
     0 0 0 1px rgba(200, 30, 30, 0.1);
 }
 
-/* The closing call to action ("Start churning") uses the same glass so it
-   blends into the moving background mesh instead of sitting on a flat,
-   opaque chip. */
-.moving-border.glass-cta > span {
-  background: rgba(255, 255, 255, 0.03);
-  -webkit-backdrop-filter: blur(25px) saturate(140%);
-  backdrop-filter: blur(25px) saturate(140%);
-}
-html:not(.dark) .moving-border.glass-cta > span {
-  background: rgba(0, 0, 0, 0.02);
-}
+/* The closing call to action ("Start churning") inherits the frosted glass
+   from `.moving-border > *`; this only re-points its hover ink at the muted
+   crimson. */
 .moving-border.glass-cta:hover > span,
 .moving-border.glass-cta:active > span {
   color: var(--about-signal);

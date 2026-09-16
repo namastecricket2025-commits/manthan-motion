@@ -19,7 +19,8 @@ import { useNavigate } from "react-router";
 /**
  * /settings — a standalone dashboard canvas dedicated to user configuration.
  * It shares the app shell (sidebar, theme toggle, sign out) but pulls in
- * nothing from the STEM Lab simulations.
+ * nothing from the STEM Lab simulations. Deep links such as
+ * `/settings#legal` open the matching accordion panel.
  */
 export default function Settings() {
   const { signOut } = useAuth();
@@ -29,7 +30,6 @@ export default function Settings() {
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
     if (key === "dashboard") navigate("/dashboard");
-    else if (key === "notebooks") navigate("/dashboard?view=notebooks");
     else if (key === "lab") navigate("/lab");
     else if (key === "about") navigate("/about");
   };

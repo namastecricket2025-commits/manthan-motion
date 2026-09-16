@@ -10,7 +10,6 @@ import PieCenter from "@/components/charts/pie-center";
 import PieChart from "@/components/charts/pie-chart";
 import PieSlice from "@/components/charts/pie-slice";
 import { ChartTooltip } from "@/components/charts/tooltip";
-import NotebooksSection from "@/components/dashboard/NotebooksSection";
 import { DashboardNav, type DashboardSection } from "@/components/dashboard/DashboardNav";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,14 +76,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [hovered, setHovered] = useState<number | null>(null);
-  /** Sidebar tabs — Notebooks renders its own full section. `/dashboard?view=notebooks`
-      deep-links straight into it (used by the sidebar on other routes). */
-  const [view, setView] = useState<"dashboard" | "notebooks">(() =>
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("view") === "notebooks"
-      ? "notebooks"
-      : "dashboard",
-  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([
     { id: 1, name: "thermo-ch4.pdf", detail: "2.4 MB · PDF", kind: "file" },
@@ -103,8 +94,6 @@ export default function Dashboard() {
       gsap.set(els, { opacity: 1, y: 0 });
       return;
     }
-    // Runs on mount and whenever the sidebar tab changes — newly mounted
-    // panels glide in as they appear.
     const ctx = gsap.context(() => {
       gsap.fromTo(
         els,
@@ -119,7 +108,7 @@ export default function Dashboard() {
       );
     }, root);
     return () => ctx.revert();
-  }, [view]);
+  }, []);
 
   const addToQueue = (items: Omit<QueueItem, "id">[]) => {
     setQueue((q) => [...q, ...items.map((it, i) => ({ ...it, id: Date.now() + i }))]);
@@ -159,24 +148,17 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  /** Sidebar navigation: dashboard/notebooks swap in place, everything else routes. */
+  /** Sidebar navigation: the workspace path runs Dashboard -> STEM Lab ->
+      Settings -> About Us, so every item except Dashboard pushes a route. */
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
-    if (key === "lab") {
-      navigate("/lab");
-    } else if (key === "settings") {
-      navigate("/settings");
-    } else if (key === "about") {
-      navigate("/about");
-    } else {
-      setView(key);
-      navigate(key === "notebooks" ? "/dashboard?view=notebooks" : "/dashboard", {
-        replace: true,
-      });
-    }
+    if (key === "lab") navigate("/lab");
+    else if (key === "settings") navigate("/settings");
+    else if (key === "about") navigate("/about");
+    else navigate("/dashboard", { replace: true });
   };
 
-  const nav = <DashboardNav active={view} onSelect={selectSection} />;
+  const nav = <DashboardNav active="dashboard" onSelect={selectSection} />;
 
   return (
     <div ref={rootRef} className="relative min-h-screen bg-background text-foreground">
@@ -247,8 +229,6 @@ export default function Dashboard() {
       {/* ---- Main ---- */}
       <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
-          {view === "dashboard" ? (
-            <>
           {/* Greeting */}
           <div data-reveal className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -457,33 +437,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-            </>
-          ) : (
-            <>
-              {/* Notebooks tab — page header + the same section as the landing */}
-              <div data-reveal className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
-                    Notebooks
-                  </p>
-                  <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                    Your study kits
-                    <span className="text-[var(--signal)]">.</span>
-                  </h1>
-                </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-2 text-[12px] font-semibold text-foreground transition-colors hover:border-[var(--signal)] hover:text-[var(--signal)]"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  New notebook
-                </button>
-              </div>
-              <div data-reveal>
-                <NotebooksSection showHeader={false} />
-              </div>
-            </>
-          )}
+
         </div>
       </main>
       </div>

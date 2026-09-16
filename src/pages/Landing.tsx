@@ -5,7 +5,6 @@ import Footer from "@/components/landing/Footer";
 import HeroPreview from "@/components/landing/HeroPreview";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import Navbar from "@/components/landing/Navbar";
-import Notebooks from "@/components/landing/Notebooks";
 import OrbitMark from "@/components/landing/OrbitMark";
 import Pipeline from "@/components/landing/Pipeline";
 import Stats from "@/components/landing/Stats";
@@ -31,16 +30,25 @@ function Hero() {
       return;
     }
     const ctx = gsap.context(() => {
+      // Apple-style entrance: the kicker, copy, action links and footnote settle
+      // one after another on a spring ease — a touch of overshoot on the way
+      // up, a blur burn-off, no bounce wobble once they land.
+      // No `filter` here on purpose: a filter on an ancestor turns it into a
+      // backdrop root, which would flatten the glass on the hero preview card
+      // and the CTA while the entrance plays. The word-level blur lives in
+      // TextGenerate instead, where it can't affect any glass surface.
       gsap.fromTo(
         els,
-        { opacity: 0, y: 26 },
+        { opacity: 0, y: 30, scale: 0.985 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.65,
-          ease: "power3.out",
-          stagger: 0.1,
-          delay: 0.35,
+          scale: 1,
+          duration: 0.85,
+          ease: "back.out(1.6)",
+          stagger: 0.12,
+          delay: 0.42,
+          clearProps: "transform",
         },
       );
     }, root);
@@ -69,8 +77,9 @@ function Hero() {
             <span data-hero-fade className="kicker">
               Manthan · study material, distilled
             </span>              <TextGenerate
-              className="mt-6 font-display text-[40px] font-bold leading-[1.05] tracking-tight text-foreground sm:text-6xl md:text-[68px] md:leading-[1.02]"
+              className="mt-6 font-display text-[40px] font-bold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-6xl md:text-[68px] md:leading-[1.0]"
               delay={0.25}
+              spring
               segments={[
                 { text: "Churn your notes into" },
                 { text: "clarity.", className: "gradient-text" },
@@ -99,7 +108,7 @@ function Hero() {
               </MovingBorderButton>
               <a
                 href="#how"
-                className="btn-ghost inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] px-6 py-3 text-sm font-semibold text-foreground"
+                className="btn-ghost glass-chip inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-foreground"
               >
                 <Sparkles className="h-4 w-4 text-[var(--signal)]" />
                 See how it works
@@ -141,7 +150,6 @@ export default function Landing() {
           <Features />
           <Pipeline />
           <Stats />
-          <Notebooks />
           <CtaSection />
         </main>
         <Footer />
