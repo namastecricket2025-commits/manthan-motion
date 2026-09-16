@@ -125,15 +125,11 @@
   --mesh-cursor-core: rgba(220, 38, 38, 0.06);
   --mesh-cursor-tail: rgba(163, 22, 22, 0.02);
 
-  /* ---- Frosted glass (light) -----------------------------------------
-     A smoky, clear neutral base: 45% translucent white. This is what stops
-     the crimson blob behind a card from reading as a solid red panel — the
-     backdrop is mixed into a pale neutral scrim, while the mesh still
-     glints through as a soft bloom. */
-  --glass-fill: rgba(255, 255, 255, 0.45);
-  --glass-fill-strong: rgba(255, 255, 255, 0.62);
+  /* ---- Frosted glass (light) ----------------------------------------- */
+  --glass-fill: rgba(0, 0, 0, 0.015);
+  --glass-fill-strong: rgba(0, 0, 0, 0.035);
   --glass-hairline: rgba(0, 0, 0, 0.05);
-  --glass-blur: blur(28px) saturate(140%);
+  --glass-blur: blur(25px) saturate(145%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.16);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
@@ -205,21 +201,24 @@
   --sidebar-accent-foreground: #3a2320;
   --sidebar-border: rgba(36, 20, 18, 0.12);
   --sidebar-ring: var(--signal);
-  --chart-background: oklch(1 0 0);
-  --chart-foreground: oklch(0.145 0.004 285);
-  --chart-foreground-muted: oklch(0.55 0.014 260);
+  /* These were leftover default shadcn values in the blue/violet hue range
+     (oklch hues 260–285). Warm palette only — no chart accent may read blue
+     against the crimson theme. */
+  --chart-background: #fdfaf8;
+  --chart-foreground: #241412;
+  --chart-foreground-muted: #7d6a64;
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: oklch(0.4 0.1828 274.34);
-  --chart-grid: oklch(0.9 0 0);
+  --chart-crosshair: rgba(200, 31, 39, 0.45);
+  --chart-grid: rgba(36, 20, 18, 0.1);
   --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: oklch(0.21 0.006 285 / 0.8);
-  --chart-tooltip-foreground: oklch(0.985 0 0);
-  --chart-tooltip-muted: oklch(0.65 0.01 260);
-  --chart-marker-background: oklch(0.97 0.005 260);
-  --chart-marker-border: oklch(0.85 0.01 260);
-  --chart-marker-foreground: oklch(0.3 0.01 260);
-  --chart-label: oklch(0.45 0.01 260);
+  --chart-tooltip-background: rgba(30, 18, 16, 0.88);
+  --chart-tooltip-foreground: #fdf8f6;
+  --chart-tooltip-muted: #b9aca7;
+  --chart-marker-background: #fdfaf8;
+  --chart-marker-border: rgba(36, 20, 18, 0.14);
+  --chart-marker-foreground: #3a2320;
+  --chart-label: #7d6a64;
   --chart-scale-01: oklch(0.98 0.003 106);
   --chart-scale-02: oklch(0.92 0.008 106);
   --chart-scale-03: oklch(0.82 0.015 106);
@@ -255,19 +254,17 @@
   --mesh-hue-2: rgba(220, 38, 38, 0.1); /* crimson    */
   --mesh-hue-3: rgba(143, 29, 34, 0.14); /* oxblood    */
   /* Cursor blob — the diffused crimson blend that follows the pointer. */
-  --mesh-cursor-core: rgba(220, 38, 38, 0.15);
-  --mesh-cursor-tail: rgba(163, 22, 22, 0.05);
+  --mesh-cursor-core: rgba(220, 38, 38, 0.16);
+  --mesh-cursor-tail: rgba(163, 22, 22, 0.04);
 
-  /* ---- Frosted glass (dark) ------------------------------------------
-     The smoky slate neutral base (55%) is deliberate: pure white-alpha glass
-     over a crimson blob lets the red straight through, which is what made
-     the cards look like solid red fills and buried the copy. Slate
-     neutralises the bleed while `saturate(140%)` keeps the mesh glowing
-     under the glass. */
-  --glass-fill: rgba(15, 23, 42, 0.55);
-  --glass-fill-strong: rgba(15, 23, 42, 0.7);
+  /* ---- Frosted glass (dark) — crimson-neutral, never blue -------------
+     Pure white-alpha glass over the crimson mesh. NOTE: no slate/blue fill
+     here on purpose — a `rgba(15,23,42,*)` base reads as a cold blue panel
+     against the warm ruby canvas, which is exactly the tint we removed. */
+  --glass-fill: rgba(255, 255, 255, 0.02);
+  --glass-fill-strong: rgba(255, 255, 255, 0.045);
   --glass-hairline: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(28px) saturate(140%);
+  --glass-blur: blur(25px) saturate(145%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
@@ -403,9 +400,9 @@
      everywhere else that shares these two classes). Both themes are driven by
      the tokens in :root / .dark:
 
-       fill      rgba(15,23,42,0.55)  dark  / rgba(255,255,255,0.45)  light
-       blur      blur(28px) saturate(140%) so the mesh glints through as a
-                 soft bloom instead of reading as a solid red fill
+       fill      rgba(255,255,255,0.02)  dark  / rgba(0,0,0,0.015)  light
+       blur      blur(25px) saturate(145%) so the crimson blob glints and
+                 drifts under every card instead of being blocked out
        outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
        depth     one wide, soft ambient shadow (never a hard drop shadow)
      ------------------------------------------------ */
@@ -439,6 +436,43 @@
     backdrop-filter: var(--glass-blur);
     border-top: 1px solid var(--glass-hairline);
     box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.35);
+  }
+
+  /* ------------------------------------------------
+     LOCKED GLASS SPEC — the one rule that cannot be overridden.
+
+     Every card surface in the app (panel, chip, footer, About's glass, the
+     CTA body and the Settings accordion panes) is pinned to the same
+     translucent Apple layer, so the cursor-tracking crimson blob is always
+     visible glinting underneath the copy. `!important` is deliberate: it
+     keeps a later, more specific component rule from re-introducing an
+     opaque fill or a cold tint (the bug that flattened the theme).
+     ------------------------------------------------ */
+  .glass-panel,
+  .glass-chip,
+  .site-footer,
+  .apple-glass,
+  .set-item,
+  .set-card,
+  .set-block,
+  .set-row,
+  .moving-border > * {
+    background: rgba(255, 255, 255, 0.02) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(145%) !important;
+    backdrop-filter: blur(25px) saturate(145%) !important;
+    border-color: rgba(255, 255, 255, 0.07) !important;
+  }
+  html:not(.dark) .glass-panel,
+  html:not(.dark) .glass-chip,
+  html:not(.dark) .site-footer,
+  html:not(.dark) .apple-glass,
+  html:not(.dark) .set-item,
+  html:not(.dark) .set-card,
+  html:not(.dark) .set-block,
+  html:not(.dark) .set-row,
+  html:not(.dark) .moving-border > * {
+    background: rgba(0, 0, 0, 0.015) !important;
+    border-color: rgba(0, 0, 0, 0.05) !important;
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -848,17 +882,16 @@
     left: 0;
     /* Majestic scale: one giant atmospheric shape, a touch wider than the
        viewport, so the pointer drags a whole pool of light around rather
-       than a small spot. The smoky glass bases above keep the copy sharp
-       underneath it. */
+       than a small spot. */
     width: max(105vw, 100vh);
     height: max(105vw, 100vh);
     background: radial-gradient(
       circle,
-      var(--mesh-cursor-core, rgba(220, 38, 38, 0.15)) 0%,
-      var(--mesh-cursor-tail, rgba(163, 22, 22, 0.05)) 50%,
+      var(--mesh-cursor-core, rgba(220, 38, 38, 0.16)) 0%,
+      var(--mesh-cursor-tail, rgba(163, 22, 22, 0.04)) 60%,
       transparent 100%
     );
-    filter: blur(120px);
+    filter: blur(130px);
     animation: none;
     opacity: 0;
     transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1);
@@ -889,6 +922,18 @@
   }
   .orbit-mark__satellite {
     fill: var(--text-main);
+  }
+  /* The orbit is a pure CSS infinite rotation, bound to the outer pair (the
+     connector + the white satellite). `transform-box: view-box` +
+     `transform-origin` pivots it on the core's centre (200,200 in the 400×400
+     viewBox), so the satellite loops a clean 360° trajectory around the
+     anchored crimson circle. Motionless Mode and the OS reduced-motion flag
+     park it via the global `html[data-motion="reduced"]` rule. */
+  .orbit-group {
+    transform-box: view-box;
+    transform-origin: 200px 200px;
+    animation: orbit 16s linear infinite;
+    will-change: transform;
   }
   .orbit-mark__connector {
     stroke: var(--text-dim);

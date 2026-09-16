@@ -30,22 +30,21 @@ html:not(.dark) .about-root {
 }
 
 /* ---------- 1. Authentic Apple glass ----------
-   Borderless frosted glass on a smoky, clear neutral base:
-     dark   rgba(15,23,42,0.5)      light  rgba(255,255,255,0.45)
-     blur   blur(28px) saturate(140%)
+   Translucent crimson-neutral glass (mirrors the locked spec in index.css):
+     dark   rgba(255,255,255,0.02)   light  rgba(0,0,0,0.015)
+     blur   blur(25px) saturate(145%)
      edge   1px rgba(255,255,255,0.07) dark / rgba(0,0,0,0.05) light
-   Never a flat opaque fill — and never a pure-alpha white fill either,
-   because that lets the crimson blob behind the card read as a solid red
-   panel. The neutral scrim is what keeps the copy sharp on top of it. */
+   Never a flat opaque fill and never a cold slate tint — the pointer-
+   tracking crimson blob has to stay visible glinting underneath. */
 .apple-glass {
-  background: rgba(15, 23, 42, 0.5);
-  -webkit-backdrop-filter: blur(28px) saturate(140%);
-  backdrop-filter: blur(28px) saturate(140%);
+  background: rgba(255, 255, 255, 0.02);
+  -webkit-backdrop-filter: blur(25px) saturate(145%);
+  backdrop-filter: blur(25px) saturate(145%);
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4);
 }
 html:not(.dark) .apple-glass {
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.015);
   border-color: rgba(0, 0, 0, 0.05);
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.14);
 }

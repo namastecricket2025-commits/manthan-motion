@@ -9,10 +9,11 @@ import { settingsRuntime } from "@/lib/app-settings";
  *  1. AMBIENT MESH — four oversized crimson/ruby radial shapes drifting on
  *     slow loops (CSS, see `.mesh-blob--*`). Pure atmosphere.
  *  2. CURSOR BLOB — one *giant* diffused crimson blob (a little wider than
- *     the viewport) that glides after the pointer with spring + friction
- *     inertia (this file). It is deliberately *not* a solid bright red: a
- *     120px blur over a translucent crimson gradient (0.15 → 0.05 →
- *     transparent), so the pointer drags a whole pool of ambient light
+ *     the viewport) whose position is mapped from the pointer's clientX /
+ *     clientY each frame and eased with spring + friction inertia (this
+ *     file). It is deliberately *not* a solid bright red: a 130px blur
+ *     over a translucent crimson gradient (0.16 → 0.04 at 60% →
+ *     transparent), so the cursor drags a whole pool of ambient light
  *     across the canvas and it glints under the frosted glass panels
  *     rather than becoming a wall of colour.
  *
@@ -77,11 +78,15 @@ function CursorBlob() {
     let idle = 0;
     let acc = 0;
 
-    const onMove = (e: PointerEvent) => {
+    const onMove = (e: MouseEvent | PointerEvent) => {
       target.x = e.clientX;
       target.y = e.clientY;
       idle = 0;
     };
+    // `pointermove` is the modern listener; plain `mousemove` keeps the same
+    // cursor mapping on browsers that never shipped Pointer Events.
+    const moveEvent: "pointermove" | "mousemove" =
+      "onpointermove" in window ? "pointermove" : "mousemove";
 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
@@ -123,12 +128,12 @@ function CursorBlob() {
       place();
     };
 
-    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener(moveEvent, onMove, { passive: true });
     raf = requestAnimationFrame(tick);
 
     return () => {
       window.clearTimeout(reveal);
-      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener(moveEvent, onMove);
       cancelAnimationFrame(raf);
     };
   }, []);
