@@ -112,14 +112,10 @@
   --panel-bg: rgba(248, 250, 252, 0.6);
 
   /* ---- BACKGROUND MESH (light) ----------------------------------------
-     Multi-layered crimson/ruby radial shapes behind a heavy 140px blur, so
-     the canvas keeps depth without ever tinting the copy. `--mesh-ceiling`
-     is the hard opacity cap the Ambient Intensity slider cannot exceed. */
-  --mesh-blur: 140px;
+     The same canvas engine, with the paint strength roughly halved by the
+     engine so a pale canvas never turns pink. `--mesh-ceiling` is the hard
+     opacity cap the Ambient Intensity slider cannot exceed. */
   --mesh-ceiling: 0.9;
-  --mesh-hue-1: rgba(163, 22, 22, 0.09); /* deep ruby  */
-  --mesh-hue-2: rgba(220, 38, 38, 0.045); /* crimson    */
-  --mesh-hue-3: rgba(143, 29, 34, 0.07); /* oxblood    */
 
   /* ---- Frosted glass (light) ----------------------------------------- */
   --glass-fill: rgba(255, 255, 255, 0.45);
@@ -229,7 +225,9 @@
 .dark,
 [data-theme="dark"] {
   /* Brand palette (dark) */
-  --ink: #150c0b;
+  /* Clean dark-neutral base canvas (never a blue template tint): the crimson
+     field is painted over this, and the glass panels sit just above it. */
+  --ink: #0b0f19;
   --signal: #e0323a;
   --signal-2: #8f1d22;
   --text-main: #f8fafc;
@@ -237,19 +235,15 @@
      the glass no matter what the mesh is doing behind it. */
   --text-dim: #e2e8f0;
   --card-border: rgba(224, 50, 58, 0.2);
-  --panel-bg: rgba(21, 12, 11, 0.6);
+  --panel-bg: rgba(11, 15, 25, 0.62);
 
   /* ---- BACKGROUND MESH (dark) ----------------------------------------
-     The signature deep-red atmosphere: large ruby and crimson radial shapes
-     under one heavy 140px blur. Shape alphas stay in the 5–22% band (the
-     pointer canopy is a fixed 16% → 5% falloff) and the whole field is
-     capped by `--mesh-ceiling`, so it glows like embers behind the glass
-     instead of becoming a bright wall. */
-  --mesh-blur: 140px;
+     The canvas engine paints the deep-red atmosphere — a rgba(180,20,20,
+     0.16) core diffusing to rgba(130,10,10,0.04) at 50% and fully
+     transparent at 100% — behind the container's 140px blur. The layer's
+     own opacity is capped by `--mesh-ceiling`, so it glows like embers
+     behind the glass instead of becoming a bright wall. */
   --mesh-ceiling: 0.85;
-  --mesh-hue-1: rgba(163, 22, 22, 0.22); /* deep ruby  */
-  --mesh-hue-2: rgba(220, 38, 38, 0.13); /* crimson    */
-  --mesh-hue-3: rgba(143, 29, 34, 0.17); /* oxblood    */
 
   /* ---- Frosted glass (dark) — smoky neutral translucent canvas --------
      The 55% slate scrim is what stops the restored crimson backdrop from
@@ -303,34 +297,38 @@
   /* shadcn aliases (dark) */
   --background: var(--ink);
   --foreground: var(--text-main);
-  --card: #1e1210;
+  /* Neutral dark surface ramp (dialogs, popovers, menus, muted wells) built
+     on the same neutral base as `--ink`, so no primitive falls back to a
+     default blue/grey template or a mismatched warm fill. Crimson stays the
+     only accent. */
+  --card: #121826;
   --card-foreground: var(--text-main);
-  --popover: #1e1210;
+  --popover: #121826;
   --popover-foreground: var(--text-main);
   --primary: var(--signal);
   --primary-foreground: #fff7f5;
-  --secondary: #271614;
-  --secondary-foreground: #f4ece9;
-  --muted: #241614;
-  --muted-foreground: #b9aca7;
-  --accent: #2b1a17;
-  --accent-foreground: #f4ece9;
+  --secondary: #1a2130;
+  --secondary-foreground: #f2f5f9;
+  --muted: #171d2a;
+  --muted-foreground: #b3bdcc;
+  --accent: #1c2333;
+  --accent-foreground: #f2f5f9;
   --destructive: #e0323a;
-  --border: rgba(244, 236, 233, 0.12);
-  --input: rgba(244, 236, 233, 0.14);
+  --border: rgba(226, 232, 240, 0.12);
+  --input: rgba(226, 232, 240, 0.14);
   --ring: var(--signal);
   --chart-1: #e0323a;
   --chart-2: #8f1d22;
   --chart-3: #b97750;
   --chart-4: #7d8f78;
   --chart-5: #b9aca7;
-  --sidebar: #1e1210;
+  --sidebar: #121826;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
   --sidebar-primary-foreground: #fff7f5;
-  --sidebar-accent: #271614;
-  --sidebar-accent-foreground: #f4ece9;
-  --sidebar-border: rgba(244, 236, 233, 0.1);
+  --sidebar-accent: #1a2130;
+  --sidebar-accent-foreground: #f2f5f9;
+  --sidebar-border: rgba(226, 232, 240, 0.1);
   --sidebar-ring: var(--signal);
 }
 
@@ -765,164 +763,48 @@
   }
 
   /* ------------------------------------------------
-     THE MANTHAN BACKDROP ENGINE — the signature background layer.
+     THE MANTHAN BACKDROP ENGINE — a native HTML5 canvas.
 
-     A full-viewport, pointer-transparent layer (`z-index: 1`) holding the
-     massive crimson glow:
+     One full-viewport container (`100vw × 100vh`, `position: fixed`,
+     `top/left: 0`, `z-index: 1`, `pointer-events: none`) holding a single
+     `<canvas>`. The massive organic crimson shapes are painted with the 2D
+     rendering context inside it (see MeshBackground.tsx); the container
+     carries the heavy `filter: blur(140px)` that smears them into ambient
+     light. Nothing here animates in CSS — every frame comes from the
+     engine's requestAnimationFrame loop, which is what makes the shapes
+     glide, expand and track the cursor with a liquid lag.
 
-       .mesh-cursor-glow  one viewport-sized canopy whose gradient is anchored
-                          `at var(--mouse-x) var(--mouse-y)`. The React engine
-                          writes those two variables every frame as *lerped*
-                          (inertia-damped) cursor coordinates, so the canopy
-                          glides after the pointer with a liquid lag instead
-                          of snapping to it.
-       .mesh-shape--*     four oversized organic shapes (deep ruby, crimson,
-                          oxblood). Their wrappers are translated by the same
-                          damped position at four different damping factors —
-                          layered parallax — while the inner `.mesh-glow--*`
-                          spans morph fluidly on slow loops.
-
-     Visibility is double-clamped: the shape alphas live in the 3-22% band
-     per theme and the layer's opacity is capped by `--mesh-ceiling`, so even
-     at 100% Ambient Intensity the field is atmosphere, never a solid wall.
-     The smoky card glass is what keeps the copy readable on top of it.
+     Visibility is capped by `--mesh-ceiling` × Ambient Intensity, so even at
+     100% the field is atmosphere, never a solid wall. The smoky card glass
+     is what keeps the copy readable on top of it.
      ------------------------------------------------ */
-  .mesh-backdrop {
+  .mesh-canvas-wrap {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     /* above the page canvas, below the z-10 content wrappers */
     z-index: 1;
     pointer-events: none;
     overflow: hidden;
+    filter: blur(140px);
     opacity: min(
       1,
       calc(var(--mesh-ceiling, 0.9) * var(--bg-glow-opacity, 1))
     );
     transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  /* The lab bench layers its own blueprint matrix and per-subject accent
-     glows over this same atmosphere, so there the crimson sits one level
-     down, exactly as it did before. */
-  .lab-root .mesh-backdrop {
-    z-index: 0;
-  }
-
-  /* The pointer-tracked canopy — the signature fill, verbatim. */
-  .mesh-cursor-glow {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-      circle at var(--mouse-x, 50%) var(--mouse-y, 40%),
-      rgba(180, 20, 20, 0.16) 0%,
-      rgba(130, 10, 10, 0.05) 50%,
-      transparent 100%
-    ) !important;
-    filter: blur(140px);
-  }
-
-  /* JS translates these wrappers (the tracked parallax); the inner span owns
-     the morph animation, so the two never fight over `transform`. */
-  .mesh-shape {
-    position: absolute;
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-  .mesh-glow {
+  .mesh-canvas {
     display: block;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    filter: blur(var(--mesh-blur, 140px));
-    will-change: transform;
-    animation: mesh-morph 38s ease-in-out infinite;
   }
-  /* Each shape holds its hue across the core before fading out, which is what
-     gives the field body once the 140px blur has softened the edges. Sizing
-     is `max(vw, vh)` so tall, narrow phones get the same coverage as a wide
-     desktop — there is never a flat, empty quadrant left behind. */
-  .mesh-shape--a {
-    top: -26%;
-    left: -18%;
-    width: max(70vw, 64vh);
-    height: max(70vw, 64vh);
-  }
-  .mesh-glow--a {
-    background: radial-gradient(
-      circle at 42% 42%,
-      var(--mesh-hue-1) 0%,
-      var(--mesh-hue-1) 44%,
-      transparent 78%
-    );
-    animation-duration: 54s;
-  }
-  .mesh-shape--b {
-    top: -20%;
-    right: -20%;
-    width: max(64vw, 58vh);
-    height: max(64vw, 58vh);
-  }
-  .mesh-glow--b {
-    background: radial-gradient(
-      circle at 58% 46%,
-      var(--mesh-hue-2) 0%,
-      var(--mesh-hue-2) 40%,
-      transparent 76%
-    );
-    animation-duration: 46s;
-    animation-direction: reverse;
-  }
-  .mesh-shape--c {
-    bottom: -30%;
-    left: 0%;
-    width: max(74vw, 70vh);
-    height: max(74vw, 70vh);
-  }
-  .mesh-glow--c {
-    background: radial-gradient(
-      circle at 50% 54%,
-      var(--mesh-hue-3) 0%,
-      var(--mesh-hue-3) 46%,
-      transparent 80%
-    );
-    animation-duration: 62s;
-  }
-  .mesh-shape--d {
-    top: 26%;
-    left: 32%;
-    width: max(52vw, 48vh);
-    height: max(52vw, 48vh);
-  }
-  .mesh-glow--d {
-    background: radial-gradient(
-      circle at 50% 50%,
-      var(--mesh-hue-3) 0%,
-      var(--mesh-hue-3) 36%,
-      transparent 74%
-    );
-    animation-duration: 34s;
-    animation-direction: reverse;
-  }
-  /* Fluid morph: the silhouette breathes between scale and a drifting blob
-     radius, which is what makes the field feel liquid rather than like four
-     static circles. */
-  @keyframes mesh-morph {
-    0%,
-    100% {
-      transform: scale(1, 1);
-      border-radius: 50% 50% 50% 50%;
-    }
-    25% {
-      transform: scale(1.1, 0.94);
-      border-radius: 58% 42% 55% 45%;
-    }
-    50% {
-      transform: scale(0.94, 1.08);
-      border-radius: 45% 55% 42% 58%;
-    }
-    75% {
-      transform: scale(1.06, 1.02);
-      border-radius: 52% 48% 58% 42%;
-    }
+  /* The lab bench layers its own blueprint matrix and per-subject accent
+     glows over this same atmosphere, so there the crimson sits one level
+     down, exactly as it did before. */
+  .lab-root .mesh-canvas-wrap {
+    z-index: 0;
   }
 
   /* ------------------------------------------------

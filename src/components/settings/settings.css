@@ -33,9 +33,9 @@ html[data-text="dyslexic"] {
   font-size: calc(16px * var(--text-scale, 1.06));
 }
 
-/* Ambient intensity — the global background-glow driver. The backdrop layer
-   reads it (`.mesh-backdrop`), so 0% is a completely flat page. */
-html[data-ambient="flat"] .mesh-backdrop {
+/* Ambient intensity — the global background-glow driver. The backdrop canvas
+   reads it (`.mesh-canvas-wrap`), so 0% is a completely flat page. */
+html[data-ambient="flat"] .mesh-canvas-wrap {
   opacity: 0;
 }
 /* Dyslexic-friendly letterforms: wider tracking, generous word spacing and a
@@ -99,9 +99,10 @@ html:not(.dark) .set-root.set-root--bare {
    ------------------------------------------------------------ */
 
 .set-root {
-  /* Warm ink to match the global dark theme — no cold blue canvas. */
-  --set-ink: #150c0b;
-  --set-bg: #150c0b;
+  /* Clean dark-neutral canvas, matching the global dark theme base (--ink).
+     No blue template tokens: the crimson backdrop canvas supplies the colour. */
+  --set-ink: #0b0f19;
+  --set-bg: #0b0f19;
 
   /* ---- Apple-style glass tokens: one source of truth for every surface ----
      Card fill   rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
@@ -149,7 +150,7 @@ html:not(.dark) .set-root.set-root--bare {
   -moz-osx-font-smoothing: grayscale;
   /* Deep warm base (never a slate/purple-gray block) so the shared crimson
      mesh behind the panel supplies the atmosphere. */
-  background: linear-gradient(180deg, #12080a 0%, #0e0607 44%, #0a0506 100%);
+  background: linear-gradient(180deg, #0b0f19 0%, #0b0f19 44%, #090d16 100%);
 }
 
 /* faint blueprint matrix, matched to the lab backdrop, scaled by ambient */
@@ -162,8 +163,8 @@ html:not(.dark) .set-root.set-root--bare {
   background-image:
     linear-gradient(to right, rgba(103, 232, 249, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(103, 232, 249, 0.06) 1px, transparent 1px),
-    linear-gradient(to right, rgba(148, 163, 184, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+    linear-gradient(to right, rgba(150, 150, 154, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(150, 150, 154, 0.045) 1px, transparent 1px);
   background-size:
     48px 48px,
     48px 48px,
@@ -428,7 +429,7 @@ html:not(.dark) .set-root.set-root--bare {
 }
 .set-slider [data-slot="slider-track"] {
   height: 3px;
-  background: rgba(148, 163, 184, 0.16);
+  background: rgba(148, 148, 152, 0.16);
 }
 .set-slider [data-slot="slider-range"] {
   background: linear-gradient(90deg, var(--set-crimson), var(--set-crimson-deep));
@@ -472,7 +473,7 @@ html:not(.dark) .set-root.set-root--bare {
   height: 24px;
   width: 44px;
   border: 1px solid var(--set-hairline);
-  background: rgba(148, 163, 184, 0.18);
+  background: rgba(148, 148, 152, 0.18);
 }
 .set-switch[data-state="checked"] {
   border-color: rgba(200, 30, 30, 0.42);
@@ -848,7 +849,7 @@ html:not(.dark) .set-select-content [role="option"] {
   height: 5px;
   width: 30px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 148, 152, 0.22);
   transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 .set-strength__bar--l1 {
@@ -955,7 +956,7 @@ html:not(.dark) .set-select-content [role="option"] {
 }
 .set-device__tag--other {
   border-color: var(--set-border);
-  background: rgba(148, 163, 184, 0.12);
+  background: rgba(148, 148, 152, 0.12);
   color: var(--set-dim);
 }
 
@@ -1160,10 +1161,10 @@ html:not(.dark) .set-root {
 }
 html:not(.dark) .set-root::before {
   background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.075) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.075) 1px, transparent 1px),
-    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(20, 20, 24, 0.075) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 20, 24, 0.075) 1px, transparent 1px),
+    linear-gradient(to right, rgba(20, 20, 24, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 20, 24, 0.05) 1px, transparent 1px);
 }
 html:not(.dark) .set-item[data-state="open"] {
   border-color: rgba(0, 0, 0, 0.09) !important;

@@ -2,88 +2,167 @@ import { useEffect, useRef } from "react";
 import { settingsRuntime } from "@/lib/app-settings";
 
 /**
- * Manthan backdrop engine — the signature crimson atmosphere.
+ * Manthan backdrop engine — a native HTML5 canvas tracking the cursor.
  *
- * One full-viewport, pointer-transparent layer (`pointer-events: none`,
- * `z-index: 1`) holds everything:
+ * Structure: one full-viewport container (`100vw × 100vh`, `position: fixed`,
+ * `top/left: 0`, `z-index: 1`, `pointer-events: none`, `filter: blur(140px)`)
+ * holding a single `<canvas>`. Nothing about the motion is CSS: every frame is
+ * painted by the 2D rendering context inside a requestAnimationFrame loop, and
+ * the container's heavy blur smears those shapes into ambient light.
  *
- *   1. THE POINTER CANOPY (`.mesh-cursor-glow`) — the signature fill,
- *      `radial-gradient(circle at var(--mouse-x) var(--mouse-y), …)` behind a
- *      140px blur. Because the gradient itself is anchored to those two
- *      variables, the whole pool of light travels with the cursor.
- *   2. FOUR ORGANIC SHAPES (`.mesh-shape--a…d`) — oversized crimson/ruby/
- *      oxblood radial blobs that morph fluidly on long keyframe loops and are
- *      translated by the same damped position at four different damping
- *      factors, which is what gives the field layered depth.
+ * THE PAINT (exactly the historical fill): each shape is an organic path —
+ * a circular silhouette modulated by two slow sine harmonics, so it morphs
+ * instead of being a perfect circle — filled with a radial gradient of
  *
- * THE MOTION: a window-level `mousemove` listener captures the raw cursor
- * coordinates (clientX / clientY) immediately; a single rAF loop then eases
- * the live position toward them with an exponential lerp —
+ *     rgba(180, 20, 20, 0.16)   0%
+ *     rgba(130, 10, 10, 0.04)   50%
+ *     transparent              100%
  *
- *     pos += (target − pos) · LERP · k          // k normalises to 60fps
+ * scaled per shape by its own alpha so overlapping glows blend into a halo
+ * rather than stacking into one solid slab.
  *
- * — and writes the *smoothed* value back into `--mouse-x` / `--mouse-y` on the
- * layer. That is the inertia: the shapes keep gliding after the cursor stops,
- * and lag behind it while it moves, instead of snapping. Everything is written
- * straight to inline styles/custom properties, so pointer movement never
- * re-renders React.
+ * THE MOTION: a window-level `mousemove` / `pointermove` listener records the
+ * raw cursor metrics (clientX / clientY) immediately. The rAF loop then eases
+ * the live position toward them with a linear-interpolation dampening step —
  *
- * After the pointer rests, the target eases along a slow Lissajous path so the
- * background is never dead. Motionless Mode freezes it in place, the 30fps
- * framerate target throttles the loop, `--bg-glow-opacity` (Ambient Intensity)
- * scales the whole layer, and touch / reduced-motion users get the same
- * atmosphere parked as a static pool of light.
+ *     pos += (target − pos) · lerp · k        // k normalises the step to 60fps
+ *
+ * — and each shape chases that already-damped position with its *own* lerp
+ * factor, which is what produces the luxurious, liquid delay and the layered
+ * depth between the shapes. Radii are lerped too, so the field glides and
+ * expands rather than snapping. After the pointer rests, the target drifts
+ * along a slow closed path so the atmosphere keeps breathing on its own.
+ *
+ * Motionless Mode freezes the loop, the 30fps framerate target throttles it,
+ * `--bg-glow-opacity` (Ambient Intensity) scales the whole layer, and touch /
+ * reduced-motion visitors get the same atmosphere parked on a static frame.
  */
 
-/** Resting spot as a fraction of the viewport, before the first pointer move. */
-const REST = { x: 0.32, y: 0.34 };
-/** Lerp factor per 60fps step for the canopy — lower is heavier, floatier. */
-const LERP = 0.055;
-/** How far each ambient shape trails the cursor, per shape (px of drift per
- *  px of cursor displacement from the viewport centre). Deliberately four
- *  different values so the layers separate in depth as the mouse moves. */
-const SHAPE_DAMP = [0.05, 0.075, 0.03, 0.095];
+/** Resting pointer spot, as a fraction of the viewport. */
+const REST = { x: 0.34, y: 0.36 };
+/** Canopy dampening per 60fps step — lower is heavier and floatier. */
+const CANOPY_LERP = 0.055;
 /** How long the pointer must be still before the field drifts on its own. */
 const IDLE_AFTER = 2.4;
+/** Radial samples per silhouette (smooth enough once blurred 140px). */
+const LOBES = 56;
+/** The canvas sits behind a 140px blur, so rendering it small is invisible to
+ *  the eye and keeps the loop cheap on mid-range devices. */
+const MAX_EDGE = 1024;
+/** Day-theme paint multiplier: a pale canvas must never turn pink. */
+const LIGHT_STRENGTH = 0.4;
+
+/** The mandated gradient ramp. */
+const CORE = [180, 20, 20] as const;
+const MID = [130, 10, 10] as const;
+const CORE_ALPHA = 0.16;
+const MID_ALPHA = 0.04;
+
+type ShapeConfig = {
+  /** Per-shape dampening — the spread of these values is the depth layering. */
+  lerp: number;
+  /** Resting radius, as a fraction of the viewport's longest edge. */
+  radius: number;
+  /** Multiplier on the mandated gradient ramp. */
+  alpha: number;
+  /** Offset from the cursor, as a fraction of the viewport. */
+  ox: number;
+  oy: number;
+  /** Breathing / morph phase so no two shapes move together. */
+  phase: number;
+};
+
+/** Five massive layers: two broad ones, three tighter and nearer. */
+const SHAPES: ShapeConfig[] = [
+  { lerp: 0.1, radius: 0.3, alpha: 1, ox: 0, oy: 0, phase: 0 },
+  { lerp: 0.045, radius: 0.42, alpha: 0.7, ox: -0.2, oy: -0.1, phase: 1.7 },
+  { lerp: 0.07, radius: 0.26, alpha: 0.75, ox: 0.22, oy: 0.14, phase: 3.1 },
+  { lerp: 0.028, radius: 0.52, alpha: 0.5, ox: 0.08, oy: -0.22, phase: 4.4 },
+  { lerp: 0.085, radius: 0.2, alpha: 0.8, ox: -0.15, oy: 0.18, phase: 5.6 },
+];
 
 export default function MeshBackground() {
-  const layerRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const layer = layerRef.current;
-    if (!layer) return;
-
-    const shapes = Array.from(
-      layer.querySelectorAll<HTMLElement>(".mesh-shape"),
-    );
-    const offsets = shapes.map(() => ({ x: 0, y: 0 }));
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const size = { w: window.innerWidth, h: window.innerHeight };
+    const buffer = { w: 0, h: 0, s: 1 };
+
+    /** Live state per shape — positions and radii are lerped, never set raw. */
+    const live = SHAPES.map((cfg) => ({
+      cfg,
+      x: size.w * (REST.x + cfg.ox),
+      y: size.h * (REST.y + cfg.oy),
+      r: cfg.radius * Math.max(size.w, size.h),
+    }));
+
     const target = { x: size.w * REST.x, y: size.h * REST.y };
     const pos = { ...target };
 
-    const writeVars = () => {
-      layer.style.setProperty("--mouse-x", `${pos.x.toFixed(1)}px`);
-      layer.style.setProperty("--mouse-y", `${pos.y.toFixed(1)}px`);
-    };
-    const writeShapes = () => {
-      for (let i = 0; i < shapes.length; i += 1) {
-        const { x, y } = offsets[i];
-        shapes[i].style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(
-          2,
-        )}px, 0)`;
-      }
-    };
-
-    // Publish the resting position immediately so the canopy is never stuck
-    // at the CSS fallback while waiting for a first mousemove.
-    writeVars();
-
-    const onResize = () => {
+    const resize = () => {
       size.w = window.innerWidth;
       size.h = window.innerHeight;
+      const longest = Math.max(size.w, size.h);
+      const s = Math.min(1, MAX_EDGE / longest);
+      buffer.s = s;
+      buffer.w = Math.max(1, Math.round(size.w * s));
+      buffer.h = Math.max(1, Math.round(size.h * s));
+      canvas.width = buffer.w;
+      canvas.height = buffer.h;
     };
-    window.addEventListener("resize", onResize, { passive: true });
+    resize();
+
+    const paint = (t: number) => {
+      const s = buffer.s;
+      // Theme strength is a class read (no style recalc), so it can be checked
+      // cheaply every frame and still react instantly to the theme toggle.
+      const strength = document.documentElement.classList.contains("dark")
+        ? 1
+        : LIGHT_STRENGTH;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, buffer.w, buffer.h);
+
+      for (const item of live) {
+        const { cfg } = item;
+        const cx = item.x * s;
+        const cy = item.y * s;
+        const r = item.r * s;
+        if (r <= 0.5) continue;
+
+        // Organic silhouette: two slow harmonics on the radius give the shape
+        // its liquid, morphing contour.
+        ctx.beginPath();
+        for (let i = 0; i <= LOBES; i += 1) {
+          const a = (i / LOBES) * Math.PI * 2;
+          const wobble =
+            1 +
+            0.13 * Math.sin(3 * a + t * 0.21 + cfg.phase) +
+            0.08 * Math.sin(5 * a - t * 0.16 + cfg.phase * 1.7);
+          const rr = r * wobble;
+          const px = cx + Math.cos(a) * rr;
+          const py = cy + Math.sin(a) * rr;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+
+        // The mandated ramp, scaled by this shape's weight and the theme.
+        const core = CORE_ALPHA * cfg.alpha * strength;
+        const mid = MID_ALPHA * cfg.alpha * strength;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0, `rgba(${CORE[0]}, ${CORE[1]}, ${CORE[2]}, ${core.toFixed(4)})`);
+        grad.addColorStop(0.5, `rgba(${MID[0]}, ${MID[1]}, ${MID[2]}, ${mid.toFixed(4)})`);
+        grad.addColorStop(1, `rgba(${MID[0]}, ${MID[1]}, ${MID[2]}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+    };
 
     // Raw pointer capture — the immediate half of the tracking.
     let idle = 0;
@@ -93,23 +172,24 @@ export default function MeshBackground() {
       idle = 0;
     };
     // `pointermove` is the modern listener; plain `mousemove` keeps the same
-    // cursor mapping on browsers that never shipped Pointer Events.
+    // cursor tracking on browsers that never shipped Pointer Events.
     const moveEvent: "pointermove" | "mousemove" =
       "onpointermove" in window ? "pointermove" : "mousemove";
     window.addEventListener(moveEvent, onMove, { passive: true });
+    window.addEventListener("resize", resize, { passive: true });
 
     const reduced =
       settingsRuntime.reduceMotion ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const finePointer = window.matchMedia("(pointer: fine)").matches;
 
-    // Touch devices and reduced-motion users keep the atmosphere parked: the
-    // resting pool of light, no follow loop.
+    // Touch devices and reduced-motion visitors keep the atmosphere parked:
+    // one static frame of the resting arrangement, no loop.
     if (reduced || !finePointer) {
-      writeShapes();
+      paint(0);
       return () => {
         window.removeEventListener(moveEvent, onMove);
-        window.removeEventListener("resize", onResize);
+        window.removeEventListener("resize", resize);
       };
     }
 
@@ -132,63 +212,53 @@ export default function MeshBackground() {
         acc = 0;
       }
 
-      // No pointer for a while → drift along a slow closed path so the
-      // atmosphere keeps moving on its own.
+      const k = Math.min(dt * 60, 3);
+      const t = now / 1000;
+
+      // No pointer for a while → drift along a slow closed path so the field
+      // keeps moving on its own.
       idle += dt;
       if (idle > IDLE_AFTER) {
-        const t = now / 1000;
-        target.x = size.w * (0.5 + 0.2 * Math.sin(t * 0.13));
-        target.y = size.h * (0.5 + 0.14 * Math.cos(t * 0.11));
+        target.x = size.w * (0.5 + 0.2 * Math.sin(t * 0.11));
+        target.y = size.h * (0.5 + 0.14 * Math.cos(t * 0.09));
       }
 
-      // Inertia: exponential lerp, normalised so a 144Hz display and a 30fps
-      // device trail identically.
-      const k = Math.min(dt * 60, 3);
-      const ease = Math.min(1, LERP * k);
-      pos.x += (target.x - pos.x) * ease;
-      pos.y += (target.y - pos.y) * ease;
-      writeVars();
+      // The canopy: a linear-interpolation dampening step, normalised to 60fps
+      // so a 144Hz display and a 30fps device trail identically.
+      const canopy = Math.min(1, CANOPY_LERP * k);
+      pos.x += (target.x - pos.x) * canopy;
+      pos.y += (target.y - pos.y) * canopy;
 
-      // Layered parallax: each shape trails the same eased position by its own
-      // factor, so the field separates in depth rather than sliding as one
-      // sheet.
-      const dx = pos.x - size.w / 2;
-      const dy = pos.y - size.h / 2;
-      for (let i = 0; i < offsets.length; i += 1) {
-        const damp = SHAPE_DAMP[i % SHAPE_DAMP.length];
-        offsets[i].x += (dx * damp - offsets[i].x) * ease;
-        offsets[i].y += (dy * damp - offsets[i].y) * ease;
+      const longest = Math.max(size.w, size.h);
+      for (const item of live) {
+        const { cfg } = item;
+        // Each shape chases the already-damped canopy at its own rate, and
+        // keeps its own offset — that is the layered, liquid lag.
+        const shapeEase = Math.min(1, cfg.lerp * k);
+        item.x += (pos.x + cfg.ox * size.w - item.x) * shapeEase;
+        item.y += (pos.y + cfg.oy * size.h - item.y) * shapeEase;
+
+        // Radii breathe too, so the shapes expand and contract as they travel.
+        const want = cfg.radius * longest * (1 + 0.1 * Math.sin(t * 0.15 + cfg.phase));
+        item.r += (want - item.r) * Math.min(1, 0.05 * k);
       }
-      writeShapes();
+
+      paint(t);
     };
 
+    paint(0);
     raf = requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener(moveEvent, onMove);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", resize);
       cancelAnimationFrame(raf);
     };
   }, []);
 
   return (
-    <div ref={layerRef} className="mesh-backdrop" aria-hidden="true">
-      {/* the pointer-tracked canopy — the signature crimson fill */}
-      <span className="mesh-cursor-glow" />
-
-      {/* four fluid crimson shapes, translated by the damped cursor position */}
-      <span className="mesh-shape mesh-shape--a">
-        <span className="mesh-glow mesh-glow--a" />
-      </span>
-      <span className="mesh-shape mesh-shape--b">
-        <span className="mesh-glow mesh-glow--b" />
-      </span>
-      <span className="mesh-shape mesh-shape--c">
-        <span className="mesh-glow mesh-glow--c" />
-      </span>
-      <span className="mesh-shape mesh-shape--d">
-        <span className="mesh-glow mesh-glow--d" />
-      </span>
+    <div className="mesh-canvas-wrap" aria-hidden="true">
+      <canvas ref={canvasRef} className="mesh-canvas" />
     </div>
   );
 }
