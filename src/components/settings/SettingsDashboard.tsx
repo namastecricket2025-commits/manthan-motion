@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { SPRING } from "@/components/lab/use-canvas";
+import { SPRING } from "@/lib/motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { FrameTarget, TextComfort, ThemeMode } from "@/lib/app-settings";
@@ -249,7 +249,7 @@ function FloatField({
 /* the dashboard                                                       */
 /* ------------------------------------------------------------------ */
 
-export default function SettingsDashboard() {
+export default function SettingsDashboard({ bare = false }: { bare?: boolean } = {}) {
   const { settings, update, reset, systemReducedMotion } = useSettings();
   const spring = settings.reduceMotion ? { duration: 0 } : SPRING;
 
@@ -414,7 +414,11 @@ export default function SettingsDashboard() {
   const comfortIndex = Math.max(0, COMFORT.findIndex((c) => c.key === settings.textComfort));
 
   return (
-    <section id="settings" className="set-root" aria-labelledby="settings-heading">
+    <section
+      id="settings"
+      className={`set-root${bare ? " set-root--bare" : ""}`}
+      aria-labelledby="settings-heading"
+    >
       <div className="set-shell">
         <header className="set-head">
           <div className="set-head__meta">

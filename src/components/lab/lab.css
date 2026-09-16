@@ -1209,13 +1209,11 @@ html:not(.dark) .lab-root .lab-tip__title {
 }
 
 @media (max-width: 1023px) {
-  /* The lab owns exactly one viewport on small screens — no internal page
-     scroll, canvas pinned to the top half, deck below. It is *not* fixed to
-     the window any more: the settings dashboard sits directly beneath the
-     lab, so the document scrolls on past this section while the lab itself
-     still fits a single screen with zero scrolling to observe a change. */
+  /* the lab owns the viewport on small screens: exactly one screen, no page
+     scroll, canvas pinned to the top half and controls in the deck below */
   .lab-root {
-    position: relative;
+    position: fixed;
+    inset: 0;
     height: 100dvh;
     min-height: 0;
     overflow: hidden;

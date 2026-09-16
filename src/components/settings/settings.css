@@ -68,10 +68,14 @@ html[data-ambient="flat"] .lab-root .lab-spin {
   animation-play-state: paused !important;
 }
 
-/* host section sitting directly beneath the STEM Lab */
-.lab-settings-host {
-  position: relative;
-  z-index: 1;
+/* Standalone /settings route: the page shell already paints the canvas, so
+   the dashboard drops its own backdrop and outer padding. */
+.set-root--bare {
+  padding: 0;
+  background: none;
+}
+.set-root--bare::before {
+  display: none;
 }
 
 /* ------------------------------------------------------------

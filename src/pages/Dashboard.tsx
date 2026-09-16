@@ -11,6 +11,7 @@ import PieChart from "@/components/charts/pie-chart";
 import PieSlice from "@/components/charts/pie-slice";
 import { ChartTooltip } from "@/components/charts/tooltip";
 import NotebooksSection from "@/components/dashboard/NotebooksSection";
+import { DashboardNav, type DashboardSection } from "@/components/dashboard/DashboardNav";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -22,10 +23,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
-  BookOpen,
   FileText,
-  FlaskConical,
-  LayoutDashboard,
   Link2,
   LogOut,
   Menu,
@@ -79,8 +77,14 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [hovered, setHovered] = useState<number | null>(null);
-  /** Sidebar tabs — Notebooks renders its own full section. */
-  const [view, setView] = useState<"dashboard" | "notebooks">("dashboard");
+  /** Sidebar tabs — Notebooks renders its own full section. `/dashboard?view=notebooks`
+      deep-links straight into it (used by the sidebar on other routes). */
+  const [view, setView] = useState<"dashboard" | "notebooks">(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("view") === "notebooks"
+      ? "notebooks"
+      : "dashboard",
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([
     { id: 1, name: "thermo-ch4.pdf", detail: "2.4 MB · PDF", kind: "file" },
@@ -155,55 +159,22 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  const nav = (
-    <nav className="flex flex-col gap-1">
-      {(
-        [
-          { label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
-          { label: "Notebooks", icon: BookOpen, key: "notebooks" },
-          { label: "STEM Lab", icon: FlaskConical, key: "lab" },
-        ] as const
-      ).map((item) => {
-        const active = item.key !== "lab" && view === item.key;
-        return (
-          <button
-            key={item.label}
-            type="button"
-            onClick={() => {
-              if (item.key === "lab") {
-                setSheetOpen(false);
-                navigate("/lab");
-              } else {
-                setView(item.key);
-                setSheetOpen(false);
-              }
-            }}
-            className={
-              "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors " +
-              (active
-                ? "border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
-                : "border border-transparent text-text-dim hover:text-foreground")
-            }
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </button>
-        );
-      })}
-      {/* Settings live directly beneath the STEM Lab section */}
-      <button
-        type="button"
-        onClick={() => {
-          setSheetOpen(false);
-          navigate("/lab#settings");
-        }}
-        className="flex items-center gap-3 rounded-xl border border-transparent px-3.5 py-2.5 text-sm font-medium text-text-dim transition-colors hover:text-foreground"
-      >
-        <Menu className="h-4 w-4" />
-        Settings
-      </button>
-    </nav>
-  );
+  /** Sidebar navigation: dashboard/notebooks swap in place, everything else routes. */
+  const selectSection = (key: DashboardSection) => {
+    setSheetOpen(false);
+    if (key === "lab") {
+      navigate("/lab");
+    } else if (key === "settings") {
+      navigate("/settings");
+    } else {
+      setView(key);
+      navigate(key === "notebooks" ? "/dashboard?view=notebooks" : "/dashboard", {
+        replace: true,
+      });
+    }
+  };
+
+  const nav = <DashboardNav active={view} onSelect={selectSection} />;
 
   return (
     <div ref={rootRef} className="relative min-h-screen bg-background text-foreground">

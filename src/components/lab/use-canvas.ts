@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import { settingsRuntime } from "@/lib/app-settings";
 
 /** Spring tuning used across the lab: stiffness 250, damping 22. */
-export const SPRING = { type: "spring", stiffness: 250, damping: 22 } as const;
+export { SPRING } from "@/lib/motion";
 
 /**
  * Runs a callback every animation frame with delta time (seconds).
