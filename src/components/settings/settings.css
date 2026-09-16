@@ -33,9 +33,9 @@ html[data-text="dyslexic"] {
   font-size: calc(16px * var(--text-scale, 1.06));
 }
 
-/* Ambient intensity — the global background-glow driver. The mesh layer
-   reads it (`.mesh-field`), so 0% is a completely flat page. */
-html[data-ambient="flat"] .mesh-field {
+/* Ambient intensity — the global background-glow driver. The backdrop layer
+   reads it (`.mesh-backdrop`), so 0% is a completely flat page. */
+html[data-ambient="flat"] .mesh-backdrop {
   opacity: 0;
 }
 /* Dyslexic-friendly letterforms: wider tracking, generous word spacing and a

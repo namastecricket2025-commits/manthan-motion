@@ -117,19 +117,15 @@
      is the hard opacity cap the Ambient Intensity slider cannot exceed. */
   --mesh-blur: 140px;
   --mesh-ceiling: 0.9;
-  --mesh-hue-1: rgba(163, 22, 22, 0.07); /* deep ruby  */
-  --mesh-hue-2: rgba(220, 38, 38, 0.03); /* crimson    */
-  --mesh-hue-3: rgba(143, 29, 34, 0.05); /* oxblood    */
-  /* Cursor blob — halved in the day theme, or a shape wider than the
-     viewport would tint the whole pale canvas pink. */
-  --mesh-cursor-core: rgba(220, 38, 38, 0.06);
-  --mesh-cursor-tail: rgba(163, 22, 22, 0.02);
+  --mesh-hue-1: rgba(163, 22, 22, 0.09); /* deep ruby  */
+  --mesh-hue-2: rgba(220, 38, 38, 0.045); /* crimson    */
+  --mesh-hue-3: rgba(143, 29, 34, 0.07); /* oxblood    */
 
   /* ---- Frosted glass (light) ----------------------------------------- */
-  --glass-fill: rgba(0, 0, 0, 0.015);
-  --glass-fill-strong: rgba(0, 0, 0, 0.035);
-  --glass-hairline: rgba(0, 0, 0, 0.05);
-  --glass-blur: blur(25px) saturate(145%);
+  --glass-fill: rgba(255, 255, 255, 0.45);
+  --glass-fill-strong: rgba(255, 255, 255, 0.6);
+  --glass-hairline: rgba(0, 0, 0, 0.04);
+  --glass-blur: blur(28px) saturate(130%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.16);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
@@ -245,26 +241,24 @@
 
   /* ---- BACKGROUND MESH (dark) ----------------------------------------
      The signature deep-red atmosphere: large ruby and crimson radial shapes
-     under one heavy 140px blur. Alphas stay in the 10–18% band and the whole
-     field is capped by `--mesh-ceiling`, so it glows like embers behind the
-     glass instead of becoming a bright wall. */
+     under one heavy 140px blur. Shape alphas stay in the 5–22% band (the
+     pointer canopy is a fixed 16% → 5% falloff) and the whole field is
+     capped by `--mesh-ceiling`, so it glows like embers behind the glass
+     instead of becoming a bright wall. */
   --mesh-blur: 140px;
   --mesh-ceiling: 0.85;
-  --mesh-hue-1: rgba(163, 22, 22, 0.18); /* deep ruby  */
-  --mesh-hue-2: rgba(220, 38, 38, 0.1); /* crimson    */
-  --mesh-hue-3: rgba(143, 29, 34, 0.14); /* oxblood    */
-  /* Cursor blob — the diffused crimson blend that follows the pointer. */
-  --mesh-cursor-core: rgba(220, 38, 38, 0.16);
-  --mesh-cursor-tail: rgba(163, 22, 22, 0.04);
+  --mesh-hue-1: rgba(163, 22, 22, 0.22); /* deep ruby  */
+  --mesh-hue-2: rgba(220, 38, 38, 0.13); /* crimson    */
+  --mesh-hue-3: rgba(143, 29, 34, 0.17); /* oxblood    */
 
-  /* ---- Frosted glass (dark) — crimson-neutral, never blue -------------
-     Pure white-alpha glass over the crimson mesh. NOTE: no slate/blue fill
-     here on purpose — a `rgba(15,23,42,*)` base reads as a cold blue panel
-     against the warm ruby canvas, which is exactly the tint we removed. */
-  --glass-fill: rgba(255, 255, 255, 0.02);
-  --glass-fill-strong: rgba(255, 255, 255, 0.045);
-  --glass-hairline: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(25px) saturate(145%);
+  /* ---- Frosted glass (dark) — smoky neutral translucent canvas --------
+     The 55% slate scrim is what stops the restored crimson backdrop from
+     blinding the copy: the cursor-tracking glow still glides visibly under
+     the card, but it can never saturate the panel or swallow the text. */
+  --glass-fill: rgba(15, 23, 42, 0.55);
+  --glass-fill-strong: rgba(15, 23, 42, 0.68);
+  --glass-hairline: rgba(255, 255, 255, 0.06);
+  --glass-blur: blur(28px) saturate(130%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
@@ -400,9 +394,9 @@
      everywhere else that shares these two classes). Both themes are driven by
      the tokens in :root / .dark:
 
-       fill      rgba(255,255,255,0.02)  dark  / rgba(0,0,0,0.015)  light
-       blur      blur(25px) saturate(145%) so the crimson blob glints and
-                 drifts under every card instead of being blocked out
+       fill      rgba(15,23,42,0.55)  dark  / rgba(255,255,255,0.45)  light
+       blur      blur(28px) saturate(130%) so the tracked crimson backdrop
+                 glides under every card without drowning the copy
        outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
        depth     one wide, soft ambient shadow (never a hard drop shadow)
      ------------------------------------------------ */
@@ -441,12 +435,14 @@
   /* ------------------------------------------------
      LOCKED GLASS SPEC — the one rule that cannot be overridden.
 
-     Every card surface in the app (panel, chip, footer, About's glass, the
-     CTA body and the Settings accordion panes) is pinned to the same
-     translucent Apple layer, so the cursor-tracking crimson blob is always
-     visible glinting underneath the copy. `!important` is deliberate: it
-     keeps a later, more specific component rule from re-introducing an
-     opaque fill or a cold tint (the bug that flattened the theme).
+     Every card surface in the app (the six feature grid cards, the five
+     pipeline steps, the stats modules, the bottom CTA panel, About's glass,
+     the footer and the Settings accordion panes) is pinned to the same
+     smoky, translucent Apple layer. There is no saturated or opaque panel
+     anywhere: the mouse-tracked crimson backdrop stays visible gliding
+     underneath, while the neutral scrim keeps the copy high-contrast.
+     `!important` is deliberate — it stops a later, more specific component
+     rule from re-introducing an opaque fill or a solid red panel.
      ------------------------------------------------ */
   .glass-panel,
   .glass-chip,
@@ -455,12 +451,11 @@
   .set-item,
   .set-card,
   .set-block,
-  .set-row,
-  .moving-border > * {
-    background: rgba(255, 255, 255, 0.02) !important;
-    -webkit-backdrop-filter: blur(25px) saturate(145%) !important;
-    backdrop-filter: blur(25px) saturate(145%) !important;
-    border-color: rgba(255, 255, 255, 0.07) !important;
+  .set-row {
+    background: rgba(15, 23, 42, 0.55) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(130%) !important;
+    backdrop-filter: blur(28px) saturate(130%) !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
   }
   html:not(.dark) .glass-panel,
   html:not(.dark) .glass-chip,
@@ -469,10 +464,9 @@
   html:not(.dark) .set-item,
   html:not(.dark) .set-card,
   html:not(.dark) .set-block,
-  html:not(.dark) .set-row,
-  html:not(.dark) .moving-border > * {
-    background: rgba(0, 0, 0, 0.015) !important;
-    border-color: rgba(0, 0, 0, 0.05) !important;
+  html:not(.dark) .set-row {
+    background: rgba(255, 255, 255, 0.45) !important;
+    border-color: rgba(0, 0, 0, 0.04) !important;
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -588,14 +582,26 @@
     );
     animation: border-rotate 8s linear infinite;
   }
-  /* The primary CTA is the same frosted glass as the cards, so it sits in
-     the moving mesh instead of reading as an opaque dark pill. The 1.5px
-     conic ring keeps its crisp travelling border on top. */
-  .moving-border > * {
+  /* THE one solid crimson fill in the system: the primary action button
+     (`Generate study material`, `Start churning`). Everything else — panels,
+     chips, pipeline cards, the CTA wrapper — is frosted glass over the
+     tracked crimson backdrop. The 1.5px conic ring keeps its travelling
+     border on top. */
+  .moving-border__inner {
     border-radius: calc(999px - 1.5px);
-    background: var(--glass-fill);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    background: var(--signal);
+    color: var(--primary-foreground, #fff7f5);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      0 16px 40px -18px color-mix(in srgb, var(--signal) 80%, transparent);
+    transition: filter 220ms ease;
+  }
+  .moving-border:hover .moving-border__inner,
+  .moving-border:focus-visible .moving-border__inner {
+    filter: brightness(1.08) saturate(1.04);
+  }
+  .moving-border:active .moving-border__inner {
+    filter: brightness(0.95);
   }
   .moving-border:hover,
   .moving-border:active,
@@ -626,13 +632,8 @@
   @media (prefers-reduced-motion: reduce) {
     .moving-border {
       animation: none;
-      /* a soft crimson hairline, never a solid red ring — the button keeps
-         its glass body in motionless mode too */
-      background: linear-gradient(
-        120deg,
-        color-mix(in srgb, var(--signal) 55%, transparent),
-        color-mix(in srgb, var(--signal-2) 45%, transparent)
-      );
+      /* the ring is the same crimson as the fill it wraps */
+      background: var(--signal);
     }
     .moving-border:hover,
     .moving-border:active {
@@ -764,140 +765,164 @@
   }
 
   /* ------------------------------------------------
-     THE MANTHAN MESH — the signature background layer.
+     THE MANTHAN BACKDROP ENGINE — the signature background layer.
 
-     Four very large radial shapes (deep ruby, crimson, oxblood) drift on
-     slow, prime-length loops. Each blob carries its own `filter:
-     blur(140px)`, which is the cheap way to do this: the browser rasterises
-     the blurred shape once and then only composites a transform each frame,
-     so the motion stays smooth without re-blurring a full-viewport texture.
+     A full-viewport, pointer-transparent layer (`z-index: 1`) holding the
+     massive crimson glow:
 
-     Visibility is double-clamped: the shape alphas live in the 3–18% band
-     per theme, and `.mesh-field` opacity is capped by `--mesh-ceiling` so
-     the Ambient Intensity slider (--bg-glow-opacity) can never push the
-     atmosphere into a bright wall behind the text.
+       .mesh-cursor-glow  one viewport-sized canopy whose gradient is anchored
+                          `at var(--mouse-x) var(--mouse-y)`. The React engine
+                          writes those two variables every frame as *lerped*
+                          (inertia-damped) cursor coordinates, so the canopy
+                          glides after the pointer with a liquid lag instead
+                          of snapping to it.
+       .mesh-shape--*     four oversized organic shapes (deep ruby, crimson,
+                          oxblood). Their wrappers are translated by the same
+                          damped position at four different damping factors —
+                          layered parallax — while the inner `.mesh-glow--*`
+                          spans morph fluidly on slow loops.
+
+     Visibility is double-clamped: the shape alphas live in the 3-22% band
+     per theme and the layer's opacity is capped by `--mesh-ceiling`, so even
+     at 100% Ambient Intensity the field is atmosphere, never a solid wall.
+     The smoky card glass is what keeps the copy readable on top of it.
      ------------------------------------------------ */
-  .mesh-field {
+  .mesh-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 0;
+    /* above the page canvas, below the z-10 content wrappers */
+    z-index: 1;
     pointer-events: none;
     overflow: hidden;
     opacity: min(
       1,
-      calc(var(--mesh-ceiling, 0.85) * var(--bg-glow-opacity, 1))
+      calc(var(--mesh-ceiling, 0.9) * var(--bg-glow-opacity, 1))
     );
     transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .mesh-blob {
+  /* The lab bench layers its own blueprint matrix and per-subject accent
+     glows over this same atmosphere, so there the crimson sits one level
+     down, exactly as it did before. */
+  .lab-root .mesh-backdrop {
+    z-index: 0;
+  }
+
+  /* The pointer-tracked canopy — the signature fill, verbatim. */
+  .mesh-cursor-glow {
     position: absolute;
-    border-radius: 9999px;
-    filter: blur(var(--mesh-blur, 140px));
+    inset: 0;
+    background: radial-gradient(
+      circle at var(--mouse-x, 50%) var(--mouse-y, 40%),
+      rgba(180, 20, 20, 0.16) 0%,
+      rgba(130, 10, 10, 0.05) 50%,
+      transparent 100%
+    ) !important;
+    filter: blur(140px);
+  }
+
+  /* JS translates these wrappers (the tracked parallax); the inner span owns
+     the morph animation, so the two never fight over `transform`. */
+  .mesh-shape {
+    position: absolute;
     transform: translate3d(0, 0, 0);
     will-change: transform;
-    animation: mesh-drift 46s ease-in-out infinite;
+  }
+  .mesh-glow {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    filter: blur(var(--mesh-blur, 140px));
+    will-change: transform;
+    animation: mesh-morph 38s ease-in-out infinite;
   }
   /* Each shape holds its hue across the core before fading out, which is what
      gives the field body once the 140px blur has softened the edges. Sizing
      is `max(vw, vh)` so tall, narrow phones get the same coverage as a wide
      desktop — there is never a flat, empty quadrant left behind. */
-  .mesh-blob--a {
-    top: -24%;
-    left: -16%;
-    width: max(62vw, 58vh);
-    height: max(62vw, 58vh);
+  .mesh-shape--a {
+    top: -26%;
+    left: -18%;
+    width: max(70vw, 64vh);
+    height: max(70vw, 64vh);
+  }
+  .mesh-glow--a {
     background: radial-gradient(
       circle at 42% 42%,
       var(--mesh-hue-1) 0%,
-      var(--mesh-hue-1) 42%,
+      var(--mesh-hue-1) 44%,
       transparent 78%
     );
     animation-duration: 54s;
   }
-  .mesh-blob--b {
-    top: -18%;
+  .mesh-shape--b {
+    top: -20%;
     right: -20%;
-    width: max(56vw, 52vh);
-    height: max(56vw, 52vh);
+    width: max(64vw, 58vh);
+    height: max(64vw, 58vh);
+  }
+  .mesh-glow--b {
     background: radial-gradient(
       circle at 58% 46%,
       var(--mesh-hue-2) 0%,
-      var(--mesh-hue-2) 38%,
-      transparent 74%
+      var(--mesh-hue-2) 40%,
+      transparent 76%
     );
     animation-duration: 46s;
     animation-direction: reverse;
   }
-  .mesh-blob--c {
-    bottom: -28%;
-    left: 4%;
-    width: max(66vw, 64vh);
-    height: max(66vw, 64vh);
+  .mesh-shape--c {
+    bottom: -30%;
+    left: 0%;
+    width: max(74vw, 70vh);
+    height: max(74vw, 70vh);
+  }
+  .mesh-glow--c {
     background: radial-gradient(
       circle at 50% 54%,
       var(--mesh-hue-3) 0%,
-      var(--mesh-hue-3) 44%,
+      var(--mesh-hue-3) 46%,
       transparent 80%
     );
     animation-duration: 62s;
   }
-  .mesh-blob--d {
-    top: 30%;
-    left: 36%;
-    width: max(44vw, 42vh);
-    height: max(44vw, 42vh);
+  .mesh-shape--d {
+    top: 26%;
+    left: 32%;
+    width: max(52vw, 48vh);
+    height: max(52vw, 48vh);
+  }
+  .mesh-glow--d {
     background: radial-gradient(
       circle at 50% 50%,
-      var(--mesh-hue-2) 0%,
-      var(--mesh-hue-2) 34%,
-      transparent 72%
+      var(--mesh-hue-3) 0%,
+      var(--mesh-hue-3) 36%,
+      transparent 74%
     );
-    animation-duration: 38s;
+    animation-duration: 34s;
     animation-direction: reverse;
   }
-  @keyframes mesh-drift {
+  /* Fluid morph: the silhouette breathes between scale and a drifting blob
+     radius, which is what makes the field feel liquid rather than like four
+     static circles. */
+  @keyframes mesh-morph {
     0%,
     100% {
-      transform: translate3d(0, 0, 0) scale(1);
+      transform: scale(1, 1);
+      border-radius: 50% 50% 50% 50%;
     }
-    33% {
-      transform: translate3d(4%, -3%, 0) scale(1.08);
+    25% {
+      transform: scale(1.1, 0.94);
+      border-radius: 58% 42% 55% 45%;
     }
-    66% {
-      transform: translate3d(-3%, 4%, 0) scale(0.95);
+    50% {
+      transform: scale(0.94, 1.08);
+      border-radius: 45% 55% 42% 58%;
     }
-  }
-
-  /* ------------------------------------------------
-     CURSOR BLOB — the interactive half of the background.
-
-     Position is written per frame by JS as
-     `translate3d(x, y, 0) translate(-50%, -50%)`, so this element must not
-     carry a keyframe animation of its own. The fill is the diffused crimson
-     blend (never a solid red) behind a 120px blur: it glides under the
-     frosted panels and glints through them.
-     ------------------------------------------------ */
-  .mesh-blob--cursor {
-    top: 0;
-    left: 0;
-    /* Majestic scale: one giant atmospheric shape, a touch wider than the
-       viewport, so the pointer drags a whole pool of light around rather
-       than a small spot. */
-    width: max(105vw, 100vh);
-    height: max(105vw, 100vh);
-    background: radial-gradient(
-      circle,
-      var(--mesh-cursor-core, rgba(220, 38, 38, 0.16)) 0%,
-      var(--mesh-cursor-tail, rgba(163, 22, 22, 0.04)) 60%,
-      transparent 100%
-    );
-    filter: blur(130px);
-    animation: none;
-    opacity: 0;
-    transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .mesh-blob--cursor.is-live {
-    opacity: 1;
+    75% {
+      transform: scale(1.06, 1.02);
+      border-radius: 52% 48% 58% 42%;
+    }
   }
 
   /* ------------------------------------------------

@@ -26,11 +26,11 @@ export function MovingBorderButton({
   target?: string;
   rel?: string;
 }) {
-  // No opaque fill here: the frosted glass comes from `.moving-border > *`
-  // in the global stylesheet, so the button blends into the moving mesh.
+  // The primary action button is the ONE solid crimson fill in the system
+  // (see `.moving-border__inner` in the global stylesheet) — the ink and the
+  // hover lift are owned by CSS so the label can never land crimson-on-crimson.
   const inner = cn(
-    "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-display text-sm font-semibold tracking-wide text-foreground transition-colors duration-300",
-    "hover:text-[var(--signal)] active:text-[var(--signal)]",
+    "moving-border__inner inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 font-display text-sm font-semibold tracking-wide duration-300",
     innerClassName,
   );
 
