@@ -5,6 +5,7 @@ import { REACTIONS, SUBSTANCES } from "./reactions";
 import type { Reaction, Substance } from "./reactions";
 import { sfx } from "./lab-sound";
 import { SPRING, useCanvasSize, useRaf } from "./use-canvas";
+import { animDt } from "@/lib/app-settings";
 import { useTelemetryPublisher } from "./PhysicsSim";
 
 /* ---------- formula rendering (digits → subscripts) ---------- */
@@ -116,17 +117,20 @@ function CollisionScreen({ a, b, temp, running }: { a: Substance; b: Substance; 
 
     const speed = 0.25 + st.temp * 0.85;
     const mols = molecules.current;
-    if (st.running) {
+    /* Motionless Mode parks the gas cloud: velocities stop being kicked and the
+       integrator is fed a zero delta, so the collision screen holds its frame. */
+    const adt = animDt(dt);
+    if (st.running && adt > 0) {
       for (const m of mols) {
-        m.vx += (Math.random() - 0.5) * 240 * dt;
-        m.vy += (Math.random() - 0.5) * 240 * dt;
+        m.vx += (Math.random() - 0.5) * 240 * adt;
+        m.vy += (Math.random() - 0.5) * 240 * adt;
         const vmag = Math.hypot(m.vx, m.vy);
         if (vmag > 260 * speed) {
           m.vx = (m.vx / vmag) * 260 * speed;
           m.vy = (m.vy / vmag) * 260 * speed;
         }
-        m.x += m.vx * dt * speed;
-        m.y += m.vy * dt * speed;
+        m.x += m.vx * adt * speed;
+        m.y += m.vy * adt * speed;
         if (m.x < m.r) { m.x = m.r; m.vx = Math.abs(m.vx); }
         if (m.x > w - m.r) { m.x = w - m.r; m.vx = -Math.abs(m.vx); }
         if (m.y < m.r) { m.y = m.r; m.vy = Math.abs(m.vy); }
@@ -156,8 +160,8 @@ function CollisionScreen({ a, b, temp, running }: { a: Substance; b: Substance; 
       }
     } else {
       for (const m of mols) {
-        m.x += m.vx * dt * 0.06;
-        m.y += m.vy * dt * 0.06;
+        m.x += m.vx * adt * 0.06;
+        m.y += m.vy * adt * 0.06;
       }
     }
 

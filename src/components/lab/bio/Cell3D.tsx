@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { animDt } from "@/lib/app-settings";
 import { useTelemetryPublisher } from "../PhysicsSim";
 import { CursorTip } from "../CursorTip";
 
@@ -1054,6 +1055,9 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     if (!renderer || !sc || !cam || !group) return;
 
     const dt = Math.min(0.033, _dt);
+    /* ambient motion budget: 0 in Motionless Mode, so idle orbits and drifting
+       ions hold perfectly still while pointer drags (which use `dt`) stay live */
+    const adt = animDt(dt);
     const o = orbit.current;
     // idle auto-rotation: dampens instantly on interaction via lastInteraction
     const since = (performance.now() - lastInteraction.current) / 1000;
@@ -1062,8 +1066,8 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const tgt = orbitTarget.current;
     if (!isInteracting && since > 1.0) {
       const autoSpeed = 0.11;
-      tgt.yaw += dt * autoSpeed * Math.min(1, (since - 1.0) * 0.9);
-      tgt.pitch += Math.sin(t * 0.22) * dt * 0.012;
+      tgt.yaw += adt * autoSpeed * Math.min(1, (since - 1.0) * 0.9);
+      tgt.pitch += Math.sin(t * 0.22) * adt * 0.012;
       tgt.pitch = clamp(tgt.pitch, -0.58, 0.58);
     }
     // smooth damped lerp — inertia feel (velocity clamped so the chase can
@@ -1071,8 +1075,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const lerp = 1 - Math.pow(0.001, dt); // frame-rate independent
     // yaw/pitch lerp with velocity for ultra-smooth
     const yawDiff = tgt.yaw - o.yaw;
-    const pitchDiff = tgt.pitch - o.pitch;
-    const damp = isInteracting ? Math.pow(0.06, dt * 60) : Math.pow(0.15, dt * 60);
+    const pitchDiff = tgt.pitch - o.pitch;      const damp = isInteracting ? Math.pow(0.06, dt * 60) : Math.pow(0.15, dt * 60);
     orbitVel.current.yaw = clamp(orbitVel.current.yaw * damp + yawDiff * 8 * dt, -Math.abs(yawDiff), Math.abs(yawDiff));
     orbitVel.current.pitch = clamp(orbitVel.current.pitch * damp + pitchDiff * 8 * dt, -Math.abs(pitchDiff), Math.abs(pitchDiff));
     o.yaw += orbitVel.current.yaw;
@@ -1154,13 +1157,13 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
               q.vel.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3);
             }
           } else {
-            q.vel.x += (Math.random() - 0.5) * 1.1 * dt;
-            q.vel.y += (Math.random() - 0.5) * 1.1 * dt;
-            q.vel.z += (Math.random() - 0.5) * 1.1 * dt;
+            q.vel.x += (Math.random() - 0.5) * 1.1 * adt;
+            q.vel.y += (Math.random() - 0.5) * 1.1 * adt;
+            q.vel.z += (Math.random() - 0.5) * 1.1 * adt;
             q.vel.multiplyScalar(0.992);
             const sp = q.vel.length();
             if (sp > 4) q.vel.multiplyScalar(4 / sp);
-            q.pos.addScaledVector(q.vel, dt);
+            q.pos.addScaledVector(q.vel, adt);
             const dq = q.pos.length();
             if (dq > RR) {
               q.pos.multiplyScalar(RR / dq);
@@ -1199,18 +1202,18 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       if (dragIon.current === st) return; // dragged ion follows pointer, no physics
       // brownian drift + slight velocity damping
       // add small random kick
-      st.vel.x += (Math.random() - 0.5) * 0.9 * dt;
-      st.vel.y += (Math.random() - 0.5) * 0.9 * dt;
-      st.vel.z += (Math.random() - 0.5) * 0.9 * dt;
+      st.vel.x += (Math.random() - 0.5) * 0.9 * adt;
+      st.vel.y += (Math.random() - 0.5) * 0.9 * adt;
+      st.vel.z += (Math.random() - 0.5) * 0.9 * adt;
       st.vel.multiplyScalar(0.995);
       // clamp speed
       const spd = st.vel.length();
       if (spd > 3.2) st.vel.multiplyScalar(3.2 / spd);
       if (spd < 0.4) {
         // ensure minimum drift
-        st.vel.add(new THREE.Vector3((Math.random()-0.5)*0.6, (Math.random()-0.5)*0.6, (Math.random()-0.5)*0.6).multiplyScalar(dt*3));
+        st.vel.add(new THREE.Vector3((Math.random()-0.5)*0.6, (Math.random()-0.5)*0.6, (Math.random()-0.5)*0.6).multiplyScalar(adt*3));
       }
-      const next = st.mesh.position.clone().add(st.vel.clone().multiplyScalar(dt));
+      const next = st.mesh.position.clone().add(st.vel.clone().multiplyScalar(adt));
       // collision with nucleus (sphere 15)
       const toNuc = next.clone().sub(nucCenter);
       const nucR = 15.2 + (st.kind === "Ca2+" ? 1.55 : 1.32);

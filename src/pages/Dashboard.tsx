@@ -190,13 +190,18 @@ export default function Dashboard() {
           </button>
         );
       })}
-      <span className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-text-dim">
+      {/* Settings live directly beneath the STEM Lab section */}
+      <button
+        type="button"
+        onClick={() => {
+          setSheetOpen(false);
+          navigate("/lab#settings");
+        }}
+        className="flex items-center gap-3 rounded-xl border border-transparent px-3.5 py-2.5 text-sm font-medium text-text-dim transition-colors hover:text-foreground"
+      >
         <Menu className="h-4 w-4" />
         Settings
-        <span className="ml-auto text-[10px] uppercase tracking-widest text-text-dim/70">
-          soon
-        </span>
-      </span>
+      </button>
     </nav>
   );
 

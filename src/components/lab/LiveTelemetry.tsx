@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Activity, Sigma } from "lucide-react";
 import { clamp } from "./use-canvas";
+import { settingsRuntime } from "@/lib/app-settings";
 
 export interface TelemetryRow {
   k: string;
@@ -56,6 +57,7 @@ function Spark({ feed }: { feed: TelemetryFeed }) {
     let last = 0;
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop);
+      if (settingsRuntime.reduceMotion) return; // Motionless Mode: hold the trace
       if (now - last < 50) return; // ~20 fps is plenty for a sparkline
       last = now;
       const c = ref.current;
@@ -116,6 +118,11 @@ export function LiveTelemetry({ feed, embedded = false }: { feed: TelemetryFeed;
     let raf = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
+      if (settingsRuntime.reduceMotion) {
+        // idle pulse parks in Motionless Mode
+        if (pulse.current) pulse.current.style.opacity = "0.85";
+        return;
+      }
       if (pulse.current) {
         pulse.current.style.opacity = String(0.45 + 0.55 * Math.abs(Math.sin(performance.now() / 540)));
         pulse.current.style.boxShadow = `0 0 8px ${feedRef.current.accent}`;

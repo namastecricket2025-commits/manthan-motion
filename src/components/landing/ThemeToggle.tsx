@@ -1,5 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useResolvedTheme } from "@/lib/app-settings";
 
 const STORAGE_KEY = "manthan-theme";
 
@@ -27,6 +28,13 @@ export function ThemeToggle({ className }: { className?: string }) {
   const [dark, setDark] = useState<boolean>(() =>
     typeof document !== "undefined" ? readStored() : true,
   );
+  /* the settings dashboard owns theme mode too (light / dark / system), so
+     mirror whatever it resolves to instead of drifting out of sync */
+  const resolved = useResolvedTheme();
+
+  useEffect(() => {
+    setDark(resolved === "dark");
+  }, [resolved]);
 
   useEffect(() => {
     applyTheme(dark);

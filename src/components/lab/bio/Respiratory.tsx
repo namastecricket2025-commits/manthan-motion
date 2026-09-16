@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { motion } from "motion/react";
 import { Eye, EyeOff, RotateCcw, Wind, PenLine } from "lucide-react";
 import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { animDt } from "@/lib/app-settings";
 import { CursorTip, useCursorTip } from "../CursorTip";
 import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { cartilageMaps, disposeSurfaceMaps, lungMaps, tissueMaterial, vesselMaps } from "../lab-textures";
@@ -453,7 +454,8 @@ export default function Respiratory() {
     const tgt = target.current;
     const o = orbit.current;
     const since = (performance.now() - lastInteract.current) / 1000;
-    if (dragging.current === null && since > 1.4) tgt.yaw += dt * 0.1;
+    // idle auto-rotate — stands still in Motionless Mode
+    if (dragging.current === null && since > 1.4) tgt.yaw += animDt(dt) * 0.1;
     // Exponential chase instead of a velocity integrator: the orbit state
     // simply closes a frame-rate-independent fraction of the remaining error
     // every frame, so pointer motion can never recurse through state and

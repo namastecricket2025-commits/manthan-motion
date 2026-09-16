@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { motion } from "motion/react";
 import { Droplets, Eye, EyeOff, Gauge, RotateCcw, PenLine } from "lucide-react";
 import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { animDt } from "@/lib/app-settings";
 import { CursorTip, useCursorTip } from "../CursorTip";
 import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { disposeSurfaceMaps, kidneyCortexMaps, medullaMaps, tissueMaterial, vesselMaps } from "../lab-textures";
@@ -386,7 +387,8 @@ export default function Excretory() {
     const tgt = target.current;
     const o = orbit.current;
     const since = (performance.now() - lastInteract.current) / 1000;
-    if (dragging.current === null && since > 1.4) tgt.yaw += dt * 0.1;
+    // idle auto-rotate — stands still in Motionless Mode
+    if (dragging.current === null && since > 1.4) tgt.yaw += animDt(dt) * 0.1;
     const yd = tgt.yaw - o.yaw;
     const pd = tgt.pitch - o.pitch;
     // exponential chase (no velocity integrator → no overshoot/jitter)

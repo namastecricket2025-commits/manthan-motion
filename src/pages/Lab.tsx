@@ -2,12 +2,13 @@ import BiologyExplorer from "@/components/lab/BiologyExplorer";
 import ChemistryWorkspace from "@/components/lab/ChemistryWorkspace";
 import PhysicsSim from "@/components/lab/PhysicsSim";
 import LiveTelemetry, { TelemetryProvider, useTelemetry } from "@/components/lab/LiveTelemetry";
+import SettingsDashboard from "@/components/settings/SettingsDashboard";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { SPRING } from "@/components/lab/use-canvas";
 import { isSoundEnabled, setSoundEnabled } from "@/components/lab/lab-sound";
 import { Atom, Beaker, Dna, FlaskConical, ArrowLeft, Radiation, Volume2, VolumeX } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import "../components/lab/lab.css";
@@ -66,6 +67,8 @@ function MobileTelemetry() {
 function LabShell() {
   const [tab, setTab] = useState<LabTab>("physics");
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
+  const [settingsInView, setSettingsInView] = useState(false);
+  const settingsRef = useRef<HTMLElement | null>(null);
   const active = TABS.find((t) => t.key === tab)!;
   const feed = useTelemetry();
   const accent = TAB_ACCENT[tab];
@@ -77,10 +80,35 @@ function LabShell() {
     if (root) root.setAttribute("data-tab", tab);
   }, [tab]);
 
+  /* deep link from the dashboard sidebar: /lab#settings */
+  useEffect(() => {
+    if (window.location.hash !== "#settings") return;
+    const id = window.setTimeout(
+      () => settingsRef.current?.scrollIntoView({ block: "start" }),
+      60,
+    );
+    return () => window.clearTimeout(id);
+  }, []);
+
+  /* the telemetry column is fixed to the viewport, so stand it down once the
+     settings dashboard below the lab scrolls into view */
+  useEffect(() => {
+    const el = settingsRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => setSettingsInView(entry.isIntersecting),
+      { rootMargin: "-8% 0px -8% 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <div className="lab-root" data-tab={tab}>
+    <>
+      <div className="lab-root" data-tab={tab}>
       {/* scientific backdrop: blueprint matrix + ambient accent glows.
-          Fixed, pointer-transparent, static — sits entirely behind the shell. */}
+          Scoped to this section (absolute, pointer-transparent) so it never
+          covers the settings dashboard underneath. */}
       <div className="lab-backdrop lab-backdrop--grid" aria-hidden />
       <div className="lab-backdrop lab-backdrop--glow" aria-hidden>
         <span
@@ -175,9 +203,19 @@ function LabShell() {
         </main>
       </div>
 
-      {/* desktop: floating telemetry sidebar (≥1380px only, via CSS) */}
-      {feed && <LiveTelemetry feed={feed} />}
-    </div>
+        {/* desktop: floating telemetry sidebar (≥1280px only, via CSS) */}
+        {feed && !settingsInView && <LiveTelemetry feed={feed} />}
+      </div>
+
+      {/* User Settings & Accessibility — sits directly beneath the STEM Lab */}
+      <section
+        ref={settingsRef}
+        className="lab-settings-host"
+        aria-label="User settings and accessibility dashboard"
+      >
+        <SettingsDashboard />
+      </section>
+    </>
   );
 }
 

@@ -1,21 +1,46 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
+import { settingsRuntime } from "@/lib/app-settings";
 
 /** Spring tuning used across the lab: stiffness 250, damping 22. */
 export const SPRING = { type: "spring", stiffness: 250, damping: 22 } as const;
 
-/** Runs a callback every animation frame with delta time (seconds). */
+/**
+ * Runs a callback every animation frame with delta time (seconds).
+ *
+ * Two user preferences are honoured centrally here so every lab simulation
+ * reacts to them at once:
+ *
+ * - **Framerate target** (30 / 60 / uncapped) throttles the loop, trading
+ *   smoothness for battery life.
+ * - **Reduce Motion / Motionless Mode** freezes the animation clock `t`, so
+ *   every idle orbit, breathing cycle, floating particle and sine wave snaps
+ *   to a fixed state — while `dt` keeps flowing, which means pointer drags and
+ *   zooms stay perfectly responsive.
+ */
 export function useRaf(cb: (dt: number, t: number) => void) {
   const ref = useRef(cb);
   ref.current = cb;
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
+    let clock = 0; // animation time — frozen while motion is reduced
+    let acc = 0; // accumulator for the framerate cap
     const loop = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      ref.current(dt, now / 1000);
       raf = requestAnimationFrame(loop);
+      const realDt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const target = settingsRuntime.frameTarget;
+      let dt = realDt;
+      if (target > 0) {
+        acc += realDt;
+        const step = 1 / target;
+        if (acc < step * 0.9) return;
+        dt = acc;
+        acc = 0;
+      }
+      if (!settingsRuntime.reduceMotion) clock += dt;
+      ref.current(dt, clock);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);

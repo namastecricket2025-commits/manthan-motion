@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { syncViewport, useCanvasSize, useRaf, useViewport, useWheelZoom, clamp } from "./use-canvas";
+import { animDt } from "@/lib/app-settings";
 
 interface Atom3DProps {
   z: number;
@@ -224,7 +225,8 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     if (!renderer || !sc || !cam3 || !grp) return;
 
     const c = cam.current;
-    if (!dragging.current) c.yaw += dt * 0.1; // idle auto-rotate
+    // idle auto-rotate — stands still in Motionless Mode
+    if (!dragging.current) c.yaw += animDt(dt) * 0.1;
     grp.rotation.y = c.yaw;
     grp.rotation.x = c.pitch;
 

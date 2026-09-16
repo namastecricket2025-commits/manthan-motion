@@ -29,6 +29,9 @@
 
 /* ---------- Dark bench defaults (lab is a dark instrument by design) ---------- */
 .lab-root {
+  /* anchors the absolutely-positioned backdrop to this section (the page
+     scrolls on to the settings dashboard below the lab) */
+  position: relative;
   --lab-ink: #0b1120;
   --lab-bg: #0f172a;
   --lab-panel: #1e293b;
@@ -65,10 +68,11 @@
   --lab-accent-2: rgba(255, 59, 92, 0.55);
 }
 .lab-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 .lab-backdrop--grid {
   /* blueprint matrix: hairline grid every 44px, stronger line every 5th */
@@ -84,29 +88,42 @@
     220px 220px;
   mask-image: radial-gradient(ellipse 120% 90% at 50% 30%, #000 38%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 30%, #000 38%, transparent 78%);
-  opacity: 0.5;
+  /* Ambient Intensity (settings dashboard) scales every backdrop layer:
+     opacity, blur softness and drift speed. --ambient 0 = fully flat. */
+  opacity: calc(0.5 * var(--ambient, 1));
 }
 .corner-glow {
   position: absolute;
   border-radius: 9999px;
+}
+@keyframes lab-glow-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-20px, 16px, 0) scale(1.07);
+  }
 }
 .corner-glow--tr {
   top: -14%;
   right: -10%;
   width: 560px;
   height: 560px;
-  filter: blur(90px);
-  opacity: 0.16;
+  filter: blur(calc(90px * var(--ambient-blur, 1)));
+  opacity: calc(0.16 * var(--ambient, 1));
   transition: opacity 0.8s ease, background 0.8s ease;
+  animation: lab-glow-drift calc(19s * var(--ambient-dur, 1)) ease-in-out infinite;
 }
 .corner-glow--bl {
   bottom: -18%;
   left: -12%;
   width: 620px;
   height: 620px;
-  filter: blur(100px);
+  filter: blur(calc(100px * var(--ambient-blur, 1)));
   background: radial-gradient(circle, rgba(34, 211, 238, 0.5), transparent 65%);
-  opacity: 0.1;
+  opacity: calc(0.1 * var(--ambient, 1));
+  animation: lab-glow-drift calc(25s * var(--ambient-dur, 1)) ease-in-out infinite reverse;
 }
 
 /* ---------- Live telemetry sidebar (desktop only) ---------- */
@@ -952,13 +969,13 @@ html:not(.dark) .lab-root .lab-backdrop--grid {
     linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
     linear-gradient(to right, rgba(15, 23, 42, 0.055) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(15, 23, 5, 0.05) 1px, transparent 1px);
-  opacity: 0.55;
+  opacity: calc(0.55 * var(--ambient, 1));
 }
 html:not(.dark) .lab-root .corner-glow--tr {
-  opacity: 0.1;
+  opacity: calc(0.1 * var(--ambient, 1));
 }
 html:not(.dark) .lab-root .corner-glow--bl {
-  opacity: 0.07;
+  opacity: calc(0.07 * var(--ambient, 1));
 }
 html:not(.dark) .lab-root .lab-input,
 html:not(.dark) .lab-root .lab-search {
@@ -1192,10 +1209,13 @@ html:not(.dark) .lab-root .lab-tip__title {
 }
 
 @media (max-width: 1023px) {
-  /* the lab owns the viewport on small screens: zero page scroll */
+  /* The lab owns exactly one viewport on small screens — no internal page
+     scroll, canvas pinned to the top half, deck below. It is *not* fixed to
+     the window any more: the settings dashboard sits directly beneath the
+     lab, so the document scrolls on past this section while the lab itself
+     still fits a single screen with zero scrolling to observe a change. */
   .lab-root {
-    position: fixed;
-    inset: 0;
+    position: relative;
     height: 100dvh;
     min-height: 0;
     overflow: hidden;

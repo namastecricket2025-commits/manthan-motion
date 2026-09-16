@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTelemetryPublisher } from "../PhysicsSim";
 import { SPRING, clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { animDt } from "@/lib/app-settings";
 import * as THREE from "three";
 import { motion } from "motion/react";
 import { Activity, Info, Pause, Play, RotateCcw, PenLine } from "lucide-react";
@@ -424,7 +425,8 @@ export default function HeartAnatomy() {
     const o = orbit.current;
     const since = (performance.now() - lastInteract.current) / 1000;
     const interacting = dragging.current !== null;
-    if (!interacting && since > 1.4) tgt.yaw += dt * 0.1;
+    // idle auto-rotate — stands still in Motionless Mode
+    if (!interacting && since > 1.4) tgt.yaw += animDt(dt) * 0.1;
 
     const yd = tgt.yaw - o.yaw;
     const pd = tgt.pitch - o.pitch;

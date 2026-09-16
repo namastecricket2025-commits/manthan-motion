@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-canvas";
+import { animDt } from "@/lib/app-settings";
 import { useTelemetryPublisher } from "../PhysicsSim";
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -307,7 +308,8 @@ export default function DnaHelix3D() {
     const isInteracting = dragging.current !== null || pointers.current.size > 0;
     // explore auto-rotate
     if (mode.current === "explore" && autoRotate && !isInteracting && since > 0.9) {
-      tgt.yaw += dt * 0.28;
+      // idle Explore-Helix spin — stands still in Motionless Mode
+      tgt.yaw += animDt(dt) * 0.28;
     }
     // transcribe progress autoplay
     if (mode.current === "transcribe" && playing) {
