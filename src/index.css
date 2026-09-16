@@ -365,6 +365,26 @@
     border-radius: 999px;
   }
 
+  /* ------------------------------------------------
+     Site footer — the same Apple glass spec as the About
+     and Settings panels, so the footer blends into the moving
+     background mesh instead of reading as a flat opaque slab.
+     `--text-dim` is scoped here so the muted copy stays legible.
+     ------------------------------------------------ */
+  .site-footer {
+    --text-dim: #94a3b8;
+    background: rgba(255, 255, 255, 0.03);
+    -webkit-backdrop-filter: blur(25px) saturate(140%);
+    backdrop-filter: blur(25px) saturate(140%);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  html:not(.dark) .site-footer,
+  [data-theme="light"] .site-footer {
+    --text-dim: #374151;
+    background: rgba(0, 0, 0, 0.02);
+    border-top-color: rgba(0, 0, 0, 0.06);
+  }
+
   /* Gradient headline text — an "ember tail": the accent word starts in the
      heading colour (pure warm white in dark mode, espresso black in light
      mode) and holds it for well over half the word, then sweeps into a

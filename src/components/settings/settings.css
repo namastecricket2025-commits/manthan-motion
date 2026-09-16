@@ -14,18 +14,33 @@
    1. PREFERENCE HOOKS
    ------------------------------------------------------------ */
 
-/* Text comfort — scales the whole layout because Tailwind sizes are rem. */
+/* Text comfort — the typography scaling module. `--text-scale` is written by
+   applySettings() on <html>, so the slider rescales the entire interface
+   live (Tailwind sizes are all rem). */
+html {
+  font-size: calc(16px * var(--text-scale, 1));
+}
 html[data-text="small"] {
-  font-size: 15px;
+  font-size: calc(16px * var(--text-scale, 0.94));
 }
 html[data-text="medium"] {
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale, 1));
 }
 html[data-text="large"] {
-  font-size: 17.5px;
+  font-size: calc(16px * var(--text-scale, 1.12));
 }
 html[data-text="dyslexic"] {
-  font-size: 17px;
+  font-size: calc(16px * var(--text-scale, 1.06));
+}
+
+/* Ambient intensity — the global background-glow driver. `.blob-canvas` and
+   every ambient glow layer read it, so 0% is a completely flat page. */
+.blob-canvas {
+  opacity: calc(var(--bg-canvas-opacity, 1) * var(--bg-glow-opacity, 1));
+  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html[data-ambient="flat"] .blob-canvas {
+  opacity: 0;
 }
 /* Dyslexic-friendly letterforms: wider tracking, generous word spacing and a
    high-x-height stack. Applied last so it wins everywhere, including the lab
@@ -34,7 +49,9 @@ html[data-text="dyslexic"] body,
 html[data-text="dyslexic"] .lab-root,
 html[data-text="dyslexic"] .lab-root *,
 html[data-text="dyslexic"] .set-root,
-html[data-text="dyslexic"] .set-root * {
+html[data-text="dyslexic"] .set-root *,
+html[data-text="dyslexic"] .about-root,
+html[data-text="dyslexic"] .about-root * {
   font-family: Verdana, Tahoma, "Trebuchet MS", "DejaVu Sans", sans-serif !important;
   letter-spacing: 0.02em;
   word-spacing: 0.1em;
@@ -90,33 +107,39 @@ html:not(.dark) .set-root.set-root--bare {
   --set-bg: #0f172a;
 
   /* ---- Apple-style glass tokens: one source of truth for every surface ----
-     Card fill   rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
+     Card fill   rgba(255,255,255,0.03) dark / rgba(0,0,0,0.02) light
      Hairline    1px rgba(255,255,255,0.07) dark / rgba(0,0,0,0.05) light
+     Blur        blur(25px) saturate(140%)
      Ambient     0 30px 80px -20px rgba(0,0,0,0.25)                       */
-  --set-glass: rgba(255, 255, 255, 0.02);
-  --set-glass-strong: rgba(255, 255, 255, 0.045);
+  --set-glass: rgba(255, 255, 255, 0.03);
+  --set-glass-strong: rgba(255, 255, 255, 0.055);
   --set-hairline: rgba(255, 255, 255, 0.07);
+  --set-blur: blur(25px) saturate(140%);
   --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.25);
-  --set-ring: 0 0 12px rgba(220, 38, 38, 0.4);
+  --set-ring: 0 0 12px rgba(200, 30, 30, 0.32);
   --set-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* legacy aliases now resolve to the glass spec, so no surface keeps a
      heavy fill or a thick solid border */
-  --set-panel: rgba(255, 255, 255, 0.02);
-  --set-panel-deep: rgba(255, 255, 255, 0.015);
-  --set-well: rgba(255, 255, 255, 0.02);
+  --set-panel: rgba(255, 255, 255, 0.03);
+  --set-panel-deep: rgba(255, 255, 255, 0.02);
+  --set-well: rgba(255, 255, 255, 0.03);
   --set-border: rgba(255, 255, 255, 0.07);
   --set-border-strong: rgba(255, 255, 255, 0.16);
-  /* type matched to the app's warm ink so the glass belongs to the same
-     surface family as the sidebar shell */
-  --set-text: #ede4e0;
-  --set-title: #f7f1ee;
-  --set-dim: #b9aca7;
-  --set-faint: #9a8c87;
-  --set-neon: #ff3b5c;
-  --set-neon-2: #e11d48;
-  --set-neon-text: #ff8a9a;
-  --set-danger: #ef4444;
+  /* Readable ink: every body/secondary node clears contrast against the
+     dark canvas — no dim grey text on glass. */
+  --set-text: #e2e8f0;
+  --set-title: #f1f5f9;
+  --set-dim: #b3c2d4;
+  --set-faint: #94a3b8;
+  /* one muted crimson accent — never the hot, blinding solid red */
+  --set-crimson: #c81e1e;
+  --set-crimson-deep: #8f1d22;
+  --set-neon: #c81e1e;
+  --set-neon-2: #8f1d22;
+  --set-crimson-text: #e2938f;
+  --set-neon-text: #e2938f;
+  --set-danger: #c81e1e;
 
   position: relative;
   isolation: isolate;
@@ -128,12 +151,12 @@ html:not(.dark) .set-root.set-root--bare {
   background:
     radial-gradient(
       900px 520px at 88% 0%,
-      rgba(255, 59, 92, calc(0.075 * var(--ambient, 1))),
+      rgba(200, 30, 30, calc(0.05 * var(--bg-glow-opacity, 1))),
       transparent 62%
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      rgba(56, 189, 248, calc(0.055 * var(--ambient, 1))),
+      rgba(56, 189, 248, calc(0.045 * var(--bg-glow-opacity, 1))),
       transparent 60%
     ),
     linear-gradient(180deg, #0a0f1e 0%, #0f172a 44%, #0b1120 100%);
@@ -158,7 +181,7 @@ html:not(.dark) .set-root.set-root--bare {
     240px 240px;
   mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 26%, transparent 82%);
   -webkit-mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 26%, transparent 82%);
-  opacity: calc(0.95 * var(--ambient, 1));
+  opacity: calc(0.95 * var(--bg-glow-opacity, 1));
 }
 
 .set-shell {
@@ -182,8 +205,8 @@ html:not(.dark) .set-root.set-root--bare {
   align-items: center;
   gap: 6px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 59, 92, 0.3);
-  background: rgba(255, 59, 92, 0.1);
+  border: 1px solid rgba(200, 30, 30, 0.28);
+  background: rgba(200, 30, 30, 0.1);
   padding: 4px 10px;
   font-size: 10px;
   font-weight: 700;
@@ -202,12 +225,12 @@ html:not(.dark) .set-root.set-root--bare {
 }
 /* supporting caption recedes so the active labels keep the hierarchy */
 .set-head__sub {
-  margin-top: 7px;
+  margin-top: 8px;
   max-width: 58ch;
   font-size: 0.8rem;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--set-dim);
-  opacity: 0.6;
+  opacity: 0.78;
 }
 
 /* ------------------------------------------------------------
@@ -226,8 +249,8 @@ html:not(.dark) .set-root.set-root--bare {
   border: 1px solid var(--set-hairline) !important;
   border-radius: 20px;
   background: var(--set-glass);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
   box-shadow: var(--set-shadow);
   overflow: hidden;
   transition:
@@ -240,7 +263,7 @@ html:not(.dark) .set-root.set-root--bare {
   background: var(--set-glass-strong);
   box-shadow:
     var(--set-shadow),
-    0 0 0 1px rgba(220, 38, 38, 0.06);
+    0 0 0 1px rgba(200, 30, 30, 0.07);
 }
 
 .set-trigger {
@@ -270,10 +293,10 @@ html:not(.dark) .set-root.set-root--bare {
   align-items: center;
   justify-content: center;
   border-radius: 11px;
-  border: 1px solid rgba(220, 38, 38, 0.24);
-  background: rgba(220, 38, 38, 0.09);
-  color: #ff647c;
-  box-shadow: 0 0 calc(14px * var(--ambient, 1)) rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(200, 30, 30, 0.28);
+  background: rgba(200, 30, 30, 0.1);
+  color: var(--set-crimson-text);
+  box-shadow: 0 0 calc(14px * var(--ambient, 1)) rgba(200, 30, 30, 0.16);
 }
 .set-panel-title__icon svg {
   color: inherit;
@@ -288,11 +311,11 @@ html:not(.dark) .set-root.set-root--bare {
 }
 .set-panel-title__blurb {
   display: block;
-  margin-top: 2px;
+  margin-top: 3px;
   font-size: 0.7rem;
   font-weight: 500;
   color: var(--set-faint);
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 .set-content {
@@ -338,15 +361,17 @@ html:not(.dark) .set-root.set-root--bare {
    4. ROWS + CONTROLS
    ------------------------------------------------------------ */
 
-/* Inner blocks reuse the same glass spec as the outer pane but deliberately
-   skip backdrop-filter: a nested blur would only sample the parent's already
-   blurred group (the parent is a backdrop root), which looks flat. */
+/* Inner blocks reuse the exact same glass spec as the outer pane — the same
+   fill, the same razor hairline, the same wide ambient shadow and the same
+   backdrop blur. */
 .set-row,
 .set-block,
 .set-card {
   border-radius: 16px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
   box-shadow: var(--set-shadow);
 }
 
@@ -375,16 +400,16 @@ html:not(.dark) .set-root.set-root--bare {
   color: var(--set-title);
 }
 .set-row__hint {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 0.74rem;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--set-dim);
-  opacity: 0.72;
+  opacity: 0.82;
 }
 .set-row__note {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 0.72rem;
-  color: #ffb3c1;
+  color: var(--set-neon-text);
 }
 .set-row__control {
   display: flex;
@@ -396,8 +421,8 @@ html:not(.dark) .set-root.set-root--bare {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  border: 1px solid rgba(255, 59, 92, 0.3);
-  background: rgba(255, 59, 92, 0.12);
+  border: 1px solid rgba(200, 30, 30, 0.3);
+  background: rgba(200, 30, 30, 0.12);
   padding: 2px 8px;
   font-size: 10px;
   font-weight: 700;
@@ -416,8 +441,8 @@ html:not(.dark) .set-root.set-root--bare {
   background: rgba(148, 163, 184, 0.16);
 }
 .set-slider [data-slot="slider-range"] {
-  background: linear-gradient(90deg, var(--set-neon), var(--set-neon-2));
-  box-shadow: 0 0 calc(11px * var(--ambient, 1)) rgba(220, 38, 38, 0.35);
+  background: linear-gradient(90deg, var(--set-crimson), var(--set-crimson-deep));
+  box-shadow: 0 0 calc(11px * var(--ambient, 1)) rgba(200, 30, 30, 0.28);
 }
 .set-slider [data-slot="slider-thumb"] {
   height: 15px;
@@ -433,23 +458,23 @@ html:not(.dark) .set-root.set-root--bare {
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
     0 4px 14px -2px rgba(0, 0, 0, 0.4),
-    0 0 0 4px rgba(220, 38, 38, 0.12);
+    0 0 0 4px rgba(200, 30, 30, 0.14);
 }
 .set-slider [data-slot="slider-thumb"]:focus-visible {
   outline: none;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
-    0 0 0 4px rgba(220, 38, 38, 0.22);
+    0 0 0 4px rgba(200, 30, 30, 0.22);
 }
 .set-scale {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 9.5px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--set-faint);
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 /* --- switch: hairline hairline, white knob with a soft shadow --- */
@@ -460,9 +485,9 @@ html:not(.dark) .set-root.set-root--bare {
   background: rgba(148, 163, 184, 0.18);
 }
 .set-switch[data-state="checked"] {
-  border-color: rgba(220, 38, 38, 0.42);
-  background: linear-gradient(135deg, var(--set-neon), var(--set-neon-2));
-  box-shadow: 0 0 calc(14px * var(--ambient, 1)) rgba(220, 38, 38, 0.45);
+  border-color: rgba(200, 30, 30, 0.42);
+  background: linear-gradient(135deg, var(--set-crimson), var(--set-crimson-deep));
+  box-shadow: 0 0 calc(14px * var(--ambient, 1)) rgba(200, 30, 30, 0.32);
 }
 .set-switch [data-slot="switch-thumb"] {
   height: 18px;
@@ -485,6 +510,8 @@ html:not(.dark) .set-root.set-root--bare {
   border-radius: 12px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
   color: var(--set-text);
   font-size: 0.8rem;
   transition: border-color 0.35s var(--set-ease), background 0.35s var(--set-ease);
@@ -494,25 +521,32 @@ html:not(.dark) .set-root.set-root--bare {
   background: var(--set-glass-strong);
 }
 .set-select:focus-visible {
-  border-color: rgba(220, 38, 38, 0.42);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+  border-color: rgba(200, 30, 30, 0.42);
+  box-shadow: 0 0 0 3px rgba(200, 30, 30, 0.14);
 }
 /* portalled — must carry its own colours */
 .set-select-content {
   z-index: 80;
   border: 1px solid var(--set-hairline);
   border-radius: 14px;
-  background: rgba(20, 14, 13, 0.72);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
+  background: rgba(18, 24, 38, 0.72);
+  /* portalled outside .set-root, so the token needs a fallback here */
+  -webkit-backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
+  backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
   color: #e2e8f0;
   box-shadow: var(--set-shadow);
 }
+.set-select-content [role="option"] {
+  color: #e2e8f0;
+}
 html:not(.dark) .set-select-content {
   border-color: rgba(0, 0, 0, 0.05);
-  background: rgba(252, 250, 249, 0.82);
-  color: #241412;
+  background: rgba(255, 255, 255, 0.86);
+  color: #1e293b;
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.18);
+}
+html:not(.dark) .set-select-content [role="option"] {
+  color: #1e293b;
 }
 
 /* --- theme picker: borderless until chosen, then a soft crimson ring --- */
@@ -547,7 +581,7 @@ html:not(.dark) .set-select-content {
   background: var(--set-glass-strong);
 }
 .set-theme--on {
-  background: rgba(220, 38, 38, 0.05);
+  background: rgba(200, 30, 30, 0.06);
 }
 /* the animated selection pill carries the glow so the ring springs between
    the three cards instead of blinking on and off */
@@ -555,8 +589,8 @@ html:not(.dark) .set-select-content {
   position: absolute;
   inset: 0;
   border-radius: 15px;
-  border: 1px solid rgba(220, 38, 38, 0.32);
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.14), rgba(220, 38, 38, 0.03));
+  border: 1px solid rgba(200, 30, 30, 0.34);
+  background: linear-gradient(135deg, rgba(200, 30, 30, 0.14), rgba(200, 30, 30, 0.03));
   box-shadow: var(--set-ring);
 }
 .set-theme__preview {
@@ -595,8 +629,8 @@ html:not(.dark) .set-select-content {
   height: 10px;
   width: 10px;
   border-radius: 999px;
-  background: var(--set-neon);
-  box-shadow: 0 0 calc(10px * var(--ambient, 1)) rgba(255, 59, 92, 0.6);
+  background: var(--set-crimson);
+  box-shadow: 0 0 calc(10px * var(--ambient, 1)) rgba(200, 30, 30, 0.4);
 }
 .set-theme__label {
   position: relative;
@@ -609,22 +643,22 @@ html:not(.dark) .set-select-content {
 }
 .set-theme__hint {
   position: relative;
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   color: var(--set-faint);
 }
 .set-theme__check {
   position: absolute;
   top: 10px;
   right: 10px;
-  color: #ff647c;
+  color: var(--set-crimson-text);
 }
 
 /* --- text comfort steps: same borderless-to-glowing-ring language --- */
 .set-steps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 12px;
 }
 .set-step {
   border-radius: 11px;
@@ -643,18 +677,18 @@ html:not(.dark) .set-select-content {
   transform: translateY(-1px);
 }
 .set-step--on {
-  background: rgba(220, 38, 38, 0.07);
-  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(200, 30, 30, 0.07);
+  border-color: rgba(200, 30, 30, 0.3);
   box-shadow: var(--set-ring);
 }
 .set-step__label {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 650;
   color: var(--set-dim);
 }
 .set-step--on .set-step__label {
-  color: #ffd0d8;
+  color: var(--set-neon-text);
 }
 .set-step__scale {
   display: block;
@@ -667,7 +701,9 @@ html:not(.dark) .set-select-content {
   border-radius: 14px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
-  padding: 13px;
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
+  padding: 14px;
 }
 .set-preview__label {
   font-size: 0.62rem;
@@ -694,7 +730,7 @@ html:not(.dark) .set-select-content {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 11px;
+  margin-bottom: 13px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -727,7 +763,9 @@ html:not(.dark) .set-select-content {
   border-radius: 12px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
-  padding: 21px 12px 7px;
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
+  padding: 22px 13px 8px;
   font-size: 0.82rem;
   color: var(--set-text);
   transition:
@@ -744,8 +782,8 @@ html:not(.dark) .set-select-content {
 .set-field__input:focus {
   outline: none;
   background: var(--set-glass-strong);
-  border-color: rgba(220, 38, 38, 0.4);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.13);
+  border-color: rgba(200, 30, 30, 0.4);
+  box-shadow: 0 0 0 3px rgba(200, 30, 30, 0.13);
 }
 .set-field__input--solo {
   padding: 12px;
@@ -759,11 +797,11 @@ html:not(.dark) .set-select-content {
 }
 .set-field__label {
   position: absolute;
-  left: 13px;
+  left: 14px;
   top: 15px;
   pointer-events: none;
   font-size: 0.82rem;
-  color: var(--set-faint);
+  color: var(--set-dim);
   transition:
     top 0.18s ease,
     font-size 0.18s ease,
@@ -773,35 +811,35 @@ html:not(.dark) .set-select-content {
 .set-field__input:focus + .set-field__label,
 .set-field__input:not(:placeholder-shown) + .set-field__label {
   top: 7px;
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #ff647c;
+  color: var(--set-crimson-text);
 }
 
 .set-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 11px;
+  gap: 9px;
+  margin-top: 14px;
 }
 
 .set-note {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  margin-top: 9px;
-  font-size: 0.7rem;
-  line-height: 1.6;
-  color: var(--set-faint);
-  opacity: 0.6;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 0.72rem;
+  line-height: 1.65;
+  color: var(--set-dim);
+  opacity: 0.85;
 }
 .set-note--plain {
   margin-top: 0;
   font-size: 0.75rem;
   color: var(--set-dim);
-  opacity: 0.72;
+  opacity: 0.9;
 }
 
 /* password strength */
@@ -824,7 +862,7 @@ html:not(.dark) .set-select-content {
   transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 .set-strength__bar--l1 {
-  background: #ef4444;
+  background: #c81e1e;
 }
 .set-strength__bar--l2 {
   background: #f59e0b;
@@ -848,8 +886,8 @@ html:not(.dark) .set-select-content {
   border-radius: 999px;
   border: 1px solid var(--set-hairline);
   background: transparent;
-  padding: 4px 10px;
-  font-size: 0.68rem;
+  padding: 5px 11px;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--set-dim);
   cursor: pointer;
@@ -872,11 +910,13 @@ html:not(.dark) .set-select-content {
   border-radius: 13px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
-  padding: 9px 11px;
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
+  padding: 11px 12px;
 }
 .set-device--current {
-  border-color: rgba(220, 38, 38, 0.24);
-  background: rgba(220, 38, 38, 0.05);
+  border-color: rgba(200, 30, 30, 0.26);
+  background: rgba(200, 30, 30, 0.06);
 }
 .set-device--empty {
   justify-content: center;
@@ -907,15 +947,16 @@ html:not(.dark) .set-select-content {
   color: var(--set-title);
 }
 .set-device__sub {
-  font-size: 0.68rem;
-  color: var(--set-faint);
+  font-size: 0.7rem;
+  color: var(--set-dim);
+  opacity: 0.85;
 }
 .set-device__tag {
   flex: none;
   border-radius: 999px;
-  border: 1px solid rgba(255, 59, 92, 0.34);
-  background: rgba(255, 59, 92, 0.14);
-  padding: 2px 8px;
+  border: 1px solid rgba(200, 30, 30, 0.34);
+  background: rgba(200, 30, 30, 0.14);
+  padding: 3px 9px;
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -925,13 +966,13 @@ html:not(.dark) .set-select-content {
 .set-device__tag--other {
   border-color: var(--set-border);
   background: rgba(148, 163, 184, 0.12);
-  color: var(--set-faint);
+  color: var(--set-dim);
 }
 
-/* danger card — the same glass, warmed by a faint red wash */
+/* danger card — the same glass, warmed by a faint muted-crimson wash */
 .set-card--danger {
-  border-color: rgba(239, 68, 68, 0.14);
-  background: rgba(239, 68, 68, 0.035);
+  border-color: rgba(200, 30, 30, 0.18);
+  background: rgba(200, 30, 30, 0.04);
 }
 
 /* ------------------------------------------------------------
@@ -946,7 +987,9 @@ html:not(.dark) .set-select-content {
   border-radius: 12px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
-  padding: 9px 14px;
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
+  padding: 10px 15px;
   font-size: 0.78rem;
   font-weight: 650;
   color: var(--set-dim);
@@ -971,32 +1014,35 @@ html:not(.dark) .set-select-content {
   cursor: not-allowed;
 }
 .set-btn--primary {
-  border: none;
+  border: 1px solid rgba(200, 30, 30, 0.5);
   color: #fff;
-  background: linear-gradient(135deg, #ff2e55, #e11d48);
+  background: linear-gradient(135deg, rgba(200, 30, 30, 0.95), rgba(143, 29, 34, 0.95));
   box-shadow:
-    0 0 calc(20px * var(--ambient, 1)) rgba(255, 59, 92, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 0 calc(18px * var(--ambient, 1)) rgba(200, 30, 30, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 .set-btn--primary:hover {
   color: #fff;
+  background: linear-gradient(135deg, rgba(200, 30, 30, 1), rgba(143, 29, 34, 1));
   box-shadow:
-    0 0 calc(30px * var(--ambient, 1)) rgba(255, 59, 92, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 0 calc(24px * var(--ambient, 1)) rgba(200, 30, 30, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 .set-btn--ghost {
   background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .set-btn--danger {
-  border: none;
+  border: 1px solid rgba(200, 30, 30, 0.55);
   color: #fff;
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
-  box-shadow: 0 0 calc(18px * var(--ambient, 1)) rgba(239, 68, 68, 0.35);
+  background: linear-gradient(135deg, rgba(200, 30, 30, 0.92), rgba(143, 29, 34, 0.94));
+  box-shadow: 0 0 calc(16px * var(--ambient, 1)) rgba(200, 30, 30, 0.22);
 }
 .set-btn--danger-soft {
-  border-color: rgba(239, 68, 68, 0.45);
-  background: rgba(239, 68, 68, 0.14);
-  color: #fecaca;
+  border-color: rgba(200, 30, 30, 0.45);
+  background: rgba(200, 30, 30, 0.12);
+  color: var(--set-neon-text);
 }
 
 /* ------------------------------------------------------------
@@ -1007,8 +1053,10 @@ html:not(.dark) .set-select-content {
   border-radius: 16px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
+  -webkit-backdrop-filter: var(--set-blur);
+  backdrop-filter: var(--set-blur);
   box-shadow: var(--set-shadow);
-  padding: 14px;
+  padding: 15px;
 }
 .set-legal__head {
   display: flex;
@@ -1033,8 +1081,8 @@ html:not(.dark) .set-select-content {
 .set-legal__list {
   display: flex;
   flex-direction: column;
-  gap: 11px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 14px;
 }
 .set-legal__clause {
   display: flex;
@@ -1055,8 +1103,8 @@ html:not(.dark) .set-select-content {
   color: var(--set-dim);
 }
 .set-legal__body {
-  font-size: 0.78rem;
-  line-height: 1.72;
+  font-size: 0.79rem;
+  line-height: 1.78;
   color: var(--set-dim);
 }
 .set-legal__body strong {
@@ -1072,9 +1120,10 @@ html:not(.dark) .set-select-content {
   z-index: 90;
   border: 1px solid var(--set-hairline);
   border-radius: 20px;
-  background: rgba(22, 16, 15, 0.72);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
+  background: rgba(18, 24, 38, 0.76);
+  /* portalled outside .set-root, so the token needs a fallback here */
+  -webkit-backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
+  backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
   color: #e2e8f0;
   box-shadow: var(--set-shadow);
 }
@@ -1083,10 +1132,10 @@ html:not(.dark) .set-select-content {
   color: #f1f5f9;
 }
 .set-dialog__desc {
-  color: #9fb0c6;
+  color: #cbd5e1;
   font-size: 0.8rem;
-  line-height: 1.65;
-  opacity: 0.72;
+  line-height: 1.7;
+  opacity: 0.92;
 }
 
 /* ------------------------------------------------------------
@@ -1094,34 +1143,36 @@ html:not(.dark) .set-select-content {
    ------------------------------------------------------------ */
 
 html:not(.dark) .set-root {
-  /* light glass: rgba(0,0,0,0.015) fill + rgba(0,0,0,0.05) hairline */
-  --set-glass: rgba(0, 0, 0, 0.015);
-  --set-glass-strong: rgba(0, 0, 0, 0.032);
+  /* light glass: rgba(0,0,0,0.02) fill + rgba(0,0,0,0.05) hairline */
+  --set-glass: rgba(0, 0, 0, 0.02);
+  --set-glass-strong: rgba(0, 0, 0, 0.04);
   --set-hairline: rgba(0, 0, 0, 0.05);
   --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.12);
-  --set-ring: 0 0 12px rgba(220, 38, 38, 0.32);
-  --set-panel: rgba(0, 0, 0, 0.015);
-  --set-panel-deep: rgba(0, 0, 0, 0.02);
-  --set-well: rgba(0, 0, 0, 0.015);
+  --set-ring: 0 0 12px rgba(200, 30, 30, 0.28);
+  --set-panel: rgba(0, 0, 0, 0.02);
+  --set-panel-deep: rgba(0, 0, 0, 0.03);
+  --set-well: rgba(0, 0, 0, 0.02);
   --set-border: rgba(0, 0, 0, 0.05);
   --set-border-strong: rgba(0, 0, 0, 0.1);
-  /* type harmonised with the app's warm paper ink so the glass reads as part
-     of the same surface family as the sidebar */
-  --set-text: #241412;
-  --set-title: #241412;
-  --set-dim: #6f5b56;
-  --set-faint: #8a7a74;
-  --set-neon-text: #b3163c;
+  /* High-contrast ink on pale glass: charcoal / deep slate for every
+     secondary and legal node — nothing renders invisible. */
+  --set-text: #1e293b;
+  --set-title: #111827;
+  --set-dim: #374151;
+  --set-faint: #4b5563;
+  --set-crimson-text: #9b1c1c;
+  --set-neon-text: #9b1c1c;
+  --set-danger: #c81e1e;
   color: var(--set-text);
   background:
     radial-gradient(
       900px 520px at 88% 0%,
-      rgba(255, 59, 92, calc(0.08 * var(--ambient, 1))),
+      rgba(200, 30, 30, calc(0.06 * var(--bg-glow-opacity, 1))),
       transparent 62%
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      rgba(56, 189, 248, calc(0.09 * var(--ambient, 1))),
+      rgba(56, 189, 248, calc(0.07 * var(--bg-glow-opacity, 1))),
       transparent 60%
     ),
     linear-gradient(180deg, #eef2f7 0%, #f8fafc 44%, #e6ecf4 100%);
@@ -1137,54 +1188,58 @@ html:not(.dark) .set-item[data-state="open"] {
   border-color: rgba(0, 0, 0, 0.09) !important;
 }
 html:not(.dark) .set-theme--on {
-  background: rgba(220, 38, 38, 0.04);
+  background: rgba(200, 30, 30, 0.04);
 }
 html:not(.dark) .set-step--on {
-  background: rgba(220, 38, 38, 0.05);
+  background: rgba(200, 30, 30, 0.05);
+}
+html:not(.dark) .set-step--on .set-step__label {
+  color: #9b1c1c;
 }
 html:not(.dark) .set-device--current {
-  background: rgba(220, 38, 38, 0.04);
+  background: rgba(200, 30, 30, 0.04);
 }
 html:not(.dark) .set-theme__preview {
   border-color: rgba(0, 0, 0, 0.07);
 }
 html:not(.dark) .set-btn {
-  color: #4a3a36;
+  color: #374151;
 }
 html:not(.dark) .set-btn:hover {
-  color: #241412;
+  color: #111827;
 }
 html:not(.dark) .set-btn--primary,
 html:not(.dark) .set-btn--primary:hover {
   color: #fff;
-  background: linear-gradient(135deg, #ff2e55, #e11d48);
+  background: linear-gradient(135deg, rgba(200, 30, 30, 0.95), rgba(143, 29, 34, 0.95));
 }
 html:not(.dark) .set-btn--danger,
 html:not(.dark) .set-btn--danger:hover {
   color: #fff;
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  background: linear-gradient(135deg, rgba(200, 30, 30, 0.92), rgba(143, 29, 34, 0.94));
 }
 html:not(.dark) .set-btn--ghost {
   background: transparent;
 }
 html:not(.dark) .set-card--danger {
-  background: rgba(239, 68, 68, 0.03);
+  background: rgba(200, 30, 30, 0.035);
 }
 html:not(.dark) .set-dialog {
-  background: rgba(252, 250, 249, 0.78);
-  color: #241412;
+  background: rgba(255, 255, 255, 0.86);
+  color: #1e293b;
 }
 html:not(.dark) .set-dialog__title {
-  color: #241412;
+  color: #111827;
 }
 html:not(.dark) .set-dialog__desc {
-  color: #6f5b56;
+  color: #374151;
+  opacity: 0.95;
 }
 html:not(.dark) .set-switch {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.12);
 }
 html:not(.dark) .set-switch[data-state="checked"] {
-  background: linear-gradient(135deg, var(--set-neon), var(--set-neon-2));
+  background: linear-gradient(135deg, var(--set-crimson), var(--set-crimson-deep));
 }
 html:not(.dark) .set-slider [data-slot="slider-track"] {
   background: rgba(0, 0, 0, 0.1);
@@ -1203,10 +1258,18 @@ html:not(.dark) .set-switch [data-slot="switch-thumb"] {
     0 2px 6px -1px rgba(0, 0, 0, 0.2);
 }
 html:not(.dark) .set-inline-btn:hover {
-  color: #241412;
+  color: #111827;
 }
 html:not(.dark) .set-row__note {
-  color: #b3163c;
+  color: #9b1c1c;
+}
+html:not(.dark) .set-device__tag {
+  color: #9b1c1c;
+}
+html:not(.dark) .set-legal__tag,
+html:not(.dark) .set-kicker,
+html:not(.dark) .set-panel-title__icon {
+  color: #9b1c1c;
 }
 
 @media (max-width: 640px) {

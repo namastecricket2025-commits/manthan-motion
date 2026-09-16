@@ -81,21 +81,34 @@ function AxisText({
   segments: { text: string; className?: string }[];
   className?: string;
 }) {
+  // Flatten every segment into one word list so a real, unclipped space is
+  // always emitted between words — including across segment boundaries, which
+  // is what keeps "About Manthan" from collapsing into "AboutManthan".
+  const words = segments.flatMap((seg, si) =>
+    seg.text
+      .split(" ")
+      .filter(Boolean)
+      .map((word, wi, arr) => ({
+        key: `${si}-${wi}`,
+        word,
+        className: seg.className,
+        spaceAfter: wi < arr.length - 1 || si < segments.length - 1,
+      })),
+  );
+
   return (
     <span className={className}>
-      {segments.map((seg, si) =>
-        seg.text.split(" ").map((word, wi, words) => (
-          <span key={`${si}-${wi}`} className="axis-word">
-            <span
-              data-axis-word
-              className={`axis-word__inner${seg.className ? ` ${seg.className}` : ""}`}
-            >
-              {word}
-              {wi < words.length - 1 ? "\u00A0" : ""}
-            </span>
+      {words.map((w) => (
+        <span key={w.key} className="axis-word">
+          <span
+            data-axis-word
+            className={`axis-word__inner${w.className ? ` ${w.className}` : ""}`}
+          >
+            {w.word}
+            {w.spaceAfter ? "\u00A0" : ""}
           </span>
-        )),
-      )}
+        </span>
+      ))}
     </span>
   );
 }
@@ -506,7 +519,11 @@ function WhySection() {
         </motion.div>
 
         <div className="mt-[clamp(2.5rem,6vw,4rem)] flex justify-center">
-          <MovingBorderButton to="/dashboard" innerClassName="px-7 py-3.5 text-sm">
+          <MovingBorderButton
+            to="/dashboard"
+            className="glass-cta"
+            innerClassName="px-7 py-3.5 text-sm"
+          >
             Start churning
             <ArrowRight className="h-4 w-4" />
           </MovingBorderButton>

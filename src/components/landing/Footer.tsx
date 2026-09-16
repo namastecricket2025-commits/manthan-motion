@@ -4,14 +4,16 @@ import { Logo } from "./Logo";
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
 /**
- * Site footer — a solid (opaque) panel that visibly separates from the
- * animated blob canvas above it, with founder credit and legal links.
+ * Site footer — Apple-style glass instead of an opaque panel, so it blends
+ * into the animated blob canvas behind it, with founder credit and legal
+ * links. `--text-dim` is re-declared here so secondary copy keeps a readable
+ * contrast ratio on the translucent surface.
  */
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative z-10 border-t-0 border-[var(--card-border)] bg-[var(--ink)]">
+    <footer className="site-footer relative z-10">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
           {/* Brand */}

@@ -46,6 +46,17 @@ export const settingsRuntime = {
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
+/**
+ * Typography scale written to `--text-scale`, which the global stylesheet
+ * multiplies against the 16px root size (everything downstream is rem).
+ */
+export const TEXT_SCALE: Record<TextComfort, number> = {
+  small: 0.94,
+  medium: 1,
+  large: 1.12,
+  dyslexic: 1.06,
+};
+
 export function frameTargetToFps(target: FrameTarget) {
   return target === "30" ? 30 : target === "60" ? 60 : 0;
 }
@@ -128,6 +139,12 @@ export function applySettings(settings: AppSettings) {
   root.style.setProperty("--ambient", ambient.toFixed(3));
   root.style.setProperty("--ambient-dur", ambientDuration(settings.ambient));
   root.style.setProperty("--ambient-blur", (0.55 + 0.45 * ambient).toFixed(2));
+  // Ambient Intensity -> the single global driver for every background glow.
+  // 0% fades the blurred backdrop shapes out completely, 100% renders them
+  // at full softness. Read by `.blob-canvas` and the ambient glow layers.
+  root.style.setProperty("--bg-glow-opacity", ambient.toFixed(3));
+  // Text Comfort -> the typography scaling module (root rem size).
+  root.style.setProperty("--text-scale", String(TEXT_SCALE[settings.textComfort] ?? 1));
 
   // Keep the header ThemeToggle on the same source of truth.
   try {
