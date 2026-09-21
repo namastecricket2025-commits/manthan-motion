@@ -46,9 +46,11 @@
   --color-signal-2: var(--signal-2);
   --color-text-main: var(--text-main);
   --color-text-dim: var(--text-dim);
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+  --font-sans: "Inter", "Noto Sans Devanagari", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI",
     sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui,
+  --font-display: "Space Grotesk", "Noto Sans Devanagari", "Inter",
+    ui-sans-serif, system-ui,
     sans-serif;
   --font-poster: "Outfit", "Space Grotesk", "Inter", ui-sans-serif, system-ui,
     sans-serif;
@@ -105,18 +107,22 @@
   --signal: #c81f27;
   --signal-2: #8f1d22;
   --text-main: #1b1110;
-  --text-dim: #374151;
-  --card-border: rgba(200, 31, 39, 0.22);
+  --text-dim: #333f4b;
+  --card-border: rgba(200, 31, 39, 0.26);
   --panel-bg: rgba(247, 243, 240, 0.55);
+  /* Neutral segment of the primary-button ring — stronger in light mode so
+     the pill reads as a defined button instead of a faint outline. */
+  --moving-ring: rgba(0, 0, 0, 0.14);
 
   /* ---- BACKGROUND BLOB FIELD (light) ---------------------------------
      The three colour stops of the metaball field (see BlobBackground).
-     Light keeps the same hues but a pale base stop and a much lower opacity
-     ceiling, so the field reads as a tint rather than a wash. */
+     Light keeps the same hues but a pale base stop and a lower opacity
+     ceiling than dark, while the deep stop stays saturated enough that the
+     field reads as crimson light through paper — never muddy rose. */
   --bg-canvas-a: #c81f27;
-  --bg-canvas-b: #8f1d22;
+  --bg-canvas-b: #a0242b;
   --bg-canvas-c: #f2ece8;
-  --bg-canvas-opacity: 0.65;
+  --bg-canvas-opacity: 0.78;
 
   /* ---- Frosted glass (light) ----------------------------------------- */
   --glass-fill-strong: rgba(0, 0, 0, 0.035);
@@ -241,6 +247,8 @@
   --bg-canvas-b: #8f1d22;
   --bg-canvas-c: #150c0b;
   --bg-canvas-opacity: 0.9;
+  /* Neutral segment of the primary-button ring (dark). */
+  --moving-ring: rgba(255, 255, 255, 0.16);
 
   /* ---- Frosted glass (dark) ------------------------------------------ */
   --glass-fill-strong: rgba(255, 255, 255, 0.05);
@@ -397,9 +405,9 @@
     box-shadow: var(--glass-shadow);
   }
   html:not(.dark) .glass-panel {
-    background: rgba(0, 0, 0, 0.015);
-    border-color: var(--glass-hairline);
-    box-shadow: var(--glass-shadow);
+    background: rgba(255, 255, 255, 0.42);
+    border-color: rgba(0, 0, 0, 0.07);
+    box-shadow: 0 24px 60px -30px rgba(31, 10, 8, 0.22);
   }
 
   .glass-chip {
@@ -411,9 +419,9 @@
     box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.4);
   }
   html:not(.dark) .glass-chip {
-    background: rgba(0, 0, 0, 0.02);
-    border-color: var(--glass-hairline);
-    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 18px 50px -24px rgba(31, 10, 8, 0.25);
   }
 
   /* ------------------------------------------------
@@ -431,10 +439,10 @@
     box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.5);
   }
   html:not(.dark) .site-footer {
-    --text-dim: #374151;
-    background: rgba(0, 0, 0, 0.015);
-    border-top-color: var(--glass-hairline);
-    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.12);
+    --text-dim: #333f4b;
+    background: rgba(255, 255, 255, 0.5);
+    border-top-color: rgba(0, 0, 0, 0.07);
+    box-shadow: 0 -30px 80px -40px rgba(31, 10, 8, 0.18);
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -540,15 +548,19 @@
     padding: 1.5px;
     background: conic-gradient(
       from var(--border-angle, 0deg),
-      var(--card-border) 0deg,
+      var(--moving-ring) 0deg,
       var(--signal) 40deg,
-      var(--card-border) 90deg,
-      var(--card-border) 190deg,
+      var(--moving-ring) 90deg,
+      var(--moving-ring) 190deg,
       var(--signal-2) 240deg,
-      var(--card-border) 300deg,
-      var(--card-border) 360deg
+      var(--moving-ring) 300deg,
+      var(--moving-ring) 360deg
     );
     animation: border-rotate 8s linear infinite;
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.5);
+  }
+  html:not(.dark) .moving-border {
+    box-shadow: 0 16px 40px -22px rgba(120, 20, 16, 0.45);
   }
   /* The inner is deliberately *translucent*, not a solid fill: the conic
      gradient behind it is the animation, and a frosted pane lets it sweep
@@ -557,13 +569,17 @@
   .moving-border__inner {
     border-radius: calc(999px - 1.5px);
     background: rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
     -webkit-backdrop-filter: blur(25px) saturate(160%);
     backdrop-filter: blur(25px) saturate(160%);
     color: var(--text-main);
     transition: background 220ms ease;
   }
   html:not(.dark) .moving-border__inner {
-    background: rgba(0, 0, 0, 0.02);
+    /* Real white glass in light mode: a near-invisible fill over the paper
+       canvas read as an undefined outline, not a button. */
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
   }
   .moving-border:hover .moving-border__inner,
   .moving-border:focus-visible .moving-border__inner {
@@ -571,7 +587,7 @@
   }
   html:not(.dark) .moving-border:hover .moving-border__inner,
   html:not(.dark) .moving-border:focus-visible .moving-border__inner {
-    background: rgba(0, 0, 0, 0.045);
+    background: rgba(255, 255, 255, 0.75);
   }
   .moving-border:hover,
   .moving-border:active,

@@ -149,24 +149,29 @@ export function applySettings(settings: AppSettings) {
   const root = document.documentElement;
   const dark = resolveTheme(settings.themeMode) === "dark";
 
+  /*
+   * The glow level, normalised to the ceiling: 60% on the slider (and
+   * everything above it) is the maximum glow the site ever renders — the
+   * exact brightness the old 100% produced. Below 60 the glow scales down
+   * proportionally to 0 at 0%.
+   */
+  const glowLevel = Math.min(1, ambient / (GLOW_CEILING / 100));
+
   root.classList.toggle("dark", dark);
   root.setAttribute("data-theme", dark ? "dark" : "light");
   root.setAttribute("data-motion", settings.reduceMotion ? "reduced" : "full");
   root.setAttribute("data-cursor-field", settings.cursorField ? "on" : "off");
   root.setAttribute("data-text", settings.textComfort);
   root.setAttribute("data-ambient", ambientBand(settings.ambient));
-  root.style.setProperty("--ambient", ambient.toFixed(3));
+  root.style.setProperty("--ambient", glowLevel.toFixed(3));
   root.style.setProperty("--ambient-dur", ambientDuration(settings.ambient));
-  root.style.setProperty("--ambient-blur", (0.55 + 0.45 * ambient).toFixed(2));
+  root.style.setProperty("--ambient-blur", (0.55 + 0.45 * glowLevel).toFixed(2));
   // Ambient Intensity -> the single global driver for every background glow.
   // 0% fades the blurred backdrop shapes out completely; GLOW_CEILING (60%)
   // already renders them at full softness, and everything above is clamped so
   // the backdrop stays an aura and never a wall. Read by `.blob-canvas` and
   // the ambient glow layers.
-  root.style.setProperty(
-    "--bg-glow-opacity",
-    Math.min(1, ambient / (GLOW_CEILING / 100)).toFixed(3),
-  );
+  root.style.setProperty("--bg-glow-opacity", glowLevel.toFixed(3));
   // Text Comfort -> the typography scaling module (root rem size).
   root.style.setProperty("--text-scale", String(TEXT_SCALE[settings.textComfort] ?? 1));
 

@@ -515,9 +515,9 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
             <AccordionContent className="set-content">
               <div className="set-body">
                 <Row
-                  title="Ambient Intensity"
+                  title="Background glow level"
                   badge={`${settings.ambient}%`}
-                  hint="Scales the opacity, speed and glowing background blur of the site layout. 0% is a fully static, flat page; the glow reaches its intended maximum at 60% and holds there — the rest of the slider is headroom, not extra glare."
+                  hint="Controls the brightness of the animated background field. 0% renders a fully static, flat page; 60% is the maximum glow the site applies, and values above it hold at that ceiling rather than getting brighter."
                 >
                   <div className="set-slider-wrap">
                     <Slider
@@ -531,7 +531,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     />
                     <div className="set-scale">
                       <span>0% · static</span>
-                      <span>60% · max glow</span>
+                      <span>60% · maximum</span>
                       <span>100%</span>
                     </div>
                   </div>

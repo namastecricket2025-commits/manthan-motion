@@ -45,9 +45,9 @@ html:not(.dark) .about-root {
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.32);
 }
 html:not(.dark) .apple-glass {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(0, 0, 0, 0.07);
+  box-shadow: 0 34px 80px -30px rgba(31, 10, 8, 0.22);
 }
 /* hover-lift variant: same glass, deepening ambient shadow */
 .apple-glass--lift {

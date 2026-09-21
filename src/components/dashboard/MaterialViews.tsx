@@ -51,20 +51,9 @@ export interface SlidesPayload {
   slides: { title: string; bullets: string[]; notes?: string }[];
 }
 
-/** A friendly icon per summary section — picked deterministically, not randomly,
- *  so a regenerated summary's sections keep stable icons per position. */
-const SECTION_ICONS = [
-  "📌",
-  "🔍",
-  "⚡",
-  "🧭",
-  "🧠",
-  "🕰️",
-  "⚖️",
-  "🔗",
-  "🌱",
-  "🧩",
-] as const;
+/** Summary sections carry quiet two-digit ordinals instead of icons —
+ *  formal, and stable per position across regenerations. */
+const sectionOrdinal = (i: number) => String(i + 1).padStart(2, "0");
 
 /* ------------------------------ summary ------------------------------ */
 
@@ -86,9 +75,12 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
             key={`${section.heading}-${i}`}
             className="rounded-2xl border border-[var(--card-border)] p-4"
           >
-            <p className="flex items-center gap-2 font-display text-sm font-bold tracking-tight">
-              <span aria-hidden="true">
-                {SECTION_ICONS[i % SECTION_ICONS.length]}
+            <p className="flex items-baseline gap-2 font-display text-sm font-bold tracking-tight">
+              <span
+                aria-hidden="true"
+                className="text-[11px] font-semibold tabular-nums text-[var(--signal)]"
+              >
+                {sectionOrdinal(i)}
               </span>
               {section.heading}
             </p>
@@ -115,10 +107,7 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
       {payload.keyTerms && payload.keyTerms.length > 0 && (
         <div>
           <p className="font-display text-sm font-bold tracking-tight">
-            Key terms{" "}
-            <span aria-hidden="true" className="text-[var(--signal)]">
-              ✦
-            </span>
+            Key terms
           </p>
           <dl className="mt-3 grid gap-3 sm:grid-cols-2">
             {payload.keyTerms.map((term, i) => (
@@ -172,7 +161,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
           {/* front — the question */}
           <span className="flip-card__face glass-panel flex flex-col items-center justify-center gap-3 px-6 py-8 text-center">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--signal)]">
-              <span aria-hidden="true">✦ </span>Question
+              Question
             </span>
             <span className="font-display text-lg font-bold leading-snug tracking-tight">
               {card.front}
@@ -184,7 +173,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
           {/* back — the answer */}
           <span className="flip-card__face flip-card__face--back glass-panel flex flex-col items-center justify-center gap-3 px-6 py-8 text-center">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--signal)]">
-              <span aria-hidden="true">✦ </span>Answer
+              Answer
             </span>
             <span className="font-display text-lg font-bold leading-snug tracking-tight">
               {card.back}
@@ -234,7 +223,6 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
 
   if (done) {
     const percent = Math.round((score / total) * 100);
-    const face = percent >= 80 ? "🏆" : percent >= 50 ? "💪" : "📚";
     const message =
       percent >= 80
         ? "Excellent — that's exam-ready recall."
@@ -243,9 +231,6 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
           : "Good start — run it again and watch the score climb.";
     return (
       <div className="flex flex-col items-center gap-3 py-10 text-center">
-        <span aria-hidden="true" className="text-4xl">
-          {face}
-        </span>
         <p className="font-display text-4xl font-bold tracking-tight">
           {score}
           <span className="text-text-dim">/{total}</span>
@@ -727,7 +712,6 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
       <div className="glass-panel overflow-hidden">
         <div className="border-b border-[var(--card-border)] px-6 py-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--signal)]">
-            <span aria-hidden="true">🎞️ </span>
             {payload.title}
             {payload.subtitle ? ` · ${payload.subtitle}` : ""}
           </p>
