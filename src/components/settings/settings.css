@@ -105,14 +105,14 @@ html:not(.dark) .set-root.set-root--bare {
   --set-bg: #0b0f19;
 
   /* ---- Apple-style glass tokens: one source of truth for every surface ----
-     Card fill   rgba(15,23,42,0.5) dark / rgba(255,255,255,0.45) light
+     Card fill   rgba(11,15,25,0.32) dark / rgba(255,255,255,0.45) light
      Hairline    1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
      Blur        blur(28px) saturate(135%)
      Ambient     0 30px 80px -20px rgba(0,0,0,0.25)
      Deliberately translucent, never opaque: the animated crimson blobs have
      to stay visible drifting underneath every panel. */
-  --set-glass: rgba(15, 23, 42, 0.5);
-  --set-glass-strong: rgba(15, 23, 42, 0.66);
+  --set-glass: rgba(11, 15, 25, 0.32);
+  --set-glass-strong: rgba(11, 15, 25, 0.46);
   --set-hairline: rgba(255, 255, 255, 0.06);
   --set-blur: blur(28px) saturate(135%);
   --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.25);
@@ -121,9 +121,9 @@ html:not(.dark) .set-root.set-root--bare {
 
   /* legacy aliases now resolve to the glass spec, so no surface keeps a
      heavy fill or a thick solid border */
-  --set-panel: rgba(15, 23, 42, 0.5);
-  --set-panel-deep: rgba(15, 23, 42, 0.42);
-  --set-well: rgba(15, 23, 42, 0.5);
+  --set-panel: rgba(11, 15, 25, 0.32);
+  --set-panel-deep: rgba(11, 15, 25, 0.24);
+  --set-well: rgba(11, 15, 25, 0.32);
   --set-border: rgba(255, 255, 255, 0.07);
   --set-border-strong: rgba(255, 255, 255, 0.16);
   /* Readable ink: every body/secondary node clears contrast against the

@@ -37,7 +37,7 @@ html:not(.dark) .about-root {
    Never a saturated or opaque panel — the animated crimson blobs stay
    visible drifting underneath while the copy keeps full contrast. */
 .apple-glass {
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(11, 15, 25, 0.32);
   -webkit-backdrop-filter: blur(28px) saturate(135%);
   backdrop-filter: blur(28px) saturate(135%);
   border: 1px solid rgba(255, 255, 255, 0.06);

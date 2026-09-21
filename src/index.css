@@ -234,7 +234,10 @@
      the glass no matter what the mesh is doing behind it. */
   --text-dim: #e2e8f0;
   --card-border: rgba(224, 50, 58, 0.2);
-  --panel-bg: rgba(11, 15, 25, 0.62);
+  /* Chrome (sidebar, command bars): a touch denser than card glass so rail
+     text never sits directly on a bright blob, still translucent enough for
+     the field to glow through. */
+  --panel-bg: rgba(11, 15, 25, 0.5);
 
   /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
      Two CSS-animated crimson blobs (see `.mesh-field` / `@keyframes
@@ -243,12 +246,14 @@
      the only dimmer on top of them. */
   --mesh-ceiling: 1;
 
-  /* ---- Frosted glass (dark) — smoky neutral translucent canvas --------
-     The 50% slate scrim is what stops the animated crimson backdrop from
-     blinding the copy: the blobs still drift visibly under the card, but
-     they can never saturate the panel or swallow the text. */
-  --glass-fill: rgba(15, 23, 42, 0.5);
-  --glass-fill-strong: rgba(15, 23, 42, 0.66);
+  /* ---- Frosted glass (dark) — crimson-forward translucent glass ------
+     Deliberately light on scrim. The house look is the crimson blob field
+     reading *through* every card, so the fill is only a whisper of the ink
+     base (a warm near-black, never a blue slate tint): the mesh stays
+     visible as it drifts under the panel, while the ink beneath and the
+     off-white type tokens above keep the copy crisp. */
+  --glass-fill: rgba(11, 15, 25, 0.32);
+  --glass-fill-strong: rgba(11, 15, 25, 0.46);
   --glass-hairline: rgba(255, 255, 255, 0.06);
   --glass-blur: blur(28px) saturate(135%);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
@@ -448,7 +453,7 @@
   .set-card,
   .set-block,
   .set-row {
-    background: rgba(15, 23, 42, 0.5) !important;
+    background: rgba(11, 15, 25, 0.32) !important;
     -webkit-backdrop-filter: blur(28px) saturate(135%) !important;
     backdrop-filter: blur(28px) saturate(135%) !important;
     border-color: rgba(255, 255, 255, 0.06) !important;
@@ -806,12 +811,14 @@
   .mesh-blob--a {
     top: -10%;
     left: -10%;
-    width: 600px;
-    height: 600px;
+    /* 600px is the floor; on wide viewports the blob scales up with the
+       canvas so the field covers the page instead of pooling in one corner. */
+    width: max(600px, 62vw);
+    height: max(600px, 62vw);
     background: radial-gradient(
       circle,
-      rgba(220, 38, 38, 0.14) 0%,
-      rgba(163, 22, 22, 0.04) 60%,
+      rgba(220, 38, 38, 0.24) 0%,
+      rgba(163, 22, 22, 0.08) 60%,
       transparent 100%
     );
     filter: blur(130px);
@@ -821,12 +828,12 @@
   .mesh-blob--b {
     bottom: -10%;
     right: -10%;
-    width: 500px;
-    height: 500px;
+    width: max(500px, 54vw);
+    height: max(500px, 54vw);
     background: radial-gradient(
       circle,
-      rgba(200, 30, 30, 0.12) 0%,
-      rgba(130, 10, 10, 0.03) 60%,
+      rgba(200, 30, 30, 0.2) 0%,
+      rgba(130, 10, 10, 0.06) 60%,
       transparent 100%
     );
     filter: blur(120px);
@@ -838,16 +845,16 @@
   html:not(.dark) .mesh-blob--a {
     background: radial-gradient(
       circle,
-      rgba(220, 38, 38, 0.07) 0%,
-      rgba(163, 22, 22, 0.02) 60%,
+      rgba(220, 38, 38, 0.09) 0%,
+      rgba(163, 22, 22, 0.03) 60%,
       transparent 100%
     );
   }
   html:not(.dark) .mesh-blob--b {
     background: radial-gradient(
       circle,
-      rgba(200, 30, 30, 0.06) 0%,
-      rgba(130, 10, 10, 0.015) 60%,
+      rgba(200, 30, 30, 0.075) 0%,
+      rgba(130, 10, 10, 0.025) 60%,
       transparent 100%
     );
   }
@@ -884,7 +891,8 @@
 
   /* ------------------------------------------------
      Hero orbit mark — the large anchored circle with the small light
-     satellite orbiting it. GSAP owns the `.orbit-group` transform.
+     satellite orbiting it. The orbit is a pure CSS infinite rotation (see
+     `.orbit-group` / `@keyframes orbit`); nothing else writes that transform.
      ------------------------------------------------ */
   .orbit-mark {
     display: block;
