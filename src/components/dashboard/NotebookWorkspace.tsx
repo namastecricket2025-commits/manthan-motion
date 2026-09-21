@@ -13,6 +13,8 @@ import {
   type SummaryPayload,
 } from "@/components/dashboard/MaterialViews";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
+import { useCdPill } from "@/components/landing/use-cd-pill";
+import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
   AlertCircle,
   Check,
@@ -27,7 +29,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 
@@ -89,7 +91,9 @@ export function NotebookWorkspace({
   const generate = useAction(api.ai.generate);
 
   const [dragOver, setDragOver] = useState(false);
-  const [uploads, setUploads] = useState<{ name: string; error?: string }[]>([]);
+  const [uploads, setUploads] = useState<
+    { key: number; name: string; error?: string }[]
+  >([]);
   const [linkValue, setLinkValue] = useState("");
   const [busyLink, setBusyLink] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -102,6 +106,7 @@ export function NotebookWorkspace({
   const [running, setRunning] = useState<Kind[]>([]);
   const [tab, setTab] = useState<Kind>("summary");
   const [retrying, setRetrying] = useState<string | null>(null);
+  const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
 
   const readyCount =
     sources?.filter((s) => s.status !== "failed" && s.characters > 0).length ??
@@ -110,48 +115,69 @@ export function NotebookWorkspace({
 
   /* ----------------------------- ingest ----------------------------- */
 
+  const uploadKeyRef = useRef(0);
+
+  /**
+   * Every selected file uploads in parallel — picking five PDFs adds five
+   * sources, not one. Rows are keyed by a counter (names can repeat); a
+   * failure marks just its own row and the rest continue.
+   */
   async function uploadFiles(files: FileList | null) {
     if (!files?.length) return;
-    for (const file of Array.from(files)) {
+    const list = Array.from(files);
+    const accepted = list.filter((file) => {
       if (file.size > MAX_UPLOAD) {
         toast.error(`${file.name} is larger than 20 MB.`);
-        continue;
+        return false;
       }
-      setUploads((u) => [...u, { name: file.name }]);
-      try {
-        const url = await generateUploadUrl();
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "content-type": file.type || "application/octet-stream",
-          },
-          body: file,
-        });
-        if (!response.ok) {
-          throw new Error(`Upload failed (${response.status}).`);
+      return true;
+    });
+    if (accepted.length === 0) return;
+
+    const keys = accepted.map(() => uploadKeyRef.current++);
+    setUploads((u) => [
+      ...u,
+      ...accepted.map((file, i) => ({ key: keys[i], name: file.name })),
+    ]);
+
+    await Promise.all(
+      accepted.map(async (file, i) => {
+        const key = keys[i];
+        try {
+          const url = await generateUploadUrl();
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "content-type": file.type || "application/octet-stream",
+            },
+            body: file,
+          });
+          if (!response.ok) {
+            throw new Error(`Upload failed (${response.status}).`);
+          }
+          const { storageId } = (await response.json()) as {
+            storageId: Id<"_storage">;
+          };
+          await ingestFile({
+            notebookId,
+            storageId,
+            name: file.name,
+            mime: file.type || undefined,
+            size: file.size,
+          });
+          setUploads((u) => u.filter((item) => item.key !== key));
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Could not add that file.";
+          setUploads((u) =>
+            u.map((item) =>
+              item.key === key ? { ...item, error: message } : item,
+            ),
+          );
+          toast.error(`${file.name}: ${message}`);
         }
-        const { storageId } = (await response.json()) as {
-          storageId: Id<"_storage">;
-        };
-        await ingestFile({
-          notebookId,
-          storageId,
-          name: file.name,
-          mime: file.type || undefined,
-          size: file.size,
-        });
-        setUploads((u) => u.filter((item) => item.name !== file.name));
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Could not add that file.";
-        setUploads((u) =>
-          u.map((item) =>
-            item.name === file.name ? { ...item, error: message } : item,
-          ),
-        );
-        toast.error(message);
-      }
-    }
+      }),
+    );
   }
 
   async function submitLink() {
@@ -218,12 +244,30 @@ export function NotebookWorkspace({
         });
       }
       for (const failure of failed) {
-        toast.error(`${failure.kind}: ${failure.error ?? "not generated"}`);
+        if (failure.quotaExceeded) {
+          // A spent day is expected and recoverable — say it like a human,
+          // point at the meter and the plans, never at a provider dump.
+          toast.error("Today's generation allowance is used up", {
+            description:
+              "It resets at midnight UTC — see the allowance meter in this panel, or the Plans page for a higher cap.",
+            duration: 8000,
+          });
+        } else {
+          toast.error(`${failure.kind}: ${failure.error ?? "not generated"}`);
+        }
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Generation failed.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Generation failed.";
+      if (/allowance/i.test(message)) {
+        toast.error("Today's generation allowance is used up", {
+          description:
+            "It resets at midnight UTC — see the allowance meter in this panel, or the Plans page for a higher cap.",
+          duration: 8000,
+        });
+      } else {
+        toast.error(message);
+      }
     } finally {
       setRunning([]);
     }
@@ -278,10 +322,10 @@ export function NotebookWorkspace({
           >
             <Upload className="h-5 w-5 text-[var(--signal)]" />
             <span className="text-sm font-medium">
-              Drop a file or click to browse
+              Drop files or click to browse — as many as you like
             </span>
             <span className="text-xs text-text-dim">
-              PDF, text, Markdown, CSV — up to 20 MB
+              PDF, text, Markdown, CSV — up to 20 MB each, added in parallel
             </span>
             <input
               type="file"
@@ -366,7 +410,7 @@ export function NotebookWorkspace({
           <ul className="space-y-2">
             {uploads.map((upload) => (
               <li
-                key={upload.name}
+                key={upload.key}
                 className="flex items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
               >
                 {upload.error ? (
@@ -546,6 +590,8 @@ export function NotebookWorkspace({
               </>
             )}
           </MovingBorderButton>
+
+          <UsageCard />
         </div>
       </div>
 
@@ -592,6 +638,7 @@ export function NotebookWorkspace({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      ref={regenerateRef}
                       onClick={() => void runGeneration([activeKind])}
                       disabled={running.length > 0}
                       className={

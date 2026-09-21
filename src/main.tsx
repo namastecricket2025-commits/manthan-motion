@@ -12,6 +12,10 @@ import "./index.css";
 // user-preference hooks (theme, motion, ambient, text comfort) — imported
 // globally so a toggle in the settings dashboard lands on every route
 import "./components/settings/settings.css";
+import { installCdEngine } from "./components/landing/cd-engine";
+
+// One rAF loop drives every spinning-disc button's speed smoothing.
+installCdEngine();
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
@@ -24,6 +28,7 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Terms = lazy(() => import("./pages/Terms.tsx"));
 const Privacy = lazy(() => import("./pages/Privacy.tsx"));
 const Honor = lazy(() => import("./pages/Honor.tsx"));
+const Pricing = lazy(() => import("./pages/Pricing.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -170,6 +175,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/honor" element={<Honor />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

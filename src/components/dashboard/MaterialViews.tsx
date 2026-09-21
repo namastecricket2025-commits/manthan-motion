@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
+import { useCdPill } from "@/components/landing/use-cd-pill";
 
 /**
  * Renderers for the five artefacts the generator produces. Each takes the
@@ -139,6 +140,8 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
 export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const prevRef = useCdPill<HTMLButtonElement>();
+  const nextRef = useCdPill<HTMLButtonElement>();
   const card = payload.cards[index];
   if (!card) return null;
 
@@ -189,6 +192,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
       <div className="flex items-center gap-3">
         <button
           type="button"
+          ref={prevRef}
           onClick={() => go(-1)}
           className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center"
           aria-label="Previous card"
@@ -200,6 +204,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
         </span>
         <button
           type="button"
+          ref={nextRef}
           onClick={() => go(1)}
           className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center"
           aria-label="Next card"
@@ -703,6 +708,8 @@ export function MindmapView({ payload }: { payload: MindmapPayload }) {
 export function SlidesView({ payload }: { payload: SlidesPayload }) {
   const [index, setIndex] = useState(0);
   const total = payload.slides.length;
+  const slidePrevRef = useCdPill<HTMLButtonElement>();
+  const slideNextRef = useCdPill<HTMLButtonElement>();
   const slide = payload.slides[index];
   if (!slide) return null;
 
@@ -748,6 +755,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
         <div className="flex w-full items-center justify-between">
           <button
             type="button"
+            ref={slidePrevRef}
             onClick={() => setIndex((i) => Math.max(0, i - 1))}
             disabled={index === 0}
             className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
@@ -760,6 +768,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
           </span>
           <button
             type="button"
+            ref={slideNextRef}
             onClick={() => setIndex((i) => Math.min(total - 1, i + 1))}
             disabled={index === total - 1}
             className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"

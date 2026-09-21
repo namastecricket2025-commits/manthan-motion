@@ -125,6 +125,10 @@ export const summary = query({
       sourceCount: 0,
       fileCount: 0,
       linkCount: 0,
+      notesCount: 0,
+      readableCount: 0,
+      failedCount: 0,
+      materialsByKind: {} as Record<string, number>,
       addedThisWeek: 0,
       perNotebook: [] as { id: string; name: string; count: number }[],
       byDay: [] as { day: string; label: string; count: number }[],
@@ -163,11 +167,29 @@ export const summary = query({
 
     const weekStart = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
+    // Generated artefacts across every notebook — what the donut's second
+    // ring reports so the chart shows outcomes, not only inputs.
+    const materials = await ctx.db
+      .query("materials")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    const materialsByKind: Record<string, number> = {};
+    for (const material of materials) {
+      materialsByKind[material.kind] =
+        (materialsByKind[material.kind] ?? 0) + 1;
+    }
+
     return {
       notebookCount: notebooks.length,
       sourceCount: sources.length,
       fileCount: sources.filter((s) => s.kind === "file").length,
       linkCount: sources.filter((s) => s.kind === "link").length,
+      notesCount: sources.filter((s) => s.kind === "text").length,
+      readableCount: sources.filter(
+        (s) => s.status !== "failed" && (s.text?.length ?? 0) > 0,
+      ).length,
+      failedCount: sources.filter((s) => s.status === "failed").length,
+      materialsByKind,
       addedThisWeek: sources.filter((s) => s.createdAt >= weekStart).length,
       perNotebook: notebooks
         .slice()

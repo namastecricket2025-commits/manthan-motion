@@ -84,6 +84,17 @@ const schema = defineSchema(
     })
       .index("by_notebook", ["notebookId"])
       .index("by_owner", ["ownerId"]),
+
+    // One row per user per UTC day. `used`/`requests` are written by the
+    // generation action; the dashboard reads the same row to draw the quota
+    // meter, so what the student sees is what the engine counted.
+    usage: defineTable({
+      userId: v.id("users"),
+      day: v.string(), // "2026-09-21" — UTC date bucket
+      used: v.number(), // model tokens consumed (prompt + completion)
+      requests: v.number(), // successful model calls
+      updatedAt: v.number(),
+    }).index("by_user_day", ["userId", "day"]),
   },
   {
     schemaValidation: false,

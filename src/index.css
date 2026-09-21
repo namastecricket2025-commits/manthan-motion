@@ -359,6 +359,18 @@
        the pinned horizontal "How it works" section */
     overflow-x: clip;
   }
+  /* Mobile: pages open at the correct scale with no layout-driven reflow —
+     the 16px inputs stop iOS zoom-on-focus, and text autosizing is off so
+     headlines keep their set size in portrait. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   ::selection {
     background: color-mix(in srgb, var(--signal) 75%, transparent);
     color: #fff;
@@ -546,12 +558,13 @@
     display: inline-flex;
     border-radius: 999px;
     padding: 1.5px;
-    /* One spin clock drives BOTH the conic rim and the face sheen, so the
-       whole button reads as a single spinning disc. 8s at rest, 1.1s on
-       hover/focus/press, ~0.9s while the action is loading. */
-    --spin: 8s;
+    /* The spin clock is JavaScript (cd-engine.ts): it lerps the disc's
+       seconds-per-turn toward fast on hover / busy and back toward slow on
+       leave, so BOTH the speed-up and the revert are smooth — a CSS
+       animation-duration change would snap. The engine writes --cd-angle
+       (sheen) and --cd-angle-r (rim) every frame. */
     background: conic-gradient(
-      from var(--border-angle, 0deg),
+      from var(--cd-angle-r, 0deg),
       var(--moving-ring) 0deg,
       var(--signal) 40deg,
       var(--moving-ring) 90deg,
@@ -560,7 +573,6 @@
       var(--moving-ring) 300deg,
       var(--moving-ring) 360deg
     );
-    animation: border-rotate var(--spin) linear infinite;
     box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.5);
   }
   html:not(.dark) .moving-border {
@@ -571,7 +583,7 @@
      rotation is nearly still at rest; hover/focus/press spin it up (see
      below). A hairline top highlight is what makes the fill read as
      polished rather than flat. */
-  .moving-border__inner {
+  .cd-face {
     position: relative;
     overflow: hidden;
     border-radius: calc(999px - 1.5px);
@@ -580,12 +592,12 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       inset 0 0 0 1px rgba(255, 255, 255, 0.07);
     color: var(--primary-foreground);
-    transition: filter 220ms ease, background 220ms ease;
+    transition: filter 260ms ease, color 260ms ease;
   }
-  /* The CD sheen lives ON the red face: a soft white wedge sweeping across
-     the fill in lock-step with the rim (same --spin clock), so the shine
-     visibly travels through the label like light on a spinning disc. */
-  .moving-border__inner::before {
+  /* The CD sheen ON the face, BENEATH the label (the label span sits above
+     with z-10): a soft white wedge that sweeps with the disc — you see it
+     pass under the words, which is the effect being asked for. */
+  .cd-face::before {
     content: "";
     position: absolute;
     /* A centered SQUARE large enough to cover the pill's diagonal at any
@@ -595,73 +607,65 @@
     width: 260%;
     aspect-ratio: 1 / 1;
     translate: -50% -50%;
+    rotate: var(--cd-angle, 0deg);
     background: conic-gradient(
       from 0deg,
       transparent 0deg,
-      rgba(255, 255, 255, 0.38) 24deg,
+      rgba(255, 255, 255, 0.34) 24deg,
       rgba(255, 255, 255, 0.05) 58deg,
       transparent 95deg,
       transparent 360deg
     );
-    animation: cd-sheen var(--spin, 8s) linear infinite;
     pointer-events: none;
   }
-  @keyframes cd-sheen {
-    to {
-      transform: rotate(360deg);
-    }
+  /* Hover: the disc races (engine) and the words brighten with it. */
+  .moving-border:hover .cd-face {
+    filter: brightness(1.08) saturate(1.05);
+    color: #ffffff;
   }
-  .moving-border:hover .moving-border__inner,
-  .moving-border:focus-visible .moving-border__inner {
-    filter: brightness(1.09) saturate(1.05);
+  .moving-border:focus-visible .cd-face {
+    filter: brightness(1.08) saturate(1.05);
+  }
+  .moving-border:hover .cd-face,
+  .moving-border:focus-visible .cd-face {
+    filter: brightness(1.08) saturate(1.05);
+  }
+  /* Hover: the words brighten with the disc. */
+  .moving-border:hover .cd-face {
+    color: #ffffff;
   }
   .moving-border:disabled {
-    /* A paused ring, paused sheen and a dimmed body: inactive actions
-       shouldn't look pressable, and shouldn't keep spinning either. */
-    animation-play-state: paused;
+    /* Dimmed and still: the engine freezes a disabled disc entirely. */
     opacity: 0.6;
   }
-  .moving-border:disabled .moving-border__inner::before {
-    animation-play-state: paused;
-  }
-  .moving-border:disabled .moving-border__inner {
+  .moving-border:disabled .cd-face {
     filter: saturate(0.7);
   }
-  .moving-border:hover,
-  .moving-border:active,
-  .moving-border:focus-visible {
-    --spin: 1.1s;
-  }
-  /* Loading: the disc sprints. `.is-busy` beats the `:disabled` pause below
-     because it is declared after it — generation keeps the animation alive
-     and drops the dimmed look so the button reads as working, not dead. */
+  /* Loading: the engine's fast target covers is-busy; the styling just
+     drops the dimmed disabled look so an in-flight action reads as working,
+     not dead. */
   .moving-border.is-busy {
-    --spin: 0.9s;
     opacity: 1;
-    animation-play-state: running;
     cursor: progress;
   }
-  .moving-border.is-busy .moving-border__inner {
+  .moving-border.is-busy .cd-face {
     filter: brightness(1.05) saturate(1.08);
-  }
-  .moving-border.is-busy .moving-border__inner::before {
-    animation-play-state: running;
   }
   .moving-border:active {
     transform: scale(0.985);
     transition: transform 120ms ease;
   }
 
-  /* Compact CD pills — the same spinning-disc treatment at small scale for
-     secondary actions (Regenerate / Delete, deck pagers, quiz choices). The
-     rim + sheen share one clock so the pill still reads as one surface. */
+  /* Compact CD pills — the same JS-driven disc at small scale for secondary
+     actions (Regenerate / Delete, deck pagers). The engine's pointerenter/
+     leave wiring is shared, so these get the same smooth speed-up and
+     smooth revert as the big buttons. */
   .cd-pill {
-    --spin: 8s;
     position: relative;
     overflow: hidden;
     border: 1px solid var(--card-border);
     background-image: conic-gradient(
-      from var(--border-angle, 0deg),
+      from var(--cd-angle-r, 0deg),
       transparent 0deg,
       color-mix(in srgb, var(--signal) 26%, transparent) 38deg,
       transparent 85deg,
@@ -670,7 +674,6 @@
       transparent 285deg,
       transparent 360deg
     );
-    animation: border-rotate var(--spin) linear infinite;
   }
   .cd-pill::before {
     content: "";
@@ -680,6 +683,7 @@
     width: 240%;
     aspect-ratio: 1 / 1;
     translate: -50% -50%;
+    rotate: var(--cd-angle, 0deg);
     background: conic-gradient(
       from 0deg,
       transparent 0deg,
@@ -687,7 +691,6 @@
       transparent 75deg,
       transparent 360deg
     );
-    animation: cd-sheen var(--spin) linear infinite;
     pointer-events: none;
   }
   .cd-pill > * {
@@ -697,30 +700,29 @@
   .cd-pill:hover,
   .cd-pill:active,
   .cd-pill:focus-visible {
-    --spin: 1.1s;
     border-color: color-mix(in srgb, var(--signal) 55%, transparent);
   }
   .cd-pill.is-busy {
-    --spin: 0.9s;
     cursor: progress;
   }
-  html[data-motion="reduced"] .cd-pill,
   html[data-motion="reduced"] .cd-pill::before {
-    animation: none;
+    display: none;
+  }
+  html[data-motion="reduced"] .cd-pill {
+    background-image: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    .cd-pill,
     .cd-pill::before {
-      animation: none;
+      display: none;
+    }
+    .cd-pill {
+      background-image: none;
     }
   }
 
   /* Touch feedback: press state for touch-first devices */
   @media (hover: none) {
-    .moving-border:active {
-      --spin: 0.8s;
-    }
-    .moving-border:active .moving-border__inner {
+    .moving-border:active .cd-face {
       filter: brightness(1.12);
     }
     .btn-ghost:active,
@@ -735,25 +737,19 @@
 
   @media (prefers-reduced-motion: reduce) {
     .moving-border {
-      animation: none;
       /* static crimson ring instead of the travelling conic sweep */
       background: linear-gradient(120deg, var(--signal), var(--signal-2));
     }
-    .moving-border:hover,
-    .moving-border:active {
-      animation: none;
-    }
-    .moving-border__inner::before {
+    .cd-face::before {
       display: none;
     }
   }
   /* Motionless Mode (in-app accessibility switch) kills the disc too —
      same deal as prefers-reduced-motion: static face, static ring. */
   html[data-motion="reduced"] .moving-border {
-    animation: none;
     background: linear-gradient(120deg, var(--signal), var(--signal-2));
   }
-  html[data-motion="reduced"] .moving-border__inner::before {
+  html[data-motion="reduced"] .cd-face::before {
     display: none;
   }
 

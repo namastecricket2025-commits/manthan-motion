@@ -155,5 +155,19 @@ export const assertNotebook = internalQuery({
   },
 });
 
+/** Same gate as assertNotebook, but returns the owner id for spend metering. */
+export const assertOwner = internalQuery({
+  args: { notebookId: v.id("notebooks") },
+  handler: async (ctx, { notebookId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Sign in first.");
+    const notebook = await ctx.db.get(notebookId);
+    if (!notebook || notebook.ownerId !== userId) {
+      throw new Error("Notebook not found.");
+    }
+    return userId;
+  },
+});
+
 export type MaterialKind = (typeof MATERIAL_KINDS)[number];
 export type NotebookId = Id<"notebooks">;

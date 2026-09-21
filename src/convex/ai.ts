@@ -3,6 +3,7 @@
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action } from "./_generated/server";
+import { msUntilReset } from "./usage";
 import { v } from "convex/values";
 import { extractText, getDocumentProxy } from "unpdf";
 import { z } from "zod";
@@ -27,6 +28,9 @@ import { z } from "zod";
 
 const MAX_SOURCE_TEXT = 200_000; // per source
 const MAX_CORPUS = 120_000; // total characters handed to the model
+
+/** Rough token estimate — models chunk English prose near 4 chars/token. */
+const CHARS_PER_TOKEN = 4;
 
 const kindValidator = v.union(
   v.literal("summary"),
@@ -101,9 +105,33 @@ const GEMINI_MODELS = [
 const TRANSIENT =
   /high demand|overloaded|try again|rate limit|resource.?exhausted/i;
 
-/** Account-level failures: every other candidate fails identically. */
+/**
+ * Account-level failures: every other candidate fails identically.
+ */
 const FATAL =
   /api key not valid|api_key_invalid|permission denied|permission_denied|billing|not enabled|has been disabled/i;
+
+/**
+ * The free tier ran out for today — an expected, recoverable state, not a
+ * crash. It gets its own error class so the UI can show the usage card and a
+ * reset time instead of a raw provider dump.
+ */
+export class QuotaError extends Error {
+  resetsAt: number;
+  constructor(resetsAt: number) {
+    super("Daily generation allowance reached.");
+    this.name = "QuotaError";
+    this.resetsAt = resetsAt;
+  }
+}
+
+/** The provider itself refused on quota grounds (429 / RESOURCE_EXHAUSTED). */
+function isProviderQuotaError(status: number, message: string) {
+  return (
+    status === 429 ||
+    /resource.?exhausted|quota|rate.?limit/i.test(message)
+  );
+}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -201,7 +229,7 @@ async function geminiAttempt(
   system: string,
   prompt: string,
 ): Promise<
-  { ok: true; text: string } | { ok: false; status: number; message: string }
+  { ok: true; text: string; tokens?: number } | { ok: false; status: number; message: string }
 > {
   try {
     const response = await fetch(
@@ -225,6 +253,7 @@ async function geminiAttempt(
     const payload = (await response.json()) as {
       error?: { message?: string };
       candidates?: { content?: { parts?: { text?: string }[] } }[];
+      usageMetadata?: { totalTokenCount?: number };
     };
     if (!response.ok) {
       return {
@@ -241,6 +270,9 @@ async function geminiAttempt(
         payload?.candidates?.[0]?.content?.parts
           ?.map((part) => part.text ?? "")
           .join("") ?? "",
+      tokens:
+        payload?.usageMetadata?.totalTokenCount ??
+        undefined,
     };
   } catch (error) {
     return {
@@ -264,7 +296,7 @@ async function callGemini(
   system: string,
   prompt: string,
   prefer?: string,
-): Promise<{ text: string; model: string }> {
+): Promise<{ text: string; model: string; tokens?: number }> {
   const failures: string[] = [];
   const candidates = orderCandidates(config.models, prefer);
 
@@ -278,7 +310,7 @@ async function callGemini(
         if (result.text.trim()) {
           lastGoodModel = model;
           busyUntil.delete(model);
-          return { text: result.text, model };
+          return { text: result.text, model, tokens: result.tokens };
         }
         failures.push(`${model}: the model replied with nothing`);
         break;
@@ -313,7 +345,7 @@ async function callModel(
   system: string,
   prompt: string,
   prefer?: string,
-): Promise<{ text: string; model: string }> {
+): Promise<{ text: string; model: string; tokens?: number }> {
   if (config.provider === "gemini") {
     return await callGemini(config, system, prompt, prefer ?? lastGoodModel);
   }
@@ -336,6 +368,7 @@ async function callModel(
   const payload = (await response.json()) as {
     error?: { message?: string };
     choices?: { message?: { content?: string } }[];
+    usage?: { total_tokens?: number };
   };
   if (!response.ok) {
     throw new Error(
@@ -345,6 +378,7 @@ async function callModel(
   return {
     text: payload?.choices?.[0]?.message?.content ?? "",
     model: config.models[0],
+    tokens: payload?.usage?.total_tokens,
   };
 }
 
@@ -687,14 +721,35 @@ export const reExtract = action({
   },
 });
 
-/** Churn a notebook's sources into the requested artefacts. */
+/**
+ * Churn a notebook's sources into the requested artefacts.
+ *
+ * Spend is metered: the day's ledger is checked before anything runs, tokens
+ * actually consumed are written back after each call, and a day that is out of
+ * allowance fails fast with a QuotaError (surfaced to the UI as `quotaExceeded`)
+ * instead of half-running and dying on the provider's own 429.
+ */
 export const generate = action({
   args: { notebookId: v.id("notebooks"), kinds: v.array(kindValidator) },
   handler: async (
     ctx,
     { notebookId, kinds },
-  ): Promise<{ kind: Kind; ok: boolean; error?: string }[]> => {
+  ): Promise<
+    { kind: Kind; ok: boolean; error?: string; quotaExceeded?: boolean }[]
+  > => {
     if (kinds.length === 0) throw new Error("Pick at least one thing to generate.");
+
+    const userId = await ctx.runQuery(internal.materials.assertOwner, {
+      notebookId,
+    });
+
+    const usage = await ctx.runQuery(internal.usage.ensureWithinQuota, {
+      userId,
+    });
+    const resetsAt = Date.now() + msUntilReset();
+    if (usage.used >= usage.limit) {
+      throw new QuotaError(resetsAt);
+    }
 
     const context = await ctx.runQuery(internal.materials.sourceContext, {
       notebookId,
@@ -722,15 +777,47 @@ export const generate = action({
     const corpus = parts.join("\n\n");
 
     const config = resolveProvider();
-    const results: { kind: Kind; ok: boolean; error?: string }[] = [];
+    const results: {
+      kind: Kind;
+      ok: boolean;
+      error?: string;
+      quotaExceeded?: boolean;
+    }[] = [];
+
+    let remaining = usage.limit - usage.used;
 
     for (const kind of kinds) {
+      if (remaining <= 0) {
+        results.push({
+          kind,
+          ok: false,
+          quotaExceeded: true,
+          error: `Daily allowance reached — resets at ${new Date(resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`,
+        });
+        continue;
+      }
+
       try {
-        const { text: raw, model } = await callModel(
+        const { text: raw, model, tokens } = await callModel(
           config,
           SYSTEM,
           buildPrompt(kind, context.notebookName, corpus),
         );
+
+        // Meter what the call actually cost, falling back to the estimate.
+        const spent =
+          tokens ??
+          Math.round(
+            (buildPrompt(kind, context.notebookName, corpus).length + raw.length) /
+              CHARS_PER_TOKEN,
+          );
+        await ctx.runMutation(internal.usage.record, {
+          userId,
+          tokens: spent,
+          requests: 1,
+        });
+        remaining -= spent;
+
         const json = parseJsonLoose(raw);
 
         const parsed =
@@ -770,6 +857,22 @@ export const generate = action({
 
         results.push({ kind, ok: true });
       } catch (error) {
+        // The provider's own quota refusal also stops the run — retrying the
+        // remaining artefacts would just burn more of a day that is already out.
+        if (error instanceof Error && isProviderQuotaError(429, error.message)) {
+          await ctx.runMutation(internal.usage.record, {
+            userId,
+            tokens: 0,
+            requests: 0,
+          });
+          results.push({
+            kind,
+            ok: false,
+            quotaExceeded: true,
+            error: "The AI provider's free quota for today is used up. Your allowance resets soon — see the usage card on the dashboard.",
+          });
+          break;
+        }
         results.push({
           kind,
           ok: false,

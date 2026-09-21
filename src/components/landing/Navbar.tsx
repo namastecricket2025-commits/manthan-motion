@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { Logo } from "./Logo";
 import { FloatingDock, type DockItem } from "./FloatingDock";
+import { MobileMenu } from "./MobileMenu";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -119,18 +120,20 @@ export default function Navbar() {
         </a>
 
         <div className="flex items-center gap-2">
-          {/* The one dock: a glass pill that magnifies gently on desktop,
-              an expandable trigger on mobile. Magnification is capped so
-              icons never balloon past the navbar. */}
-          <FloatingDock
-            items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
-            mobileDirection="down"
-            desktopClassName="h-14 items-center gap-2 px-3 pb-0"
-            minSize={DOCK_ZOOM.minSize}
-            maxSize={DOCK_ZOOM.maxSize}
-            minIconSize={DOCK_ZOOM.minIconSize}
-            maxIconSize={DOCK_ZOOM.maxIconSize}
-          />
+          {/* Desktop (md+): the magnifying glass dock. Mobile: a readable
+              labeled panel with a primary Get started / Open dashboard CTA,
+              replacing the old icon-only fan. */}
+          <div className="hidden md:block">
+            <FloatingDock
+              items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
+              desktopClassName="h-14 items-center gap-2 px-3 pb-0"
+              minSize={DOCK_ZOOM.minSize}
+              maxSize={DOCK_ZOOM.maxSize}
+              minIconSize={DOCK_ZOOM.minIconSize}
+              maxIconSize={DOCK_ZOOM.maxIconSize}
+            />
+          </div>
+          <MobileMenu items={isAuthenticated ? dockItems : [...dockItems, signInItem]} />
           <ThemeToggle />
           {/* Sign in lives once, in the dock (icon + tooltip). */}
           <div className="hidden sm:block">{cta}</div>

@@ -209,8 +209,19 @@ export default function Dashboard() {
     ? [
         { label: "Files", value: summary.fileCount, color: "var(--signal)" },
         { label: "Links", value: summary.linkCount, color: "#b97750" },
+        { label: "Pasted notes", value: summary.notesCount, color: "#7c5f52" },
       ].filter((d) => d.value > 0)
     : [];
+  const generatedData = summary
+    ? [
+        { label: "Summaries", value: summary.materialsByKind.summary ?? 0 },
+        { label: "Flashcards", value: summary.materialsByKind.flashcards ?? 0 },
+        { label: "Quizzes", value: summary.materialsByKind.quiz ?? 0 },
+        { label: "Mind maps", value: summary.materialsByKind.mindmap ?? 0 },
+        { label: "Slide decks", value: summary.materialsByKind.slides ?? 0 },
+      ].filter((d) => d.value > 0)
+    : [];
+  const generatedTotal = generatedData.reduce((sum, d) => sum + d.value, 0);
   const weekData = summary?.byDay ?? [];
   const weekTotal = weekData.reduce((sum, d) => sum + d.count, 0);
 
@@ -619,36 +630,67 @@ export default function Dashboard() {
                                 <PieCenter defaultLabel="Sources" />
                               </PieChart>
                             </div>
-                            <ul className="w-full space-y-1.5">
-                              {mixData.map((m, i) => (
-                                <li key={m.label}>
-                                  <button
-                                    type="button"
-                                    onMouseEnter={() => setHovered(i)}
-                                    onMouseLeave={() => setHovered(null)}
-                                    onFocus={() => setHovered(i)}
-                                    onBlur={() => setHovered(null)}
-                                    className={
-                                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors " +
-                                      (hovered === i
-                                        ? "bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                        : "")
-                                    }
-                                  >
-                                    <span
-                                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                      style={{ background: m.color }}
-                                    />
-                                    <span className="text-text-dim">
-                                      {m.label}
-                                    </span>
-                                    <span className="ml-auto font-medium tabular-nums">
-                                      {m.value}
-                                    </span>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
+                            <div className="w-full">
+                              <ul className="space-y-1.5">
+                                {mixData.map((m, i) => (
+                                  <li key={m.label}>
+                                    <button
+                                      type="button"
+                                      onMouseEnter={() => setHovered(i)}
+                                      onMouseLeave={() => setHovered(null)}
+                                      onFocus={() => setHovered(i)}
+                                      onBlur={() => setHovered(null)}
+                                      className={
+                                        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors " +
+                                        (hovered === i
+                                          ? "bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                                          : "")
+                                      }
+                                    >
+                                      <span
+                                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                        style={{ background: m.color }}
+                                      />
+                                      <span className="text-text-dim">
+                                        {m.label}
+                                      </span>
+                                      <span className="ml-auto font-medium tabular-nums">
+                                        {m.value}
+                                      </span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                              {summary && summary.failedCount > 0 && (
+                                <p className="mt-2 px-2.5 text-[11px] leading-relaxed text-text-dim">
+                                  {summary.failedCount} need text — {summary.readableCount} readable by the AI.
+                                </p>
+                              )}
+
+                              {generatedTotal > 0 && (
+                                <div className="mt-4 border-t border-[var(--card-border)] pt-3">
+                                  <p className="px-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-dim">
+                                    Generated · {generatedTotal} total
+                                  </p>
+                                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 px-2.5">
+                                    {generatedData.map((g) => (
+                                      <li
+                                        key={g.label}
+                                        className="flex items-center gap-1.5 text-xs"
+                                      >
+                                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal)]" />
+                                        <span className="text-text-dim">
+                                          {g.label}
+                                        </span>
+                                        <span className="font-medium tabular-nums">
+                                          {g.value}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
