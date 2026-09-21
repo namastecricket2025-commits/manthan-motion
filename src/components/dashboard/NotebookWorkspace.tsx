@@ -245,11 +245,15 @@ export function NotebookWorkspace({
       }
       for (const failure of failed) {
         if (failure.quotaExceeded) {
-          // A spent day is expected and recoverable — say it like a human,
-          // point at the meter and the plans, never at a provider dump.
           toast.error("Today's generation allowance is used up", {
             description:
               "It resets at midnight UTC — see the allowance meter in this panel, or the Plans page for a higher cap.",
+            duration: 8000,
+          });
+        } else if (failure.rateLimited) {
+          toast.error("The AI is rate-limited right now", {
+            description:
+              "The free tier allows about 20 requests per minute — wait a minute and generate again. Your allowance is untouched.",
             duration: 8000,
           });
         } else {

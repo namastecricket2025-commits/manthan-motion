@@ -32,22 +32,22 @@ const TIERS = [
   {
     name: "Scholar",
     cadence: "Coming soon",
-    price: "₹99",
+    price: "₹129",
     per: "/month",
     blurb: "For the heavy revision season.",
     features: [
       "Everything in Free",
-      "5× the daily generation allowance",
+      "5× the daily generation allowance (300,000 tokens)",
       "Priority generation queue at peak hours",
       "Longer sources — full textbooks per notebook",
     ],
-    cta: "Join the waitlist",
+    cta: "Get notified",
     highlight: true,
   },
   {
     name: "Classroom",
     cadence: "Coming soon",
-    price: "₹499",
+    price: "₹549",
     per: "/month",
     blurb: "For teachers and study groups.",
     features: [
@@ -56,7 +56,7 @@ const TIERS = [
       "Consolidated usage view for educators",
       "School billing on one invoice",
     ],
-    cta: "Talk to us",
+    cta: "Contact us",
     highlight: false,
   },
 ];

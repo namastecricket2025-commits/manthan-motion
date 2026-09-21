@@ -7,6 +7,7 @@ import {
   IconLogin,
   IconSettings,
   IconSparkles,
+  IconTag,
   IconUser,
   IconWand,
 } from "@tabler/icons-react";
@@ -55,6 +56,11 @@ const DOCK_LINKS: DockItem[] = [
     title: "STEM Lab",
     icon: <IconAtom className="h-full w-full" strokeWidth={1.7} />,
     href: "/lab",
+  },
+  {
+    title: "Plans",
+    icon: <IconTag className="h-full w-full" strokeWidth={1.7} />,
+    href: "/pricing",
   },
   {
     title: "Settings",

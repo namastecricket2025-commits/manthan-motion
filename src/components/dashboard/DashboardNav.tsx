@@ -8,6 +8,7 @@ import {
   NotebookPen,
   Plus,
   Settings2,
+  Tag,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,6 +25,7 @@ export type DashboardSection =
   | "notebooks"
   | "lab"
   | "settings"
+  | "pricing"
   | "about";
 
 const ITEMS: {
@@ -34,6 +36,7 @@ const ITEMS: {
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "notebooks", label: "Notebooks", icon: NotebookPen },
   { key: "lab", label: "STEM Lab", icon: FlaskConical },
+  { key: "pricing", label: "Plans & Pricing", icon: Tag },
   { key: "settings", label: "Settings", icon: Settings2 },
   { key: "about", label: "About Us", icon: Info },
 ];

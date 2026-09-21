@@ -18,7 +18,7 @@ export function UsageCard() {
 
   const pct = Math.min(100, Math.round((usage.used / usage.limit) * 100));
   const remaining = Math.max(0, usage.limit - usage.used);
-  const out = remaining === 0;
+  const out = usage.used >= usage.limit;
   const resetsAt = new Date(usage.resetsAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -75,6 +75,9 @@ export function UsageCard() {
         </div>
       </dl>
 
+      {/* Truth in metering: only a genuinely spent day may say "used up".
+          A per-minute provider limit is NOT a spent day — the meter stays
+          showing allowance remaining, so the card and the ledger agree. */}
       {out ? (
         <p className="mt-3 text-xs leading-relaxed text-text-dim">
           You have used today's full allowance. It resets at {resetsAt} — or
@@ -83,8 +86,10 @@ export function UsageCard() {
       ) : (
         <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-text-dim">
           <span>
-            {usage.requests} generation{usage.requests === 1 ? "" : "s"} today.
-            Tokens are what the AI reads and writes.
+            {remaining.toLocaleString()} tokens left · {usage.requests}
+            {" "}
+            generation{usage.requests === 1 ? "" : "s"} today. Tokens are what
+            the AI reads and writes.
           </span>
           <Link
             to="/pricing"

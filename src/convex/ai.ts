@@ -133,6 +133,21 @@ function isProviderQuotaError(status: number, message: string) {
   );
 }
 
+/**
+ * Provider DAILY quota: the free tier also has a requests-per-day metric.
+ * Only this flavour means the day is genuinely over.
+ */
+const PROVIDER_DAY = /per\s?day|perday|generate\w*perday/i;
+
+/**
+ * Provider PER-MINUTE quota ("free_tier_requests, limit: 20 … retry in 56s"):
+ * a temporary cooldown, NOT a spent day. The first build lumped this in with
+ * daily quota and told users their allowance was gone while the meter sat at
+ * zero — that is exactly the misclassification this separates.
+ */
+const PROVIDER_PER_MINUTE =
+  /retry in \d|per\s?minute|requests?\s?per\s?minute|freer\_tier\_requests|free_tier_requests/i;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -735,7 +750,13 @@ export const generate = action({
     ctx,
     { notebookId, kinds },
   ): Promise<
-    { kind: Kind; ok: boolean; error?: string; quotaExceeded?: boolean }[]
+    {
+      kind: Kind;
+      ok: boolean;
+      error?: string;
+      quotaExceeded?: boolean;
+      rateLimited?: boolean;
+    }[]
   > => {
     if (kinds.length === 0) throw new Error("Pick at least one thing to generate.");
 
@@ -782,6 +803,7 @@ export const generate = action({
       ok: boolean;
       error?: string;
       quotaExceeded?: boolean;
+      rateLimited?: boolean;
     }[] = [];
 
     let remaining = usage.limit - usage.used;
@@ -857,27 +879,38 @@ export const generate = action({
 
         results.push({ kind, ok: true });
       } catch (error) {
-        // The provider's own quota refusal also stops the run — retrying the
-        // remaining artefacts would just burn more of a day that is already out.
-        if (error instanceof Error && isProviderQuotaError(429, error.message)) {
-          await ctx.runMutation(internal.usage.record, {
-            userId,
-            tokens: 0,
-            requests: 0,
-          });
-          results.push({
-            kind,
-            ok: false,
-            quotaExceeded: true,
-            error: "The AI provider's free quota for today is used up. Your allowance resets soon — see the usage card on the dashboard.",
-          });
+        const message =
+          error instanceof Error ? error.message : "Generation failed.";
+
+        // Provider quota refusals come in two flavours that need opposite
+        // treatment: per-minute RPM (wait a minute, nothing is lost) and
+        // per-day quota (the day is over). Either stops the run — retrying
+        // the remaining artefacts would just hit the same wall.
+        if (isProviderQuotaError(429, message)) {
+          if (PROVIDER_DAY.test(message)) {
+            results.push({
+              kind,
+              ok: false,
+              quotaExceeded: true,
+              error:
+                "The AI provider's daily free quota is used up. Your allowance resets at midnight UTC.",
+            });
+          } else {
+            results.push({
+              kind,
+              ok: false,
+              rateLimited: true,
+              error:
+                "The AI is rate-limited right now — the free tier allows about 20 requests per minute. Wait a minute and generate again.",
+            });
+          }
           break;
         }
+
         results.push({
           kind,
           ok: false,
-          error:
-            error instanceof Error ? error.message : "Generation failed.",
+          error: message === "Generation failed." ? message : message,
         });
       }
     }

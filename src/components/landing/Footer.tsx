@@ -52,6 +52,9 @@ export default function Footer() {
             <a href="#stats" className="transition-colors hover:text-foreground">
               Impact
             </a>
+            <Link to="/pricing" className="transition-colors hover:text-foreground">
+              Plans & Pricing
+            </Link>
             <Link
               to={AUTH_URL}
               className="transition-colors hover:text-foreground"

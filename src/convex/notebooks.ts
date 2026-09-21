@@ -132,6 +132,15 @@ export const summary = query({
       addedThisWeek: 0,
       perNotebook: [] as { id: string; name: string; count: number }[],
       byDay: [] as { day: string; label: string; count: number }[],
+      materialsByDay: [] as {
+        day: string;
+        label: string;
+        summary: number;
+        flashcards: number;
+        quiz: number;
+        mindmap: number;
+        slides: number;
+      }[],
     };
 
     const userId = await getAuthUserId(ctx);
@@ -179,6 +188,32 @@ export const summary = query({
         (materialsByKind[material.kind] ?? 0) + 1;
     }
 
+    // Materials generated per day over the last seven days, split by kind —
+    // the stacked bars under the donut: "these many summaries, these many
+    // quizzes" on each day, from real createdAt stamps.
+    const materialsByDay = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (6 - i));
+      const start = date.getTime();
+      const end = start + 24 * 60 * 60 * 1000;
+      const todays = materials.filter(
+        (m) => m.createdAt >= start && m.createdAt < end,
+      );
+      return {
+        day: date.toLocaleDateString(undefined, { weekday: "short" }),
+        label: date.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        summary: todays.filter((m) => m.kind === "summary").length,
+        flashcards: todays.filter((m) => m.kind === "flashcards").length,
+        quiz: todays.filter((m) => m.kind === "quiz").length,
+        mindmap: todays.filter((m) => m.kind === "mindmap").length,
+        slides: todays.filter((m) => m.kind === "slides").length,
+      };
+    });
+
     return {
       notebookCount: notebooks.length,
       sourceCount: sources.length,
@@ -190,6 +225,7 @@ export const summary = query({
       ).length,
       failedCount: sources.filter((s) => s.status === "failed").length,
       materialsByKind,
+      materialsByDay,
       addedThisWeek: sources.filter((s) => s.createdAt >= weekStart).length,
       perNotebook: notebooks
         .slice()

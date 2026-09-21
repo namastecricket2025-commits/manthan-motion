@@ -193,6 +193,7 @@ export default function Dashboard() {
     if (key === "lab") navigate("/lab");
     else if (key === "settings") navigate("/settings");
     else if (key === "about") navigate("/about");
+    else if (key === "pricing") navigate("/pricing");
     else if (key === "notebooks") navigate("/dashboard?view=notebooks");
     else navigate("/dashboard");
   };
@@ -222,8 +223,22 @@ export default function Dashboard() {
       ].filter((d) => d.value > 0)
     : [];
   const generatedTotal = generatedData.reduce((sum, d) => sum + d.value, 0);
+  const generatedByDay = summary?.materialsByDay ?? [];
+  const generatedByDayTotal = generatedByDay.reduce(
+    (sum, d) => sum + d.summary + d.flashcards + d.quiz + d.mindmap + d.slides,
+    0,
+  );
   const weekData = summary?.byDay ?? [];
   const weekTotal = weekData.reduce((sum, d) => sum + d.count, 0);
+
+  /** Distinct crimson-family shades, one per artefact kind (stacked bars). */
+  const KIND_COLORS: Record<string, string> = {
+    summary: "var(--signal)",
+    flashcards: "#b97750",
+    quiz: "#7c5f52",
+    mindmap: "#e0323a",
+    slides: "#a05a48",
+  };
 
   return (
     <div
@@ -697,18 +712,19 @@ export default function Dashboard() {
                         <div data-reveal className="glass-panel p-5 sm:p-6">
                           <div className="flex items-center justify-between">
                             <h2 className="font-display text-base font-bold tracking-tight">
-                              Sources added
+                              Generated per day
                             </h2>
                             <span className="text-[11px] font-medium text-text-dim">
-                              last 7 days
+                              last 7 days · {generatedByDayTotal} total
                             </span>
                           </div>
                           <div className="mt-4">
-                            {weekData.length > 0 ? (
+                            {generatedByDay.length > 0 ? (
                               <BarChart
-                                data={weekData}
+                                data={generatedByDay}
                                 xDataKey="day"
                                 aspectRatio="16 / 9"
+                                stacked
                                 margin={{
                                   top: 16,
                                   right: 8,
@@ -717,11 +733,11 @@ export default function Dashboard() {
                                 }}
                               >
                                 <Grid horizontal />
-                                <Bar
-                                  dataKey="count"
-                                  fill="var(--signal)"
-                                  lineCap={6}
-                                />
+                                <Bar dataKey="summary" fill={KIND_COLORS.summary} lineCap={0} />
+                                <Bar dataKey="flashcards" fill={KIND_COLORS.flashcards} lineCap={0} />
+                                <Bar dataKey="quiz" fill={KIND_COLORS.quiz} lineCap={0} />
+                                <Bar dataKey="mindmap" fill={KIND_COLORS.mindmap} lineCap={0} />
+                                <Bar dataKey="slides" fill={KIND_COLORS.slides} lineCap={0} />
                                 <BarXAxis />
                                 <ChartTooltip showCrosshair={false} />
                               </BarChart>
@@ -731,10 +747,33 @@ export default function Dashboard() {
                               </p>
                             )}
                           </div>
-                          {weekData.length > 0 && weekTotal === 0 && (
+                          {generatedByDay.length > 0 && generatedByDayTotal === 0 && (
                             <p className="mt-2 text-xs text-text-dim">
-                              Nothing added in the last seven days yet.
+                              Nothing generated in the last seven days yet — churn
+                              a notebook and it will chart here, per kind.
                             </p>
+                          )}
+                          {generatedByDayTotal > 0 && (
+                            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                              {[
+                                ["summary", "Summaries"],
+                                ["flashcards", "Flashcards"],
+                                ["quiz", "Quizzes"],
+                                ["mindmap", "Mind maps"],
+                                ["slides", "Slides"],
+                              ].map(([key, label]) => (
+                                <li
+                                  key={key}
+                                  className="flex items-center gap-1.5 text-[11px]"
+                                >
+                                  <span
+                                    className="h-2 w-2 rounded-sm"
+                                    style={{ background: KIND_COLORS[key] }}
+                                  />
+                                  <span className="text-text-dim">{label}</span>
+                                </li>
+                              ))}
+                            </ul>
                           )}
                         </div>
                       </div>
