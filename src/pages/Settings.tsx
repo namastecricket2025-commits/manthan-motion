@@ -30,6 +30,7 @@ export default function Settings() {
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
     if (key === "dashboard") navigate("/dashboard");
+    else if (key === "notebooks") navigate("/dashboard?view=notebooks");
     else if (key === "lab") navigate("/lab");
     else if (key === "about") navigate("/about");
   };

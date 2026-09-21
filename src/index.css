@@ -550,26 +550,28 @@
     );
     animation: border-rotate 8s linear infinite;
   }
-  /* THE one solid crimson fill in the system: the primary action button
-     (`Generate study material`, `Start churning`). Everything else — panels,
-     chips, pipeline cards, the CTA wrapper — is frosted glass over the
-     tracked crimson backdrop. The 1.5px conic ring keeps its travelling
-     border on top. */
+  /* The inner is deliberately *translucent*, not a solid fill: the conic
+     gradient behind it is the animation, and a frosted pane lets it sweep
+     through the button like the sheen on a spinning CD. The 8s rotation is
+     nearly still at rest; hover/focus/press spin it up (see below). */
   .moving-border__inner {
     border-radius: calc(999px - 1.5px);
-    background: var(--signal);
-    color: var(--primary-foreground, #fff7f5);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.24),
-      0 16px 40px -18px color-mix(in srgb, var(--signal) 80%, transparent);
-    transition: filter 220ms ease;
+    background: rgba(255, 255, 255, 0.03);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
+    color: var(--text-main);
+    transition: background 220ms ease;
+  }
+  html:not(.dark) .moving-border__inner {
+    background: rgba(0, 0, 0, 0.02);
   }
   .moving-border:hover .moving-border__inner,
   .moving-border:focus-visible .moving-border__inner {
-    filter: brightness(1.08) saturate(1.04);
+    background: rgba(255, 255, 255, 0.07);
   }
-  .moving-border:active .moving-border__inner {
-    filter: brightness(0.95);
+  html:not(.dark) .moving-border:hover .moving-border__inner,
+  html:not(.dark) .moving-border:focus-visible .moving-border__inner {
+    background: rgba(0, 0, 0, 0.045);
   }
   .moving-border:hover,
   .moving-border:active,
@@ -600,8 +602,8 @@
   @media (prefers-reduced-motion: reduce) {
     .moving-border {
       animation: none;
-      /* the ring is the same crimson as the fill it wraps */
-      background: var(--signal);
+      /* static crimson ring instead of the travelling conic sweep */
+      background: linear-gradient(120deg, var(--signal), var(--signal-2));
     }
     .moving-border:hover,
     .moving-border:active {

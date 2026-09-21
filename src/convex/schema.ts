@@ -32,12 +32,28 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    // A notebook is the user's own workspace: the thing they name, fill with
+    // sources, and churn into study material. Everything on the dashboard is
+    // scoped to one, so a brand-new account starts genuinely empty.
+    notebooks: defineTable({
+      ownerId: v.id("users"),
+      name: v.string(),
+      createdAt: v.number(),
+    }).index("by_owner", ["ownerId"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // A source is something the user actually added: a file they picked or a
+    // link they pasted. Nothing here is ever seeded — an empty table means a
+    // new user sees an empty dashboard.
+    sources: defineTable({
+      ownerId: v.id("users"),
+      notebookId: v.id("notebooks"),
+      kind: v.union(v.literal("file"), v.literal("link")),
+      name: v.string(),
+      detail: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_notebook", ["notebookId"]),
   },
   {
     schemaValidation: false,

@@ -1,16 +1,32 @@
-import { Logo } from "@/components/landing/Logo";
-import { ThemeToggle } from "@/components/landing/ThemeToggle";
-import HeroPreview from "@/components/landing/HeroPreview";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import BlobBackground from "@/components/BlobBackground";
-import BarChart from "@/components/charts/bar-chart";
 import Bar from "@/components/charts/bar";
+import BarChart from "@/components/charts/bar-chart";
 import BarXAxis from "@/components/charts/bar-x-axis";
 import Grid from "@/components/charts/grid";
 import PieCenter from "@/components/charts/pie-center";
 import PieChart from "@/components/charts/pie-chart";
 import PieSlice from "@/components/charts/pie-slice";
 import { ChartTooltip } from "@/components/charts/tooltip";
-import { DashboardNav, type DashboardSection } from "@/components/dashboard/DashboardNav";
+import {
+  DashboardNav,
+  type DashboardSection,
+} from "@/components/dashboard/DashboardNav";
+import { Logo } from "@/components/landing/Logo";
+import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
+import { ThemeToggle } from "@/components/landing/ThemeToggle";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -22,45 +38,28 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
+  ArrowRight,
+  Check,
   FileText,
   Link2,
   LogOut,
   Menu,
-  Plus,
+  NotebookPen,
+  Pencil,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
+import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
-/* Sample data — clearly labelled in the UI until real data exists.    */
+/* Everything on this page is derived from rows the signed-in user     */
+/* actually created. There is no sample data: a new account sees       */
+/* empty states and a clear first step, never invented numbers.        */
 /* ------------------------------------------------------------------ */
-const MIX = [
-  { label: "Flashcards", value: 14, color: "var(--signal)" },
-  { label: "Summaries", value: 6, color: "var(--signal-2)" },
-  { label: "Question banks", value: 4, color: "#b97750" },
-];
-
-const WEEK = [
-  { day: "Mon", Minutes: 35 },
-  { day: "Tue", Minutes: 20 },
-  { day: "Wed", Minutes: 45 },
-  { day: "Thu", Minutes: 25 },
-  { day: "Fri", Minutes: 60 },
-  { day: "Sat", Minutes: 15 },
-  { day: "Sun", Minutes: 40 },
-];
-
-
-
-interface QueueItem {
-  id: number;
-  name: string;
-  detail: string;
-  kind: "file" | "link";
-}
 
 function greeting() {
   const h = new Date().getHours();
@@ -69,22 +68,61 @@ function greeting() {
   return "Good evening";
 }
 
-/* ------------------------------------------------------------------ */
+/** Shared "no rows yet" block, so empty states stay consistent. */
+function EmptyHint({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof FileText;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--card-border)] px-4 py-8 text-center">
+      <Icon className="h-5 w-5 text-[var(--signal)]" />
+      <p className="text-sm font-medium">{title}</p>
+      <p className="max-w-xs text-xs leading-relaxed text-text-dim">{body}</p>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const view =
+    searchParams.get("view") === "notebooks" ? "notebooks" : "overview";
+  const notebookParam = searchParams.get("notebook");
+
+  const notebooks = useQuery(api.notebooks.list);
+  const summary = useQuery(api.notebooks.summary);
+  const createNotebook = useMutation(api.notebooks.create);
+  const renameNotebook = useMutation(api.notebooks.rename);
+  const removeNotebook = useMutation(api.notebooks.remove);
+  const addSource = useMutation(api.sources.add);
+  const removeSource = useMutation(api.sources.remove);
+
+  const activeNotebook =
+    notebooks?.find((n) => n.id === notebookParam) ?? notebooks?.[0];
+  const activeId = activeNotebook?.id as Id<"notebooks"> | undefined;
+  const sources = useQuery(
+    api.sources.listForNotebook,
+    activeId ? { notebookId: activeId } : "skip",
+  );
 
   const [hovered, setHovered] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [queue, setQueue] = useState<QueueItem[]>([
-    { id: 1, name: "thermo-ch4.pdf", detail: "2.4 MB · PDF", kind: "file" },
-    { id: 2, name: "khanacademy.org/electrostatics", detail: "Link", kind: "link" },
-  ]);
   const [linkValue, setLinkValue] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -98,348 +136,776 @@ export default function Dashboard() {
       gsap.fromTo(
         els,
         { opacity: 0, y: 26 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          ease: "power3.out",
-          stagger: 0.07,
-        },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.07 },
       );
     }, root);
     return () => ctx.revert();
-  }, []);
+  }, [view, activeId, notebooks?.length]);
 
-  const addToQueue = (items: Omit<QueueItem, "id">[]) => {
-    setQueue((q) => [...q, ...items.map((it, i) => ({ ...it, id: Date.now() + i }))]);
-    const count = items.length;
-    if (count > 0) {
-      toast(`${count === 1 ? "Source" : `${count} sources`} added to the queue`, {
-        description: "Ready for the five-step pipeline.",
-      });
+  /* ---------------- actions ---------------- */
+
+  async function handleCreateNotebook(event?: React.FormEvent) {
+    event?.preventDefault();
+    const name = draftName.trim();
+    if (!name || busy) return;
+    setBusy(true);
+    try {
+      const id = await createNotebook({ name });
+      setDraftName("");
+      toast("Notebook created", { description: name });
+      navigate(`/dashboard?notebook=${id}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not create notebook",
+      );
+    } finally {
+      setBusy(false);
     }
-  };
+  }
 
-  const removeFromQueue = (id: number, name: string) => {
-    setQueue((q) => q.filter((x) => x.id !== id));
-    toast("Source removed", { description: name });
-  };
+  async function handleRename(notebookId: Id<"notebooks">) {
+    const name = renameValue.trim();
+    if (!name) return;
+    try {
+      await renameNotebook({ notebookId, name });
+      setRenamingId(null);
+      toast("Notebook renamed", { description: name });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not rename notebook",
+      );
+    }
+  }
 
-  const onFiles = (files: FileList | null) => {
+  async function handleDelete(notebookId: Id<"notebooks">, name: string) {
+    try {
+      await removeNotebook({ notebookId });
+      toast("Notebook deleted", { description: name });
+      if (notebookParam === notebookId) navigate("/dashboard");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not delete notebook",
+      );
+    }
+  }
+
+  async function addSources(
+    items: { kind: "file" | "link"; name: string; detail?: string }[],
+  ) {
+    if (!activeId) return;
+    for (const item of items) {
+      try {
+        await addSource({ notebookId: activeId, ...item });
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not add source",
+        );
+      }
+    }
+    if (items.length > 0) {
+      toast(
+        `${items.length === 1 ? "Source" : `${items.length} sources`} added`,
+        { description: `Saved in ${activeNotebook?.name ?? "your notebook"}.` },
+      );
+    }
+  }
+
+  function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    addToQueue(
+    void addSources(
       Array.from(files).map((f) => ({
+        kind: "file" as const,
         name: f.name,
         detail: `${(f.size / 1024 / 1024).toFixed(1)} MB · ${f.type.split("/")[1]?.toUpperCase() ?? "FILE"}`,
-        kind: "file" as const,
       })),
     );
-  };
+  }
 
-  const addLink = () => {
+  function addLink() {
     const url = linkValue.trim();
     if (!url) return;
-    addToQueue([{ name: url, detail: "Link", kind: "link" }]);
+    void addSources([{ kind: "link", name: url, detail: "Link" }]);
     setLinkValue("");
-  };
+  }
 
-  const handleSignOut = async () => {
+  async function handleSignOut() {
     await signOut();
     navigate("/");
-  };
+  }
 
-  /** Sidebar navigation: the workspace path runs Dashboard -> STEM Lab ->
-      Settings -> About Us, so every item except Dashboard pushes a route. */
+  /** Sidebar navigation: everything except Dashboard/Notebooks pushes a route. */
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
     if (key === "lab") navigate("/lab");
     else if (key === "settings") navigate("/settings");
     else if (key === "about") navigate("/about");
-    else navigate("/dashboard", { replace: true });
+    else if (key === "notebooks") navigate("/dashboard?view=notebooks");
+    else
+      navigate(
+        notebookParam ? `/dashboard?notebook=${notebookParam}` : "/dashboard",
+      );
   };
 
-  const nav = <DashboardNav active="dashboard" onSelect={selectSection} />;
+  const nav = (
+    <DashboardNav
+      active={view === "notebooks" ? "notebooks" : "dashboard"}
+      onSelect={selectSection}
+    />
+  );
+
+  const hasNotebooks = (notebooks?.length ?? 0) > 0;
+  const mixData = summary
+    ? [
+        { label: "Files", value: summary.fileCount, color: "var(--signal)" },
+        { label: "Links", value: summary.linkCount, color: "#b97750" },
+      ].filter((d) => d.value > 0)
+    : [];
+  const weekData = summary?.byDay ?? [];
+  const weekTotal = weekData.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div ref={rootRef} className="relative min-h-screen bg-background text-foreground">
-      {/* Same pixelated-blob canvas as the homepage — the dashboard lives in
-          the same visual world as the marketing site. */}
+    <div
+      ref={rootRef}
+      className="relative min-h-screen bg-background text-foreground"
+    >
       <BlobBackground />
       <div className="relative z-10">
         {/* ---- Sidebar (desktop) ---- */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between border-r border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-5 backdrop-blur-xl min-[760px]:flex">
-        <div className="flex flex-col gap-8">
-          <Logo />
-          {nav}
-        </div>
-        <div className="flex items-center justify-between">
-          <ThemeToggle />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 border-[var(--card-border)] bg-transparent"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </Button>
-        </div>
-      </aside>
-
-      {/* ---- Mobile top bar ---- */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
-        <Logo />
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger asChild>
-              <button
-                type="button"
-                aria-label="Open menu"
-                className="glass-chip inline-flex h-10 w-10 items-center justify-center text-foreground"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className="w-[80vw] max-w-xs border-r border-[var(--card-border)] bg-[var(--ink)]/95 backdrop-blur-xl"
+        <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-5 backdrop-blur-xl min-[760px]:flex">
+          <div className="flex flex-col gap-8">
+            <Logo />
+            {nav}
+          </div>
+          <div className="flex items-center justify-between pt-6">
+            <ThemeToggle />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-[var(--card-border)] bg-transparent"
+              onClick={handleSignOut}
             >
-              <SheetHeader>
-                <SheetTitle className="text-left">
-                  <Logo />
-                </SheetTitle>
-              </SheetHeader>
-              <div className="px-2">{nav}</div>
-              <div className="mt-auto px-4 pb-8">
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 border-[var(--card-border)] bg-transparent"
-                  onClick={handleSignOut}
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </Button>
+          </div>
+        </aside>
+
+        {/* ---- Mobile top bar ---- */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+          <Logo />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Open menu"
+                  className="glass-chip inline-flex h-10 w-10 items-center justify-center text-foreground"
                 >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-
-      {/* ---- Main ---- */}
-      <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
-        <div className="mx-auto flex max-w-5xl flex-col gap-6">
-          {/* Greeting */}
-          <div data-reveal className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
-                {greeting()}
-              </p>
-              <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                {user?.name ?? "Welcome back"}
-                <span className="text-[var(--signal)]">.</span>
-              </h1>
-            </div>
-            <span className="glass-chip px-3 py-1.5 text-[11px] font-medium text-text-dim">
-              Sample data — your kits will appear here
-            </span>
-          </div>
-
-          {/* Stat cards */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {[
-              { label: "Study kits", value: "3" },
-              { label: "Flashcards", value: "24" },
-              { label: "Sources", value: "2" },
-            ].map((s) => (
-              <div key={s.label} data-reveal className="glass-panel p-4 sm:p-5">
-                <p className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                  {s.value}
-                </p>
-                <p className="mt-1 text-[11px] font-medium text-text-dim sm:text-xs">
-                  {s.label}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Charts row — Bklit UI */}
-          <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
-            {/* Material mix donut */}
-            <div data-reveal className="glass-panel p-5 sm:p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-bold tracking-tight">
-                  Material mix
-                </h2>
-                <span className="text-[11px] font-medium text-text-dim">this week</span>
-              </div>
-              <div className="mt-4 flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
-                <div className="w-full max-w-[220px] shrink-0">
-                  <PieChart
-                    data={MIX}
-                    innerRadius={62}
-                    cornerRadius={4}
-                    padAngle={0.04}
-                    hoveredIndex={hovered}
-                    onHoverChange={setHovered}
-                    hoverOffset={6}
-                  >
-                    {MIX.map((_, i) => (
-                      <PieSlice key={i} index={i} />
-                    ))}
-                    <PieCenter defaultLabel="Total items" />
-                  </PieChart>
-                </div>
-                {/* Hover-synced legend */}
-                <ul className="w-full space-y-1.5">
-                  {MIX.map((m, i) => (
-                    <li key={m.label}>
-                      <button
-                        type="button"
-                        onMouseEnter={() => setHovered(i)}
-                        onMouseLeave={() => setHovered(null)}
-                        onFocus={() => setHovered(i)}
-                        onBlur={() => setHovered(null)}
-                        className={
-                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors " +
-                          (hovered === i
-                            ? "bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                            : "")
-                        }
-                      >
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ background: m.color }}
-                        />
-                        <span className="text-text-dim">{m.label}</span>
-                        <span className="ml-auto font-medium tabular-nums">{m.value}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Weekly activity bars */}
-            <div data-reveal className="glass-panel p-5 sm:p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-bold tracking-tight">
-                  Study activity
-                </h2>
-                <span className="text-[11px] font-medium text-text-dim">minutes / day</span>
-              </div>
-              <div className="mt-4">
-                <BarChart data={WEEK} xDataKey="day" aspectRatio="16 / 9" margin={{ top: 16, right: 8, bottom: 4, left: 0 }}>
-                  <Grid horizontal />
-                  <Bar dataKey="Minutes" fill="var(--signal)" lineCap={6} />
-                  <BarXAxis />
-                  <ChartTooltip showCrosshair={false} />
-                </BarChart>
-              </div>
-            </div>
-          </div>
-
-          {/* Upload queue + pipeline */}
-          <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-            <div data-reveal className="glass-panel p-5 sm:p-6">
-              <h2 className="font-display text-base font-bold tracking-tight">
-                Add sources
-              </h2>
-              <label
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  onFiles(e.dataTransfer.files);
-                }}
-                className={
-                  "mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center transition-colors " +
-                  (dragOver
-                    ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                    : "border-[var(--card-border)] hover:border-[var(--signal)]")
-                }
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--ink)]/95 backdrop-blur-xl"
               >
-                <Upload className="h-5 w-5 text-[var(--signal)]" />
-                <span className="text-sm font-medium">Drop files or click to browse</span>
-                <span className="text-xs text-text-dim">PDF, DOCX, PPTX, images</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    onFiles(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              <div className="mt-3 flex gap-2">
-                <div className="relative flex-1">
-                  <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
-                  <input
-                    value={linkValue}
-                    onChange={(e) => setLinkValue(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addLink()}
-                    placeholder="Paste a link…"
-                    className="w-full rounded-full border border-[var(--card-border)] bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
-                  />
-                </div>
-                <Button
-                  className="gap-1.5 rounded-full bg-[var(--signal)] px-4 text-[var(--primary-foreground)] hover:bg-[var(--signal)]/90"
-                  onClick={addLink}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add
-                </Button>
-              </div>
-
-              {/* Queue */}
-              <ul className="mt-4 space-y-2">
-                {queue.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
+                <SheetHeader>
+                  <SheetTitle className="text-left">
+                    <Logo />
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="px-2">{nav}</div>
+                <div className="mt-auto px-4 pb-8">
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-[var(--card-border)] bg-transparent"
+                    onClick={handleSignOut}
                   >
-                    {item.kind === "file" ? (
-                      <FileText className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-                    ) : (
-                      <Link2 className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-                    )}
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {item.name}
-                    </span>
-                    <span className="hidden text-xs text-text-dim sm:block">{item.detail}</span>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${item.name}`}
-                      onClick={() => removeFromQueue(item.id, item.name)}
-                      className="rounded-full p-1 text-text-dim transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] hover:text-[var(--signal)]"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))}
-                {queue.length === 0 && (
-                  <li className="rounded-xl border border-dashed border-[var(--card-border)] px-3.5 py-4 text-center text-sm text-text-dim">
-                    Queue is empty — add a file or link above.
-                  </li>
-                )}
-              </ul>
-            </div>
-
-            {/* Live pipeline preview (reused from the landing hero) */}
-            <div data-reveal>
-              <HeroPreview />
-            </div>
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
+        </header>
 
+        {/* ---- Main ---- */}
+        <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
+          <div className="mx-auto flex max-w-5xl flex-col gap-6">
+            <div
+              data-reveal
+              className="flex flex-wrap items-end justify-between gap-3"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
+                  {greeting()}
+                </p>
+                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                  {user?.name ?? "Welcome"}
+                  <span className="text-[var(--signal)]">.</span>
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
+                  {view === "notebooks"
+                    ? "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."
+                    : hasNotebooks
+                      ? `Working in ${activeNotebook?.name ?? "your notebook"} — add sources, then churn them into study material.`
+                      : "Create your first notebook, drop in your notes, and Manthan turns them into study material."}
+                </p>
+              </div>
+              {view === "overview" && hasNotebooks && (
+                <MovingBorderButton
+                  onClick={() => navigate("/dashboard?view=notebooks")}
+                  innerClassName="px-5 py-2.5 text-[13px]"
+                >
+                  <NotebookPen className="h-4 w-4" />
+                  All notebooks
+                </MovingBorderButton>
+              )}
+            </div>
 
-        </div>
-      </main>
+            {/* ================= NOTEBOOKS VIEW ================= */}
+            {view === "notebooks" ? (
+              <>
+                <div data-reveal className="glass-panel p-5 sm:p-6">
+                  <h2 className="font-display text-base font-bold tracking-tight">
+                    New notebook
+                  </h2>
+                  <form
+                    onSubmit={handleCreateNotebook}
+                    className="mt-4 flex flex-col gap-2 sm:flex-row"
+                  >
+                    <input
+                      value={draftName}
+                      onChange={(e) => setDraftName(e.target.value)}
+                      placeholder="e.g. Physics — Electrostatics"
+                      className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                    />
+                    <MovingBorderButton
+                      type="submit"
+                      disabled={busy || !draftName.trim()}
+                      className="w-full sm:w-fit"
+                      innerClassName="px-6 py-3 text-sm"
+                    >
+                      Create notebook
+                      <ArrowRight className="h-4 w-4" />
+                    </MovingBorderButton>
+                  </form>
+                </div>
+
+                <div
+                  data-reveal
+                  className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2"
+                >
+                  {notebooks?.map((notebook) => (
+                    <div
+                      key={notebook.id}
+                      className="glass-panel flex flex-col gap-3 p-5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {renamingId === notebook.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                autoFocus
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter")
+                                    void handleRename(
+                                      notebook.id as Id<"notebooks">,
+                                    );
+                                  if (e.key === "Escape") setRenamingId(null);
+                                }}
+                                className="w-44 rounded-lg border border-[var(--card-border)] bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-[var(--signal)]"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Save name"
+                                onClick={() =>
+                                  void handleRename(
+                                    notebook.id as Id<"notebooks">,
+                                  )
+                                }
+                                className="rounded-lg p-1 text-[var(--signal)]"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <h3 className="truncate font-display text-base font-bold tracking-tight">
+                              {notebook.name}
+                            </h3>
+                          )}
+                          <p className="mt-1 text-xs text-text-dim">
+                            {notebook.sourceCount}{" "}
+                            {notebook.sourceCount === 1 ? "source" : "sources"}
+                            {" · "}
+                            {notebook.fileCount} files · {notebook.linkCount}{" "}
+                            links
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            aria-label={`Rename ${notebook.name}`}
+                            onClick={() => {
+                              setRenamingId(notebook.id);
+                              setRenameValue(notebook.name);
+                            }}
+                            className="rounded-lg p-1.5 text-text-dim transition-colors hover:text-foreground"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label={`Delete ${notebook.name}`}
+                                className="rounded-lg p-1.5 text-text-dim transition-colors hover:text-[var(--signal)]"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete “{notebook.name}”?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This removes the notebook and the{" "}
+                                  {notebook.sourceCount}{" "}
+                                  {notebook.sourceCount === 1
+                                    ? "source"
+                                    : "sources"}{" "}
+                                  queued inside it. It cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    void handleDelete(
+                                      notebook.id as Id<"notebooks">,
+                                      notebook.name,
+                                    )
+                                  }
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+
+                      <MovingBorderButton
+                        onClick={() =>
+                          navigate(`/dashboard?notebook=${notebook.id}`)
+                        }
+                        className="w-fit"
+                        innerClassName="px-4 py-2 text-[13px]"
+                      >
+                        Open notebook
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </MovingBorderButton>
+                    </div>
+                  ))}
+                </div>
+
+                {notebooks?.length === 0 && (
+                  <div data-reveal className="glass-panel p-5 sm:p-6">
+                    <EmptyHint
+                      icon={NotebookPen}
+                      title="No notebooks yet"
+                      body="Name a notebook after the subject or chapter you are revising, then add your sources to it."
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              /* ================= OVERVIEW ================= */
+              <>
+                {notebooks === undefined && (
+                  <div
+                    data-reveal
+                    className="glass-panel p-6 text-sm text-text-dim"
+                  >
+                    Loading your workspace…
+                  </div>
+                )}
+
+                {!hasNotebooks && notebooks !== undefined && (
+                  <div
+                    data-reveal
+                    className="glass-panel flex flex-col gap-5 p-6 sm:p-8"
+                  >
+                    <div>
+                      <h2 className="font-display text-xl font-bold tracking-tight">
+                        Start with a notebook
+                      </h2>
+                      <p className="mt-2 max-w-lg text-sm leading-relaxed text-text-dim">
+                        Nothing here yet — that is expected. Manthan only ever
+                        shows what you have actually added.
+                      </p>
+                    </div>
+                    <form
+                      onSubmit={handleCreateNotebook}
+                      className="flex flex-col gap-2 sm:flex-row"
+                    >
+                      <input
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        placeholder="Name it — e.g. Biology — Respiration"
+                        className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                      />
+                      <MovingBorderButton
+                        type="submit"
+                        disabled={busy || !draftName.trim()}
+                        className="w-full sm:w-fit"
+                        innerClassName="px-6 py-3 text-sm"
+                      >
+                        Create notebook
+                        <ArrowRight className="h-4 w-4" />
+                      </MovingBorderButton>
+                    </form>
+                    <ol className="grid gap-3 text-sm text-text-dim sm:grid-cols-3">
+                      {[
+                        "Name a notebook for the chapter you are revising.",
+                        "Drop in PDFs, slides, pasted notes or links.",
+                        "Churn them into summaries, flashcards and question banks.",
+                      ].map((step, i) => (
+                        <li key={step} className="flex gap-2.5">
+                          <span className="font-display font-bold text-[var(--signal)]">
+                            0{i + 1}
+                          </span>
+                          <span className="leading-relaxed">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {hasNotebooks && (
+                  <>
+                    <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                      {[
+                        {
+                          label: "Notebooks",
+                          value: summary?.notebookCount ?? 0,
+                        },
+                        {
+                          label: "Sources",
+                          value: summary?.sourceCount ?? 0,
+                        },
+                        {
+                          label: "Added this week",
+                          value: summary?.addedThisWeek ?? 0,
+                        },
+                      ].map((s) => (
+                        <div
+                          key={s.label}
+                          data-reveal
+                          className="glass-panel p-4 sm:p-5"
+                        >
+                          <p className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                            {s.value}
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium text-text-dim sm:text-xs">
+                            {s.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Charts only exist once there is something to chart — a
+                        brand-new workspace stays focused on adding sources. */}
+                    {(summary?.sourceCount ?? 0) > 0 && (
+                    <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
+                      {/* Source mix */}
+                      <div data-reveal className="glass-panel p-5 sm:p-6">
+                        <div className="flex items-center justify-between">
+                          <h2 className="font-display text-base font-bold tracking-tight">
+                            Source mix
+                          </h2>
+                          <span className="text-[11px] font-medium text-text-dim">
+                            all time
+                          </span>
+                        </div>
+                        {mixData.length > 0 ? (
+                          <div className="mt-4 flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
+                            <div className="w-full max-w-[220px] shrink-0">
+                              <PieChart
+                                data={mixData}
+                                innerRadius={62}
+                                cornerRadius={4}
+                                padAngle={0.04}
+                                hoveredIndex={hovered}
+                                onHoverChange={setHovered}
+                                hoverOffset={6}
+                              >
+                                {mixData.map((_, i) => (
+                                  <PieSlice key={i} index={i} />
+                                ))}
+                                <PieCenter defaultLabel="Sources" />
+                              </PieChart>
+                            </div>
+                            <ul className="w-full space-y-1.5">
+                              {mixData.map((m, i) => (
+                                <li key={m.label}>
+                                  <button
+                                    type="button"
+                                    onMouseEnter={() => setHovered(i)}
+                                    onMouseLeave={() => setHovered(null)}
+                                    onFocus={() => setHovered(i)}
+                                    onBlur={() => setHovered(null)}
+                                    className={
+                                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors " +
+                                      (hovered === i
+                                        ? "bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                                        : "")
+                                    }
+                                  >
+                                    <span
+                                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                      style={{ background: m.color }}
+                                    />
+                                    <span className="text-text-dim">
+                                      {m.label}
+                                    </span>
+                                    <span className="ml-auto font-medium tabular-nums">
+                                      {m.value}
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div className="mt-4">
+                            <EmptyHint
+                              icon={Upload}
+                              title="No sources yet"
+                              body="Your files and links appear here as a split once you add the first one."
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sources added, last 7 days — real createdAt counts */}
+                      <div data-reveal className="glass-panel p-5 sm:p-6">
+                        <div className="flex items-center justify-between">
+                          <h2 className="font-display text-base font-bold tracking-tight">
+                            Sources added
+                          </h2>
+                          <span className="text-[11px] font-medium text-text-dim">
+                            last 7 days
+                          </span>
+                        </div>
+                        <div className="mt-4">
+                          {weekData.length > 0 ? (
+                            <BarChart
+                              data={weekData}
+                              xDataKey="day"
+                              aspectRatio="16 / 9"
+                              margin={{ top: 16, right: 8, bottom: 4, left: 0 }}
+                            >
+                              <Grid horizontal />
+                              <Bar
+                                dataKey="count"
+                                fill="var(--signal)"
+                                lineCap={6}
+                              />
+                              <BarXAxis />
+                              <ChartTooltip showCrosshair={false} />
+                            </BarChart>
+                          ) : (
+                            <p className="py-10 text-center text-xs text-text-dim">
+                              Loading…
+                            </p>
+                          )}
+                        </div>
+                        {weekData.length > 0 && weekTotal === 0 && (
+                          <p className="mt-2 text-xs text-text-dim">
+                            Nothing added in the last seven days yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+                      {/* Add sources → saved to the active notebook */}
+                      <div data-reveal className="glass-panel p-5 sm:p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h2 className="font-display text-base font-bold tracking-tight">
+                            Add sources
+                          </h2>
+                          <span className="text-[11px] font-medium text-text-dim">
+                            {activeNotebook?.name}
+                          </span>
+                        </div>
+                        <label
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOver(true);
+                          }}
+                          onDragLeave={() => setDragOver(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOver(false);
+                            onFiles(e.dataTransfer.files);
+                          }}
+                          className={
+                            "mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center transition-colors " +
+                            (dragOver
+                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                              : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                          }
+                        >
+                          <Upload className="h-5 w-5 text-[var(--signal)]" />
+                          <span className="text-sm font-medium">
+                            Drop files or click to browse
+                          </span>
+                          <span className="text-xs text-text-dim">
+                            PDF, DOCX, PPTX, images
+                          </span>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              onFiles(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+
+                        <div className="mt-3 flex gap-2">
+                          <div className="relative flex-1">
+                            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
+                            <input
+                              value={linkValue}
+                              onChange={(e) => setLinkValue(e.target.value)}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && addLink()
+                              }
+                              placeholder="Paste a link…"
+                              className="w-full rounded-full border border-[var(--card-border)] bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                            />
+                          </div>
+                          <MovingBorderButton
+                            onClick={addLink}
+                            disabled={!linkValue.trim()}
+                            className="shrink-0"
+                            innerClassName="px-4 py-2.5 text-[13px]"
+                          >
+                            Add
+                          </MovingBorderButton>
+                        </div>
+
+                        <ul className="mt-4 space-y-2">
+                          {sources?.map((item) => (
+                            <li
+                              key={item._id}
+                              className="flex items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
+                            >
+                              {item.kind === "file" ? (
+                                <FileText className="h-4 w-4 shrink-0 text-[var(--signal)]" />
+                              ) : (
+                                <Link2 className="h-4 w-4 shrink-0 text-[var(--signal)]" />
+                              )}
+                              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                                {item.name}
+                              </span>
+                              <span className="hidden text-xs text-text-dim sm:block">
+                                {item.detail}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Remove ${item.name}`}
+                                onClick={async () => {
+                                  await removeSource({ sourceId: item._id });
+                                  toast("Source removed", {
+                                    description: item.name,
+                                  });
+                                }}
+                                className="rounded-full p-1 text-text-dim transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] hover:text-[var(--signal)]"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </li>
+                          ))}
+                          {sources?.length === 0 && (
+                            <li>
+                              <EmptyHint
+                                icon={Upload}
+                                title="Nothing queued yet"
+                                body="Add a file or a link above — it is saved to this notebook and stays after a refresh."
+                              />
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+
+                      {/* The user's real notebooks */}
+                      <div data-reveal className="glass-panel p-5 sm:p-6">
+                        <div className="flex items-center justify-between">
+                          <h2 className="font-display text-base font-bold tracking-tight">
+                            Your notebooks
+                          </h2>
+                          <span className="text-[11px] font-medium text-text-dim">
+                            {notebooks?.length ?? 0} total
+                          </span>
+                        </div>
+                        <ul className="mt-4 space-y-2">
+                          {notebooks?.map((notebook) => {
+                            const selected = notebook.id === activeId;
+                            return (
+                              <li key={notebook.id}>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/dashboard?notebook=${notebook.id}`,
+                                    )
+                                  }
+                                  className={
+                                    "flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors " +
+                                    (selected
+                                      ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                                      : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                                  }
+                                >
+                                  <NotebookPen className="h-4 w-4 shrink-0 text-[var(--signal)]" />
+                                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                                    {notebook.name}
+                                  </span>
+                                  <span className="shrink-0 text-xs tabular-nums text-text-dim">
+                                    {notebook.sourceCount}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <MovingBorderButton
+                          onClick={() => navigate("/dashboard?view=notebooks")}
+                          className="mt-4"
+                          innerClassName="px-4 py-2.5 text-[13px]"
+                        >
+                          <NotebookPen className="h-4 w-4" />
+                          New notebook
+                        </MovingBorderButton>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );
