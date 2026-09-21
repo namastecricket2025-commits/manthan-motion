@@ -18,6 +18,9 @@ export interface AppSettings {
   ambient: number;
   /** Motionless mode: freezes every continuous loop and idle 3D orbit. */
   reduceMotion: boolean;
+  /** The background field leaning toward the pointer — off keeps every other
+   *  animation but nothing follows the cursor. */
+  cursorField: boolean;
   frameTarget: FrameTarget;
   themeMode: ThemeMode;
   textComfort: TextComfort;
@@ -26,10 +29,18 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   ambient: 100,
   reduceMotion: false,
+  cursorField: true,
   frameTarget: "60",
   themeMode: "dark",
   textComfort: "medium",
 };
+
+/**
+ * Ambient slider value (0-100) at which the background glow hits its ceiling.
+ * Above this the glow holds at maximum — the top of the slider is headroom,
+ * not extra glare, so the backdrop can never wash the page out.
+ */
+export const GLOW_CEILING = 60;
 
 const STORE_KEY = "manthan-settings";
 /** Legacy key the header toggle already reads/writes. */
@@ -38,6 +49,8 @@ const LEGACY_THEME_KEY = "manthan-theme";
 /** Mutable mirror read inside 60fps render loops. */
 export const settingsRuntime = {
   reduceMotion: false,
+  /** Whether ambient loops may lean toward the pointer. */
+  cursorField: true,
   /** 0 means "uncapped". */
   frameTarget: 60,
   /** 0..1 mirror of `ambient`. */
@@ -101,6 +114,10 @@ export function loadSettings(): AppSettings {
       ...DEFAULT_SETTINGS,
       ...parsed,
       ambient: typeof parsed.ambient === "number" ? parsed.ambient : DEFAULT_SETTINGS.ambient,
+      cursorField:
+        typeof parsed.cursorField === "boolean"
+          ? parsed.cursorField
+          : DEFAULT_SETTINGS.cursorField,
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -124,6 +141,7 @@ export function applySettings(settings: AppSettings) {
   const ambient = clamp01(settings.ambient / 100);
 
   settingsRuntime.reduceMotion = settings.reduceMotion;
+  settingsRuntime.cursorField = settings.cursorField;
   settingsRuntime.frameTarget = frameTargetToFps(settings.frameTarget);
   settingsRuntime.ambient = ambient;
 
@@ -134,15 +152,21 @@ export function applySettings(settings: AppSettings) {
   root.classList.toggle("dark", dark);
   root.setAttribute("data-theme", dark ? "dark" : "light");
   root.setAttribute("data-motion", settings.reduceMotion ? "reduced" : "full");
+  root.setAttribute("data-cursor-field", settings.cursorField ? "on" : "off");
   root.setAttribute("data-text", settings.textComfort);
   root.setAttribute("data-ambient", ambientBand(settings.ambient));
   root.style.setProperty("--ambient", ambient.toFixed(3));
   root.style.setProperty("--ambient-dur", ambientDuration(settings.ambient));
   root.style.setProperty("--ambient-blur", (0.55 + 0.45 * ambient).toFixed(2));
   // Ambient Intensity -> the single global driver for every background glow.
-  // 0% fades the blurred backdrop shapes out completely, 100% renders them
-  // at full softness. Read by `.blob-canvas` and the ambient glow layers.
-  root.style.setProperty("--bg-glow-opacity", ambient.toFixed(3));
+  // 0% fades the blurred backdrop shapes out completely; GLOW_CEILING (60%)
+  // already renders them at full softness, and everything above is clamped so
+  // the backdrop stays an aura and never a wall. Read by `.blob-canvas` and
+  // the ambient glow layers.
+  root.style.setProperty(
+    "--bg-glow-opacity",
+    Math.min(1, ambient / (GLOW_CEILING / 100)).toFixed(3),
+  );
   // Text Comfort -> the typography scaling module (root rem size).
   root.style.setProperty("--text-scale", String(TEXT_SCALE[settings.textComfort] ?? 1));
 

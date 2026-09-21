@@ -30,6 +30,7 @@
  * `--bg-canvas-opacity` × `--bg-glow-opacity` in the stylesheet.
  */
 import { useEffect, useRef } from "react";
+import { settingsRuntime } from "@/lib/app-settings";
 
 const TAU = Math.PI * 2;
 
@@ -208,9 +209,17 @@ export default function BlobBackground() {
     function paint() {
       if (!image || !fieldCtx) return;
 
-      if (finePointer) {
+      // Cursor-tracking is its own preference: when it is off the field keeps
+      // drifting exactly as before but never leans toward the pointer.
+      const follow = finePointer && settingsRuntime.cursorField;
+      if (follow) {
         easedX += (pointerX - easedX) * 0.035;
         easedY += (pointerY - easedY) * 0.035;
+      } else {
+        // Ease the offset home so toggling the setting mid-drift settles the
+        // field back instead of freezing it displaced.
+        easedX += (0 - easedX) * 0.035;
+        easedY += (0 - easedY) * 0.035;
       }
       const offsetX = easedX * cols * 0.07;
       const offsetY = easedY * rows * 0.07;

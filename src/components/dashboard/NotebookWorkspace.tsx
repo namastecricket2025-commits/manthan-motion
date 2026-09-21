@@ -42,12 +42,17 @@ import { toast } from "sonner";
 
 type Kind = "summary" | "flashcards" | "quiz" | "mindmap" | "slides";
 
-const KIND_META: { kind: Kind; label: string; hint: string }[] = [
-  { kind: "summary", label: "Summary", hint: "Structured revision notes" },
-  { kind: "flashcards", label: "Flashcards", hint: "Active-recall cards" },
-  { kind: "quiz", label: "Quiz", hint: "Multiple choice practice" },
-  { kind: "mindmap", label: "Mind map", hint: "One-page hierarchy" },
-  { kind: "slides", label: "Slides", hint: "A deck to present from" },
+const KIND_META: {
+  kind: Kind;
+  label: string;
+  hint: string;
+  icon: string;
+}[] = [
+  { kind: "summary", label: "Summary", hint: "Structured revision notes", icon: "📝" },
+  { kind: "flashcards", label: "Flashcards", hint: "Active-recall cards", icon: "🎯" },
+  { kind: "quiz", label: "Quiz", hint: "Multiple choice practice", icon: "❓" },
+  { kind: "mindmap", label: "Mind map", hint: "One-page hierarchy", icon: "🧠" },
+  { kind: "slides", label: "Slides", hint: "A deck to present from", icon: "🎞️" },
 ];
 
 const MAX_UPLOAD = 20 * 1024 * 1024;
@@ -514,10 +519,11 @@ export function NotebookWorkspace({
                     ) : null}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <span aria-hidden="true">{meta.icon}</span>
                       {meta.label}
                     </span>
-                    <span className="block text-[11px] text-text-dim">
+                    <span className="block pl-6 text-[11px] text-text-dim">
                       {hasMaterial ? "Ready — regenerate any time" : meta.hint}
                     </span>
                   </span>
@@ -575,6 +581,9 @@ export function NotebookWorkspace({
                       : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                   }
                 >
+                  <span aria-hidden="true" className="mr-1.5">
+                    {meta.icon}
+                  </span>
                   {meta.label}
                 </button>
               ))}

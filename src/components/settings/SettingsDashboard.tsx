@@ -5,6 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
   Accessibility,
+  ArrowUpRight,
   Check,
   Download,
   Eye,
@@ -26,6 +27,7 @@ import {
   UserCog,
   Waves,
 } from "lucide-react";
+import { Link } from "react-router";
 
 import {
   Accordion,
@@ -87,6 +89,13 @@ const FRAME_OPTIONS: { value: FrameTarget; label: string; hint: string }[] = [
 /** The four accordion panels, addressable as `/settings#<key>`. */
 const PANEL_KEYS = ["accessibility", "theme", "account", "legal"] as const;
 type PanelKey = (typeof PANEL_KEYS)[number];
+
+/** Where each legal box's dedicated page lives. */
+const LEGAL_ROUTES: Record<string, string> = {
+  terms: "/terms",
+  privacy: "/privacy",
+  honor: "/honor",
+};
 
 /**
  * Which panel a location hash should reveal. The footer's policy links point
@@ -508,7 +517,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                 <Row
                   title="Ambient Intensity"
                   badge={`${settings.ambient}%`}
-                  hint="Scales the opacity, speed and glowing background blur effect of the site layout. 0% is a fully static, flat page — 100% is maximum neon glow and drifting particles."
+                  hint="Scales the opacity, speed and glowing background blur of the site layout. 0% is a fully static, flat page; the glow reaches its intended maximum at 60% and holds there — the rest of the slider is headroom, not extra glare."
                 >
                   <div className="set-slider-wrap">
                     <Slider
@@ -522,10 +531,23 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     />
                     <div className="set-scale">
                       <span>0% · static</span>
-                      <span>50%</span>
-                      <span>100% · max glow</span>
+                      <span>60% · max glow</span>
+                      <span>100%</span>
                     </div>
                   </div>
+                </Row>
+
+                <Row
+                  title="Cursor-tracking Background"
+                  badge={settings.cursorField ? "Following" : "Off"}
+                  hint="Stops the background glow field from leaning toward your pointer as it moves. Everything else keeps moving — the drifting blobs, page transitions and lab simulations are untouched."
+                >
+                  <Switch
+                    className="set-switch"
+                    checked={settings.cursorField}
+                    aria-label="Cursor-tracking background"
+                    onCheckedChange={(v) => update({ cursorField: v })}
+                  />
                 </Row>
 
                 <Row
@@ -894,24 +916,24 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
             </AccordionTrigger>
             <AccordionContent className="set-content">
               <div className="set-body">
-                {LEGAL_BOXES.map((box) => (
-                  <article key={box.id} className="set-legal">
-                    <header className="set-legal__head">
-                      <span className="set-legal__tag">{box.tag}</span>
-                      <h3 className="set-legal__title">{box.title}</h3>
-                    </header>
-                    <ol className="set-legal__list">
-                      {box.clauses.map((c) => (
-                        <li key={c.n} className="set-legal__clause">
-                          <span className="set-legal__n">{c.n}</span>
-                          <p className="set-legal__body">
-                            <strong>{c.heading}:</strong> {c.body}
-                          </p>
-                        </li>
-                      ))}
-                    </ol>
-                  </article>
-                ))}
+                {/* The full policies live on dedicated pages — this panel just
+                    links to them so nothing has to be scrolled in an accordion. */}
+                <div className="set-legal-links">
+                  {LEGAL_BOXES.map((box) => (
+                    <Link
+                      key={box.id}
+                      to={LEGAL_ROUTES[box.id] ?? "/terms"}
+                      className="set-legal-card"
+                    >
+                      <span className="set-legal-card__tag">{box.tag}</span>
+                      <span className="set-legal-card__title">{box.title}</span>
+                      <span className="set-legal-card__meta">
+                        {box.clauses.length} clause{box.clauses.length === 1 ? "" : "s"} · opens its own page
+                      </span>
+                      <ArrowUpRight className="set-legal-card__arrow" />
+                    </Link>
+                  ))}
+                </div>
               </div>
             </AccordionContent>
           </AccordionItem>

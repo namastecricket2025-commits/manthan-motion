@@ -2,9 +2,12 @@ import { Link } from "react-router";
 import { Logo } from "./Logo";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
-/** The Legal category of the central Settings dashboard (opens its accordion
- *  panel and scrolls it into view). */
-const LEGAL_URL = "/settings#legal";
+/** Every policy lives on its own page now — not inside the settings accordion. */
+const LEGAL = [
+  { to: "/terms", label: "Terms of Service" },
+  { to: "/privacy", label: "Privacy Policy" },
+  { to: "/honor", label: "Academic Honor" },
+] as const;
 
 /**
  * Site footer — Apple-style glass instead of an opaque panel, so it blends
@@ -57,19 +60,21 @@ export default function Footer() {
             </Link>
           </nav>
 
-          {/* Legal — every policy link lands on the Legal category inside the
-              central Settings dashboard, which opens that accordion panel. */}
+          {/* Legal — one dedicated page per policy. */}
           <nav
             aria-label="Legal"
             className="flex flex-col items-start gap-2.5 text-sm font-medium text-text-dim"
           >
             <span className="kicker mb-1">Legal</span>
-            <Link to={LEGAL_URL} className="transition-colors hover:text-foreground">
-              Terms of Service
-            </Link>
-            <Link to={LEGAL_URL} className="transition-colors hover:text-foreground">
-              Privacy Policy
-            </Link>
+            {LEGAL.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="transition-colors hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ))}
             <a
               href="mailto:support@manthan.app"
               className="transition-colors hover:text-foreground"
@@ -82,15 +87,15 @@ export default function Footer() {
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-[var(--card-border)] pt-6 text-xs text-text-dim sm:flex-row">
           <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-text-dim sm:justify-start">
             <nav aria-label="Footer" className="flex flex-wrap gap-3">
-              <Link to={LEGAL_URL} className="transition-colors hover:text-foreground">
-                Terms of Service
-              </Link>
-              <Link to={LEGAL_URL} className="transition-colors hover:text-foreground">
-                Privacy Policy
-              </Link>
-              <Link to={LEGAL_URL} className="transition-colors hover:text-foreground">
-                Cookies
-              </Link>
+              {LEGAL.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ))}
             </nav>
           </div>
           <p>© {year} Manthan · All rights reserved</p>

@@ -1048,10 +1048,19 @@ html:not(.dark) .set-select-content [role="option"] {
 }
 
 /* ------------------------------------------------------------
-   7. LEGAL BOXES
+   7. LEGAL BOXES — links to the dedicated policy pages
    ------------------------------------------------------------ */
 
-.set-legal {
+.set-legal-links {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.set-legal-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
   border-radius: 16px;
   border: 1px solid var(--set-hairline);
   background: var(--set-glass);
@@ -1059,59 +1068,41 @@ html:not(.dark) .set-select-content [role="option"] {
   backdrop-filter: var(--set-blur);
   box-shadow: var(--set-shadow);
   padding: 15px;
+  text-decoration: none;
+  transition: border-color 0.25s ease, transform 0.25s ease;
 }
-.set-legal__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 9px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid var(--set-hairline);
+.set-legal-card:hover {
+  border-color: color-mix(in srgb, var(--set-neon) 45%, transparent);
+  transform: translateY(-2px);
 }
-.set-legal__tag {
+.set-legal-card__tag {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.62rem;
   letter-spacing: 0.06em;
   color: var(--set-neon-text);
 }
-.set-legal__title {
+.set-legal-card__title {
   font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--set-title);
 }
-.set-legal__list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 14px;
-}
-.set-legal__clause {
-  display: flex;
-  gap: 10px;
-}
-.set-legal__n {
-  display: inline-flex;
-  flex: none;
-  height: 20px;
-  width: 20px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  border: 1px solid var(--set-hairline);
-  background: var(--set-glass-strong);
-  font-size: 0.62rem;
-  font-weight: 700;
+.set-legal-card__meta {
+  font-size: 0.72rem;
   color: var(--set-dim);
 }
-.set-legal__body {
-  font-size: 0.79rem;
-  line-height: 1.78;
+.set-legal-card__arrow {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  height: 15px;
+  width: 15px;
   color: var(--set-dim);
+  transition: color 0.25s ease, transform 0.25s ease;
 }
-.set-legal__body strong {
-  color: var(--set-title);
-  font-weight: 650;
+.set-legal-card:hover .set-legal-card__arrow {
+  color: var(--set-neon);
+  transform: translate(1px, -1px);
 }
 
 /* ------------------------------------------------------------
@@ -1269,7 +1260,7 @@ html:not(.dark) .set-row__note {
 html:not(.dark) .set-device__tag {
   color: #9b1c1c;
 }
-html:not(.dark) .set-legal__tag,
+html:not(.dark) .set-legal-card__tag,
 html:not(.dark) .set-kicker,
 html:not(.dark) .set-panel-title__icon {
   color: #9b1c1c;

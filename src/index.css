@@ -854,6 +854,39 @@
   animation-duration: 1.6s;
 }
 
+/* --------------------------------------------------------------
+   Flashcard 3D flip — the answer lives on the back face and the
+   whole card rotates, so a reveal is a physical motion rather
+   than text swapping in place. Motionless Mode parks the flip
+   through the global reduced-motion rule below.
+   -------------------------------------------------------------- */
+.flip-card {
+  perspective: 1400px;
+}
+.flip-card__inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.flip-card--flipped .flip-card__inner {
+  transform: rotateY(180deg);
+}
+.flip-card__face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backdrop-filter: var(--glass-blur, blur(25px) saturate(160%));
+  backdrop-filter: var(--glass-blur, blur(25px) saturate(160%));
+  border-radius: var(--radius, 18px);
+}
+.flip-card__face--back {
+  transform: rotateY(180deg);
+}
+html[data-motion="reduced"] .flip-card__inner {
+  transition: none;
+}
+
 /* Electron + bulb glow in the circuit sandbox */
 .lab-electron {
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--signal) 80%, transparent));
