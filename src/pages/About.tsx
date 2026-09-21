@@ -1,6 +1,6 @@
 import "@/components/about/about.css";
 
-import MeshBackground from "@/components/MeshBackground";
+import BlobBackground from "@/components/BlobBackground";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -556,7 +556,7 @@ export default function About() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <MeshBackground />
+      <BlobBackground />
       <div className="relative z-10">
         <Navbar />
         <main className="about-root">

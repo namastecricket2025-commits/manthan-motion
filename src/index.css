@@ -99,36 +99,36 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand palette (light) — a crisp sand-white canvas so the crimson
-     ambient mesh reads as an elegant tint rather than a colour wash. */
-  --ink: #f8fafc;
+  /* Brand palette (light) — warm sand-white canvas, so the crimson blob
+     field is the only saturated thing on the page. */
+  --ink: #f7f3f0;
   --signal: #c81f27;
   --signal-2: #8f1d22;
-  --text-main: #0f172a;
-  /* Every paragraph, caption and label clears contrast on pale glass and on
-     the diffused mesh behind it. */
-  --text-dim: #1e293b;
+  --text-main: #1b1110;
+  --text-dim: #374151;
   --card-border: rgba(200, 31, 39, 0.22);
-  --panel-bg: rgba(248, 250, 252, 0.6);
+  --panel-bg: rgba(247, 243, 240, 0.55);
 
   /* ---- BACKGROUND BLOB FIELD (light) ---------------------------------
-     The same two animated blobs, re-declared below at roughly half strength
-     so a pale canvas picks up the ambient touch without turning pink. */
-  --mesh-ceiling: 1;
+     The three colour stops of the metaball field (see BlobBackground).
+     Light keeps the same hues but a pale base stop and a much lower opacity
+     ceiling, so the field reads as a tint rather than a wash. */
+  --bg-canvas-a: #c81f27;
+  --bg-canvas-b: #8f1d22;
+  --bg-canvas-c: #f2ece8;
+  --bg-canvas-opacity: 0.65;
 
   /* ---- Frosted glass (light) ----------------------------------------- */
-  --glass-fill: rgba(255, 255, 255, 0.45);
-  --glass-fill-strong: rgba(255, 255, 255, 0.6);
+  --glass-fill-strong: rgba(0, 0, 0, 0.035);
   --glass-hairline: rgba(0, 0, 0, 0.04);
-  --glass-blur: blur(28px) saturate(135%);
-  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.16);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
      word, then blends through two warm oxide stops into the signal red on
      the final letters. The extra intermediate stops make the black→red
      sweep silky instead of a hard snap. */
-  --gt-head: #0f172a;
+  --gt-head: #241412;
   --gt-tail: #c81f27;
 
   /* Stroke-text display gradient (light): a golden-ember sweep that pops
@@ -195,21 +195,21 @@
   /* These were leftover default shadcn values in the blue/violet hue range
      (oklch hues 260–285). Warm palette only — no chart accent may read blue
      against the crimson theme. */
-  --chart-background: #fdfaf8;
-  --chart-foreground: #241412;
-  --chart-foreground-muted: #7d6a64;
+  --chart-background: oklch(100% 0 0);
+  --chart-foreground: oklch(14.5% 0.004 285);
+  --chart-foreground-muted: oklch(55% 0.014 260);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: rgba(200, 31, 39, 0.45);
-  --chart-grid: rgba(36, 20, 18, 0.1);
+  --chart-crosshair: oklch(40% 0.1828 274.34);
+  --chart-grid: oklch(90% 0 0);
   --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: rgba(30, 18, 16, 0.88);
-  --chart-tooltip-foreground: #fdf8f6;
-  --chart-tooltip-muted: #b9aca7;
-  --chart-marker-background: #fdfaf8;
-  --chart-marker-border: rgba(36, 20, 18, 0.14);
-  --chart-marker-foreground: #3a2320;
-  --chart-label: #7d6a64;
+  --chart-tooltip-background: oklch(21% 0.006 285 / 0.8);
+  --chart-tooltip-foreground: oklch(98.5% 0 0);
+  --chart-tooltip-muted: oklch(65% 0.01 260);
+  --chart-marker-background: oklch(97% 0.005 260);
+  --chart-marker-border: oklch(85% 0.01 260);
+  --chart-marker-foreground: oklch(30% 0.01 260);
+  --chart-label: oklch(45% 0.01 260);
   --chart-scale-01: oklch(0.98 0.003 106);
   --chart-scale-02: oklch(0.92 0.008 106);
   --chart-scale-03: oklch(0.82 0.015 106);
@@ -223,40 +223,29 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) */
-  /* Clean dark-neutral base canvas (never a blue template tint): the crimson
-     field is painted over this, and the glass panels sit just above it. */
-  --ink: #0b0f19;
+  /* Brand palette (dark) — warm espresso ink, the base the crimson field is
+     painted over. */
+  --ink: #150c0b;
   --signal: #e0323a;
   --signal-2: #8f1d22;
-  --text-main: #f8fafc;
-  /* Crisp off-white / silver: card copy and subtext stay fully legible on
-     the glass no matter what the mesh is doing behind it. */
-  --text-dim: #e2e8f0;
+  --text-main: #fdf8f6;
+  --text-dim: #cbd5e1;
   --card-border: rgba(224, 50, 58, 0.2);
-  /* Chrome (sidebar, command bars): a touch denser than card glass so rail
-     text never sits directly on a bright blob, still translucent enough for
-     the field to glow through. */
-  --panel-bg: rgba(11, 15, 25, 0.5);
+  --panel-bg: rgba(21, 12, 11, 0.6);
 
   /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
-     Two CSS-animated crimson blobs (see `.mesh-field` / `@keyframes
-     fluidGlow`). Their alphas are already the low, readable values shipped
-     in the keyframe spec, so the ceiling sits at 1 and Ambient Intensity is
-     the only dimmer on top of them. */
-  --mesh-ceiling: 1;
+     The metaball field's three stops and its opacity ceiling. In dark the
+     field is at full strength (0.9) over the espresso ink, which is the
+     signature look. */
+  --bg-canvas-a: #e0323a;
+  --bg-canvas-b: #8f1d22;
+  --bg-canvas-c: #150c0b;
+  --bg-canvas-opacity: 0.9;
 
-  /* ---- Frosted glass (dark) — crimson-forward translucent glass ------
-     Deliberately light on scrim. The house look is the crimson blob field
-     reading *through* every card, so the fill is only a whisper of the ink
-     base (a warm near-black, never a blue slate tint): the mesh stays
-     visible as it drifts under the panel, while the ink beneath and the
-     off-white type tokens above keep the copy crisp. */
-  --glass-fill: rgba(11, 15, 25, 0.32);
-  --glass-fill-strong: rgba(11, 15, 25, 0.46);
+  /* ---- Frosted glass (dark) ------------------------------------------ */
+  --glass-fill-strong: rgba(255, 255, 255, 0.05);
   --glass-hairline: rgba(255, 255, 255, 0.06);
-  --glass-blur: blur(28px) saturate(135%);
-  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.45);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.5);
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
      heading warm-white (`--text-main`) and holds it for just over half the
@@ -264,7 +253,7 @@
      final letters. Matching the heading colour exactly plus two intermediate
      stops keeps the word reading as heading text while the tail ignites
      smoothly. */
-  --gt-head: #f8fafc;
+  --gt-head: #f4ece9;
   --gt-tail: #ff4f58;
 
   /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
@@ -300,38 +289,37 @@
   /* shadcn aliases (dark) */
   --background: var(--ink);
   --foreground: var(--text-main);
-  /* Neutral dark surface ramp (dialogs, popovers, menus, muted wells) built
-     on the same neutral base as `--ink`, so no primitive falls back to a
-     default blue/grey template or a mismatched warm fill. Crimson stays the
-     only accent. */
-  --card: #121826;
+  /* Warm espresso surface ramp (dialogs, popovers, menus, muted wells) built
+     on the same base as `--ink`, so no primitive falls back to a default
+     grey template or a mismatched cold fill. Crimson stays the only accent. */
+  --card: #1e1210;
   --card-foreground: var(--text-main);
-  --popover: #121826;
+  --popover: #1e1210;
   --popover-foreground: var(--text-main);
   --primary: var(--signal);
   --primary-foreground: #fff7f5;
-  --secondary: #1a2130;
-  --secondary-foreground: #f2f5f9;
-  --muted: #171d2a;
-  --muted-foreground: #b3bdcc;
-  --accent: #1c2333;
-  --accent-foreground: #f2f5f9;
+  --secondary: #271614;
+  --secondary-foreground: #f4ece9;
+  --muted: #241614;
+  --muted-foreground: #b9aca7;
+  --accent: #2b1a17;
+  --accent-foreground: #f4ece9;
   --destructive: #e0323a;
-  --border: rgba(226, 232, 240, 0.12);
-  --input: rgba(226, 232, 240, 0.14);
+  --border: rgba(244, 236, 233, 0.12);
+  --input: rgba(244, 236, 233, 0.14);
   --ring: var(--signal);
   --chart-1: #e0323a;
   --chart-2: #8f1d22;
   --chart-3: #b97750;
   --chart-4: #7d8f78;
   --chart-5: #b9aca7;
-  --sidebar: #121826;
+  --sidebar: #1e1210;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
   --sidebar-primary-foreground: #fff7f5;
-  --sidebar-accent: #1a2130;
-  --sidebar-accent-foreground: #f2f5f9;
-  --sidebar-border: rgba(226, 232, 240, 0.1);
+  --sidebar-accent: #271614;
+  --sidebar-accent-foreground: #f4ece9;
+  --sidebar-border: rgba(244, 236, 233, 0.1);
   --sidebar-ring: var(--signal);
 }
 
@@ -390,33 +378,42 @@
    ============================================================ */
 @layer components {
   /* ------------------------------------------------
-     Authentic Apple glass — the single surface language for every card, grid
-     item, pipeline block, stats module and CTA wrapper on the home page (and
-     everywhere else that shares these two classes). Both themes are driven by
-     the tokens in :root / .dark:
+     Apple glass — the single surface language for every card, grid item,
+     pipeline block, stats module and CTA wrapper on the home page (and
+     everywhere else that shares these classes). The crimson canvas field
+     glints through all of them:
 
-       fill      rgba(15,23,42,0.5)   dark  / rgba(255,255,255,0.45)  light
-       blur      blur(28px) saturate(135%) so the animated crimson backdrop
-                 drifts under every card without drowning the copy
+       fill      rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
+       blur      blur(25px) saturate(160%)
        outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
        depth     one wide, soft ambient shadow (never a hard drop shadow)
      ------------------------------------------------ */
   .glass-panel {
-    background: var(--glass-fill);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    background: rgba(255, 255, 255, 0.02);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
     border: 1px solid var(--glass-hairline);
     border-radius: 18px;
     box-shadow: var(--glass-shadow);
   }
+  html:not(.dark) .glass-panel {
+    background: rgba(0, 0, 0, 0.015);
+    border-color: var(--glass-hairline);
+    box-shadow: var(--glass-shadow);
+  }
 
   .glass-chip {
-    background: var(--glass-fill);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    background: rgba(255, 255, 255, 0.03);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
     border: 1px solid var(--glass-hairline);
     border-radius: 999px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.4);
+  }
+  html:not(.dark) .glass-chip {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: var(--glass-hairline);
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.12);
   }
 
   /* ------------------------------------------------
@@ -426,50 +423,18 @@
      `--text-dim` is scoped here so the muted copy stays legible.
      ------------------------------------------------ */
   .site-footer {
-    background: var(--glass-fill);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    --text-dim: #cbd5e1;
+    background: rgba(255, 255, 255, 0.02);
+    -webkit-backdrop-filter: blur(25px) saturate(160%);
+    backdrop-filter: blur(25px) saturate(160%);
     border-top: 1px solid var(--glass-hairline);
-    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.5);
   }
-
-  /* ------------------------------------------------
-     LOCKED GLASS SPEC — the one rule that cannot be overridden.
-
-     Every card surface in the app (the six feature grid cards, the five
-     pipeline steps, the stats modules, the bottom CTA panel, About's glass,
-     the footer and the Settings accordion panes) is pinned to the same
-     smoky, translucent Apple layer. There is no saturated or opaque panel
-     anywhere: the mouse-tracked crimson backdrop stays visible gliding
-     underneath, while the neutral scrim keeps the copy high-contrast.
-     `!important` is deliberate — it stops a later, more specific component
-     rule from re-introducing an opaque fill or a solid red panel.
-     ------------------------------------------------ */
-  .glass-panel,
-  .glass-chip,
-  .site-footer,
-  .apple-glass,
-  .set-item,
-  .set-card,
-  .set-block,
-  .set-row {
-    background: rgba(11, 15, 25, 0.32) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(135%) !important;
-    backdrop-filter: blur(28px) saturate(135%) !important;
-    border-color: rgba(255, 255, 255, 0.06) !important;
-    /* soft ambient lift so every card floats above the animated canvas */
-    box-shadow: var(--glass-shadow) !important;
-  }
-  html:not(.dark) .glass-panel,
-  html:not(.dark) .glass-chip,
-  html:not(.dark) .site-footer,
-  html:not(.dark) .apple-glass,
-  html:not(.dark) .set-item,
-  html:not(.dark) .set-card,
-  html:not(.dark) .set-block,
-  html:not(.dark) .set-row {
-    background: rgba(255, 255, 255, 0.45) !important;
-    border-color: rgba(0, 0, 0, 0.04) !important;
+  html:not(.dark) .site-footer {
+    --text-dim: #374151;
+    background: rgba(0, 0, 0, 0.015);
+    border-top-color: var(--glass-hairline);
+    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.12);
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -768,167 +733,48 @@
   }
 
   /* ------------------------------------------------
-     THE MANTHAN BLOB FIELD — pure CSS keyframe engine.
+     THE MANTHAN BLOB FIELD — the canvas metaball engine.
 
-     A permanent full-viewport layer (100vw × 100vh, fixed, top/left: 0,
-     z-index: 1, pointer-events: none, overflow: hidden) holding two large
-     crimson blobs. There is no JavaScript, no canvas and no pointer
-     tracking anywhere in this: the motion is one infinite `@keyframes
-     fluidGlow` loop per blob (25s, linear), which the compositor runs off
-     the main thread even while the page is scrolling.
+     `BlobBackground` renders one fixed full-viewport <canvas> at z-index 0,
+     under the z-10 content wrappers. The engine paints the field at a coarse
+     grid resolution (10px cells, 7px on phones) and then upscales it with
+     image smoothing off, which is what gives the glow its soft, banded,
+     painted-by-hand look.
 
-     The keyframes animate *transform only* — never width, height, blur or
-     colour — so each blurred blob is rasterised once and only its
-     translation is composited per frame. That is what makes this cheap
-     enough to leave running on a mid-range phone.
-
-     Strength is capped by `--mesh-ceiling` × Ambient Intensity, so the
-     sliders in the settings dashboard still own the final opacity.
+     The layer fades with the Ambient Intensity slider (`--bg-glow-opacity`,
+     written on <html> by the settings provider) multiplied by the per-theme
+     ceiling (`--bg-canvas-opacity`), and goes completely flat at 0%.
      ------------------------------------------------ */
-  .mesh-field {
+  .blob-canvas {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    /* above the page canvas, below the z-10 content wrappers */
-    z-index: 1;
-    pointer-events: none;
-    overflow: hidden;
-    opacity: min(
-      1,
-      calc(var(--mesh-ceiling, 1) * var(--bg-glow-opacity, 1))
-    );
-    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .mesh-blob {
-    position: absolute;
-    border-radius: 50%;
-    will-change: transform;
-    animation: fluidGlow 25s linear infinite;
-  }
-  /* Blob 1 — anchored top-left, sweeping right and down across the canvas. */
-  .mesh-blob--a {
-    top: -10%;
-    left: -10%;
-    /* 600px is the floor; on wide viewports the blob scales up with the
-       canvas so the field covers the page instead of pooling in one corner. */
-    width: max(600px, 62vw);
-    height: max(600px, 62vw);
-    background: radial-gradient(
-      circle,
-      rgba(220, 38, 38, 0.24) 0%,
-      rgba(163, 22, 22, 0.08) 60%,
-      transparent 100%
-    );
-    filter: blur(130px);
-  }
-  /* Blob 2 — anchored bottom-right, running the same loop in reverse and
-     offset half a cycle so the two cross the middle out of phase. */
-  .mesh-blob--b {
-    bottom: -10%;
-    right: -10%;
-    width: max(500px, 54vw);
-    height: max(500px, 54vw);
-    background: radial-gradient(
-      circle,
-      rgba(200, 30, 30, 0.2) 0%,
-      rgba(130, 10, 10, 0.06) 60%,
-      transparent 100%
-    );
-    filter: blur(120px);
-    animation-direction: reverse;
-    animation-delay: -12s;
-  }
-  /* Light theme: the same two blobs at roughly half strength, so the pale
-     canvas picks up the ambient touch without ever turning pink. */
-  html:not(.dark) .mesh-blob--a {
-    background: radial-gradient(
-      circle,
-      rgba(220, 38, 38, 0.09) 0%,
-      rgba(163, 22, 22, 0.03) 60%,
-      transparent 100%
-    );
-  }
-  html:not(.dark) .mesh-blob--b {
-    background: radial-gradient(
-      circle,
-      rgba(200, 30, 30, 0.075) 0%,
-      rgba(130, 10, 10, 0.025) 60%,
-      transparent 100%
-    );
-  }
-  /* The infinite drift: translate up 20vh, right 26vw, then down and around,
-     circling back to the start. Linear easing + vw/vh units keep it perfectly
-     smooth at any viewport size, and because only `transform` changes the
-     browser never re-runs the blur. */
-  @keyframes fluidGlow {
-    0% {
-      transform: translate3d(0, 0, 0);
-    }
-    20% {
-      transform: translate3d(26vw, 14vh, 0);
-    }
-    40% {
-      transform: translate3d(56vw, 36vh, 0);
-    }
-    60% {
-      transform: translate3d(30vw, 58vh, 0);
-    }
-    80% {
-      transform: translate3d(-6vw, 26vh, 0);
-    }
-    100% {
-      transform: translate3d(0, 0, 0);
-    }
-  }
-  /* The lab bench layers its own blueprint matrix and per-subject accent
-     glows over this same atmosphere, so there the crimson sits one level
-     down, exactly as it did before. */
-  .lab-root .mesh-field {
+    inset: 0;
     z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    image-rendering: pixelated;
+    opacity: calc(var(--bg-canvas-opacity, 1) * var(--bg-glow-opacity, 1));
+    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* ------------------------------------------------
      Hero orbit mark — the large anchored circle with the small light
-     satellite orbiting it. The orbit is a pure CSS infinite rotation (see
-     `.orbit-group` / `@keyframes orbit`); nothing else writes that transform.
+     satellite riding the connector around it. GSAP rotates `.orbit-group`
+     with svgOrigin "200 200" (see HeroMark); nothing else writes that
+     transform, and `.orbit-group` only needs the CSS origin to match.
      ------------------------------------------------ */
-  .orbit-mark {
-    display: block;
-    width: min(74vmin, 540px);
-    height: min(74vmin, 540px);
-    margin-inline: auto;
-    overflow: visible;
-  }
-  .orbit-mark__halo {
-    fill: color-mix(in srgb, var(--signal) 12%, transparent);
-    filter: blur(42px);
-    opacity: calc(0.9 * var(--bg-glow-opacity, 1));
-  }
-  .orbit-mark__core {
+  .logo-svg .big-circle {
     fill: var(--signal);
-    filter: drop-shadow(0 18px 60px color-mix(in srgb, var(--signal) 45%, transparent));
   }
-  .orbit-mark__satellite {
+  .logo-svg .small-circle {
     fill: var(--text-main);
   }
-  /* The orbit is a pure CSS infinite rotation, bound to the outer pair (the
-     connector + the white satellite). `transform-box: view-box` +
-     `transform-origin` pivots it on the core's centre (200,200 in the 400×400
-     viewBox), so the satellite loops a clean 360° trajectory around the
-     anchored crimson circle. Motionless Mode and the OS reduced-motion flag
-     park it via the global `html[data-motion="reduced"]` rule. */
-  .orbit-group {
-    transform-box: view-box;
-    transform-origin: 200px 200px;
-    animation: orbit 16s linear infinite;
-    will-change: transform;
-  }
-  .orbit-mark__connector {
+  .logo-svg .connector {
     stroke: var(--text-dim);
-    stroke-width: 1.6;
-    opacity: 0.75;
+    stroke-width: 2px;
+  }
+  .logo-svg .orbit-group {
+    transform-origin: 200px 200px;
   }
 
 }

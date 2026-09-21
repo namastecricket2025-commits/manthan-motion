@@ -1,4 +1,4 @@
-import MeshBackground from "@/components/MeshBackground";
+import BlobBackground from "@/components/BlobBackground";
 import CtaSection from "@/components/landing/CtaSection";
 import Features from "@/components/landing/Features";
 import Footer from "@/components/landing/Footer";
@@ -143,9 +143,9 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen">
-      {/* The signature crimson mesh — drifting, heavily blurred, opacity
-          capped in the theme tokens. */}
-      <MeshBackground />
+      {/* The signature crimson blob field — the canvas metaball engine, its
+          opacity capped by the theme tokens and the Ambient Intensity slider. */}
+      <BlobBackground />
       <div className="relative z-10">
         {/* Anchor target for the "Home" nav item — the header is fixed, so
             an anchor on it can't scroll the page; this spans the top. */}

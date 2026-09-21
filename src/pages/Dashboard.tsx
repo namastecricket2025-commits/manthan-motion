@@ -1,7 +1,7 @@
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import HeroPreview from "@/components/landing/HeroPreview";
-import MeshBackground from "@/components/MeshBackground";
+import BlobBackground from "@/components/BlobBackground";
 import BarChart from "@/components/charts/bar-chart";
 import Bar from "@/components/charts/bar";
 import BarXAxis from "@/components/charts/bar-x-axis";
@@ -164,7 +164,7 @@ export default function Dashboard() {
     <div ref={rootRef} className="relative min-h-screen bg-background text-foreground">
       {/* Same pixelated-blob canvas as the homepage — the dashboard lives in
           the same visual world as the marketing site. */}
-      <MeshBackground />
+      <BlobBackground />
       <div className="relative z-10">
         {/* ---- Sidebar (desktop) ---- */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between border-r border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-5 backdrop-blur-xl min-[760px]:flex">

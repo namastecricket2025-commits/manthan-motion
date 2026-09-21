@@ -12,8 +12,8 @@
      Secondary ink  #E2E8F0 · #94A3B8 (dark) — #374151 · #1E293B (light)   */
   --about-signal: #c81e1e;
   --about-signal-glow: rgba(200, 30, 30, 0.85);
-  --about-dim: #e2e8f0; /* secondary paragraphs — silver-gray, always legible */
-  --about-faint: #cbd5e1; /* labels / indices */
+  --about-dim: #94a3b8; /* secondary paragraphs — silver-gray, always legible */
+  --about-faint: #b3c2d4; /* labels / indices */
   /* Re-point the theme's signal tokens inside this container only, so the
      hero's accent word, kicker dots, hairlines and the CTA's orbiting
      border all resolve to the muted crimson instead of the hot #e0323a. */
@@ -25,27 +25,28 @@
 html:not(.dark) .about-root {
   --about-signal: #c81f27;
   --about-signal-glow: rgba(200, 30, 30, 0.85);
-  --about-dim: #1e293b;
-  --about-faint: #334155;
+  --about-dim: #374151;
+  --about-faint: #1e293b;
 }
 
 /* ---------- 1. Authentic Apple glass ----------
-   Smoky translucent glass (mirrors the locked spec in index.css):
-     dark   rgba(15,23,42,0.5)       light  rgba(255,255,255,0.45)
-     blur   blur(28px) saturate(135%)
-     edge   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
-   Never a saturated or opaque panel — the animated crimson blobs stay
+   Smoky translucent glass (the same values `.glass-panel` uses in
+   index.css):
+     dark   rgba(255,255,255,0.03)   light  rgba(0,0,0,0.02)
+     blur   blur(25px) saturate(140%)
+     edge   1px rgba(255,255,255,0.07) dark / rgba(0,0,0,0.06) light
+   Never a saturated or opaque panel — the animated crimson field stays
    visible drifting underneath while the copy keeps full contrast. */
 .apple-glass {
-  background: rgba(11, 15, 25, 0.32);
-  -webkit-backdrop-filter: blur(28px) saturate(135%);
-  backdrop-filter: blur(28px) saturate(135%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+  -webkit-backdrop-filter: blur(25px) saturate(140%);
+  backdrop-filter: blur(25px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.32);
 }
 html:not(.dark) .apple-glass {
-  background: rgba(255, 255, 255, 0.45);
-  border-color: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.14);
 }
 /* hover-lift variant: same glass, deepening ambient shadow */
