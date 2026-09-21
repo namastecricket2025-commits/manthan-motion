@@ -13,6 +13,7 @@ import {
   DashboardNav,
   type DashboardSection,
 } from "@/components/dashboard/DashboardNav";
+import { NotebookWorkspace } from "@/components/dashboard/NotebookWorkspace";
 import { Logo } from "@/components/landing/Logo";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
@@ -38,28 +39,31 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
+  ArrowLeft,
   ArrowRight,
   Check,
-  FileText,
-  Link2,
   LogOut,
   Menu,
   NotebookPen,
   Pencil,
   Trash2,
-  Upload,
-  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 
-/* ------------------------------------------------------------------ */
-/* Everything on this page is derived from rows the signed-in user     */
-/* actually created. There is no sample data: a new account sees       */
-/* empty states and a clear first step, never invented numbers.        */
-/* ------------------------------------------------------------------ */
+/**
+ * The dashboard has three faces:
+ *
+ *   /dashboard                    the overview — real counts, real charts
+ *   /dashboard?view=notebooks     manage notebooks (create, rename, delete)
+ *   /dashboard?notebook=<id>      the notebook workspace: sources in,
+ *                                 study material out
+ *
+ * Every number shown comes from rows the signed-in user created. There is no
+ * sample data anywhere: a new account sees an empty state and a first step.
+ */
 
 function greeting() {
   const h = new Date().getHours();
@@ -74,7 +78,7 @@ function EmptyHint({
   title,
   body,
 }: {
-  icon: typeof FileText;
+  icon: typeof NotebookPen;
   title: string;
   body: string;
 }) {
@@ -101,27 +105,16 @@ export default function Dashboard() {
   const createNotebook = useMutation(api.notebooks.create);
   const renameNotebook = useMutation(api.notebooks.rename);
   const removeNotebook = useMutation(api.notebooks.remove);
-  const addSource = useMutation(api.sources.add);
-  const removeSource = useMutation(api.sources.remove);
 
-  const activeNotebook =
-    notebooks?.find((n) => n.id === notebookParam) ?? notebooks?.[0];
-  const activeId = activeNotebook?.id as Id<"notebooks"> | undefined;
-  const sources = useQuery(
-    api.sources.listForNotebook,
-    activeId ? { notebookId: activeId } : "skip",
-  );
+  const openNotebook = notebooks?.find((n) => n.id === notebookParam);
 
   const [hovered, setHovered] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [linkValue, setLinkValue] = useState("");
-  const [dragOver, setDragOver] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -140,7 +133,7 @@ export default function Dashboard() {
       );
     }, root);
     return () => ctx.revert();
-  }, [view, activeId, notebooks?.length]);
+  }, [view, notebookParam, notebooks?.length]);
 
   /* ---------------- actions ---------------- */
 
@@ -189,45 +182,6 @@ export default function Dashboard() {
     }
   }
 
-  async function addSources(
-    items: { kind: "file" | "link"; name: string; detail?: string }[],
-  ) {
-    if (!activeId) return;
-    for (const item of items) {
-      try {
-        await addSource({ notebookId: activeId, ...item });
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Could not add source",
-        );
-      }
-    }
-    if (items.length > 0) {
-      toast(
-        `${items.length === 1 ? "Source" : `${items.length} sources`} added`,
-        { description: `Saved in ${activeNotebook?.name ?? "your notebook"}.` },
-      );
-    }
-  }
-
-  function onFiles(files: FileList | null) {
-    if (!files?.length) return;
-    void addSources(
-      Array.from(files).map((f) => ({
-        kind: "file" as const,
-        name: f.name,
-        detail: `${(f.size / 1024 / 1024).toFixed(1)} MB · ${f.type.split("/")[1]?.toUpperCase() ?? "FILE"}`,
-      })),
-    );
-  }
-
-  function addLink() {
-    const url = linkValue.trim();
-    if (!url) return;
-    void addSources([{ kind: "link", name: url, detail: "Link" }]);
-    setLinkValue("");
-  }
-
   async function handleSignOut() {
     await signOut();
     navigate("/");
@@ -240,10 +194,7 @@ export default function Dashboard() {
     else if (key === "settings") navigate("/settings");
     else if (key === "about") navigate("/about");
     else if (key === "notebooks") navigate("/dashboard?view=notebooks");
-    else
-      navigate(
-        notebookParam ? `/dashboard?notebook=${notebookParam}` : "/dashboard",
-      );
+    else navigate("/dashboard");
   };
 
   const nav = (
@@ -337,23 +288,36 @@ export default function Dashboard() {
               data-reveal
               className="flex flex-wrap items-end justify-between gap-3"
             >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
-                  {greeting()}
-                </p>
+              <div className="min-w-0">
+                {openNotebook ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard")}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-text-dim transition-colors hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    All notebooks
+                  </button>
+                ) : (
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
+                    {greeting()}
+                  </p>
+                )}
                 <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                  {user?.name ?? "Welcome"}
+                  {openNotebook ? openNotebook.name : (user?.name ?? "Welcome")}
                   <span className="text-[var(--signal)]">.</span>
                 </h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
-                  {view === "notebooks"
-                    ? "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."
-                    : hasNotebooks
-                      ? `Working in ${activeNotebook?.name ?? "your notebook"} — add sources, then churn them into study material.`
-                      : "Create your first notebook, drop in your notes, and Manthan turns them into study material."}
+                  {openNotebook
+                    ? "Add your sources, then churn them into study material."
+                    : view === "notebooks"
+                      ? "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."
+                      : hasNotebooks
+                        ? "Open a notebook to add sources and generate study material."
+                        : "Create your first notebook, drop in your notes, and Manthan turns them into study material."}
                 </p>
               </div>
-              {view === "overview" && hasNotebooks && (
+              {openNotebook && (
                 <MovingBorderButton
                   onClick={() => navigate("/dashboard?view=notebooks")}
                   innerClassName="px-5 py-2.5 text-[13px]"
@@ -364,8 +328,14 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* ================= NOTEBOOKS VIEW ================= */}
-            {view === "notebooks" ? (
+            {/* ================= WORKSPACE ================= */}
+            {openNotebook ? (
+              <NotebookWorkspace
+                notebookId={openNotebook.id as Id<"notebooks">}
+                notebookName={openNotebook.name}
+              />
+            ) : view === "notebooks" ? (
+              /* ================= NOTEBOOKS MANAGER ================= */
               <>
                 <div data-reveal className="glass-panel p-5 sm:p-6">
                   <h2 className="font-display text-base font-bold tracking-tight">
@@ -473,12 +443,13 @@ export default function Dashboard() {
                                   Delete “{notebook.name}”?
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This removes the notebook and the{" "}
+                                  This removes the notebook, the{" "}
                                   {notebook.sourceCount}{" "}
                                   {notebook.sourceCount === 1
                                     ? "source"
                                     : "sources"}{" "}
-                                  queued inside it. It cannot be undone.
+                                  inside it, and everything generated from them.
+                                  It cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -569,11 +540,12 @@ export default function Dashboard() {
                         <ArrowRight className="h-4 w-4" />
                       </MovingBorderButton>
                     </form>
-                    <ol className="grid gap-3 text-sm text-text-dim sm:grid-cols-3">
+                    <ol className="grid gap-3 text-sm text-text-dim sm:grid-cols-4">
                       {[
                         "Name a notebook for the chapter you are revising.",
-                        "Drop in PDFs, slides, pasted notes or links.",
-                        "Churn them into summaries, flashcards and question banks.",
+                        "Drop in PDFs, slides, links or pasted notes.",
+                        "Churn them into a summary, flashcards, a quiz, a mind map and slides.",
+                        "Revise straight from the notebook.",
                       ].map((step, i) => (
                         <li key={step} className="flex gap-2.5">
                           <span className="font-display font-bold text-[var(--signal)]">
@@ -594,10 +566,7 @@ export default function Dashboard() {
                           label: "Notebooks",
                           value: summary?.notebookCount ?? 0,
                         },
-                        {
-                          label: "Sources",
-                          value: summary?.sourceCount ?? 0,
-                        },
+                        { label: "Sources", value: summary?.sourceCount ?? 0 },
                         {
                           label: "Added this week",
                           value: summary?.addedThisWeek ?? 0,
@@ -619,20 +588,18 @@ export default function Dashboard() {
                     </div>
 
                     {/* Charts only exist once there is something to chart — a
-                        brand-new workspace stays focused on adding sources. */}
+                        brand-new workspace stays focused on its first step. */}
                     {(summary?.sourceCount ?? 0) > 0 && (
-                    <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
-                      {/* Source mix */}
-                      <div data-reveal className="glass-panel p-5 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <h2 className="font-display text-base font-bold tracking-tight">
-                            Source mix
-                          </h2>
-                          <span className="text-[11px] font-medium text-text-dim">
-                            all time
-                          </span>
-                        </div>
-                        {mixData.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
+                        <div data-reveal className="glass-panel p-5 sm:p-6">
+                          <div className="flex items-center justify-between">
+                            <h2 className="font-display text-base font-bold tracking-tight">
+                              Source mix
+                            </h2>
+                            <span className="text-[11px] font-medium text-text-dim">
+                              all time
+                            </span>
+                          </div>
                           <div className="mt-4 flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
                             <div className="w-full max-w-[220px] shrink-0">
                               <PieChart
@@ -681,224 +648,92 @@ export default function Dashboard() {
                               ))}
                             </ul>
                           </div>
-                        ) : (
-                          <div className="mt-4">
-                            <EmptyHint
-                              icon={Upload}
-                              title="No sources yet"
-                              body="Your files and links appear here as a split once you add the first one."
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Sources added, last 7 days — real createdAt counts */}
-                      <div data-reveal className="glass-panel p-5 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <h2 className="font-display text-base font-bold tracking-tight">
-                            Sources added
-                          </h2>
-                          <span className="text-[11px] font-medium text-text-dim">
-                            last 7 days
-                          </span>
                         </div>
-                        <div className="mt-4">
-                          {weekData.length > 0 ? (
-                            <BarChart
-                              data={weekData}
-                              xDataKey="day"
-                              aspectRatio="16 / 9"
-                              margin={{ top: 16, right: 8, bottom: 4, left: 0 }}
-                            >
-                              <Grid horizontal />
-                              <Bar
-                                dataKey="count"
-                                fill="var(--signal)"
-                                lineCap={6}
-                              />
-                              <BarXAxis />
-                              <ChartTooltip showCrosshair={false} />
-                            </BarChart>
-                          ) : (
-                            <p className="py-10 text-center text-xs text-text-dim">
-                              Loading…
+
+                        <div data-reveal className="glass-panel p-5 sm:p-6">
+                          <div className="flex items-center justify-between">
+                            <h2 className="font-display text-base font-bold tracking-tight">
+                              Sources added
+                            </h2>
+                            <span className="text-[11px] font-medium text-text-dim">
+                              last 7 days
+                            </span>
+                          </div>
+                          <div className="mt-4">
+                            {weekData.length > 0 ? (
+                              <BarChart
+                                data={weekData}
+                                xDataKey="day"
+                                aspectRatio="16 / 9"
+                                margin={{
+                                  top: 16,
+                                  right: 8,
+                                  bottom: 4,
+                                  left: 0,
+                                }}
+                              >
+                                <Grid horizontal />
+                                <Bar
+                                  dataKey="count"
+                                  fill="var(--signal)"
+                                  lineCap={6}
+                                />
+                                <BarXAxis />
+                                <ChartTooltip showCrosshair={false} />
+                              </BarChart>
+                            ) : (
+                              <p className="py-10 text-center text-xs text-text-dim">
+                                Loading…
+                              </p>
+                            )}
+                          </div>
+                          {weekData.length > 0 && weekTotal === 0 && (
+                            <p className="mt-2 text-xs text-text-dim">
+                              Nothing added in the last seven days yet.
                             </p>
                           )}
                         </div>
-                        {weekData.length > 0 && weekTotal === 0 && (
-                          <p className="mt-2 text-xs text-text-dim">
-                            Nothing added in the last seven days yet.
-                          </p>
-                        )}
                       </div>
-                    </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-                      {/* Add sources → saved to the active notebook */}
-                      <div data-reveal className="glass-panel p-5 sm:p-6">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h2 className="font-display text-base font-bold tracking-tight">
-                            Add sources
-                          </h2>
-                          <span className="text-[11px] font-medium text-text-dim">
-                            {activeNotebook?.name}
-                          </span>
-                        </div>
-                        <label
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            setDragOver(true);
-                          }}
-                          onDragLeave={() => setDragOver(false)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setDragOver(false);
-                            onFiles(e.dataTransfer.files);
-                          }}
-                          className={
-                            "mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-center transition-colors " +
-                            (dragOver
-                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                              : "border-[var(--card-border)] hover:border-[var(--signal)]")
-                          }
-                        >
-                          <Upload className="h-5 w-5 text-[var(--signal)]" />
-                          <span className="text-sm font-medium">
-                            Drop files or click to browse
-                          </span>
-                          <span className="text-xs text-text-dim">
-                            PDF, DOCX, PPTX, images
-                          </span>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            multiple
-                            className="hidden"
-                            onChange={(e) => {
-                              onFiles(e.target.files);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-
-                        <div className="mt-3 flex gap-2">
-                          <div className="relative flex-1">
-                            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
-                            <input
-                              value={linkValue}
-                              onChange={(e) => setLinkValue(e.target.value)}
-                              onKeyDown={(e) =>
-                                e.key === "Enter" && addLink()
+                    <div data-reveal className="glass-panel p-5 sm:p-6">
+                      <div className="flex items-center justify-between">
+                        <h2 className="font-display text-base font-bold tracking-tight">
+                          Your notebooks
+                        </h2>
+                        <span className="text-[11px] font-medium text-text-dim">
+                          {notebooks?.length ?? 0} total
+                        </span>
+                      </div>
+                      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                        {notebooks?.map((notebook) => (
+                          <li key={notebook.id}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(`/dashboard?notebook=${notebook.id}`)
                               }
-                              placeholder="Paste a link…"
-                              className="w-full rounded-full border border-[var(--card-border)] bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
-                            />
-                          </div>
-                          <MovingBorderButton
-                            onClick={addLink}
-                            disabled={!linkValue.trim()}
-                            className="shrink-0"
-                            innerClassName="px-4 py-2.5 text-[13px]"
-                          >
-                            Add
-                          </MovingBorderButton>
-                        </div>
-
-                        <ul className="mt-4 space-y-2">
-                          {sources?.map((item) => (
-                            <li
-                              key={item._id}
-                              className="flex items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
+                              className="flex w-full items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--signal)]"
                             >
-                              {item.kind === "file" ? (
-                                <FileText className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-                              ) : (
-                                <Link2 className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-                              )}
+                              <NotebookPen className="h-4 w-4 shrink-0 text-[var(--signal)]" />
                               <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                {item.name}
+                                {notebook.name}
                               </span>
-                              <span className="hidden text-xs text-text-dim sm:block">
-                                {item.detail}
+                              <span className="shrink-0 text-xs tabular-nums text-text-dim">
+                                {notebook.sourceCount}
                               </span>
-                              <button
-                                type="button"
-                                aria-label={`Remove ${item.name}`}
-                                onClick={async () => {
-                                  await removeSource({ sourceId: item._id });
-                                  toast("Source removed", {
-                                    description: item.name,
-                                  });
-                                }}
-                                className="rounded-full p-1 text-text-dim transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] hover:text-[var(--signal)]"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </li>
-                          ))}
-                          {sources?.length === 0 && (
-                            <li>
-                              <EmptyHint
-                                icon={Upload}
-                                title="Nothing queued yet"
-                                body="Add a file or a link above — it is saved to this notebook and stays after a refresh."
-                              />
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-
-                      {/* The user's real notebooks */}
-                      <div data-reveal className="glass-panel p-5 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <h2 className="font-display text-base font-bold tracking-tight">
-                            Your notebooks
-                          </h2>
-                          <span className="text-[11px] font-medium text-text-dim">
-                            {notebooks?.length ?? 0} total
-                          </span>
-                        </div>
-                        <ul className="mt-4 space-y-2">
-                          {notebooks?.map((notebook) => {
-                            const selected = notebook.id === activeId;
-                            return (
-                              <li key={notebook.id}>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    navigate(
-                                      `/dashboard?notebook=${notebook.id}`,
-                                    )
-                                  }
-                                  className={
-                                    "flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors " +
-                                    (selected
-                                      ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                      : "border-[var(--card-border)] hover:border-[var(--signal)]")
-                                  }
-                                >
-                                  <NotebookPen className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-                                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                    {notebook.name}
-                                  </span>
-                                  <span className="shrink-0 text-xs tabular-nums text-text-dim">
-                                    {notebook.sourceCount}
-                                  </span>
-                                </button>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        <MovingBorderButton
-                          onClick={() => navigate("/dashboard?view=notebooks")}
-                          className="mt-4"
-                          innerClassName="px-4 py-2.5 text-[13px]"
-                        >
-                          <NotebookPen className="h-4 w-4" />
-                          New notebook
-                        </MovingBorderButton>
-                      </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <MovingBorderButton
+                        onClick={() => navigate("/dashboard?view=notebooks")}
+                        className="mt-4"
+                        innerClassName="px-4 py-2.5 text-[13px]"
+                      >
+                        <NotebookPen className="h-4 w-4" />
+                        New notebook
+                      </MovingBorderButton>
                     </div>
                   </>
                 )}

@@ -91,11 +91,22 @@ export const remove = mutation({
       throw new Error("Notebook not found.");
     }
 
+    // Deleting a notebook takes its sources (and their uploaded files) and
+    // everything generated from them with it, so nothing is orphaned.
     const sources = await ctx.db
       .query("sources")
       .withIndex("by_notebook", (q) => q.eq("notebookId", notebookId))
       .collect();
-    for (const source of sources) await ctx.db.delete(source._id);
+    for (const source of sources) {
+      if (source.storageId) await ctx.storage.delete(source.storageId);
+      await ctx.db.delete(source._id);
+    }
+
+    const materials = await ctx.db
+      .query("materials")
+      .withIndex("by_notebook", (q) => q.eq("notebookId", notebookId))
+      .collect();
+    for (const material of materials) await ctx.db.delete(material._id);
 
     await ctx.db.delete(notebookId);
   },

@@ -1,0 +1,643 @@
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import {
+  FlashcardsView,
+  type FlashcardsPayload,
+  MindmapView,
+  type MindmapPayload,
+  QuizView,
+  type QuizPayload,
+  SlidesView,
+  type SlidesPayload,
+  SummaryView,
+  type SummaryPayload,
+} from "@/components/dashboard/MaterialViews";
+import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
+import {
+  AlertCircle,
+  Check,
+  FileText,
+  Link2,
+  Loader2,
+  NotebookPen,
+  RotateCcw,
+  Sparkles,
+  Trash2,
+  Type,
+  Upload,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
+
+/**
+ * The notebook workspace: where the product actually happens.
+ *
+ * Sources go in (uploaded files, fetched links, typed notes), the extracted
+ * text is what the generator reads, and the artefacts it returns are rendered
+ * here. Nothing on this screen is decorative — every count, status and
+ * artefact traces back to a row the user created.
+ */
+
+type Kind = "summary" | "flashcards" | "quiz" | "mindmap" | "slides";
+
+const KIND_META: { kind: Kind; label: string; hint: string }[] = [
+  { kind: "summary", label: "Summary", hint: "Structured revision notes" },
+  { kind: "flashcards", label: "Flashcards", hint: "Active-recall cards" },
+  { kind: "quiz", label: "Quiz", hint: "Multiple choice practice" },
+  { kind: "mindmap", label: "Mind map", hint: "One-page hierarchy" },
+  { kind: "slides", label: "Slides", hint: "A deck to present from" },
+];
+
+const MAX_UPLOAD = 20 * 1024 * 1024;
+
+function relativeTime(timestamp: number) {
+  const seconds = Math.round((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} d ago`;
+}
+
+function SourceIcon({ kind }: { kind: "file" | "link" | "text" }) {
+  if (kind === "file") return <FileText className="h-4 w-4 shrink-0" />;
+  if (kind === "link") return <Link2 className="h-4 w-4 shrink-0" />;
+  return <Type className="h-4 w-4 shrink-0" />;
+}
+
+export function NotebookWorkspace({
+  notebookId,
+  notebookName,
+}: {
+  notebookId: Id<"notebooks">;
+  notebookName: string;
+}) {
+  const sources = useQuery(api.sources.listForNotebook, { notebookId });
+  const materials = useQuery(api.materials.listForNotebook, { notebookId });
+
+  const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
+  const addText = useMutation(api.sources.addText);
+  const removeSource = useMutation(api.sources.remove);
+  const removeMaterial = useMutation(api.materials.remove);
+
+  const ingestFile = useAction(api.ai.ingestFile);
+  const ingestLink = useAction(api.ai.ingestLink);
+  const reExtract = useAction(api.ai.reExtract);
+  const generate = useAction(api.ai.generate);
+
+  const [dragOver, setDragOver] = useState(false);
+  const [uploads, setUploads] = useState<{ name: string; error?: string }[]>([]);
+  const [linkValue, setLinkValue] = useState("");
+  const [busyLink, setBusyLink] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesTitle, setNotesTitle] = useState("");
+  const [notesBody, setNotesBody] = useState("");
+  const [busyNotes, setBusyNotes] = useState(false);
+  const [selected, setSelected] = useState<Kind[]>(
+    KIND_META.map((meta) => meta.kind),
+  );
+  const [running, setRunning] = useState<Kind[]>([]);
+  const [tab, setTab] = useState<Kind>("summary");
+  const [retrying, setRetrying] = useState<string | null>(null);
+
+  const readyCount =
+    sources?.filter((s) => s.status !== "failed" && s.characters > 0).length ??
+    0;
+  const failedCount = sources?.filter((s) => s.status === "failed").length ?? 0;
+
+  /* ----------------------------- ingest ----------------------------- */
+
+  async function uploadFiles(files: FileList | null) {
+    if (!files?.length) return;
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_UPLOAD) {
+        toast.error(`${file.name} is larger than 20 MB.`);
+        continue;
+      }
+      setUploads((u) => [...u, { name: file.name }]);
+      try {
+        const url = await generateUploadUrl();
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "content-type": file.type || "application/octet-stream",
+          },
+          body: file,
+        });
+        if (!response.ok) {
+          throw new Error(`Upload failed (${response.status}).`);
+        }
+        const { storageId } = (await response.json()) as {
+          storageId: Id<"_storage">;
+        };
+        await ingestFile({
+          notebookId,
+          storageId,
+          name: file.name,
+          mime: file.type || undefined,
+          size: file.size,
+        });
+        setUploads((u) => u.filter((item) => item.name !== file.name));
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Could not add that file.";
+        setUploads((u) =>
+          u.map((item) =>
+            item.name === file.name ? { ...item, error: message } : item,
+          ),
+        );
+        toast.error(message);
+      }
+    }
+  }
+
+  async function submitLink() {
+    const url = linkValue.trim();
+    if (!url || busyLink) return;
+    setBusyLink(true);
+    try {
+      await ingestLink({ notebookId, url });
+      setLinkValue("");
+      toast("Link read", { description: "Its text is now part of this notebook." });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not read link");
+    } finally {
+      setBusyLink(false);
+    }
+  }
+
+  async function submitNotes() {
+    if (busyNotes) return;
+    setBusyNotes(true);
+    try {
+      await addText({
+        notebookId,
+        name: notesTitle.trim() || "Pasted notes",
+        text: notesBody,
+      });
+      setNotesBody("");
+      setNotesTitle("");
+      setNotesOpen(false);
+      toast("Notes added");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not save notes",
+      );
+    } finally {
+      setBusyNotes(false);
+    }
+  }
+
+  /* --------------------------- generation --------------------------- */
+
+  function toggleKind(kind: Kind) {
+    setSelected((current) =>
+      current.includes(kind)
+        ? current.filter((k) => k !== kind)
+        : [...current, kind],
+    );
+  }
+
+  async function runGeneration(kinds: Kind[]) {
+    if (kinds.length === 0) {
+      toast.error("Pick at least one thing to generate.");
+      return;
+    }
+    setRunning(kinds);
+    setTab(kinds[0]);
+    try {
+      const results = await generate({ notebookId, kinds });
+      const failed = results.filter((r) => !r.ok);
+      const ok = results.length - failed.length;
+      if (ok > 0) {
+        toast("Study material ready", {
+          description: `Generated ${ok} of ${results.length} item${results.length === 1 ? "" : "s"} from your sources.`,
+        });
+      }
+      for (const failure of failed) {
+        toast.error(`${failure.kind}: ${failure.error ?? "not generated"}`);
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Generation failed.",
+      );
+    } finally {
+      setRunning([]);
+    }
+  }
+
+  /* ----------------------------- render ----------------------------- */
+
+  const byKind = new Map<Kind, NonNullable<typeof materials>[number]>();
+  for (const material of materials ?? []) {
+    if (!byKind.has(material.kind as Kind)) {
+      byKind.set(material.kind as Kind, material);
+    }
+  }
+  const availableTabs = KIND_META.filter((meta) => byKind.has(meta.kind));
+  const active =
+    byKind.get(tab) ??
+    (availableTabs[0] ? byKind.get(availableTabs[0].kind) : undefined);
+  const activeKind = (active?.kind ?? tab) as Kind;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        {/* ------------------------- sources ------------------------- */}
+        <div className="glass-panel flex flex-col gap-4 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-base font-bold tracking-tight">
+              Sources
+            </h2>
+            <span className="text-[11px] font-medium text-text-dim">
+              {readyCount} readable
+              {failedCount > 0 ? ` · ${failedCount} needs text` : ""}
+            </span>
+          </div>
+
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              void uploadFiles(e.dataTransfer.files);
+            }}
+            className={
+              "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-7 text-center transition-colors " +
+              (dragOver
+                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                : "border-[var(--card-border)] hover:border-[var(--signal)]")
+            }
+          >
+            <Upload className="h-5 w-5 text-[var(--signal)]" />
+            <span className="text-sm font-medium">
+              Drop a file or click to browse
+            </span>
+            <span className="text-xs text-text-dim">
+              PDF, text, Markdown, CSV — up to 20 MB
+            </span>
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void uploadFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
+              <input
+                value={linkValue}
+                onChange={(e) => setLinkValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void submitLink()}
+                placeholder="Paste a link to read…"
+                className="w-full rounded-full border border-[var(--card-border)] bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+              />
+            </div>
+            <MovingBorderButton
+              onClick={() => void submitLink()}
+              disabled={busyLink || !linkValue.trim()}
+              className="shrink-0"
+              innerClassName="px-4 py-2.5 text-[13px]"
+            >
+              {busyLink ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Read"
+              )}
+            </MovingBorderButton>
+          </div>
+
+          {notesOpen ? (
+            <div className="flex flex-col gap-2 rounded-2xl border border-[var(--card-border)] p-3.5">
+              <input
+                value={notesTitle}
+                onChange={(e) => setNotesTitle(e.target.value)}
+                placeholder="Title (optional)"
+                className="w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+              />
+              <textarea
+                value={notesBody}
+                onChange={(e) => setNotesBody(e.target.value)}
+                rows={5}
+                placeholder="Paste or type your notes here…"
+                className="w-full resize-y rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm leading-relaxed outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+              />
+              <div className="flex items-center gap-2">
+                <MovingBorderButton
+                  onClick={() => void submitNotes()}
+                  disabled={busyNotes || notesBody.trim().length < 20}
+                  innerClassName="px-4 py-2 text-[13px]"
+                >
+                  Save notes
+                </MovingBorderButton>
+                <button
+                  type="button"
+                  onClick={() => setNotesOpen(false)}
+                  className="text-xs text-text-dim hover:text-foreground"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotesOpen(true)}
+              className="w-fit text-xs font-medium text-text-dim transition-colors hover:text-foreground"
+            >
+              + Paste notes instead
+            </button>
+          )}
+
+          <ul className="space-y-2">
+            {uploads.map((upload) => (
+              <li
+                key={upload.name}
+                className="flex items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
+              >
+                {upload.error ? (
+                  <AlertCircle className="h-4 w-4 shrink-0 text-[var(--signal)]" />
+                ) : (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--signal)]" />
+                )}
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {upload.name}
+                </span>
+                <span className="text-xs text-text-dim">
+                  {upload.error ?? "Uploading…"}
+                </span>
+              </li>
+            ))}
+
+            {sources?.map((source) => (
+              <li
+                key={source._id}
+                className="rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={
+                      source.status === "failed"
+                        ? "text-[var(--signal)]"
+                        : "text-text-dim"
+                    }
+                  >
+                    <SourceIcon kind={source.kind} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {source.name}
+                  </span>
+                  <span className="hidden shrink-0 text-xs text-text-dim sm:block">
+                    {source.status === "failed"
+                      ? source.detail
+                      : source.characters > 0
+                        ? `${source.characters.toLocaleString()} chars`
+                        : source.detail}
+                  </span>
+                  {source.status !== "failed" && (
+                    <Check className="h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${source.name}`}
+                    onClick={async () => {
+                      await removeSource({ sourceId: source._id });
+                      toast("Source removed", { description: source.name });
+                    }}
+                    className="shrink-0 rounded-full p-1 text-text-dim transition-colors hover:text-[var(--signal)]"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {source.status === "failed" && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 pl-7">
+                    <p className="text-xs leading-relaxed text-text-dim">
+                      {source.error ?? "No readable text."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setRetrying(source._id);
+                        try {
+                          const result = await reExtract({
+                            sourceId: source._id,
+                          });
+                          if (result.ok) toast("Text extracted");
+                          else toast.error(result.error ?? "Still unreadable");
+                        } finally {
+                          setRetrying(null);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground"
+                    >
+                      {retrying === source._id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-3 w-3" />
+                      )}
+                      Try again
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+
+            {sources?.length === 0 && uploads.length === 0 && (
+              <li className="rounded-2xl border border-dashed border-[var(--card-border)] px-4 py-6 text-center">
+                <p className="text-sm font-medium">Nothing in this notebook</p>
+                <p className="mt-1 text-xs leading-relaxed text-text-dim">
+                  Add a file, a link or pasted notes. Manthan reads the text and
+                  cites it back in everything it generates.
+                </p>
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {/* ------------------------ generation ------------------------ */}
+        <div className="glass-panel flex flex-col gap-4 p-5 sm:p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-base font-bold tracking-tight">
+              Churn
+            </h2>
+            <Sparkles className="h-4 w-4 text-[var(--signal)]" />
+          </div>
+
+          <p className="text-xs leading-relaxed text-text-dim">
+            {readyCount === 0
+              ? "Add a source first — generation reads only the text you have given it."
+              : `Generate from the ${readyCount} readable source${readyCount === 1 ? "" : "s"} in this notebook.`}
+          </p>
+
+          <div className="flex flex-col gap-2">
+            {KIND_META.map((meta) => {
+              const on = selected.includes(meta.kind);
+              const isRunning = running.includes(meta.kind);
+              const hasMaterial = byKind.has(meta.kind);
+              return (
+                <button
+                  key={meta.kind}
+                  type="button"
+                  onClick={() => toggleKind(meta.kind)}
+                  aria-pressed={on}
+                  className={
+                    "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors " +
+                    (on
+                      ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                      : "border-[var(--card-border)]")
+                  }
+                >
+                  <span
+                    className={
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border " +
+                      (on
+                        ? "border-[var(--signal)] text-[var(--signal)]"
+                        : "border-[var(--card-border)]")
+                    }
+                  >
+                    {isRunning ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : on ? (
+                      <Check className="h-3 w-3" />
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">
+                      {meta.label}
+                    </span>
+                    <span className="block text-[11px] text-text-dim">
+                      {hasMaterial ? "Ready — regenerate any time" : meta.hint}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <MovingBorderButton
+            onClick={() => void runGeneration(selected)}
+            disabled={running.length > 0 || readyCount === 0 || selected.length === 0}
+            className="w-full"
+            innerClassName="w-full px-5 py-3 text-sm"
+          >
+            {running.length > 0 ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Churning {running.length} item
+                {running.length === 1 ? "" : "s"}…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Generate study material
+              </>
+            )}
+          </MovingBorderButton>
+        </div>
+      </div>
+
+      {/* ------------------------- materials ------------------------- */}
+      <div className="glass-panel p-5 sm:p-6">
+        {availableTabs.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <NotebookPen className="h-5 w-5 text-[var(--signal)]" />
+            <p className="text-sm font-medium">No study material yet</p>
+            <p className="max-w-sm text-xs leading-relaxed text-text-dim">
+              Whatever you generate lands here — a summary, flashcards, a quiz, a
+              mind map and a slide deck, all built from this notebook&apos;s
+              sources.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {availableTabs.map((meta) => (
+                <button
+                  key={meta.kind}
+                  type="button"
+                  onClick={() => setTab(meta.kind)}
+                  className={
+                    "rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
+                    (activeKind === meta.kind
+                      ? "border-[var(--signal)] text-foreground"
+                      : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                  }
+                >
+                  {meta.label}
+                </button>
+              ))}
+            </div>
+
+            {active && (
+              <>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--card-border)] pb-3">
+                  <p className="text-[11px] text-text-dim">
+                    {active.title} · from {active.sourceIds.length} source
+                    {active.sourceIds.length === 1 ? "" : "s"} ·{" "}
+                    {relativeTime(active.createdAt)} · {active.model}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void runGeneration([activeKind])}
+                      disabled={running.length > 0}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Regenerate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await removeMaterial({ materialId: active._id });
+                        toast("Deleted");
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-[var(--signal)]"
+                    >
+                      <X className="h-3 w-3" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  {activeKind === "summary" && (
+                    <SummaryView payload={active.payload as SummaryPayload} />
+                  )}
+                  {activeKind === "flashcards" && (
+                    <FlashcardsView
+                      payload={active.payload as FlashcardsPayload}
+                    />
+                  )}
+                  {activeKind === "quiz" && (
+                    <QuizView payload={active.payload as QuizPayload} />
+                  )}
+                  {activeKind === "mindmap" && (
+                    <MindmapView payload={active.payload as MindmapPayload} />
+                  )}
+                  {activeKind === "slides" && (
+                    <SlidesView payload={active.payload as SlidesPayload} />
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default NotebookWorkspace;

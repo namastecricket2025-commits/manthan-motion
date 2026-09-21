@@ -41,19 +41,49 @@ const schema = defineSchema(
       createdAt: v.number(),
     }).index("by_owner", ["ownerId"]),
 
-    // A source is something the user actually added: a file they picked or a
-    // link they pasted. Nothing here is ever seeded — an empty table means a
-    // new user sees an empty dashboard.
+    // A source is something the user actually added: a file they uploaded, a
+    // link they pasted, or notes they typed. Nothing here is ever seeded — an
+    // empty table means a new user sees an empty dashboard.
+    //
+    // `text` is the extracted plain text the generator reads; `status` records
+    // whether extraction worked, so the UI can be honest about a file it could
+    // not read instead of silently pretending it was understood.
     sources: defineTable({
       ownerId: v.id("users"),
       notebookId: v.id("notebooks"),
-      kind: v.union(v.literal("file"), v.literal("link")),
+      kind: v.union(v.literal("file"), v.literal("link"), v.literal("text")),
       name: v.string(),
       detail: v.optional(v.string()),
+      storageId: v.optional(v.id("_storage")),
+      text: v.optional(v.string()),
+      status: v.union(v.literal("ready"), v.literal("failed")),
+      error: v.optional(v.string()),
       createdAt: v.number(),
     })
       .index("by_owner", ["ownerId"])
       .index("by_notebook", ["notebookId"]),
+
+    // Generated study material: the output of churning a notebook's sources.
+    // `payload` is the validated JSON for one kind, and `sourceIds` records
+    // exactly which sources it was built from so a citation can point back.
+    materials: defineTable({
+      ownerId: v.id("users"),
+      notebookId: v.id("notebooks"),
+      kind: v.union(
+        v.literal("summary"),
+        v.literal("flashcards"),
+        v.literal("quiz"),
+        v.literal("mindmap"),
+        v.literal("slides"),
+      ),
+      title: v.string(),
+      payload: v.any(),
+      sourceIds: v.array(v.id("sources")),
+      model: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_notebook", ["notebookId"])
+      .index("by_owner", ["ownerId"]),
   },
   {
     schemaValidation: false,
