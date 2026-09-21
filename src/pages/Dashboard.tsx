@@ -354,6 +354,7 @@ export default function Dashboard() {
                     <MovingBorderButton
                       type="submit"
                       disabled={busy || !draftName.trim()}
+                      loading={busy}
                       className="w-full sm:w-fit"
                       innerClassName="px-6 py-3 text-sm"
                     >
@@ -533,6 +534,7 @@ export default function Dashboard() {
                       <MovingBorderButton
                         type="submit"
                         disabled={busy || !draftName.trim()}
+                        loading={busy}
                         className="w-full sm:w-fit"
                         innerClassName="px-6 py-3 text-sm"
                       >

@@ -308,6 +308,7 @@ export function NotebookWorkspace({
             <MovingBorderButton
               onClick={() => void submitLink()}
               disabled={busyLink || !linkValue.trim()}
+              loading={busyLink}
               className="shrink-0"
               innerClassName="px-4 py-2.5 text-[13px]"
             >
@@ -338,6 +339,7 @@ export function NotebookWorkspace({
                 <MovingBorderButton
                   onClick={() => void submitNotes()}
                   disabled={busyNotes || notesBody.trim().length < 20}
+                  loading={busyNotes}
                   innerClassName="px-4 py-2 text-[13px]"
                 >
                   Save notes
@@ -527,6 +529,7 @@ export function NotebookWorkspace({
           <MovingBorderButton
             onClick={() => void runGeneration(selected)}
             disabled={running.length > 0 || readyCount === 0 || selected.length === 0}
+            loading={running.length > 0}
             className="w-full"
             innerClassName="w-full px-5 py-3 text-sm"
           >
@@ -591,7 +594,10 @@ export function NotebookWorkspace({
                       type="button"
                       onClick={() => void runGeneration([activeKind])}
                       disabled={running.length > 0}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
+                      className={
+                        "inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50 " +
+                        (running.length > 0 ? "cd-pill is-busy" : "cd-pill")
+                      }
                     >
                       <RotateCcw className="h-3 w-3" />
                       Regenerate

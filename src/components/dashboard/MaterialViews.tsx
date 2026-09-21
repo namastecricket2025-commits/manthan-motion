@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 
 /**
  * Renderers for the five artefacts the generator produces. Each takes the
@@ -189,7 +190,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
         <button
           type="button"
           onClick={() => go(-1)}
-          className="glass-chip inline-flex h-10 w-10 items-center justify-center"
+          className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center"
           aria-label="Previous card"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -200,7 +201,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
         <button
           type="button"
           onClick={() => go(1)}
-          className="glass-chip inline-flex h-10 w-10 items-center justify-center"
+          className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center"
           aria-label="Next card"
         >
           <ArrowRight className="h-4 w-4" />
@@ -324,8 +325,7 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
               {question.explanation}
             </p>
           )}
-          <button
-            type="button"
+          <MovingBorderButton
             onClick={() => {
               if (index + 1 >= total) setDone(true);
               else {
@@ -333,13 +333,12 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
                 setPicked(null);
               }
             }}
-            className="moving-border mt-3 block w-fit"
+            className="mt-3"
+            innerClassName="px-4 py-2 text-[13px] font-semibold"
           >
-            <span className="moving-border__inner inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold">
-              {index + 1 >= total ? "See result" : "Next question"}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </span>
-          </button>
+            {index + 1 >= total ? "See result" : "Next question"}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </MovingBorderButton>
         </div>
       )}
     </div>
@@ -751,7 +750,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
             type="button"
             onClick={() => setIndex((i) => Math.max(0, i - 1))}
             disabled={index === 0}
-            className="glass-chip inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
+            className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
             aria-label="Previous slide"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -763,7 +762,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
             type="button"
             onClick={() => setIndex((i) => Math.min(total - 1, i + 1))}
             disabled={index === total - 1}
-            className="glass-chip inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
+            className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
             aria-label="Next slide"
           >
             <ArrowRight className="h-4 w-4" />

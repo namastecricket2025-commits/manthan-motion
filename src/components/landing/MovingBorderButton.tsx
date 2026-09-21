@@ -5,10 +5,12 @@ import { Link } from "react-router";
 /**
  * The Manthan action button.
  *
- * A conic-gradient ring sits behind a frosted inner pane, so the crimson sweep
- * rotates *through* the button like the sheen on a spinning CD — one slow 8s
- * turn at rest, spinning up to ~1.1s the moment the pointer lands on it (and
- * on :active for touch, where there is no hover).
+ * A conic-gradient ring sits behind a crimson inner face, and one spin clock
+ * drives BOTH the rim and the sheen that sweeps across the fill — the button
+ * reads as a single spinning CD. One slow 8s turn at rest, spinning up to
+ * ~1.1s the moment the pointer lands on it (and on :active for touch, where
+ * there is no hover), and ~0.9s while `loading` is set so an in-flight action
+ * visibly races instead of freezing.
  *
  * Renders a router link, an anchor, or a real <button> depending on which
  * props it is given, so the dashboard's actions get the same motion as the
@@ -25,6 +27,7 @@ export function MovingBorderButton({
   rel,
   type = "button",
   disabled,
+  loading = false,
   ariaLabel,
 }: {
   to?: string;
@@ -37,6 +40,8 @@ export function MovingBorderButton({
   rel?: string;
   type?: "button" | "submit";
   disabled?: boolean;
+  /** In-flight marker: the disc spins fast and the button stops looking dead. */
+  loading?: boolean;
   ariaLabel?: string;
 }) {
   const inner = cn(
@@ -45,7 +50,7 @@ export function MovingBorderButton({
   );
 
   const common = {
-    className: cn("moving-border block w-fit", className),
+    className: cn("moving-border block w-fit", loading && "is-busy", className),
     onClick,
     "aria-label": ariaLabel,
   };
@@ -53,14 +58,18 @@ export function MovingBorderButton({
   if (to) {
     return (
       <Link to={to} {...common} target={target} rel={rel}>
-        <span className={inner}>{children}</span>
+        <span className={inner}>
+          <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
+        </span>
       </Link>
     );
   }
   if (href) {
     return (
       <a href={href} {...common} target={target} rel={rel}>
-        <span className={inner}>{children}</span>
+        <span className={inner}>
+          <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
+        </span>
       </a>
     );
   }
@@ -74,7 +83,9 @@ export function MovingBorderButton({
         className,
       )}
     >
-      <span className={inner}>{children}</span>
+      <span className={inner}>
+        <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
+      </span>
     </button>
   );
 }

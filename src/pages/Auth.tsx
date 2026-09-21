@@ -246,23 +246,30 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </p>
                 </CardContent>
                 <CardFooter className="flex-col gap-2">
-                  <Button
+                  <button
                     type="submit"
-                    className="w-full"
                     disabled={isLoading || otp.length !== 6}
+                    className={
+                      "moving-border block w-full rounded-full " +
+                      (isLoading ? "is-busy" : "")
+                    }
                   >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      <>
-                        Verify code
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
+                    <span className="moving-border__inner flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold">
+                      <span className="relative z-10 flex items-center gap-2">
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          <>
+                            Verify code
+                            <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </span>
+                    </span>
+                  </button>
                   <Button
                     type="button"
                     variant="ghost"
