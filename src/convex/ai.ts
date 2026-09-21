@@ -81,10 +81,68 @@ function tidy(text: string) {
 /* Model providers                                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Ordered candidates — the first that answers is the one used.
+ *
+ * Google retires models for new accounts without removing them from
+ * `/v1beta/models` (a listing entry is not proof a model will run), and the
+ * flagship tier answers 503 while it is busy, so a single hard-coded model is
+ * not a working configuration. `AI_MODEL` pins exactly one and switches the
+ * fallback off.
+ */
+const GEMINI_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite",
+];
+
+/** Overloaded / rate limited: worth one retry, then move to the next model. */
+const TRANSIENT =
+  /high demand|overloaded|try again|rate limit|resource.?exhausted/i;
+
+/** Account-level failures: every other candidate fails identically. */
+const FATAL =
+  /api key not valid|api_key_invalid|permission denied|permission_denied|billing|not enabled|has been disabled/i;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * The model that answered last time, tried first next time.
+ *
+ * `generate` runs one request per artefact, so without this memo every extra
+ * summary/flashcard/quiz set would re-discover that the flagship tier is busy
+ * from scratch — several seconds and two wasted requests each. Only successes
+ * are remembered, and the full chain still runs if the memo stops working.
+ */
+let lastGoodModel: string | undefined;
+
+const BUSY_COOLDOWN_MS = 90_000;
+
+/**
+ * Models that came back overloaded get pushed to the back of the order for the
+ * next call, so one busy tier does not cost every artefact two requests.
+ *
+ * This is only a hint: a cooled-down model is still tried when nothing else
+ * answers, and the map lives in the process, so it self-heals.
+ */
+const busyUntil = new Map<string, number>();
+
+function orderCandidates(models: string[], prefer?: string) {
+  const now = Date.now();
+  const fresh = models.filter((model) => (busyUntil.get(model) ?? 0) <= now);
+  const cooling = models.filter((model) => (busyUntil.get(model) ?? 0) > now);
+
+  if (prefer && fresh.includes(prefer)) {
+    return [prefer, ...fresh.filter((model) => model !== prefer), ...cooling];
+  }
+  return [...fresh, ...cooling];
+}
+
 type ProviderConfig = {
   provider: "gemini" | "openai";
   apiKey: string;
-  model: string;
+  models: string[];
 };
 
 function resolveProvider(): ProviderConfig {
@@ -100,14 +158,15 @@ function resolveProvider(): ProviderConfig {
     return {
       provider: "openai",
       apiKey: openaiKey,
-      model: process.env.AI_MODEL ?? "gpt-4o-mini",
+      models: [process.env.AI_MODEL?.trim() || "gpt-4o-mini"],
     };
   }
   if (geminiKey) {
+    const pinned = process.env.AI_MODEL?.trim();
     return {
       provider: "gemini",
       apiKey: geminiKey,
-      model: process.env.AI_MODEL ?? "gemini-2.5-flash",
+      models: pinned ? [pinned] : GEMINI_MODELS,
     };
   }
   throw new Error(NO_KEY_MESSAGE);
@@ -135,19 +194,23 @@ function parseJsonLoose(raw: string): unknown {
   }
 }
 
-async function callModel(
-  config: ProviderConfig,
+/** One request. Returns the failure as a value so the fallback can read it. */
+async function geminiAttempt(
+  apiKey: string,
+  model: string,
   system: string,
   prompt: string,
-): Promise<string> {
-  if (config.provider === "gemini") {
+): Promise<
+  { ok: true; text: string } | { ok: false; status: number; message: string }
+> {
+  try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-goog-api-key": config.apiKey,
+          "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
@@ -164,18 +227,96 @@ async function callModel(
       candidates?: { content?: { parts?: { text?: string }[] } }[];
     };
     if (!response.ok) {
-      throw new Error(
-        payload?.error?.message ??
+      return {
+        ok: false,
+        status: response.status,
+        message:
+          payload?.error?.message ??
           `The model request failed (${response.status}).`,
-      );
+      };
     }
-    return (
-      payload?.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text ?? "")
-        .join("") ?? ""
-    );
+    return {
+      ok: true,
+      text:
+        payload?.candidates?.[0]?.content?.parts
+          ?.map((part) => part.text ?? "")
+          .join("") ?? "",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      message: error instanceof Error ? error.message : "network error",
+    };
+  }
+}
+
+/**
+ * Walk the candidate list until a model returns text.
+ *
+ * Two distinct failures are handled differently on purpose: a *retired* model
+ * (404, "no longer available to new users") is skipped silently because the next
+ * candidate is fine, while a *rejected key* aborts immediately because every
+ * remaining candidate would fail the same way.
+ */
+async function callGemini(
+  config: ProviderConfig,
+  system: string,
+  prompt: string,
+  prefer?: string,
+): Promise<{ text: string; model: string }> {
+  const failures: string[] = [];
+  const candidates = orderCandidates(config.models, prefer);
+
+  for (const model of candidates) {
+    let overloaded = false;
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const result = await geminiAttempt(config.apiKey, model, system, prompt);
+
+      if (result.ok) {
+        if (result.text.trim()) {
+          lastGoodModel = model;
+          busyUntil.delete(model);
+          return { text: result.text, model };
+        }
+        failures.push(`${model}: the model replied with nothing`);
+        break;
+      }
+
+      failures.push(`${model}: ${result.message}`);
+
+      if (
+        result.status === 401 ||
+        result.status === 403 ||
+        FATAL.test(result.message)
+      ) {
+        throw new Error(result.message);
+      }
+
+      // Overload is worth one more go; a retired model is not.
+      if (!TRANSIENT.test(result.message) && result.status < 500) break;
+      overloaded = true;
+      if (attempt === 0) await sleep(600);
+    }
+
+    if (overloaded) busyUntil.set(model, Date.now() + BUSY_COOLDOWN_MS);
   }
 
+  throw new Error(
+    `No Gemini model answered. ${failures.slice(-3).join(" · ")}`,
+  );
+}
+
+async function callModel(
+  config: ProviderConfig,
+  system: string,
+  prompt: string,
+  prefer?: string,
+): Promise<{ text: string; model: string }> {
+  if (config.provider === "gemini") {
+    return await callGemini(config, system, prompt, prefer ?? lastGoodModel);
+  }
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -183,7 +324,7 @@ async function callModel(
       authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify({
-      model: config.model,
+      model: config.models[0],
       temperature: 0.3,
       response_format: { type: "json_object" },
       messages: [
@@ -201,7 +342,10 @@ async function callModel(
       payload?.error?.message ?? `The model request failed (${response.status}).`,
     );
   }
-  return payload?.choices?.[0]?.message?.content ?? "";
+  return {
+    text: payload?.choices?.[0]?.message?.content ?? "",
+    model: config.models[0],
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -577,12 +721,12 @@ export const generate = action({
     }
     const corpus = parts.join("\n\n");
 
+    const config = resolveProvider();
     const results: { kind: Kind; ok: boolean; error?: string }[] = [];
 
     for (const kind of kinds) {
       try {
-        const config = resolveProvider();
-        const raw = await callModel(
+        const { text: raw, model } = await callModel(
           config,
           SYSTEM,
           buildPrompt(kind, context.notebookName, corpus),
@@ -621,7 +765,7 @@ export const generate = action({
           title: fallbackTitle(kind, parsed, context.notebookName),
           payload: parsed,
           sourceIds: usable.map((source) => source.id),
-          model: `${config.provider}:${config.model}`,
+          model: `${config.provider}:${model}`,
         });
 
         results.push({ kind, ok: true });
