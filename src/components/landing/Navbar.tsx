@@ -1,16 +1,13 @@
 import { useAuth } from "@/hooks/use-auth";
 import {
   Atom,
-  Home,
   LayoutDashboard,
   LogIn,
   Settings,
-  Sparkles,
   Tag,
   User,
-  WandSparkles,
-  Zap,
 } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Logo } from "./Logo";
 import { FloatingDock, type DockItem } from "./FloatingDock";
 import { MobileMenu } from "./MobileMenu";
@@ -27,31 +24,12 @@ const AUTH_URL = "/auth?returnTo=%2Fdashboard";
  * tooltips on hover; on mobile (<md) it is a compact +/× trigger that fans
  * the same links out downward.
  *
- * Hash targets scroll to landing sections; route targets use the SPA router.
+ * Routes only. Homepage section anchors (Features / How it works / Impact)
+ * are deliberately absent — a visitor can scroll the page themselves, and a
+ * nav button that merely scrolls is noise. The logo at the left returns home.
  * The workspace path is Dashboard -> STEM Lab -> Settings -> About Us.
  */
 const DOCK_LINKS: DockItem[] = [
-  {
-    title: "Home",
-    icon: <Home className="h-full w-full" strokeWidth={1.7} />,
-    href: "#top",
-  },
-  {
-    title: "Features",
-    icon: <Sparkles className="h-full w-full" strokeWidth={1.7} />,
-    href: "#features",
-  },
-  {
-    title: "How it works",
-    icon: <WandSparkles className="h-full w-full" strokeWidth={1.7} />,
-    href: "#how",
-  },
-  {
-    title: "Impact",
-    icon: <Zap className="h-full w-full" strokeWidth={1.7} />,
-    href: "#stats",
-  },
-  // The workspace path runs Dashboard -> STEM Lab -> Settings -> About Us.
   {
     title: "STEM Lab",
     icon: <Atom className="h-full w-full" strokeWidth={1.7} />,
@@ -91,6 +69,8 @@ export const DOCK_ZOOM = {
 
 export default function Navbar() {
   const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const cta = isAuthenticated ? (
     <MovingBorderButton to="/dashboard" innerClassName="px-5 py-2.5 text-[13px]">
@@ -117,13 +97,23 @@ export default function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
       <nav className="glass-chip mx-auto flex max-w-6xl items-center justify-between gap-3 py-2 pl-4 pr-2 sm:pl-5">
-        <a
-          href="#top"
+        {/* With the section buttons gone from the dock, the logo is the way
+            home: navigate there from any other page, scroll to the top when
+            already on the landing page. */}
+        <Link
+          to="/"
           aria-label="Manthan home"
+          onClick={() => {
+            if (pathname === "/") {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            } else {
+              navigate("/");
+            }
+          }}
           className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
         >
           <Logo markClassName="h-7 w-7" />
-        </a>
+        </Link>
 
         <div className="flex items-center gap-2">
           {/* Desktop (md+): the magnifying glass dock. Mobile: a readable

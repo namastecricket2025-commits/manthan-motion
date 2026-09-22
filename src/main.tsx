@@ -3,8 +3,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import React, { StrictMode, useEffect, useRef, useState, lazy, Suspense } from "react";
+import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
+import React, { StrictMode, useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
@@ -98,47 +99,35 @@ class RootErrorBoundary extends React.Component<
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 /**
- * Bridges Supabase Auth into Convex.
+ * Supabase's session, in the shape `ConvexProviderWithAuth` consumes.
  *
- * Convex verifies the Supabase access token itself (see convex/auth.config.ts),
- * so all this has to do is hand the current token over whenever the session
- * appears, is refreshed, or ends. The token callback re-reads the session, so
- * the next connection always uses the freshest token.
+ * `fetchAccessToken` reads a ref rather than state so handing Convex a token
+ * never depends on a re-render, and honours `forceRefreshToken` so Convex can
+ * demand a fresh token when the one it holds is rejected. Convex verifies the
+ * Supabase token itself (see convex/auth.config.ts) — this side only supplies
+ * it, and `ConvexProviderWithAuth` owns the connect/refresh/clear lifecycle.
  */
-function SupabaseConvexProvider({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const signedIn = useRef<boolean | null>(null);
+function useSupabaseAuthForConvex() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const sessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
     let active = true;
 
-    const fetchToken = async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session?.access_token ?? null;
-    };
-
-    const apply = (isSignedIn: boolean, force = false) => {
-      if (!force && signedIn.current === isSignedIn) return;
-      signedIn.current = isSignedIn;
-      if (isSignedIn) convex.setAuth(fetchToken);
-      else convex.clearAuth();
-    };
-
     void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
-      apply(Boolean(data.session));
-      setReady(true);
+      sessionRef.current = data.session ?? null;
+      setSession(data.session ?? null);
+      setIsLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, next) => {
         if (!active) return;
-        // A refreshed token (or one just picked up from the OAuth redirect)
-        // has to be handed over again; only sign-in/sign-out changes our state.
-        const force =
-          event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION";
-        apply(Boolean(session), force);
-        setReady(true);
+        sessionRef.current = next;
+        setSession(next);
+        setIsLoading(false);
       },
     );
 
@@ -148,11 +137,38 @@ function SupabaseConvexProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Wait for the session to be applied once, so the first queries never fire
-  // unauthenticated (which would flash an empty dashboard).
-  if (!ready) return <RouteLoading />;
+  const fetchAccessToken = useCallback(
+    async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
+      if (forceRefreshToken) {
+        const { data } = await supabase.auth.refreshSession();
+        if (data.session) sessionRef.current = data.session;
+      }
+      return sessionRef.current?.access_token ?? null;
+    },
+    [],
+  );
 
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return {
+    isLoading,
+    isAuthenticated: Boolean(session),
+    fetchAccessToken,
+  };
+}
+
+/**
+ * Bridges Supabase Auth into Convex.
+ *
+ * `ConvexProviderWithAuth` (not a bare `ConvexProvider`) is required: it is
+ * what publishes the Convex auth context that `useConvexAuth()` — and so
+ * `RequireAuth` — reads. Without it the dashboard crashes on mount with
+ * "Could not find ConvexProviderWithAuth as an ancestor component".
+ */
+function ConvexBridge({ children }: { children: React.ReactNode }) {
+  return (
+    <ConvexProviderWithAuth client={convex} useAuth={useSupabaseAuthForConvex}>
+      {children}
+    </ConvexProviderWithAuth>
+  );
 }
 
 
@@ -193,7 +209,7 @@ createRoot(document.getElementById("root")!).render(
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>
-      <SupabaseConvexProvider>
+      <ConvexBridge>
         <SettingsProvider>
         <BrowserRouter>
           <RouteSyncer />
@@ -239,7 +255,7 @@ createRoot(document.getElementById("root")!).render(
         </BrowserRouter>
         </SettingsProvider>
         <Toaster />
-      </SupabaseConvexProvider>
+      </ConvexBridge>
     </RootErrorBoundary>
   </StrictMode>,
 );
