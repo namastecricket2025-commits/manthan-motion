@@ -3,6 +3,7 @@
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action } from "./_generated/server";
+import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
 import { msUntilReset } from "./usage";
 import { v } from "convex/values";
 import { extractText, getDocumentProxy } from "unpdf";
@@ -42,10 +43,6 @@ const kindValidator = v.union(
 
 type Kind = "summary" | "flashcards" | "quiz" | "mindmap" | "slides";
 
-const NO_KEY_MESSAGE =
-  "No AI key is configured yet. Add GEMINI_API_KEY (free key from aistudio.google.com/apikey) " +
-  "or OPENAI_API_KEY in the project's Keys tab, then generate again.";
-
 /* ------------------------------------------------------------------ */
 /* Text extraction                                                     */
 /* ------------------------------------------------------------------ */
@@ -82,34 +79,8 @@ function tidy(text: string) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Model providers                                                     */
+/* Manthan's own daily allowance                                       */
 /* ------------------------------------------------------------------ */
-
-/**
- * Ordered candidates — the first that answers is the one used.
- *
- * Google retires models for new accounts without removing them from
- * `/v1beta/models` (a listing entry is not proof a model will run), and the
- * flagship tier answers 503 while it is busy, so a single hard-coded model is
- * not a working configuration. `AI_MODEL` pins exactly one and switches the
- * fallback off.
- */
-const GEMINI_MODELS = [
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
-  "gemini-3-flash-preview",
-  "gemini-3.1-flash-lite",
-];
-
-/** Overloaded / rate limited: worth one retry, then move to the next model. */
-const TRANSIENT =
-  /high demand|overloaded|try again|rate limit|resource.?exhausted/i;
-
-/**
- * Account-level failures: every other candidate fails identically.
- */
-const FATAL =
-  /api key not valid|api_key_invalid|permission denied|permission_denied|billing|not enabled|has been disabled/i;
 
 /**
  * The free tier ran out for today — an expected, recoverable state, not a
@@ -123,96 +94,6 @@ export class QuotaError extends Error {
     this.name = "QuotaError";
     this.resetsAt = resetsAt;
   }
-}
-
-/** The provider itself refused on quota grounds (429 / RESOURCE_EXHAUSTED). */
-function isProviderQuotaError(status: number, message: string) {
-  return (
-    status === 429 ||
-    /resource.?exhausted|quota|rate.?limit/i.test(message)
-  );
-}
-
-/**
- * Provider DAILY quota: the free tier also has a requests-per-day metric.
- * Only this flavour means the day is genuinely over.
- */
-const PROVIDER_DAY = /per\s?day|perday|generate\w*perday/i;
-
-/**
- * Provider PER-MINUTE quota ("free_tier_requests, limit: 20 … retry in 56s"):
- * a temporary cooldown, NOT a spent day. The first build lumped this in with
- * daily quota and told users their allowance was gone while the meter sat at
- * zero — that is exactly the misclassification this separates.
- */
-const PROVIDER_PER_MINUTE =
-  /retry in \d|per\s?minute|requests?\s?per\s?minute|freer\_tier\_requests|free_tier_requests/i;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * The model that answered last time, tried first next time.
- *
- * `generate` runs one request per artefact, so without this memo every extra
- * summary/flashcard/quiz set would re-discover that the flagship tier is busy
- * from scratch — several seconds and two wasted requests each. Only successes
- * are remembered, and the full chain still runs if the memo stops working.
- */
-let lastGoodModel: string | undefined;
-
-const BUSY_COOLDOWN_MS = 90_000;
-
-/**
- * Models that came back overloaded get pushed to the back of the order for the
- * next call, so one busy tier does not cost every artefact two requests.
- *
- * This is only a hint: a cooled-down model is still tried when nothing else
- * answers, and the map lives in the process, so it self-heals.
- */
-const busyUntil = new Map<string, number>();
-
-function orderCandidates(models: string[], prefer?: string) {
-  const now = Date.now();
-  const fresh = models.filter((model) => (busyUntil.get(model) ?? 0) <= now);
-  const cooling = models.filter((model) => (busyUntil.get(model) ?? 0) > now);
-
-  if (prefer && fresh.includes(prefer)) {
-    return [prefer, ...fresh.filter((model) => model !== prefer), ...cooling];
-  }
-  return [...fresh, ...cooling];
-}
-
-type ProviderConfig = {
-  provider: "gemini" | "openai";
-  apiKey: string;
-  models: string[];
-};
-
-function resolveProvider(): ProviderConfig {
-  const explicit = (process.env.AI_PROVIDER ?? "").toLowerCase();
-  const geminiKey =
-    process.env.GEMINI_API_KEY ??
-    process.env.GOOGLE_API_KEY ??
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
-
-  if (explicit === "openai" || (!geminiKey && openaiKey)) {
-    if (!openaiKey) throw new Error(NO_KEY_MESSAGE);
-    return {
-      provider: "openai",
-      apiKey: openaiKey,
-      models: [process.env.AI_MODEL?.trim() || "gpt-4o-mini"],
-    };
-  }
-  if (geminiKey) {
-    const pinned = process.env.AI_MODEL?.trim();
-    return {
-      provider: "gemini",
-      apiKey: geminiKey,
-      models: pinned ? [pinned] : GEMINI_MODELS,
-    };
-  }
-  throw new Error(NO_KEY_MESSAGE);
 }
 
 function parseJsonLoose(raw: string): unknown {
@@ -235,166 +116,6 @@ function parseJsonLoose(raw: string): unknown {
     }
     throw new Error("The model replied with something that was not valid JSON.");
   }
-}
-
-/** One request. Returns the failure as a value so the fallback can read it. */
-async function geminiAttempt(
-  apiKey: string,
-  model: string,
-  system: string,
-  prompt: string,
-): Promise<
-  { ok: true; text: string; tokens?: number } | { ok: false; status: number; message: string }
-> {
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            responseMimeType: "application/json",
-          },
-        }),
-      },
-    );
-    const payload = (await response.json()) as {
-      error?: { message?: string };
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-      usageMetadata?: { totalTokenCount?: number };
-    };
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: response.status,
-        message:
-          payload?.error?.message ??
-          `The model request failed (${response.status}).`,
-      };
-    }
-    return {
-      ok: true,
-      text:
-        payload?.candidates?.[0]?.content?.parts
-          ?.map((part) => part.text ?? "")
-          .join("") ?? "",
-      tokens:
-        payload?.usageMetadata?.totalTokenCount ??
-        undefined,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 0,
-      message: error instanceof Error ? error.message : "network error",
-    };
-  }
-}
-
-/**
- * Walk the candidate list until a model returns text.
- *
- * Two distinct failures are handled differently on purpose: a *retired* model
- * (404, "no longer available to new users") is skipped silently because the next
- * candidate is fine, while a *rejected key* aborts immediately because every
- * remaining candidate would fail the same way.
- */
-async function callGemini(
-  config: ProviderConfig,
-  system: string,
-  prompt: string,
-  prefer?: string,
-): Promise<{ text: string; model: string; tokens?: number }> {
-  const failures: string[] = [];
-  const candidates = orderCandidates(config.models, prefer);
-
-  for (const model of candidates) {
-    let overloaded = false;
-
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const result = await geminiAttempt(config.apiKey, model, system, prompt);
-
-      if (result.ok) {
-        if (result.text.trim()) {
-          lastGoodModel = model;
-          busyUntil.delete(model);
-          return { text: result.text, model, tokens: result.tokens };
-        }
-        failures.push(`${model}: the model replied with nothing`);
-        break;
-      }
-
-      failures.push(`${model}: ${result.message}`);
-
-      if (
-        result.status === 401 ||
-        result.status === 403 ||
-        FATAL.test(result.message)
-      ) {
-        throw new Error(result.message);
-      }
-
-      // Overload is worth one more go; a retired model is not.
-      if (!TRANSIENT.test(result.message) && result.status < 500) break;
-      overloaded = true;
-      if (attempt === 0) await sleep(600);
-    }
-
-    if (overloaded) busyUntil.set(model, Date.now() + BUSY_COOLDOWN_MS);
-  }
-
-  throw new Error(
-    `No Gemini model answered. ${failures.slice(-3).join(" · ")}`,
-  );
-}
-
-async function callModel(
-  config: ProviderConfig,
-  system: string,
-  prompt: string,
-  prefer?: string,
-): Promise<{ text: string; model: string; tokens?: number }> {
-  if (config.provider === "gemini") {
-    return await callGemini(config, system, prompt, prefer ?? lastGoodModel);
-  }
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.models[0],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    }),
-  });
-  const payload = (await response.json()) as {
-    error?: { message?: string };
-    choices?: { message?: { content?: string } }[];
-    usage?: { total_tokens?: number };
-  };
-  if (!response.ok) {
-    throw new Error(
-      payload?.error?.message ?? `The model request failed (${response.status}).`,
-    );
-  }
-  return {
-    text: payload?.choices?.[0]?.message?.content ?? "",
-    model: config.models[0],
-    tokens: payload?.usage?.total_tokens,
-  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -756,6 +477,7 @@ export const generate = action({
       error?: string;
       quotaExceeded?: boolean;
       rateLimited?: boolean;
+      providerExhausted?: boolean;
     }[]
   > => {
     if (kinds.length === 0) throw new Error("Pick at least one thing to generate.");
@@ -797,13 +519,14 @@ export const generate = action({
     }
     const corpus = parts.join("\n\n");
 
-    const config = resolveProvider();
+    const candidates = await resolveCandidates();
     const results: {
       kind: Kind;
       ok: boolean;
       error?: string;
       quotaExceeded?: boolean;
       rateLimited?: boolean;
+      providerExhausted?: boolean;
     }[] = [];
 
     let remaining = usage.limit - usage.used;
@@ -820,8 +543,8 @@ export const generate = action({
       }
 
       try {
-        const { text: raw, model, tokens } = await callModel(
-          config,
+        const { text: raw, model, provider, tokens } = await callModel(
+          candidates,
           SYSTEM,
           buildPrompt(kind, context.notebookName, corpus),
         );
@@ -874,34 +597,33 @@ export const generate = action({
           title: fallbackTitle(kind, parsed, context.notebookName),
           payload: parsed,
           sourceIds: usable.map((source) => source.id),
-          model: `${config.provider}:${model}`,
+          model: `${provider}:${model}`,
         });
 
         results.push({ kind, ok: true });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Generation failed.";
-
-        // Provider quota refusals come in two flavours that need opposite
-        // treatment: per-minute RPM (wait a minute, nothing is lost) and
-        // per-day quota (the day is over). Either stops the run — retrying
-        // the remaining artefacts would just hit the same wall.
-        if (isProviderQuotaError(429, message)) {
-          if (PROVIDER_DAY.test(message)) {
+        // The model chain is exhausted. Which flavour matters to the student:
+        // a per-day exhaustion is the *providers'* free capacity, not
+        // Manthan's allowance, and saying otherwise sent people to the Plans
+        // page over a limit they had not reached.
+        if (error instanceof ProviderUnavailable) {
+          if (error.dayExhausted && !error.rateLimited) {
             results.push({
               kind,
               ok: false,
-              quotaExceeded: true,
+              providerExhausted: true,
               error:
-                "The AI provider's daily free quota is used up. Your allowance resets at midnight UTC.",
+                "Every AI model behind Manthan has used its free capacity for today. Your own allowance is untouched — add another key in the Keys tab, or see Plans for a higher cap.",
             });
           } else {
+            const wait = error.retryAfterMs
+              ? ` About ${Math.ceil(error.retryAfterMs / 1000)}s to go.`
+              : "";
             results.push({
               kind,
               ok: false,
               rateLimited: true,
-              error:
-                "The AI is rate-limited right now — the free tier allows about 20 requests per minute. Wait a minute and generate again.",
+              error: `The AI models are busy right now, so nothing was generated.${wait} Try again in a minute — your allowance is untouched.`,
             });
           }
           break;
@@ -910,7 +632,7 @@ export const generate = action({
         results.push({
           kind,
           ok: false,
-          error: message === "Generation failed." ? message : message,
+          error: error instanceof Error ? error.message : "Generation failed.",
         });
       }
     }

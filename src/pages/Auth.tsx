@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
-import logo from "@/assets/logo.svg";
+import { LogoMark } from "@/components/landing/Logo";
 import {
   ArrowLeft,
   ArrowRight,
@@ -223,7 +223,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           className="mb-7 flex flex-col items-center gap-2 text-center"
           aria-label="Manthan home"
         >
-          <img src={logo} alt="" className="h-14 w-14" />
+          <LogoMark className="h-14 w-14" />
           <span className="font-display text-2xl font-bold tracking-tight">
             Manthan
           </span>

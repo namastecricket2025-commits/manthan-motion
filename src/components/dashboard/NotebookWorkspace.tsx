@@ -244,16 +244,25 @@ export function NotebookWorkspace({
         });
       }
       for (const failure of failed) {
-        if (failure.quotaExceeded) {
+        if (failure.providerExhausted) {
+          // The providers' free capacity, not the student's allowance. Saying
+          // otherwise sent people to the Plans page over a limit they had not
+          // reached.
+          toast.error("The AI's free capacity is used up for today", {
+            description:
+              "Every model behind Manthan has hit its provider's daily free limit. Your own allowance is untouched — add another key in the Keys tab, or see Plans for a higher cap.",
+            duration: 8000,
+          });
+        } else if (failure.quotaExceeded) {
           toast.error("Today's generation allowance is used up", {
             description:
               "It resets at midnight UTC — see the allowance meter in this panel, or the Plans page for a higher cap.",
             duration: 8000,
           });
         } else if (failure.rateLimited) {
-          toast.error("The AI is rate-limited right now", {
+          toast.error("The AI models are busy right now", {
             description:
-              "The free tier allows about 20 requests per minute — wait a minute and generate again. Your allowance is untouched.",
+              "Nothing was generated and your allowance is untouched. Give it a minute and generate again.",
             duration: 8000,
           });
         } else {
