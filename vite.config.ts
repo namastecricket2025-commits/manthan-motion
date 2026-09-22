@@ -19,8 +19,16 @@ export default defineConfig({
   build: {
     // Enable source maps for better debugging (disable in production if needed)
     sourcemap: false,
-    // Optimize chunk splitting
+    // Skip per-asset gzip reporting: it holds every generated asset in memory
+    // an extra time, and this sandbox's 2 GB ceiling is shared with the dev
+    // server and `convex dev` while a publish build runs.
+    reportCompressedSize: false,
+    // Cap concurrent file transforms. The default (20) lets Rollup transform
+    // dozens of modules at once, which spikes memory exactly when the dev
+    // server's own esbuild service is resident — that collision is what OOM-
+    // killed the build service ("The service is no longer running").
     rollupOptions: {
+      maxParallelFileOps: 4,
       output: {
         // Manual chunk splitting for better caching and lazy loading
         manualChunks: {
@@ -83,7 +91,9 @@ export default defineConfig({
       'react-dom',
       'react-dom/client',
       'react-router',
-      '@convex-dev/auth/react',
+      // @convex-dev/auth/react was removed when sign-in moved to Supabase
+      // (src/lib/supabase.ts + ConvexProviderWithAuth); prebundling it only
+      // made the dev optimizer hold a dead module graph in memory.
       'framer-motion',
     ],
   },
