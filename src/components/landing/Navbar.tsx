@@ -1,16 +1,16 @@
 import { useAuth } from "@/hooks/use-auth";
 import {
-  IconAtom,
-  IconBolt,
-  IconHome,
-  IconLayoutDashboard,
-  IconLogin,
-  IconSettings,
-  IconSparkles,
-  IconTag,
-  IconUser,
-  IconWand,
-} from "@tabler/icons-react";
+  Atom,
+  Home,
+  LayoutDashboard,
+  LogIn,
+  Settings,
+  Sparkles,
+  Tag,
+  User,
+  WandSparkles,
+  Zap,
+} from "lucide-react";
 import { Logo } from "./Logo";
 import { FloatingDock, type DockItem } from "./FloatingDock";
 import { MobileMenu } from "./MobileMenu";
@@ -33,48 +33,48 @@ const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 const DOCK_LINKS: DockItem[] = [
   {
     title: "Home",
-    icon: <IconHome className="h-full w-full" strokeWidth={1.7} />,
+    icon: <Home className="h-full w-full" strokeWidth={1.7} />,
     href: "#top",
   },
   {
     title: "Features",
-    icon: <IconSparkles className="h-full w-full" strokeWidth={1.7} />,
+    icon: <Sparkles className="h-full w-full" strokeWidth={1.7} />,
     href: "#features",
   },
   {
     title: "How it works",
-    icon: <IconWand className="h-full w-full" strokeWidth={1.7} />,
+    icon: <WandSparkles className="h-full w-full" strokeWidth={1.7} />,
     href: "#how",
   },
   {
     title: "Impact",
-    icon: <IconBolt className="h-full w-full" strokeWidth={1.7} />,
+    icon: <Zap className="h-full w-full" strokeWidth={1.7} />,
     href: "#stats",
   },
   // The workspace path runs Dashboard -> STEM Lab -> Settings -> About Us.
   {
     title: "STEM Lab",
-    icon: <IconAtom className="h-full w-full" strokeWidth={1.7} />,
+    icon: <Atom className="h-full w-full" strokeWidth={1.7} />,
     href: "/lab",
   },
   {
     title: "Plans",
-    icon: <IconTag className="h-full w-full" strokeWidth={1.7} />,
+    icon: <Tag className="h-full w-full" strokeWidth={1.7} />,
     href: "/pricing",
   },
   {
     title: "Settings",
-    icon: <IconSettings className="h-full w-full" strokeWidth={1.7} />,
+    icon: <Settings className="h-full w-full" strokeWidth={1.7} />,
     href: "/settings",
   },
   {
     title: "About Us",
-    icon: <IconUser className="h-full w-full" strokeWidth={1.7} />,
+    icon: <User className="h-full w-full" strokeWidth={1.7} />,
     href: "/about",
   },
   {
     title: "Dashboard",
-    icon: <IconLayoutDashboard className="h-full w-full" strokeWidth={1.7} />,
+    icon: <LayoutDashboard className="h-full w-full" strokeWidth={1.7} />,
     href: "/dashboard",
   },
 ];
@@ -109,7 +109,7 @@ export default function Navbar() {
   const signInItem: DockItem = {
     title: "Sign in",
     icon: (
-      <IconLogin className="h-full w-full" strokeWidth={1.7} />
+      <LogIn className="h-full w-full" strokeWidth={1.7} />
     ),
     href: AUTH_URL,
   };

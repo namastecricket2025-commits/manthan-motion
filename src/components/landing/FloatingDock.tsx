@@ -7,7 +7,7 @@ import {
   useSpring,
   useTransform,
 } from "motion/react";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 
@@ -167,7 +167,7 @@ function FloatingDockMobile({
         onClick={() => setOpen((o) => !o)}
         className="glass-chip btn-ghost inline-flex h-10 w-10 items-center justify-center text-foreground"
       >
-        <IconPlus
+        <Plus
           className={cn(
             "h-5 w-5 transition-transform duration-300",
             open && "rotate-45",

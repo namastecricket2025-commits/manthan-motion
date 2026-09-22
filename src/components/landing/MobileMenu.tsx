@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  IconAtom,
-  IconLayoutDashboard,
-  IconLogin,
-  IconTag,
-  IconUser,
-} from "@tabler/icons-react";
+  Atom,
+  LayoutDashboard,
+  LogIn,
+  Tag,
+  User,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { MovingBorderButton } from "./MovingBorderButton";
@@ -60,7 +60,7 @@ export function MobileMenu() {
             sub: "Your notebooks and study material",
             href: "/dashboard",
             icon: (
-              <IconLayoutDashboard
+              <LayoutDashboard
                 className="h-full w-full"
                 strokeWidth={1.7}
               />
@@ -72,19 +72,19 @@ export function MobileMenu() {
       title: "STEM Lab",
       sub: "Physics, chemistry, biology sandboxes",
       href: "/lab",
-      icon: <IconAtom className="h-full w-full" strokeWidth={1.7} />,
+      icon: <Atom className="h-full w-full" strokeWidth={1.7} />,
     },
     {
       title: "Plans",
       sub: "Allowances and pricing",
       href: "/pricing",
-      icon: <IconTag className="h-full w-full" strokeWidth={1.7} />,
+      icon: <Tag className="h-full w-full" strokeWidth={1.7} />,
     },
     {
       title: "About Us",
       sub: "The idea behind Manthan",
       href: "/about",
-      icon: <IconUser className="h-full w-full" strokeWidth={1.7} />,
+      icon: <User className="h-full w-full" strokeWidth={1.7} />,
     },
     ...(isAuthenticated
       ? [
@@ -100,7 +100,7 @@ export function MobileMenu() {
             title: "Sign in",
             sub: "Email or Google",
             href: "/auth?returnTo=%2Fdashboard",
-            icon: <IconLogin className="h-full w-full" strokeWidth={1.7} />,
+            icon: <LogIn className="h-full w-full" strokeWidth={1.7} />,
           },
         ]),
   ];
