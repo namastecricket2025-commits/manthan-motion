@@ -1,16 +1,14 @@
-import { useAuthActions } from "@convex-dev/auth/react";
 import { useAuth } from "@/hooks/use-auth";
-import { api } from "@/convex/_generated/api";
+import { supabase } from "@/lib/supabase";
 import logo from "@/assets/logo.svg";
 import {
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
   Eye,
   EyeOff,
   Loader2,
-  Mail,
 } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -70,7 +68,6 @@ function Field({
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, user } = useAuth();
-  const { signIn } = useAuthActions();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -78,37 +75,45 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     redirectAfterAuth,
   );
 
-  const methods = useQuery(api.profile.authMethods);
-  const googleConfigured = methods?.google ?? false;
-
-  const completeProfile = useMutation(api.profile.completeGoogleProfile);
-
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [showPassword, setShowPassword] = useState(false);
-  const [otpStep, setOtpStep] = useState(false);
-  const [otpEmail, setOtpEmail] = useState("");
-  const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [googleError, setGoogleError] = useState<string | null>(null);
-  const [namePrompt, setNamePrompt] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState<string | null>(null);
+  const [nameStep, setNameStep] = useState(false);
   const [nameValue, setNameValue] = useState("");
-  const nameAskedRef = useRef(false);
+  const askedRef = useRef(false);
 
-  // Signed-in users go straight through — unless we still owe them a name.
-  // One effect owns the decision so the redirect can never win the race
-  // against the prompt, and guests (anonymous) are never asked for a name.
+  // "Forgot password?" links come back here marked as a recovery trip, and the
+  // student chooses a new password before they are let into the app.
+  const wantsRecovery = searchParams.get("mode") === "recovery";
+  const [recoveryDone, setRecoveryDone] = useState(false);
+  const inRecovery = wantsRecovery && isAuthenticated && !recoveryDone;
+
+  // Signed-in users go straight through — unless they still owe us a name
+  // (only possible with a provider that returned none) or a new password.
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
-    if (user && !user.isAnonymous && !user.name && !nameAskedRef.current) {
-      nameAskedRef.current = true;
-      setNamePrompt(true);
+    if (inRecovery) return;
+    if (user && !user.name && !askedRef.current) {
+      askedRef.current = true;
+      setNameStep(true);
       return;
     }
-    if (!namePrompt) {
-      navigate(redirect, { replace: true });
-    }
-  }, [authLoading, isAuthenticated, user, namePrompt, navigate, redirect]);
+    if (!nameStep) navigate(redirect, { replace: true });
+  }, [
+    authLoading,
+    isAuthenticated,
+    user,
+    nameStep,
+    inRecovery,
+    navigate,
+    redirect,
+  ]);
+
+  /** Where Supabase should send the browser back to after Google / email links. */
+  const returnUrl = `${window.location.origin}/auth?returnTo=${encodeURIComponent(redirect)}`;
 
   /* --------------- email + password --------------- */
 
@@ -117,110 +122,98 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     if (busy) return;
     setBusy(true);
     setError(null);
+    setNotice(null);
+
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     const password = String(form.get("password") ?? "");
     const name = String(form.get("name") ?? "").trim();
+
     try {
-      const result = await signIn("password", {
-        flow: mode === "signUp" ? "signUp" : "signIn",
-        email,
-        password,
-        // Name travels only on sign-up — sign-in never asks for it.
-        ...(mode === "signUp" && name ? { name } : {}),
-      });
-      if (result.signingIn === false) {
-        setError(
-          "Those credentials did not match. Check the details and try again.",
-        );
-        setBusy(false);
-        return;
+      if (mode === "signUp") {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            // The name travels with the account, so we never have to ask twice.
+            data: { name: name || email.split("@")[0] },
+            emailRedirectTo: returnUrl,
+          },
+        });
+        if (signUpError) throw signUpError;
+        if (!data.session) {
+          setConfirmationSent(email);
+          setBusy(false);
+          return;
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
       }
       navigate(redirect, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Sign-in failed.";
       setError(
-        /already exists|taken/i.test(message)
-          ? "An account with that email already exists — switch to Sign in."
-          : /Invalid credentials|credentials/i.test(message)
-            ? "Incorrect email or password."
-            : mode === "signUp" && /password/i.test(message)
-              ? "Password must be at least 8 characters."
-              : message,
+        /Invalid login credentials/i.test(message)
+          ? "Incorrect email or password."
+          : /Email not confirmed/i.test(message)
+            ? "Confirm your email address first — the link is in your inbox."
+            : /already registered|already exists/i.test(message)
+              ? "An account with that email already exists — switch to Sign in."
+              : /at least 6 characters/i.test(message)
+                ? "Password must be at least 6 characters."
+                : message,
       );
       setBusy(false);
     }
   }
 
-  /* --------------- email OTP fallback --------------- */
-
-  async function handleOtpVerify(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await signIn("email-otp", {
-        email: otpEmail,
-        code: otp,
-      });
-      if (result.signingIn === false) {
-        setError("That code is incorrect or has expired.");
-        setOtp("");
-        setBusy(false);
-        return;
-      }
-      navigate(redirect, { replace: true });
-    } catch {
-      setError("That code is incorrect or has expired.");
-      setOtp("");
-    } finally {
-      setBusy(false);
+  async function handleForgotPassword() {
+    const email = (document.getElementById("auth-email") as HTMLInputElement)
+      ?.value?.trim()
+      .toLowerCase();
+    if (!email) {
+      setError("Enter your email address first, then tap “Forgot password?”.");
+      return;
     }
+    setError(null);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo: `${window.location.origin}/auth?mode=recovery` },
+    );
+    if (resetError) setError(resetError.message);
+    else setNotice(`Password reset link sent to ${email}.`);
   }
 
   /* --------------- Google --------------- */
 
   async function handleGoogle() {
-    setGoogleError(null);
-    try {
-      // When configured, this performs a full-page redirect to Google and
-      // returns to `redirectTo` with a one-time code; the client consumes it
-      // automatically on load.
-      await signIn("google", { redirectTo: redirect });
-      setGoogleError(
-        "Google sign-in did not complete. Use email and password instead.",
-      );
-    } catch {
-      setGoogleError(
-        "Google sign-in is not available right now. Use email and password below.",
-      );
-    }
-  }
-
-  /* --------------- guest --------------- */
-
-  async function handleGuest() {
-    if (busy) return;
-    setBusy(true);
     setError(null);
-    try {
-      await signIn("anonymous");
-      navigate(redirect, { replace: true });
-    } catch {
-      setError("Could not start a guest session.");
+    setBusy(true);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: returnUrl,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+    if (oauthError) {
       setBusy(false);
+      setError(
+        "Google sign-in could not start. Make sure the Google provider is enabled for this project, or use email and password.",
+      );
     }
+    // On success the browser leaves the page for Google, so nothing else to do.
   }
 
   const submitting = busy;
 
   return (
     <div className="relative min-h-[100svh] overflow-x-clip bg-background text-foreground">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-      >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(720px_420px_at_50%_-8%,color-mix(in_srgb,var(--signal)_16%,transparent),transparent_70%)]" />
       </div>
 
@@ -240,54 +233,107 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         </Link>
 
         <div className="glass-panel w-full rounded-3xl p-5 sm:p-7">
-          {otpStep ? (
-            /* ---------------- OTP verify ---------------- */
-            <form onSubmit={handleOtpVerify} className="flex flex-col gap-4">
+          {inRecovery ? (
+            /* ---------------- choose a new password ---------------- */
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = new FormData(e.currentTarget);
+                const password = String(form.get("password") ?? "");
+                const confirm = String(form.get("confirm") ?? "");
+                if (password !== confirm) {
+                  setError("Both passwords must match.");
+                  return;
+                }
+                setBusy(true);
+                setError(null);
+                const { error: updateError } = await supabase.auth.updateUser({
+                  password,
+                });
+                setBusy(false);
+                if (updateError) {
+                  setError(updateError.message);
+                  return;
+                }
+                setRecoveryDone(true);
+                navigate(redirect, { replace: true });
+              }}
+              className="flex flex-col gap-4"
+            >
               <div>
                 <h1 className="font-display text-lg font-bold tracking-tight">
-                  Check your email
+                  Choose a new password
                 </h1>
                 <p className="mt-1 text-sm text-text-dim">
-                  We sent a 6-digit code to {otpEmail}.
+                  You're signed in from the reset link — set the password you'll
+                  use next time.
                 </p>
               </div>
-              <input
-                value={otp}
-                onChange={(e) =>
-                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                inputMode="numeric"
-                autoComplete="one-time-code"
+              <Field
+                label="New password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
+                minLength={6}
+                required
                 autoFocus
-                placeholder="••••••"
-                className="w-full rounded-xl border border-[var(--card-border)] bg-transparent px-3.5 py-3.5 text-center text-[16px] font-semibold tracking-[0.5em] outline-none focus:border-[var(--signal)]"
+              />
+              <Field
+                label="Confirm password"
+                name="confirm"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Type it again"
+                minLength={6}
+                required
               />
               {error && <ErrorNote text={error} />}
-              <PrimaryButton disabled={busy || otp.length !== 6}>
+              <PrimaryButton disabled={busy}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Verify and continue
+                Save password
+                {busy ? null : <ArrowRight className="h-4 w-4" />}
               </PrimaryButton>
+            </form>
+          ) : confirmationSent ? (
+            /* ---------------- confirmation sent ---------------- */
+            <div className="flex flex-col gap-4">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <div>
+                <h1 className="font-display text-lg font-bold tracking-tight">
+                  Check your inbox
+                </h1>
+                <p className="mt-1 text-sm leading-relaxed text-text-dim">
+                  We sent a confirmation link to{" "}
+                  <span className="text-foreground">{confirmationSent}</span>.
+                  Open it to finish setting up your account — if you already had
+                  an account with this address, just sign in instead.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => {
-                  setOtpStep(false);
-                  setError(null);
-                  setOtp("");
+                  setConfirmationSent(null);
+                  setMode("signIn");
                 }}
                 className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-text-dim transition-colors hover:text-foreground"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Use a different method
+                Back to sign in
               </button>
-            </form>
-          ) : namePrompt ? (
-            /* ---------------- name completion (Google) ---------------- */
+            </div>
+          ) : nameStep ? (
+            /* ---------------- name completion ---------------- */
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 const name = nameValue.trim();
                 if (!name) return;
-                await completeProfile({ name });
+                setBusy(true);
+                await supabase.auth.updateUser({ data: { name } });
+                setBusy(false);
                 navigate(redirect, { replace: true });
               }}
               className="flex flex-col gap-4"
@@ -308,81 +354,30 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 placeholder="e.g. Aarav"
                 required
               />
-              <PrimaryButton disabled={!nameValue.trim()}>
+              <PrimaryButton disabled={!nameValue.trim() || busy}>
                 Enter Manthan
                 <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
             </form>
           ) : (
             <>
-              {mode === "signIn" ? (
-                <form
-                  onSubmit={handlePasswordSubmit}
-                  className="flex flex-col gap-4"
-                  key="signin"
-                >
-                  <div>
-                    <h1 className="font-display text-lg font-bold tracking-tight">
-                      Welcome back
-                    </h1>
-                    <p className="mt-1 text-sm text-text-dim">
-                      Sign in to reach your notebooks.
-                    </p>
-                  </div>
-                  <Field
-                    label="Email"
-                    name="email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="name@example.com"
-                    required
-                    disabled={submitting}
-                  />
-                  <div className="relative">
-                    <Field
-                      label="Password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      placeholder="Your password"
-                      required
-                      disabled={submitting}
-                    />
-                    <button
-                      type="button"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                      onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-3 top-[30px] text-text-dim transition-colors hover:text-foreground"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {error && <ErrorNote text={error} />}
-                  <PrimaryButton disabled={submitting}>
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Sign in
-                    {busy ? null : <ArrowRight className="h-4 w-4" />}
-                  </PrimaryButton>
-                </form>
-              ) : (
-                <form
-                  onSubmit={handlePasswordSubmit}
-                  className="flex flex-col gap-4"
-                  key="signup"
-                >
-                  <div>
-                    <h1 className="font-display text-lg font-bold tracking-tight">
-                      Create your account
-                    </h1>
-                    <p className="mt-1 text-sm text-text-dim">
-                      Free to start — your first notebook is a minute away.
-                    </p>
-                  </div>
+              <form
+                onSubmit={handlePasswordSubmit}
+                className="flex flex-col gap-4"
+                key={mode}
+              >
+                <div>
+                  <h1 className="font-display text-lg font-bold tracking-tight">
+                    {mode === "signIn" ? "Welcome back" : "Create your account"}
+                  </h1>
+                  <p className="mt-1 text-sm text-text-dim">
+                    {mode === "signIn"
+                      ? "Sign in to reach your notebooks."
+                      : "Free to start — your first notebook is a minute away."}
+                  </p>
+                </div>
+
+                {mode === "signUp" && (
                   <Field
                     label="Your name"
                     name="name"
@@ -391,50 +386,73 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     required
                     disabled={submitting}
                   />
+                )}
+
+                <Field
+                  label="Email"
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="name@example.com"
+                  required
+                  disabled={submitting}
+                />
+
+                <div className="relative">
                   <Field
-                    label="Email"
-                    name="email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="name@example.com"
+                    label="Password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete={
+                      mode === "signIn" ? "current-password" : "new-password"
+                    }
+                    placeholder={
+                      mode === "signIn"
+                        ? "Your password"
+                        : "At least 6 characters"
+                    }
+                    minLength={6}
                     required
                     disabled={submitting}
                   />
-                  <div className="relative">
-                    <Field
-                      label="Password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      placeholder="At least 8 characters"
-                      minLength={8}
-                      required
-                      disabled={submitting}
-                    />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-[30px] text-text-dim transition-colors hover:text-foreground"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+
+                {mode === "signIn" && (
+                  <div className="-mt-1 text-right">
                     <button
                       type="button"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                      onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-3 top-[30px] text-text-dim transition-colors hover:text-foreground"
+                      onClick={() => void handleForgotPassword()}
+                      className="text-xs font-medium text-text-dim transition-colors hover:text-foreground"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      Forgot password?
                     </button>
                   </div>
-                  {error && <ErrorNote text={error} />}
-                  <PrimaryButton disabled={submitting}>
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Create account
-                    {busy ? null : <ArrowRight className="h-4 w-4" />}
-                  </PrimaryButton>
-                </form>
-              )}
+                )}
 
-              {/* mode switch */}
+                {error && <ErrorNote text={error} />}
+                {notice && <NoticeNote text={notice} />}
+
+                <PrimaryButton disabled={submitting}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {mode === "signIn" ? "Sign in" : "Create account"}
+                  {busy ? null : <ArrowRight className="h-4 w-4" />}
+                </PrimaryButton>
+              </form>
+
               <p className="mt-4 text-center text-sm text-text-dim">
                 {mode === "signIn"
                   ? "New to Manthan?"
@@ -444,6 +462,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   onClick={() => {
                     setMode(mode === "signIn" ? "signUp" : "signIn");
                     setError(null);
+                    setNotice(null);
                   }}
                   className="font-semibold text-[var(--signal)] transition-opacity hover:opacity-80"
                 >
@@ -459,38 +478,15 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <span className="h-px flex-1 bg-[var(--card-border)]" />
               </div>
 
-              {/* Google — only when the deployment has credentials */}
-              {googleConfigured && (
-                <button
-                  type="button"
-                  onClick={() => void handleGoogle()}
-                  className="mb-3 flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--card-border)] bg-transparent px-5 py-3 text-sm font-semibold transition-colors hover:border-[var(--signal)]"
-                >
-                  <GoogleMark />
-                  Continue with Google
-                </button>
-              )}
-              {googleError && <ErrorNote text={googleError} />}
-
-              {/* email code, secondary */}
-              <div className="mb-3 flex justify-center">
-                <EmailCodeForm busy={busy} onSent={(email) => {
-                  setOtpEmail(email);
-                  setOtpStep(true);
-                  setError(null);
-                }} onError={(m) => setError(m)} />
-              </div>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => void handleGuest()}
-                  disabled={busy}
-                  className="text-xs font-medium text-text-dim transition-colors hover:text-foreground"
-                >
-                  Just exploring? Continue as guest
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => void handleGoogle()}
+                disabled={busy}
+                className="flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--card-border)] bg-transparent px-5 py-3 text-sm font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-60"
+              >
+                <GoogleMark />
+                Continue with Google
+              </button>
             </>
           )}
         </div>
@@ -521,6 +517,14 @@ function ErrorNote({ text }: { text: string }) {
   );
 }
 
+function NoticeNote({ text }: { text: string }) {
+  return (
+    <p className="rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_6%,transparent)] px-3.5 py-2.5 text-xs leading-relaxed text-text-dim">
+      {text}
+    </p>
+  );
+}
+
 function PrimaryButton({
   children,
   disabled,
@@ -537,80 +541,6 @@ function PrimaryButton({
     >
       {children}
     </MovingBorderButton>
-  );
-}
-
-/** Collapsible email-code sign-in (kept from the original flow). */
-function EmailCodeForm({
-  busy,
-  onSent,
-  onError,
-}: {
-  busy: boolean;
-  onSent: (email: string) => void;
-  onError: (message: string) => void;
-}) {
-  const { signIn } = useAuthActions();
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-text-dim transition-colors hover:text-foreground"
-      >
-        <Mail className="h-3.5 w-3.5" />
-        Sign in with an email code instead
-      </button>
-    );
-  }
-
-  return (
-    <form
-      className="flex w-full gap-2"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (sending) return;
-        setSending(true);
-        try {
-          await signIn("email-otp", { email: email.trim().toLowerCase() });
-          onSent(email.trim().toLowerCase());
-        } catch (err) {
-          onError(
-            err instanceof Error ? err.message : "Could not send the code.",
-          );
-        } finally {
-          setSending(false);
-        }
-      }}
-    >
-      <input
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        type="email"
-        required
-        placeholder="name@example.com"
-        className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-2.5 text-[16px] outline-none placeholder:text-text-dim/60 focus:border-[var(--signal)]"
-      />
-      <button
-        type="submit"
-        disabled={sending || busy}
-        className="glass-chip shrink-0 rounded-full px-4 py-2.5 text-[13px] font-semibold"
-      >
-        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send code"}
-      </button>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        aria-label="Close email code form"
-        className="px-1 text-xs text-text-dim"
-      >
-        Cancel
-      </button>
-    </form>
   );
 }
 

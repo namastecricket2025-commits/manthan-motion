@@ -98,7 +98,7 @@ export function MobileMenu() {
       : [
           {
             title: "Sign in",
-            sub: "Email, Google or guest",
+            sub: "Email or Google",
             href: "/auth?returnTo=%2Fdashboard",
             icon: <IconLogin className="h-full w-full" strokeWidth={1.7} />,
           },

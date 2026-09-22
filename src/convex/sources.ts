@@ -1,4 +1,4 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId, requireAuthUserId } from "./identity";
 import { v } from "convex/values";
 import {
   internalMutation,
@@ -55,8 +55,7 @@ export const listForNotebook = query({
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to add a file.");
+    await requireAuthUserId(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -83,8 +82,7 @@ export const add = mutation({
     detail: v.optional(v.string()),
   },
   handler: async (ctx, { notebookId, kind, name, detail }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to add a source.");
+    const userId = await requireAuthUserId(ctx);
 
     const notebook = await ctx.db.get(notebookId);
     if (!notebook || notebook.ownerId !== userId) {
@@ -109,8 +107,7 @@ export const add = mutation({
 export const addText = mutation({
   args: { notebookId: v.id("notebooks"), name: v.string(), text: v.string() },
   handler: async (ctx, { notebookId, name, text }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to add notes.");
+    const userId = await requireAuthUserId(ctx);
 
     const notebook = await ctx.db.get(notebookId);
     if (!notebook || notebook.ownerId !== userId) {
@@ -137,8 +134,7 @@ export const addText = mutation({
 export const remove = mutation({
   args: { sourceId: v.id("sources") },
   handler: async (ctx, { sourceId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to remove a source.");
+    const userId = await requireAuthUserId(ctx);
 
     const source = await ctx.db.get(sourceId);
     if (!source || source.ownerId !== userId) {
@@ -165,8 +161,7 @@ export const insertSource = internalMutation({
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in first.");
+    const userId = await requireAuthUserId(ctx);
     const notebook = await ctx.db.get(args.notebookId);
     if (!notebook || notebook.ownerId !== userId) {
       throw new Error("Notebook not found.");
@@ -221,8 +216,7 @@ export const setExtraction = internalMutation({
     detail: v.optional(v.string()),
   },
   handler: async (ctx, { sourceId, text, status, error, detail }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in first.");
+    const userId = await requireAuthUserId(ctx);
     const source = await ctx.db.get(sourceId);
     if (!source || source.ownerId !== userId) {
       throw new Error("Source not found.");

@@ -1,4 +1,4 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { currentIdentity, getAuthUserId, requireAuthUserId } from "./identity";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -76,13 +76,21 @@ export const getToday = internalQuery({
 export const myUsage = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await currentIdentity(ctx);
+    if (!identity) return null;
 
-    const row = await ctx.db
-      .query("usage")
-      .withIndex("by_user_day", (q) => q.eq("userId", userId).eq("day", utcDay()))
-      .unique();
+    // An account that has not generated anything yet has no ledger row — and
+    // that is a started meter, not a missing one: zero of the daily allowance
+    // has been spent.
+    const userId = await getAuthUserId(ctx);
+    const row = userId
+      ? await ctx.db
+          .query("usage")
+          .withIndex("by_user_day", (q) =>
+            q.eq("userId", userId).eq("day", utcDay()),
+          )
+          .unique()
+      : null;
 
     return {
       used: row?.used ?? 0,
@@ -117,8 +125,7 @@ export const ensureWithinQuota = internalQuery({
 export const addSpend = mutation({
   args: { tokens: v.number(), requests: v.number() },
   handler: async (ctx, { tokens, requests }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in first.");
+    const userId = await requireAuthUserId(ctx);
     await ctx.runMutation(internal.usage.record, {
       userId,
       tokens,

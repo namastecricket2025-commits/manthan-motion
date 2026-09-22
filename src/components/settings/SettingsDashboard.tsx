@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocation, useNavigate } from "react-router";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
   Accessibility,
@@ -59,6 +59,7 @@ import { Switch } from "@/components/ui/switch";
 const SET_SPRING = { type: "spring", stiffness: 200, damping: 24 } as const;
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 import type { FrameTarget, TextComfort, ThemeMode } from "@/lib/app-settings";
 import { LEGAL_BOXES } from "./legal-content";
 import { useSettings } from "./SettingsProvider";
@@ -287,7 +288,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const account = useQuery(api.settings.myAccount);
   const saveProfileMutation = useMutation(api.settings.updateProfile);
   const deleteAccountMutation = useMutation(api.settings.deleteAccount);
-  const revokeSessions = useAction(api.settings.signOutOtherSessions);
 
   /* ---- profile ---- */
   const [name, setName] = useState("");
@@ -311,6 +311,9 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
     setSavingProfile(true);
     try {
       await saveProfileMutation({ name: name.trim(), email: email.trim().toLowerCase() });
+      // Keep the Supabase account metadata in step so the greeting elsewhere
+      // and the next sign-in use the same name.
+      await supabase.auth.updateUser({ data: { name: name.trim() } });
       toast.success("Profile updated", { description: "Your display name and email are saved." });
     } catch (err) {
       toast.error("Could not save profile", {
@@ -326,7 +329,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const [showPw, setShowPw] = useState(false);
   const strength = useMemo(() => scorePassword(pw.next), [pw.next]);
 
-  const onChangePassword = (e: React.FormEvent) => {
+  const onChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pw.current.trim().length === 0) {
       toast.error("Current password required", { description: "Enter the password you use now." });
@@ -346,6 +349,11 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
       });
       return;
     }
+    const { error } = await supabase.auth.updateUser({ password: pw.next });
+    if (error) {
+      toast.error("Could not update password", { description: error.message });
+      return;
+    }
     setPw({ current: "", next: "", confirm: "" });
     toast.success("Password updated", { description: "Use it the next time you sign in." });
   };
@@ -357,7 +365,10 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const onRevokeOthers = async () => {
     setRevoking(true);
     try {
-      await revokeSessions({});
+      // Supabase revokes every other refresh token for this account; the
+      // browser cannot list them, but it can end them.
+      const { error } = await supabase.auth.signOut({ scope: "others" });
+      if (error) throw new Error(error.message);
       toast.success("Other devices signed out", {
         description: "Every session except this one was revoked.",
       });
@@ -859,7 +870,8 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     ))}
                     {otherSessions.length === 0 && (
                       <li className="set-device set-device--empty">
-                        No other devices are signed in to this account.
+                        Other devices aren't listed here, but signing out ends
+                        every session except this one.
                       </li>
                     )}
                   </ul>
@@ -868,7 +880,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       type="button"
                       className="set-btn"
                       onClick={onRevokeOthers}
-                      disabled={revoking || otherSessions.length === 0}
+                      disabled={revoking}
                     >
                       <ShieldCheck className="h-3.5 w-3.5" />
                       {revoking ? "Signing out…" : "Log Out of All Other Devices"}

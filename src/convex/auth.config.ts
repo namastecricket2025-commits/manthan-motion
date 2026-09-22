@@ -8,19 +8,23 @@ import type { AuthConfig } from "convex/server";
 const freebuffIssuer =
   process.env.VLY_CONVEX_AUTH_ISSUER ?? "https://freebuff.com";
 
+// Manthan signs users in with Supabase Auth. Supabase issues ES256 access
+// tokens and publishes the matching public key at its JWKS endpoint, so the
+// deployment can verify them locally — no shared secret ever reaches Convex.
+// The issuer and audience below are exactly what Supabase stamps on a token
+// (`iss` = ".../auth/v1", `aud` = "authenticated").
+// Literal on purpose: Convex requires every env var referenced from an auth
+// config to be set on the deployment, and this URL is public either way.
+const supabaseProject = "https://ahbbhzxnblphuxjybhfk.supabase.co";
+
 export default {
   providers: [
-    // Standard Convex Auth provider for this project's own sign-in ("Get
-    // Started" email/guest, see src/convex/auth.ts). The deployment
-    // self-issues JWTs (iss = CONVEX_SITE_URL, no `kid` header) validated
-    // via OIDC discovery at `${domain}/.well-known/openid-configuration`,
-    // served by auth.addHttpRoutes() in convex/http.ts. Do NOT convert this
-    // entry to `type: "customJwt"` — that path rejects tokens without a
-    // `kid` header, so sign-in would silently never confirm and RequireAuth
-    // would loop back to /auth forever.
     {
-      domain: process.env.CONVEX_SITE_URL!,
-      applicationID: "convex",
+      type: "customJwt",
+      issuer: `${supabaseProject}/auth/v1`,
+      jwks: `${supabaseProject}/auth/v1/.well-known/jwks.json`,
+      applicationID: "authenticated",
+      algorithm: "ES256",
     },
     {
       type: "customJwt",

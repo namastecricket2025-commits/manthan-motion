@@ -1,4 +1,4 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId, requireAuthUserId } from "./identity";
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -98,8 +98,7 @@ export const save = internalMutation({
     model: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in first.");
+    const userId = await requireAuthUserId(ctx);
     const notebook = await ctx.db.get(args.notebookId);
     if (!notebook || notebook.ownerId !== userId) {
       throw new Error("Notebook not found.");
@@ -131,8 +130,7 @@ export const save = internalMutation({
 export const remove = mutation({
   args: { materialId: v.id("materials") },
   handler: async (ctx, { materialId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to delete material.");
+    const userId = await requireAuthUserId(ctx);
     const material = await ctx.db.get(materialId);
     if (!material || material.ownerId !== userId) {
       throw new Error("Material not found.");

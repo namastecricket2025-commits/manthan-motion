@@ -1,33 +1,51 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { currentIdentity, getAuthUserId } from "./identity";
 
 /**
- * Get the current signed in user. Returns null if the user is not signed in.
- * Usage: const signedInUser = await ctx.runQuery(api.authHelpers.currentUser);
- * THIS FUNCTION IS READ-ONLY. DO NOT MODIFY.
+ * The signed-in account, as the UI sees it.
+ *
+ * Identity comes from the verified Supabase access token. A `users` row is only
+ * needed once the account actually stores something, so a brand-new student
+ * still has a name and email to render — those come straight from the token
+ * until the row is created on their first write.
  */
+export type SessionUser = {
+  _id: Id<"users">;
+  name?: string;
+  email?: string;
+  image?: string;
+  isAnonymous: boolean;
+};
+
 export const currentUser = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<SessionUser | null> => {
     const user = await getCurrentUser(ctx);
-
-    if (user === null) {
-      return null;
-    }
-
     return user;
   },
 });
 
 /**
- * Use this function internally to get the current user data. Remember to handle the null user case.
- * @param ctx
- * @returns
+ * Use this function internally to get the current user data. Remember to handle
+ * the null user case.
  */
-export const getCurrentUser = async (ctx: QueryCtx) => {
+export const getCurrentUser = async (
+  ctx: QueryCtx,
+): Promise<SessionUser | null> => {
+  const identity = await currentIdentity(ctx);
+  if (!identity) return null;
+
   const userId = await getAuthUserId(ctx);
-  if (userId === null) {
-    return null;
-  }
-  return await ctx.db.get(userId);
+  const row = userId ? await ctx.db.get(userId) : null;
+
+  return {
+    // Until the row exists this is only an opaque handle for React keys — the
+    // Supabase subject is already the canonical identifier.
+    _id: (row?._id ?? `supabase:${identity.subject}`) as Id<"users">,
+    name: row?.name ?? identity.name,
+    email: row?.email ?? identity.email,
+    image: row?.image ?? identity.image,
+    isAnonymous: false,
+  };
 };

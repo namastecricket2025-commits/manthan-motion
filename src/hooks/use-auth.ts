@@ -1,20 +1,64 @@
-import { api } from "@/convex/_generated/api";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvexAuth, useQuery } from "convex/react";
+import type { Session } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { avatarOf, displayNameOf, supabase } from "@/lib/supabase";
 
+export type AuthUser = {
+  id: string;
+  name: string;
+  email?: string;
+  image?: string;
+};
+
+/**
+ * The signed-in Supabase account.
+ *
+ * Supabase owns the session (persisted in localStorage and refreshed in the
+ * background), so every consumer of this hook is just a subscriber to it. The
+ * access token is handed to Convex separately, in `main.tsx`.
+ */
 export function useAuth() {
-  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
-  const user = useQuery(api.users.currentUser);
-  const { signIn, signOut } = useAuthActions();
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Derive isLoading directly from the dependencies instead of managing separate state
-  const isLoading = isAuthLoading || user === undefined;
+  useEffect(() => {
+    let active = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session ?? null);
+      setIsLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, next) => {
+        if (!active) return;
+        setSession(next);
+        setIsLoading(false);
+      },
+    );
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const account = session?.user ?? null;
+
+  const user: AuthUser | null = account
+    ? {
+        id: account.id,
+        name: displayNameOf(account),
+        email: account.email ?? undefined,
+        image: avatarOf(account),
+      }
+    : null;
 
   return {
     isLoading,
-    isAuthenticated,
+    isAuthenticated: Boolean(account),
     user,
-    signIn,
-    signOut,
+    session,
+    signOut: () => supabase.auth.signOut(),
   };
 }

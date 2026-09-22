@@ -1,56 +1,75 @@
-import { getAuthSessionId, getAuthUserId, invalidateSessions } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { action, mutation, query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { currentIdentity, getAuthUserId, requireAuthUserId } from "./identity";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Supabase puts the sign-in provider and this session's claims on the token. */
+function identityMeta(identity: Record<string, unknown> | null) {
+  if (!identity) return { providers: [] as string[], sessionId: null as string | null, issuedAt: Date.now(), expiresAt: Date.now() + 3_600_000 };
+
+  const single = identity["app_metadata.provider"];
+  const list = identity["app_metadata.providers"];
+  const providers = Array.isArray(list)
+    ? list.filter((p): p is string => typeof p === "string")
+    : typeof single === "string"
+      ? [single]
+      : [];
+
+  const issuedAt = typeof identity.iat === "number" ? identity.iat * 1000 : Date.now();
+  const expiresAt =
+    typeof identity.exp === "number" ? identity.exp * 1000 : issuedAt + 3_600_000;
+
+  return {
+    providers,
+    sessionId: typeof identity.session_id === "string" ? identity.session_id : null,
+    issuedAt,
+    expiresAt,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /* Profile + active sessions (drives the account section of settings)  */
 /* ------------------------------------------------------------------ */
 
-/** The signed-in user's profile plus every live login session. */
+/** The signed-in user's profile plus the session making the request. */
 export const myAccount = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return null;
+    const identity = await currentIdentity(ctx);
+    if (!identity) return null;
 
-    const sessionId = await getAuthSessionId(ctx);
-    const user = await ctx.db.get(userId);
-    const sessions = await ctx.db
-      .query("authSessions")
-      .withIndex("userId", (q) => q.eq("userId", userId))
-      .collect();
-    const accounts = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
-      .collect();
+    const userId = await getAuthUserId(ctx);
+    const row = userId ? await ctx.db.get(userId) : null;
+    const raw = (await ctx.auth.getUserIdentity()) as Record<string, unknown> | null;
+    const meta = identityMeta(raw);
 
     return {
-      name: user?.name ?? "",
-      email: user?.email ?? "",
-      providers: accounts.map((a) => a.provider),
-      sessions: sessions
-        .sort((a, b) => b._creationTime - a._creationTime)
-        .map((s) => ({
-          id: s._id,
-          createdAt: s._creationTime,
-          expiresAt: s.expirationTime,
-          current: s._id === sessionId,
-        })),
+      name: row?.name ?? identity.name ?? "",
+      email: row?.email ?? identity.email ?? "",
+      providers: meta.providers.length > 0 ? meta.providers : ["email"],
+      // Supabase does not expose a per-user session list to browsers, so the
+      // only session we can honestly report is the one reading this page.
+      sessions: [
+        {
+          id: meta.sessionId ?? "current",
+          createdAt: meta.issuedAt,
+          expiresAt: meta.expiresAt,
+          current: true,
+        },
+      ],
     };
   },
 });
 
-/** Update display name and/or contact email of the signed-in user. */
+/** Update the display name (and the contact email kept alongside it). */
 export const updateProfile = mutation({
   args: {
     name: v.optional(v.string()),
     email: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("You need to be signed in.");
+    const userId = await requireAuthUserId(ctx);
 
     const patch: { name?: string; email?: string } = {};
 
@@ -74,60 +93,49 @@ export const updateProfile = mutation({
 });
 
 /* ------------------------------------------------------------------ */
-/* Device / session control                                            */
-/* ------------------------------------------------------------------ */
-
-/** Revoke every login session except the one making the request. */
-export const signOutOtherSessions = action({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("You need to be signed in.");
-    const sessionId = await getAuthSessionId(ctx);
-    await invalidateSessions(ctx, {
-      userId,
-      except: sessionId === null ? [] : [sessionId],
-    });
-    return { ok: true as const };
-  },
-});
-
-/* ------------------------------------------------------------------ */
 /* Account deletion — permanent                                        */
 /* ------------------------------------------------------------------ */
 
-/** Permanently erase the account, its sessions and all linked credentials. */
+/**
+ * Erase everything Manthan stores for this account: notebooks, sources (and
+ * their uploaded files), generated material, usage history and the profile row.
+ *
+ * The credentials themselves live in Supabase Auth, so the browser signs the
+ * account out right after this runs; the sign-in record is reclaimed from the
+ * Supabase dashboard.
+ */
 export const deleteAccount = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) throw new Error("You need to be signed in.");
 
-    const sessions = await ctx.db
-      .query("authSessions")
-      .withIndex("userId", (q) => q.eq("userId", userId))
+    const sources = await ctx.db
+      .query("sources")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .collect();
-    for (const session of sessions) {
-      const tokens = await ctx.db
-        .query("authRefreshTokens")
-        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
-        .collect();
-      for (const token of tokens) await ctx.db.delete(token._id);
-      await ctx.db.delete(session._id);
+    for (const source of sources) {
+      if (source.storageId) await ctx.storage.delete(source.storageId);
+      await ctx.db.delete(source._id);
     }
 
-    const accounts = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+    const materials = await ctx.db
+      .query("materials")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .collect();
-    for (const account of accounts) {
-      const codes = await ctx.db
-        .query("authVerificationCodes")
-        .withIndex("accountId", (q) => q.eq("accountId", account._id))
-        .collect();
-      for (const code of codes) await ctx.db.delete(code._id);
-      await ctx.db.delete(account._id);
-    }
+    for (const material of materials) await ctx.db.delete(material._id);
+
+    const notebooks = await ctx.db
+      .query("notebooks")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const notebook of notebooks) await ctx.db.delete(notebook._id);
+
+    const usage = await ctx.db
+      .query("usage")
+      .withIndex("by_user_day", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of usage) await ctx.db.delete(row._id);
 
     await ctx.db.delete(userId);
     return { ok: true as const };

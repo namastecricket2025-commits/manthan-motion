@@ -1,4 +1,4 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId, requireAuthUserId } from "./identity";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
@@ -54,8 +54,7 @@ export const list = query({
 export const create = mutation({
   args: { name: v.string() },
   handler: async (ctx, { name }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to create a notebook.");
+    const userId = await requireAuthUserId(ctx);
 
     return await ctx.db.insert("notebooks", {
       ownerId: userId,
@@ -68,8 +67,7 @@ export const create = mutation({
 export const rename = mutation({
   args: { notebookId: v.id("notebooks"), name: v.string() },
   handler: async (ctx, { notebookId, name }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to rename a notebook.");
+    const userId = await requireAuthUserId(ctx);
 
     const notebook = await ctx.db.get(notebookId);
     if (!notebook || notebook.ownerId !== userId) {
@@ -83,8 +81,7 @@ export const rename = mutation({
 export const remove = mutation({
   args: { notebookId: v.id("notebooks") },
   handler: async (ctx, { notebookId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Sign in to delete a notebook.");
+    const userId = await requireAuthUserId(ctx);
 
     const notebook = await ctx.db.get(notebookId);
     if (!notebook || notebook.ownerId !== userId) {

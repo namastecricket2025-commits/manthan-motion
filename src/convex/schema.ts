@@ -30,7 +30,14 @@ const schema = defineSchema(
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
 
       role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+
+      // The Supabase account this row belongs to (`sub` of the access token).
+      // Auth is handled by Supabase, so this is what ties an identity to the
+      // notebooks, sources, materials and usage it owns.
+      authSubject: v.optional(v.string()),
+    })
+      .index("email", ["email"]) // index for the email. do not remove or modify
+      .index("by_auth_subject", ["authSubject"]),
 
     // A notebook is the user's own workspace: the thing they name, fill with
     // sources, and churn into study material. Everything on the dashboard is
