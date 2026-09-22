@@ -139,7 +139,7 @@ export default function Navbar() {
               maxIconSize={DOCK_ZOOM.maxIconSize}
             />
           </div>
-          <MobileMenu items={isAuthenticated ? dockItems : [...dockItems, signInItem]} />
+          <MobileMenu />
           <ThemeToggle />
           {/* Sign in lives once, in the dock (icon + tooltip). */}
           <div className="hidden sm:block">{cta}</div>

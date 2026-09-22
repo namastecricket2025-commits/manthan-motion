@@ -151,13 +151,13 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex w-full min-w-0 flex-col items-center gap-4">
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
         aria-label={flipped ? "Show question" : "Show answer"}
         className={
-          "flip-card block h-[260px] w-full max-w-xl cursor-pointer select-none text-left sm:h-[280px] " +
+          "flip-card block h-[240px] w-full max-w-xl min-w-0 cursor-pointer select-none text-left sm:h-[280px] " +
           (flipped ? "flip-card--flipped" : "")
         }
       >
@@ -263,8 +263,7 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
 
   if (!question) return null;
 
-  return (
-    <div className="flex flex-col gap-4">
+  return (      <div className="flex min-w-0 flex-col gap-4">
       <div className="flex items-center justify-between text-xs text-text-dim">
         <span>
           Question {index + 1} of {total}
@@ -537,7 +536,7 @@ export function MindmapView({ payload }: { payload: MindmapPayload }) {
         <svg
           ref={svgRef}
           viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
-          className="mx-auto block h-auto w-full min-w-[560px] max-w-[860px]"
+          className="mx-auto block h-auto w-full max-w-[860px] sm:min-w-[560px]"
           role="img"
           aria-label={`Mind map of ${payload.root}`}
         >
@@ -714,9 +713,9 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
   if (!slide) return null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="glass-panel overflow-hidden">
-        <div className="border-b border-[var(--card-border)] px-6 py-5">
+        <div className="border-b border-[var(--card-border)] px-4 py-5 sm:px-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--signal)]">
             {payload.title}
             {payload.subtitle ? ` · ${payload.subtitle}` : ""}
@@ -733,7 +732,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
             </h4>
           </div>
         </div>
-        <ul className="flex flex-col gap-2.5 px-6 py-5">
+        <ul className="flex flex-col gap-2.5 px-4 py-5 sm:px-6">
           {slide.bullets.map((bullet, i) => (
             <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
               <span
@@ -745,7 +744,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
           ))}
         </ul>
         {slide.notes && (
-          <p className="border-t border-[var(--card-border)] px-6 py-3 text-xs italic leading-relaxed text-text-dim">
+          <p className="border-t border-[var(--card-border)] px-4 py-3 text-xs italic leading-relaxed text-text-dim sm:px-6">
             Speaker note — {slide.notes}
           </p>
         )}

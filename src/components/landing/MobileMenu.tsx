@@ -1,7 +1,13 @@
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
-import { IconPlus } from "@tabler/icons-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  IconAtom,
+  IconLayoutDashboard,
+  IconLogin,
+  IconTag,
+  IconUser,
+} from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,17 +15,16 @@ import { useAuth } from "@/hooks/use-auth";
 /**
  * The mobile navigation panel.
  *
- * Replaces the old icon-fan, which read as a long column of unlabeled squares
- * a first-time visitor could not parse. This is a plain, readable menu: every
- * destination is a full-width row with its name, and the one action that
- * matters — Get started (or Open dashboard when signed in) — sits pinned at
- * the top of the panel where it cannot be missed.
+ * Routes only — the homepage section anchors (Features / How it works /
+ * Impact) are deliberately absent on touch: the user can scroll the page
+ * themselves, and the menu is for getting somewhere. Each entry is a full
+ * row with its name; the primary action (Get started / Open dashboard)
+ * pins to the top so a first-time visitor cannot miss it.
+ *
+ * The panel is a compact sheet sized to its content — never a full-screen
+ * takeover — and closes on any navigation.
  */
-export function MobileMenu({
-  items,
-}: {
-  items: { title: string; icon: ReactNode; href: string }[];
-}) {
+export function MobileMenu() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
@@ -42,6 +47,64 @@ export function MobileMenu({
     };
   }, [open]);
 
+  const rows: {
+    title: string;
+    sub: string;
+    href: string;
+    icon: React.ReactNode;
+  }[] = [
+    ...(isAuthenticated
+      ? [
+          {
+            title: "Dashboard",
+            sub: "Your notebooks and study material",
+            href: "/dashboard",
+            icon: (
+              <IconLayoutDashboard
+                className="h-full w-full"
+                strokeWidth={1.7}
+              />
+            ),
+          },
+        ]
+      : []),
+    {
+      title: "STEM Lab",
+      sub: "Physics, chemistry, biology sandboxes",
+      href: "/lab",
+      icon: <IconAtom className="h-full w-full" strokeWidth={1.7} />,
+    },
+    {
+      title: "Plans",
+      sub: "Allowances and pricing",
+      href: "/pricing",
+      icon: <IconTag className="h-full w-full" strokeWidth={1.7} />,
+    },
+    {
+      title: "About Us",
+      sub: "The idea behind Manthan",
+      href: "/about",
+      icon: <IconUser className="h-full w-full" strokeWidth={1.7} />,
+    },
+    ...(isAuthenticated
+      ? [
+          {
+            title: "Settings",
+            sub: "Theme, motion and account",
+            href: "/settings",
+            icon: null,
+          },
+        ]
+      : [
+          {
+            title: "Sign in",
+            sub: "Email, Google or guest",
+            href: "/auth?returnTo=%2Fdashboard",
+            icon: <IconLogin className="h-full w-full" strokeWidth={1.7} />,
+          },
+        ]),
+  ];
+
   return (
     <div ref={rootRef} className="relative md:hidden">
       <AnimatePresence>
@@ -51,7 +114,7 @@ export function MobileMenu({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-chip absolute right-0 top-full z-50 mt-2 w-64 origin-top-right rounded-2xl p-2"
+            className="glass-chip absolute right-0 top-full z-50 mt-2 w-[264px] origin-top-right rounded-2xl p-2"
           >
             {/* The primary action, first and unmistakable. */}
             <div className="p-1.5 pb-2">
@@ -77,40 +140,28 @@ export function MobileMenu({
             <div className="mx-2 border-t border-[var(--glass-hairline)]" />
 
             <nav className="mt-1.5 flex flex-col">
-              {items.map((item) => {
-                const internal = item.href.startsWith("/");
-                const row = (
-                  <>
+              {rows.map((item) => (
+                <Link
+                  key={item.title}
+                  to={item.href}
+                  className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_7%,transparent)]"
+                  onClick={() => setOpen(false)}
+                >
+                  {item.icon && (
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--glass-hairline)] text-[var(--signal)]">
                       <span className="h-4 w-4">{item.icon}</span>
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-foreground">
                       {item.title}
                     </span>
-                  </>
-                );
-                const rowClass =
-                  "flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_7%,transparent)]";
-                return internal ? (
-                  <Link
-                    key={item.title}
-                    to={item.href}
-                    className={rowClass}
-                    onClick={() => setOpen(false)}
-                  >
-                    {row}
-                  </Link>
-                ) : (
-                  <a
-                    key={item.title}
-                    href={item.href}
-                    className={rowClass}
-                    onClick={() => setOpen(false)}
-                  >
-                    {row}
-                  </a>
-                );
-              })}
+                    <span className="block truncate text-[11px] leading-snug text-text-dim">
+                      {item.sub}
+                    </span>
+                  </span>
+                </Link>
+              ))}
             </nav>
           </motion.div>
         )}
@@ -125,13 +176,30 @@ export function MobileMenu({
           "glass-chip btn-ghost inline-flex h-10 w-10 items-center justify-center text-foreground",
         )}
       >
-        <IconPlus
+        <svg
+          viewBox="0 0 24 24"
           className={cn(
             "h-5 w-5 transition-transform duration-300",
-            open && "rotate-45",
+            open && "rotate-90",
           )}
+          fill="none"
+          stroke="currentColor"
           strokeWidth={1.8}
-        />
+          strokeLinecap="round"
+        >
+          {open ? (
+            <>
+              <path d="M6 6l12 12" />
+              <path d="M18 6L6 18" />
+            </>
+          ) : (
+            <>
+              <path d="M4 7h16" />
+              <path d="M4 12h16" />
+              <path d="M4 17h16" />
+            </>
+          )}
+        </svg>
       </button>
     </div>
   );
