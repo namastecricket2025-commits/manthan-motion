@@ -603,14 +603,14 @@ html:not(.dark) .set-select-content [role="option"] {
   gap: 5px;
   border-radius: 11px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #150c0b;
+  background: #0a0a0b;
   padding: 9px;
 }
 .set-theme__preview--light {
   background: #f7f3f0;
 }
 .set-theme__preview--system {
-  background: linear-gradient(120deg, #150c0b 0 50%, #f7f3f0 50% 100%);
+  background: linear-gradient(120deg, #0a0a0b 0 50%, #f7f3f0 50% 100%);
 }
 .set-theme__bar {
   height: 5px;

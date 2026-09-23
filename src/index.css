@@ -229,15 +229,15 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — warm espresso ink, the base the crimson field is
-     painted over. */
-  --ink: #150c0b;
+  /* Brand palette (dark) — neutral near-black ink so "blobs off" reads as
+     true dark mode; crimson stays the accent painted over it. */
+  --ink: #0a0a0b;
   --signal: #e0323a;
   --signal-2: #8f1d22;
-  --text-main: #fdf8f6;
+  --text-main: #f7f7f8;
   --text-dim: #cbd5e1;
   --card-border: rgba(224, 50, 58, 0.2);
-  --panel-bg: rgba(21, 12, 11, 0.6);
+  --panel-bg: rgba(10, 10, 11, 0.6);
 
   /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
      The metaball field's three stops and its opacity ceiling. In dark the
@@ -245,7 +245,7 @@
      signature look. */
   --bg-canvas-a: #e0323a;
   --bg-canvas-b: #8f1d22;
-  --bg-canvas-c: #150c0b;
+  --bg-canvas-c: #0a0a0b;
   --bg-canvas-opacity: 0.9;
   /* Neutral segment of the primary-button ring (dark). */
   --moving-ring: rgba(255, 255, 255, 0.16);
@@ -261,7 +261,7 @@
      final letters. Matching the heading colour exactly plus two intermediate
      stops keeps the word reading as heading text while the tail ignites
      smoothly. */
-  --gt-head: #f4ece9;
+  --gt-head: #f4f4f5;
   --gt-tail: #ff4f58;
 
   /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
@@ -284,11 +284,11 @@
   ----chart-crosshair: rgba(244, 236, 233, 0.18);
   ----chart-label: var(--text-dim);
   ----chart-line-primary: var(--signal);
-  ----chart-line-secondary: #b97750;
-  ----chart-tooltip-background: #241614;
+  ----chart-line-secondary: #fb7185;
+  ----chart-tooltip-background: #17171a;
   ----chart-tooltip-foreground: var(--text-main);
   ----chart-tooltip-muted: var(--text-dim);
-  ----chart-marker-background: #241614;
+  ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
   ----chart-segment-background: rgba(224, 50, 58, 0.12);
@@ -297,36 +297,36 @@
   /* shadcn aliases (dark) */
   --background: var(--ink);
   --foreground: var(--text-main);
-  /* Warm espresso surface ramp (dialogs, popovers, menus, muted wells) built
+  /* Neutral dark surface ramp (dialogs, popovers, menus, muted wells) built
      on the same base as `--ink`, so no primitive falls back to a default
-     grey template or a mismatched cold fill. Crimson stays the only accent. */
-  --card: #1e1210;
+     grey template or a mismatched warm fill. Crimson stays the only accent. */
+  --card: #141416;
   --card-foreground: var(--text-main);
-  --popover: #1e1210;
+  --popover: #141416;
   --popover-foreground: var(--text-main);
   --primary: var(--signal);
   --primary-foreground: #fff7f5;
-  --secondary: #271614;
-  --secondary-foreground: #f4ece9;
-  --muted: #241614;
-  --muted-foreground: #b9aca7;
-  --accent: #2b1a17;
-  --accent-foreground: #f4ece9;
+  --secondary: #1c1c1f;
+  --secondary-foreground: #f4f4f5;
+  --muted: #19191c;
+  --muted-foreground: #a1a1aa;
+  --accent: #232326;
+  --accent-foreground: #f4f4f5;
   --destructive: #e0323a;
   --border: rgba(244, 236, 233, 0.12);
   --input: rgba(244, 236, 233, 0.14);
   --ring: var(--signal);
   --chart-1: #e0323a;
-  --chart-2: #8f1d22;
-  --chart-3: #b97750;
+  --chart-2: #fb7185;
+  --chart-3: #e8b04b;
   --chart-4: #7d8f78;
-  --chart-5: #b9aca7;
-  --sidebar: #1e1210;
+  --chart-5: #a1a1aa;
+  --sidebar: #141416;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
   --sidebar-primary-foreground: #fff7f5;
-  --sidebar-accent: #271614;
-  --sidebar-accent-foreground: #f4ece9;
+  --sidebar-accent: #1c1c1f;
+  --sidebar-accent-foreground: #f4f4f5;
   --sidebar-border: rgba(244, 236, 233, 0.1);
   --sidebar-ring: var(--signal);
 }

@@ -209,8 +209,8 @@ export default function Dashboard() {
   const mixData = summary
     ? [
         { label: "Files", value: summary.fileCount, color: "var(--signal)" },
-        { label: "Links", value: summary.linkCount, color: "#b97750" },
-        { label: "Pasted notes", value: summary.notesCount, color: "#7c5f52" },
+        { label: "Links", value: summary.linkCount, color: "#fb7185" },
+        { label: "Pasted notes", value: summary.notesCount, color: "#a1a1aa" },
       ].filter((d) => d.value > 0)
     : [];
   const generatedData = summary
@@ -231,13 +231,13 @@ export default function Dashboard() {
   const weekData = summary?.byDay ?? [];
   const weekTotal = weekData.reduce((sum, d) => sum + d.count, 0);
 
-  /** Distinct crimson-family shades, one per artefact kind (stacked bars). */
+  /** Distinct accent shades, one per artefact kind (stacked bars). */
   const KIND_COLORS: Record<string, string> = {
     summary: "var(--signal)",
-    flashcards: "#b97750",
-    quiz: "#7c5f52",
-    mindmap: "#e0323a",
-    slides: "#a05a48",
+    flashcards: "#fb7185",
+    quiz: "#e8b04b",
+    mindmap: "#7d8f78",
+    slides: "#a1a1aa",
   };
 
   return (

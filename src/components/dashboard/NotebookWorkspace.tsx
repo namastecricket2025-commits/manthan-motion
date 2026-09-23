@@ -540,6 +540,13 @@ export function NotebookWorkspace({
               : `Generate from the ${readyCount} readable source${readyCount === 1 ? "" : "s"} in this notebook.`}
           </p>
 
+          {readyCount > 0 && (
+            <p className="rounded-lg border border-[var(--card-border)] px-3 py-2 text-[11px] leading-relaxed text-text-dim">
+              Generated in your sources&apos; language — Hindi sources produce
+              Hindi material (Devanagari), English ones English.
+            </p>
+          )}
+
           <div className="flex flex-col gap-2">
             {KIND_META.map((meta) => {
               const on = selected.includes(meta.kind);

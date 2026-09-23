@@ -195,6 +195,7 @@ const SYSTEM = [
   "You are Manthan's study-material engine. You turn a student's own sources into revision material.",
   "Work ONLY from the supplied sources. Never add facts, figures, dates, examples or citations that are not in them.",
   "If the sources are thin on something, cover less rather than guessing, and keep the student's terminology.",
+  "The user message carries a LANGUAGE directive — always follow it: every student-facing string is written in that language only, with no mixing.",
   "Reply with a single JSON object and nothing else — no prose, no markdown fences.",
 ].join(" ");
 
@@ -235,11 +236,62 @@ const KIND_SPECS: Record<Kind, { task: string; shape: string; extras: string }> 
     },
   };
 
-function buildPrompt(kind: Kind, notebookName: string, corpus: string) {
+/* ------------------------------------------------------------------ */
+/* Output language: Hindi or English, following the sources            */
+/* ------------------------------------------------------------------ */
+
+/** Devanagari (Hindi) code points — their presence marks Hindi source text. */
+const HINDI_RE = /[\u0900-\u097F]/g;
+
+/**
+ * Manthan generates in exactly two languages: the sources' own. Sampling the
+ * corpus for Devanagari script decides which — English text contains none, so
+ * even a small fraction of Hindi script is decisive. A mixed notebook takes
+ * whichever dominates, defaulting to English.
+ */
+function detectLanguage(corpusParts: string[]): "hi" | "en" {
+  let devanagari = 0;
+  let total = 0;
+  for (const part of corpusParts) {
+    const sample = part.slice(0, 8_000);
+    total += sample.length;
+    devanagari += sample.match(HINDI_RE)?.length ?? 0;
+  }
+  if (total === 0) return "en";
+  return devanagari / total > 0.01 ? "hi" : "en";
+}
+
+/**
+ * The one non-negotiable instruction per run: the model writes every
+ * student-facing string in the detected language. Without it, models drift —
+ * a Hindi source would come back with an English title and English section
+ * headings, or worse, Hindi transliterated into Latin script.
+ */
+function languageDirective(lang: "hi" | "en"): string[] {
+  if (lang === "hi") {
+    return [
+      "LANGUAGE (critical): The sources are in Hindi, so EVERY word a student reads must be written in Hindi in the Devanagari script — title, overview, section headings, points, keyTerms, card fronts and backs, questions, options, explanations, mind-map labels, slide titles, bullets and speaker notes.",
+      "Write Hindi in Devanagari script only — never transliterate Hindi into English (Latin) letters. Keep standard technical terms the way the source writes them, and copy `source` file names exactly as given.",
+      "Do not mix languages: no English sentences or English headings anywhere in the output.",
+    ];
+  }
+  return [
+    "LANGUAGE (critical): The sources are in English, so write EVERY student-facing string in English — title, overview, headings, points, keyTerms, questions, options, explanations, mind-map labels, slide titles, bullets and notes.",
+    "Do not mix other languages into the output.",
+  ];
+}
+
+function buildPrompt(
+  kind: Kind,
+  notebookName: string,
+  corpus: string,
+  lang: "hi" | "en",
+) {
   const spec = KIND_SPECS[kind];
   return [
     `Notebook: ${notebookName}`,
     `Task: ${spec.task}`,
+    ...languageDirective(lang),
     `Return exactly this shape: ${spec.shape}`,
     spec.extras,
     "",
@@ -248,7 +300,7 @@ function buildPrompt(kind: Kind, notebookName: string, corpus: string) {
   ].join("\n");
 }
 
-function fallbackTitle(kind: Kind, payload: unknown, notebook: string) {
+function fallbackTitle(kind: Kind, payload: unknown, notebook: string, lang: "hi" | "en") {
   if (kind === "summary" || kind === "slides") {
     const title = (payload as { title?: string }).title;
     if (title) return title;
@@ -257,11 +309,15 @@ function fallbackTitle(kind: Kind, payload: unknown, notebook: string) {
     const root = (payload as { root?: string }).root;
     if (root) return root;
   }
+  // Only reached when the model omitted a title; keep the same language as
+  // the material itself so a Hindi deck never gets an English label.
   if (kind === "flashcards") {
     const cards = (payload as { cards?: unknown[] }).cards ?? [];
-    return `${cards.length} flashcards · ${notebook}`;
+    return lang === "hi"
+      ? `${cards.length} फ़्लैशकार्ड · ${notebook}`
+      : `${cards.length} flashcards · ${notebook}`;
   }
-  return `${notebook} quiz`;
+  return lang === "hi" ? `${notebook} प्रश्नोत्तरी` : `${notebook} quiz`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -519,6 +575,10 @@ export const generate = action({
     }
     const corpus = parts.join("\n\n");
 
+    // Every artefact in this run comes out in the sources' own language —
+    // Hindi sources produce Hindi material, English ones English.
+    const language = detectLanguage(parts);
+
     const candidates = await resolveCandidates();
     const results: {
       kind: Kind;
@@ -546,14 +606,15 @@ export const generate = action({
         const { text: raw, model, provider, tokens } = await callModel(
           candidates,
           SYSTEM,
-          buildPrompt(kind, context.notebookName, corpus),
+          buildPrompt(kind, context.notebookName, corpus, language),
         );
 
         // Meter what the call actually cost, falling back to the estimate.
         const spent =
           tokens ??
           Math.round(
-            (buildPrompt(kind, context.notebookName, corpus).length + raw.length) /
+            (buildPrompt(kind, context.notebookName, corpus, language).length +
+              raw.length) /
               CHARS_PER_TOKEN,
           );
         await ctx.runMutation(internal.usage.record, {
@@ -594,7 +655,7 @@ export const generate = action({
         await ctx.runMutation(internal.materials.save, {
           notebookId,
           kind,
-          title: fallbackTitle(kind, parsed, context.notebookName),
+          title: fallbackTitle(kind, parsed, context.notebookName, language),
           payload: parsed,
           sourceIds: usable.map((source) => source.id),
           model: `${provider}:${model}`,

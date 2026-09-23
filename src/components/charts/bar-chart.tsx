@@ -299,6 +299,27 @@ const ChartCore = memo(function ChartCore({
       data,
       innerHeight,
       resolveDomain: (dataKeys) => {
+        // Stacked: the domain has to cover the SUM of the series, not the
+        // largest single value — a day with one item from each kind stacks
+        // five series high, and scaling that sum against a single-series max
+        // drew the stack far above the chart's top edge (the container is
+        // overflow-visible, so the bars escaped the panel entirely).
+        if (stacked) {
+          let max = 0;
+          for (const d of data) {
+            let sum = 0;
+            for (const key of dataKeys) {
+              const value = d[key];
+              if (typeof value === "number") {
+                sum += value;
+              }
+            }
+            if (sum > max) {
+              max = sum;
+            }
+          }
+          return [0, (max || 100) * 1.1];
+        }
         let max = 0;
         for (const d of data) {
           for (const key of dataKeys) {
@@ -311,7 +332,7 @@ const ChartCore = memo(function ChartCore({
         return [0, (max || 100) * 1.1];
       },
     });
-  }, [data, innerHeight, isHorizontal, lines, valueScale]);
+  }, [data, innerHeight, isHorizontal, lines, valueScale, stacked]);
 
   const primaryYScale = getPrimaryYScale(yScales, valueScale);
 
