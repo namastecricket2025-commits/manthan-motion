@@ -4,8 +4,6 @@ import { useLocation, useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
-  Accessibility,
-  ArrowUpRight,
   Check,
   Download,
   Eye,
@@ -17,7 +15,6 @@ import {
   Monitor,
   Moon,
   RotateCcw,
-  Scale,
   ShieldCheck,
   Smartphone,
   Sparkles,
@@ -27,7 +24,6 @@ import {
   UserCog,
   Waves,
 } from "lucide-react";
-import { Link } from "react-router";
 
 import {
   Accordion,
@@ -61,7 +57,6 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import type { FrameTarget, TextComfort, ThemeMode } from "@/lib/app-settings";
-import { LEGAL_BOXES } from "./legal-content";
 import { useSettings } from "./SettingsProvider";
 
 /* ------------------------------------------------------------------ */
@@ -69,9 +64,9 @@ import { useSettings } from "./SettingsProvider";
 /* ------------------------------------------------------------------ */
 
 const THEMES: { key: ThemeMode; label: string; hint: string; icon: typeof Sun }[] = [
-  { key: "light", label: "Light Mode", hint: "Warm paper ink", icon: Sun },
-  { key: "dark", label: "Dark Mode", hint: "The lab default", icon: Moon },
-  { key: "system", label: "System Default", hint: "Syncs with your OS", icon: Monitor },
+  { key: "light", label: "Light", hint: "Warm paper ink", icon: Sun },
+  { key: "dark", label: "Dark", hint: "The lab default", icon: Moon },
+  { key: "system", label: "System", hint: "Follows your device", icon: Monitor },
 ];
 
 const COMFORT: { key: TextComfort; label: string; scale: string }[] = [
@@ -88,25 +83,20 @@ const FRAME_OPTIONS: { value: FrameTarget; label: string; hint: string }[] = [
 ];
 
 /** The four accordion panels, addressable as `/settings#<key>`. */
-const PANEL_KEYS = ["accessibility", "theme", "account", "legal"] as const;
+const PANEL_KEYS = ["experience", "appearance", "account", "data"] as const;
 type PanelKey = (typeof PANEL_KEYS)[number];
 
-/** Where each legal box's dedicated page lives. */
-const LEGAL_ROUTES: Record<string, string> = {
-  terms: "/terms",
-  privacy: "/privacy",
-  honor: "/honor",
-};
-
-/**
- * Which panel a location hash should reveal. The footer's policy links point
- * at `/settings#legal`; the older `/terms` + `/privacy` anchors are accepted
- * too so both spellings land on the same Legal category.
- */
+/** Which panel a location hash should reveal. */
 function panelsFromHash(hash: string): PanelKey[] {
   const key = hash.replace(/^#/, "").toLowerCase();
-  if (key === "terms" || key === "privacy" || key === "cookies") return ["legal"];
-  const hit = PANEL_KEYS.find((p) => p === key);
+  const alias: Record<string, PanelKey> = {
+    motion: "experience",
+    accessibility: "experience",
+    theme: "appearance",
+    security: "account",
+    privacy: "data",
+  };
+  const hit = PANEL_KEYS.find((p) => p === key) ?? alias[key];
   return hit ? [hit] : [];
 }
 
@@ -210,7 +200,8 @@ function PanelTitle({
   );
 }
 
-function Row({
+/** One line in a grouped settings list — label on the left, control right. */
+function ListRow({
   title,
   hint,
   badge,
@@ -224,16 +215,16 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="set-row">
-      <div className="set-row__meta">
-        <div className="set-row__title">
+    <div className="set-lrow">
+      <div className="set-lrow__text">
+        <div className="set-lrow__title">
           <span>{title}</span>
           {badge ? <span className="set-badge">{badge}</span> : null}
         </div>
-        <p className="set-row__hint">{hint}</p>
-        {note ? <p className="set-row__note">{note}</p> : null}
+        <p className="set-lrow__hint">{hint}</p>
+        {note ? <p className="set-lrow__note">{note}</p> : null}
       </div>
-      <div className="set-row__control">{children}</div>
+      <div className="set-lrow__ctl">{children}</div>
     </div>
   );
 }
@@ -284,6 +275,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const account = useQuery(api.settings.myAccount);
   const saveProfileMutation = useMutation(api.settings.updateProfile);
@@ -453,17 +445,15 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const comfortIndex = Math.max(0, COMFORT.findIndex((c) => c.key === settings.textComfort));
 
   /* ---- panel state (deep-linkable) ---- */
-  const location = useLocation();
-  const [openPanels, setOpenPanels] = useState<string[]>(() => [
-    "accessibility",
-    "theme",
+  const [openPanels, setOpenPanels] = useState<string[]>([
+    "experience",
+    "appearance",
     ...panelsFromHash(typeof window === "undefined" ? "" : window.location.hash),
   ]);
 
   /**
-   * Deep link: a hash like `#legal` opens that panel and brings it into view.
-   * Runs for both a fresh navigation and an in-page hash change (e.g. the
-   * footer's policy link while already on /settings).
+   * Deep link: a hash like `#account` opens that panel and brings it into view.
+   * Runs for both a fresh navigation and an in-page hash change.
    */
   useEffect(() => {
     const wanted = panelsFromHash(location.hash);
@@ -484,18 +474,18 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
       aria-labelledby="settings-heading"
     >
       <div className="set-shell">
-        <header className="set-head">
-          <div className="set-head__meta">
+        <header className="set-hero">
+          <div className="set-hero__meta">
             <span className="set-kicker">
               <Sparkles className="h-3 w-3" />
               Preferences
             </span>
-            <h2 id="settings-heading" className="set-head__title">
-              User Settings &amp; Accessibility
+            <h2 id="settings-heading" className="set-hero__title">
+              Settings
             </h2>
-            <p className="set-head__sub">
-              Every control below applies instantly across the STEM Lab and is remembered on this
-              device.
+            <p className="set-hero__sub">
+              Motion, appearance, security and your data. Every change applies the moment you make
+              it, and is remembered on this device.
             </p>
           </div>
           <button type="button" className="set-btn set-btn--ghost" onClick={reset}>
@@ -510,25 +500,21 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           onValueChange={setOpenPanels}
           className="set-acc"
         >
-          {/* ============ 1. ACCESSIBILITY & MOTION CONTROL ============ */}
-          <AccordionItem
-            id="set-panel-accessibility"
-            value="accessibility"
-            className="set-item"
-          >
+          {/* ============ 1. MOTION & ATMOSPHERE ============ */}
+          <AccordionItem id="set-panel-experience" value="experience" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
-                icon={Accessibility}
-                title="Accessibility & Motion Control"
-                blurb="Dial in motion, glow and render budget"
+                icon={Waves}
+                title="Motion & Atmosphere"
+                blurb="How much the interface moves, glows and animates"
               />
             </AccordionTrigger>
             <AccordionContent className="set-content">
-              <div className="set-body">
-                <Row
-                  title="Background glow level"
+              <div className="set-group">
+                <ListRow
+                  title="Background glow"
                   badge={`${settings.ambient}%`}
-                  hint="Controls the brightness of the animated background field. 0% renders a fully static, flat page; 60% is the maximum glow the site applies, and values above it hold at that ceiling rather than getting brighter."
+                  hint="Brightness of the animated background field. At 0% the page is a flat, perfectly still surface; 60% is the brightest the design ever goes."
                 >
                   <div className="set-slider-wrap">
                     <Slider
@@ -537,34 +523,34 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       min={0}
                       max={100}
                       step={5}
-                      aria-label="Ambient intensity"
+                      aria-label="Background glow"
                       onValueChange={(v) => update({ ambient: v[0] ?? 0 })}
                     />
                     <div className="set-scale">
-                      <span>0% · static</span>
-                      <span>60% · maximum</span>
+                      <span>0% · still</span>
+                      <span>60% · brightest</span>
                       <span>100%</span>
                     </div>
                   </div>
-                </Row>
+                </ListRow>
 
-                <Row
-                  title="Cursor-tracking Background"
+                <ListRow
+                  title="Pointer-tracking background"
                   badge={settings.cursorField ? "Following" : "Off"}
-                  hint="Stops the background glow field from leaning toward your pointer as it moves. Everything else keeps moving — the drifting blobs, page transitions and lab simulations are untouched."
+                  hint="Lets the background field lean gently toward your pointer. Everything else — drifting shapes, page transitions, lab simulations — keeps moving either way."
                 >
                   <Switch
                     className="set-switch"
                     checked={settings.cursorField}
-                    aria-label="Cursor-tracking background"
+                    aria-label="Pointer-tracking background"
                     onCheckedChange={(v) => update({ cursorField: v })}
                   />
-                </Row>
+                </ListRow>
 
-                <Row
-                  title="Reduce Motion / Motionless Mode"
+                <ListRow
+                  title="Motionless mode"
                   badge={settings.reduceMotion ? "On" : "Off"}
-                  hint="Completely disables all continuous loops, bouncing animations, floating particles and interactive 3D orbit animations across the physics, chemistry and biology labs, instantly snapping every element to a clean, fixed state. Dragging and zooming still work for close inspection."
+                  hint="Stops every continuous loop, floating particle and orbiting 3D model, holding each instrument in a clean fixed state. Dragging and zooming keep working for close inspection."
                   note={
                     systemReducedMotion && !settings.reduceMotion
                       ? "Your device is already asking for reduced motion."
@@ -574,20 +560,21 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                   <Switch
                     className="set-switch"
                     checked={settings.reduceMotion}
-                    aria-label="Reduce motion / motionless mode"
+                    aria-label="Motionless mode"
                     onCheckedChange={(v) => update({ reduceMotion: v })}
                   />
-                </Row>
+                </ListRow>
 
-                <Row
-                  title="Simulation Framerate Target"
-                  hint="Caps the render loop of every 3D simulation so you can trade smoothness for battery life. It applies the moment you pick a value."
+                <ListRow
+                  title="Simulation frame rate"
+                  badge={FRAME_OPTIONS.find((o) => o.value === settings.frameTarget)?.label}
+                  hint="Caps the render loop of every 3D simulation, trading smoothness for battery life. It takes effect the moment you choose."
                 >
                   <Select
                     value={settings.frameTarget}
                     onValueChange={(v) => update({ frameTarget: v as FrameTarget })}
                   >
-                    <SelectTrigger className="set-select" aria-label="Simulation framerate target">
+                    <SelectTrigger className="set-select" aria-label="Simulation frame rate">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="set-select-content">
@@ -598,27 +585,30 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       ))}
                     </SelectContent>
                   </Select>
-                </Row>
+                </ListRow>
               </div>
             </AccordionContent>
           </AccordionItem>
 
-          {/* ============ 2. APP THEME & MODES ============ */}
-          <AccordionItem id="set-panel-theme" value="theme" className="set-item">
+          {/* ============ 2. APPEARANCE & READING ============ */}
+          <AccordionItem id="set-panel-appearance" value="appearance" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={SunMoon}
-                title="App Theme & Modes"
-                blurb="Appearance and reading comfort"
+                title="Appearance & Reading"
+                blurb="Theme and text comfort"
               />
             </AccordionTrigger>
             <AccordionContent className="set-content">
-              <div className="set-body">
-                <div className="set-block">
-                  <div className="set-block__meta">
-                    <div className="set-row__title">Appearance</div>
-                    <p className="set-row__hint">
-                      Pick a fixed theme or let Manthan follow your operating system automatically.
+              <div className="set-group">
+                <div className="set-lrow set-lrow--stack">
+                  <div className="set-lrow__text">
+                    <div className="set-lrow__title">
+                      <span>Appearance</span>
+                      <span className="set-badge">{THEMES.find((t) => t.key === settings.themeMode)?.label}</span>
+                    </div>
+                    <p className="set-lrow__hint">
+                      Pick a fixed theme, or let Manthan follow your device automatically.
                     </p>
                   </div>
                   <div className="set-theme-grid" role="radiogroup" aria-label="App theme">
@@ -658,10 +648,10 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                   </div>
                 </div>
 
-                <Row
-                  title="Text Comfort"
+                <ListRow
+                  title="Text comfort"
                   badge={COMFORT[comfortIndex]?.label}
-                  hint="Cleanly scales dashboard typography, and switches the whole interface to a spaced, dyslexia-friendly letterform when you need it."
+                  hint="Scales dashboard typography, and switches the whole interface to a spaced, dyslexia-friendly letterform when you need it."
                 >
                   <div className="set-slider-wrap">
                     <Slider
@@ -690,7 +680,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       ))}
                     </div>
                   </div>
-                </Row>
+                </ListRow>
 
                 <div className="set-preview" aria-live="polite">
                   <p className="set-preview__label">Live preview</p>
@@ -703,17 +693,17 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
             </AccordionContent>
           </AccordionItem>
 
-          {/* ============ 3. ACCOUNT SECURITY & PROFILE ============ */}
+          {/* ============ 3. ACCOUNT & SECURITY ============ */}
           <AccordionItem id="set-panel-account" value="account" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={ShieldCheck}
-                title="Account Security & Profile Management"
-                blurb="Profile, password, devices and your data"
+                title="Account & Security"
+                blurb="Profile, password and signed-in devices"
               />
             </AccordionTrigger>
             <AccordionContent className="set-content">
-              <div className="set-body">
+              <div className="set-group">
                 {/* profile */}
                 <div className="set-card">
                   <div className="set-card__head">
@@ -820,12 +810,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     </button>
                   </div>
 
-                  <p className="set-note">
-                    <Info className="h-3 w-3" />
-                    Manthan signs you in with one-time email codes, so this password locks your
-                    profile on this browser.
-                  </p>
-
                   <div className="set-actions">
                     <button type="submit" className="set-btn set-btn--primary">
                       Update password
@@ -837,7 +821,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                 <div className="set-card">
                   <div className="set-card__head">
                     <Fingerprint className="h-3.5 w-3.5" />
-                    Logged in devices
+                    Signed-in devices
                   </div>
                   <ul className="set-devices">
                     <li className="set-device set-device--current">
@@ -870,8 +854,8 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     ))}
                     {otherSessions.length === 0 && (
                       <li className="set-device set-device--empty">
-                        Other devices aren't listed here, but signing out ends
-                        every session except this one.
+                        Other devices aren&apos;t listed here, but signing out ends every session
+                        except this one.
                       </li>
                     )}
                   </ul>
@@ -883,33 +867,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       disabled={revoking}
                     >
                       <ShieldCheck className="h-3.5 w-3.5" />
-                      {revoking ? "Signing out…" : "Log Out of All Other Devices"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* data */}
-                <div className="set-card set-card--danger">
-                  <div className="set-card__head">
-                    <Download className="h-3.5 w-3.5" />
-                    Your data
-                  </div>
-                  <p className="set-note set-note--plain">
-                    Export keeps every preference, lab metric and account detail Manthan holds for
-                    you. Deletion is permanent and cannot be undone.
-                  </p>
-                  <div className="set-actions">
-                    <button type="button" className="set-btn set-btn--primary" onClick={onExport}>
-                      <Download className="h-3.5 w-3.5" />
-                      Export My Lab Progress Data
-                    </button>
-                    <button
-                      type="button"
-                      className="set-btn set-btn--danger"
-                      onClick={() => setConfirmOpen(true)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete My Account &amp; Data
+                      {revoking ? "Signing out…" : "Sign out of all other devices"}
                     </button>
                   </div>
                 </div>
@@ -917,34 +875,37 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
             </AccordionContent>
           </AccordionItem>
 
-          {/* ============ 4. TRUST & LEGAL TRANSPARENCY ============ */}
-          <AccordionItem id="set-panel-legal" value="legal" className="set-item">
+          {/* ============ 4. YOUR DATA ============ */}
+          <AccordionItem id="set-panel-data" value="data" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
-                icon={Scale}
-                title="Trust & Legal Transparency"
-                blurb="The full policies, in plain scannable form"
+                icon={Download}
+                title="Your Data"
+                blurb="Take a copy, or erase everything permanently"
               />
             </AccordionTrigger>
             <AccordionContent className="set-content">
-              <div className="set-body">
-                {/* The full policies live on dedicated pages — this panel just
-                    links to them so nothing has to be scrolled in an accordion. */}
-                <div className="set-legal-links">
-                  {LEGAL_BOXES.map((box) => (
-                    <Link
-                      key={box.id}
-                      to={LEGAL_ROUTES[box.id] ?? "/terms"}
-                      className="set-legal-card"
+              <div className="set-group">
+                <div className="set-card set-card--danger">
+                  <p className="set-note set-note--plain">
+                    <Info className="h-3 w-3" />
+                    Export keeps every preference, lab metric and account detail Manthan holds for
+                    you. Deletion is permanent and cannot be undone.
+                  </p>
+                  <div className="set-actions">
+                    <button type="button" className="set-btn set-btn--primary" onClick={onExport}>
+                      <Download className="h-3.5 w-3.5" />
+                      Export my lab progress
+                    </button>
+                    <button
+                      type="button"
+                      className="set-btn set-btn--danger"
+                      onClick={() => setConfirmOpen(true)}
                     >
-                      <span className="set-legal-card__tag">{box.tag}</span>
-                      <span className="set-legal-card__title">{box.title}</span>
-                      <span className="set-legal-card__meta">
-                        {box.clauses.length} clause{box.clauses.length === 1 ? "" : "s"} · opens its own page
-                      </span>
-                      <ArrowUpRight className="set-legal-card__arrow" />
-                    </Link>
-                  ))}
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete account &amp; data
+                    </button>
+                  </div>
                 </div>
               </div>
             </AccordionContent>

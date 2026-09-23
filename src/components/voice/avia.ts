@@ -28,6 +28,12 @@ export const AVIA_SWITCH_LINES = [
   "Okay, brain is on. Notes down, vibes parked. Let's work it out together.",
   "Locked in. I'm not handing you the answer, but I will get you all the way to it.",
   "Serious mode. One step at a time, and you do the thinking with me.",
+  "Right, switching gears. Full focus now, and we take it slowly.",
+  "Okay — pens out, vibes off. Let's actually understand this one.",
+  "Hold on, that's schoolwork. Full brain, no shortcuts. Walk me through where you are.",
+  "Alright, I'm taking this one seriously. Give me your first thought and we build from there.",
+  "Focus mode on. Hmm, let's break this into pieces you can actually hold.",
+  "Right. Deep breath, clear head. We'll do this properly, one step at a time.",
 ];
 
 /** Rotates through the switch lines without ever repeating the previous one. */
@@ -44,7 +50,41 @@ export const AVIA_GREETINGS = [
   "Hey, Avia here. Talk to me like a friend down the corridor — and when work shows up, I switch on properly.",
   "I'm Avia. Warm up with whatever, then throw me a topic and watch me get serious.",
   "Avia, reporting in. Free form chat, or full study mode — your call.",
+  "Yo. I'm the one you talk to when the textbook stops making sense. Say the word.",
+  "Hey, I'm Avia. Ask me the thing you're embarrassed to ask your teacher — I don't judge, I just explain.",
+  "Avia here. Hit the mic and talk normally. I'll follow, and when it turns into homework I'll take it seriously.",
+  "I'm Avia. We can chat nonsense for ten minutes, or we can lock in on a chapter. Either works for me.",
 ];
+
+/**
+ * Backchannels — the short, human noises a person makes while listening.
+ *
+ * Spoken before the real answer on some turns, never twice in a row: they are
+ * what separates a conversation from a chatbot reading out paragraphs. Kept
+ * to a couple of syllables so they never delay an actual answer, and only
+ * used once the student is already talking, never on a first message.
+ */
+export const AVIA_BACKCHANNELS = [
+  "Mm-hm.",
+  "Right, okay.",
+  "Hmm — okay, let me think.",
+  "Ah, got it.",
+  "Mhm, so...",
+  "Okay, okay.",
+  "Hold on — yeah, I see it.",
+  "Right.",
+  "Hmm, yeah.",
+  "Ah, that one. Okay.",
+];
+
+/** One backchannel, never the same one twice in a row. */
+export function pickBackchannel(avoid?: string): string {
+  const pool =
+    avoid && AVIA_BACKCHANNELS.length > 1
+      ? AVIA_BACKCHANNELS.filter((line) => line !== avoid)
+      : AVIA_BACKCHANNELS;
+  return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_BACKCHANNELS[0];
+}
 
 export function pickGreeting(avoid?: string): string {
   const pool =
@@ -154,9 +194,11 @@ export function sanitizeForSpeech(text: string): string {
 /**
  * Read a line aloud.
  *
- * Pitch stays at 1.0 (natural) and the rate at 1.05 — brisk, energetic, peer
- * paced: not slow, not syrupy. `cancel` first so a new reply never queues
- * behind an old one the student has already moved past.
+ * Pitch sits at 1.0 (natural) and the rate at 1.05 — brisk, energetic, peer
+ * paced: not slow, not syrupy — with a small per-turn jitter around those
+ * values so she never reads two answers with identical prosody. `cancel`
+ * first so a new reply never queues behind an old one the student has already
+ * moved past.
  */
 export function speakText(
   text: string,
@@ -177,8 +219,18 @@ export function speakText(
   if (interrupt) synth.cancel();
 
   const utterance = new SpeechSynthesisUtterance(clean);
-  utterance.pitch = 1.0;
-  utterance.rate = 1.05;
+  // Base voice: natural pitch, brisk peer pace. Both are nudged per-turn by a
+  // grain of randomness — identical prosody on every line is exactly what made
+  // her sound synthesised. Long replies settle slightly slower and a touch
+  // lower; short reactions stay quick and bright.
+  const long = clean.length > 220;
+  const grain = (spread: number) => (Math.random() * 2 - 1) * spread;
+  utterance.pitch = Number(
+    Math.min(1.25, Math.max(0.85, (long ? 0.99 : 1.02) + grain(0.03))).toFixed(3),
+  );
+  utterance.rate = Number(
+    Math.min(1.2, Math.max(0.94, (long ? 1.02 : 1.08) + grain(0.04))).toFixed(3),
+  );
   utterance.volume = 1;
   if (voice) {
     utterance.voice = voice;

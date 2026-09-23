@@ -3,6 +3,7 @@ import {
   detectStudyTopic,
   fallbackReply,
   pickAviaVoice,
+  pickBackchannel,
   pickGreeting,
   pickSwitchLine,
   speakText,
@@ -94,6 +95,9 @@ export function AviaWidget() {
   /** Last line used, so the pool never repeats back to back. */
   const lastSwitchRef = useRef<string | undefined>(undefined);
   const lastGreetingRef = useRef<string | undefined>(undefined);
+  /** Last listening noise she made, so it never repeats back to back. */
+  const lastBackchannelRef = useRef<string | undefined>(undefined);
+  const backchannelAtRef = useRef(0);
 
   turnsRef.current = turns;
   openRef.current = open;
@@ -185,6 +189,26 @@ export function AviaWidget() {
       }
 
       setThinking(true);
+
+      // The human tell: now and then she makes a small listening noise before
+      // the real answer — "mm-hm", "right, okay", "hmm, let me think". Only
+      // after the first exchange, at most once every twenty seconds, never the
+      // same one twice, and never on top of a Study Switch announcement.
+      const now = Date.now();
+      if (
+        !academic &&
+        turnsRef.current.length > 1 &&
+        now - backchannelAtRef.current > 20_000 &&
+        Math.random() < 0.45
+      ) {
+        backchannelAtRef.current = now;
+        const noise = pickBackchannel(lastBackchannelRef.current);
+        lastBackchannelRef.current = noise;
+        // interrupt = false: if the switch line is still playing, this queues
+        // behind it instead of cutting her off.
+        say(noise, false);
+      }
+
       const history = turnsRef.current.slice(-8).map((turn) => ({
         role: (turn.from === "student" ? "student" : "avia") as "student" | "avia",
         text: turn.text,
@@ -539,34 +563,39 @@ export function AviaWidget() {
         )}
       </AnimatePresence>
 
-      {/* The launcher itself: one circular orb with a living spark inside it.
-          While she is listening or speaking the ring spins up and the halo
-          breathes, so the state is readable at a glance from across the room. */}
+      {/* The launcher itself: one living orb, no icon. Six soft light strands
+          drift behind a hairline edge while a conic sweep turns around it, so
+          the state is legible from across the room — slow and calm at rest,
+          wide and fast while she listens, rippling at speech cadence while she
+          talks, and cooler once she has locked in. */}
       <motion.button
         type="button"
         onClick={() => (open ? closeWidget() : openWidget())}
         aria-expanded={open}
-        aria-label="AI Voice Tutor"
-        className={"avia-fab" + (listening || speaking ? " is-live" : "")}
+        aria-label={listening ? "Avia is listening" : "Open Avia, the AI voice tutor"}
+        className={
+          "avia-fab" +
+          (listening || speaking ? " is-live" : "") +
+          (studying ? " is-study" : "")
+        }
         initial={false}
-        animate={{ scale: open ? 0.86 : 1, opacity: open ? 0.75 : 1 }}
-        whileHover={{ scale: open ? 0.9 : 1.06 }}
+        animate={{ scale: open ? 0.88 : 1, opacity: open ? 0.7 : 1 }}
+        whileHover={{ scale: open ? 0.92 : 1.05 }}
         whileTap={{ scale: 0.94 }}
         transition={{ type: "spring", stiffness: 420, damping: 26, mass: 0.6 }}
       >
         <span className="avia-fab__halo" aria-hidden="true" />
         <span className="avia-fab__ring" aria-hidden="true" />
-        <span className="avia-fab__core">
-          <span className="avia-fab__spark" aria-hidden="true" />
-          <span className="avia-fab__glyph">
-            {listening ? (
-              <Square className="h-5 w-5" />
-            ) : speaking ? (
-              <Volume2 className="h-5 w-5" />
-            ) : (
-              <Sparkles className="h-5 w-5" />
-            )}
+        <span className="avia-fab__orb">
+          <span className="avia-fab__strands" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
           </span>
+          <span className="avia-fab__core" aria-hidden="true" />
         </span>
       </motion.button>
     </div>

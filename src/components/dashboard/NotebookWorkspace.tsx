@@ -388,11 +388,13 @@ export function NotebookWorkspace({
               Drop files or click to browse — as many as you like
             </span>
             <span className="text-xs text-text-dim">
-              PDF, text, Markdown, CSV — up to 20 MB each, added in parallel
+              PDF, Word, JPG or PNG, text and CSV — up to 20 MB each, added in
+              parallel
             </span>
             <input
               type="file"
               multiple
+              accept=".pdf,.docx,.txt,.md,.markdown,.csv,.json,.rtf,.html,.htm,.png,.jpg,.jpeg,.webp,.heic,.bmp"
               className="hidden"
               onChange={(e) => {
                 void uploadFiles(e.target.files);
@@ -592,8 +594,7 @@ export function NotebookWorkspace({
 
           {readyCount > 0 && (
             <p className="rounded-lg border border-[var(--card-border)] px-3 py-2 text-[11px] leading-relaxed text-text-dim">
-              Generated in your sources&apos; language — Hindi sources produce
-              Hindi material (Devanagari), English ones English.
+              Everything is written in the language of your sources.
             </p>
           )}
 

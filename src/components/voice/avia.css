@@ -560,3 +560,255 @@ html:not(.dark) .avia-bubble--avia {
     animation: none;
   }
 }
+
+/* ============================================================================
+   THE ORB — a Siri-inspired launcher, re-tuned per theme.
+   Appended rather than folded into the block above so the original dark
+   launcher can be diffed against it while the change settles.
+
+   The old launcher was a glass button with a sparkle glyph inside it: it read
+   as an icon, not as a presence. This one is a small living object — an inner
+   orb with a stack of soft, drifting light strands behind a hairline edge, a
+   slow conic sweep around it, and a halo that breathes. No icon: the motion
+   and the colour say what state she is in.
+
+   Two palettes, one orb. Dark mode is an aurora — indigo, violet, cyan, deep
+   space. Light mode is a pearl — cobalt, rose, teal, bright glass. Switching
+   themes re-tints every strand in place, and every brightness, saturation
+   step and hover gain is defined as a token below so the two themes stay
+   honest copies of each other rather than two hand-tuned looks that drift.
+   ========================================================================== */
+
+.avia-root {
+  /* dark: aurora on near-black glass */
+  --avia-1: #8b93ff;
+  --avia-2: #c084fc;
+  --avia-3: #38bdf8;
+  --avia-4: #f472b6;
+  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #1b2140 0%, #0d1020 58%, #07080f 100%);
+  --avia-orb-edge: rgba(255, 255, 255, 0.16);
+  --avia-strand-blur: 3.5px;
+  --avia-strand-mix: screen;
+  --avia-orbit-glow: 0 16px 44px -14px rgba(139, 147, 255, 0.6);
+  --avia-halo-alpha: 0.5;
+}
+
+html:not(.dark) .avia-root {
+  /* light: pearl glass with cobalt / rose / teal strands */
+  --avia-1: #4f6bff;
+  --avia-2: #b45cf0;
+  --avia-3: #14b8d4;
+  --avia-4: #f2679c;
+  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #ffffff 0%, #eef2ff 56%, #e2e8f5 100%);
+  --avia-orb-edge: rgba(15, 23, 42, 0.12);
+  --avia-strand-blur: 5px;
+  --avia-strand-mix: multiply;
+  --avia-orbit-glow: 0 16px 40px -16px rgba(79, 107, 255, 0.45);
+  --avia-halo-alpha: 0.34;
+}
+
+.avia-fab {
+  height: 62px;
+  width: 62px;
+  border: 1px solid var(--avia-orb-edge);
+  background: transparent;
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: blur(20px) saturate(170%);
+  box-shadow:
+    0 22px 60px -26px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.avia-fab:hover,
+.avia-fab:focus-visible {
+  border-color: color-mix(in srgb, var(--avia-1) 55%, transparent);
+  box-shadow:
+    0 24px 66px -24px rgba(0, 0, 0, 0.68),
+    var(--avia-orbit-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.avia-fab__halo {
+  inset: -18px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--avia-1) 45%, transparent),
+    transparent 70%
+  );
+  animation-duration: 6.4s;
+  filter: blur(11px);
+}
+
+.avia-fab__ring {
+  inset: -1px;
+  padding: 1.25px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--avia-3) 60%, transparent) 60deg,
+    var(--avia-1) 140deg,
+    color-mix(in srgb, var(--avia-2) 70%, transparent) 210deg,
+    transparent 320deg,
+    transparent 360deg
+  );
+  animation-duration: 7.5s;
+}
+
+/* the orb itself */
+.avia-fab__orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 50px;
+  width: 50px;
+  border-radius: 999px;
+  background: var(--avia-orb-base);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -8px 18px -10px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* the strands: six soft ribbons that drift, stretch and breathe. Their
+   differing durations and delays are what make the motion feel alive
+   instead of a looping GIF — no two strands ever line up. */
+.avia-fab__strands {
+  position: absolute;
+  inset: -6px;
+  display: block;
+  mix-blend-mode: var(--avia-strand-mix);
+  filter: blur(var(--avia-strand-blur));
+  opacity: 0.92;
+}
+
+.avia-fab__strands span {
+  position: absolute;
+  top: 50%;
+  left: 8%;
+  right: 8%;
+  height: 9px;
+  border-radius: 999px;
+  transform-origin: 50% 50%;
+}
+
+.avia-fab__strands span:nth-child(1) {
+  background: linear-gradient(90deg, transparent, var(--avia-1), transparent);
+  animation: avia-strand-a 4.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.avia-fab__strands span:nth-child(2) {
+  height: 7px;
+  background: linear-gradient(90deg, transparent, var(--avia-2), transparent);
+  animation: avia-strand-b 5.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.avia-fab__strands span:nth-child(3) {
+  height: 10px;
+  background: linear-gradient(90deg, transparent, var(--avia-3), transparent);
+  animation: avia-strand-c 5.1s cubic-bezier(0.45, 0, 0.55, 1) 0.4s infinite;
+}
+.avia-fab__strands span:nth-child(4) {
+  height: 6px;
+  background: linear-gradient(90deg, transparent, var(--avia-4), transparent);
+  animation: avia-strand-a 6.6s cubic-bezier(0.45, 0, 0.55, 1) 0.9s infinite;
+}
+.avia-fab__strands span:nth-child(5) {
+  height: 8px;
+  background: linear-gradient(90deg, transparent, var(--avia-1), transparent);
+  animation: avia-strand-b 4.2s cubic-bezier(0.45, 0, 0.55, 1) 1.4s infinite;
+}
+.avia-fab__strands span:nth-child(6) {
+  height: 5px;
+  background: linear-gradient(90deg, transparent, var(--avia-3), transparent);
+  animation: avia-strand-c 7.2s cubic-bezier(0.45, 0, 0.55, 1) 0.2s infinite;
+}
+
+@keyframes avia-strand-a {
+  0%,
+  100% {
+    transform: translateY(-9px) scaleX(0.72) scaleY(0.7);
+    opacity: 0.5;
+  }
+  35% {
+    transform: translateY(1px) scaleX(1.06) scaleY(1.5);
+    opacity: 1;
+  }
+  65% {
+    transform: translateY(9px) scaleX(0.86) scaleY(0.9);
+    opacity: 0.78;
+  }
+}
+@keyframes avia-strand-b {
+  0%,
+  100% {
+    transform: translateY(8px) scaleX(0.9) scaleY(1.1) rotate(-4deg);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-8px) scaleX(1.08) scaleY(1.9) rotate(4deg);
+    opacity: 1;
+  }
+}
+@keyframes avia-strand-c {
+  0%,
+  100% {
+    transform: translateY(-2px) scaleX(1.04) scaleY(0.6);
+    opacity: 0.55;
+  }
+  40% {
+    transform: translateY(6px) scaleX(0.78) scaleY(1.4);
+    opacity: 0.95;
+  }
+  75% {
+    transform: translateY(-10px) scaleX(1.02) scaleY(1.05);
+    opacity: 0.7;
+  }
+}
+
+/* a soft inner light so the strands read as depth, not as stripes */
+.avia-fab__core {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 34% 26%,
+    rgba(255, 255, 255, 0.24),
+    transparent 62%
+  );
+  box-shadow: none;
+}
+
+/* live states — listening pulses wide and slow, speaking ripples at speech
+   cadence, and "locked in" narrows everything to a focused, cooler orb. */
+.avia-fab.is-live .avia-fab__ring {
+  animation-duration: 2.2s;
+}
+.avia-fab.is-live .avia-fab__strands {
+  opacity: 1;
+  filter: blur(calc(var(--avia-strand-blur) * 0.8));
+}
+.avia-fab.is-live .avia-fab__strands span {
+  animation-duration: 2.4s;
+}
+.avia-fab.is-live .avia-fab__strands span:nth-child(even) {
+  animation-duration: 3.1s;
+}
+.avia-fab.is-live .avia-fab__halo {
+  animation-duration: 2.2s;
+}
+
+.avia-fab.is-study .avia-fab__ring {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--avia-3) 70%, transparent) 90deg,
+    var(--avia-1) 180deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avia-fab__strands span {
+    animation: none;
+  }
+}

@@ -1551,3 +1551,207 @@ html:not(.dark) .lab-root .lab-tip__title {
     animation: none;
   }
 }
+
+/* ============================================================
+   LIGHT MODE, SECOND SIGNAL + FIDELITY PASS
+
+   The lab flipped to light glass only when <html> had no `.dark` class.
+   applySettings() also writes `data-theme="light|dark"`, and the day those
+   two ever disagree the bench sat in its dark-navy instrument skin while the
+   rest of the site was in daylight. Every rule below therefore fires on
+   either signal, so the lab follows the theme the student actually picked.
+
+   The same block covers the utility classes the previous pass missed
+   (`text-white`, `bg-slate-600`, `border-white/30`, the slate gradients),
+   which is why a handful of labels stayed washed-out-on-light.
+
+   Instrument screens — the 2D plotters and 3D model canvases — are
+   deliberately left dark: they are the apparatus, and their light stroke
+   art is drawn for a dark face. Everything around them is paper now.
+   ============================================================ */
+
+/* ---- root tokens + canvas background ---- */
+html[data-theme="light"] .lab-root {
+  --lab-ink: #0f172a;
+  --lab-bg: #f8fafc;
+  --lab-panel: #ffffff;
+  --lab-panel-soft: rgba(255, 255, 255, 0.78);
+  --lab-panel-deep: rgba(255, 255, 255, 0.92);
+  --lab-border: rgba(15, 23, 42, 0.1);
+  --lab-border-strong: rgba(15, 23, 42, 0.18);
+  --lab-text: #0f172a;
+  --lab-dim: #41506a;
+  --lab-faint: #5b6b83;
+  background:
+    radial-gradient(1100px 640px at 12% -8%, rgba(255, 255, 255, 0.95), transparent 60%),
+    radial-gradient(900px 560px at 108% 8%, rgba(203, 213, 225, 0.55), transparent 55%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 46%, #e4eaf2 100%);
+  color: #0f172a;
+}
+
+/* ---- surfaces ---- */
+html[data-theme="light"] .lab-root .lab-header {
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom-color: rgba(15, 23, 42, 0.1);
+}
+html[data-theme="light"] .lab-root .lab-glass {
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(99, 102, 241, 0.09), transparent 55%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.72));
+}
+html[data-theme="light"] .lab-root .lab-glass-deep {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.82));
+}
+html[data-theme="light"] .lab-root .lab-telemetry,
+html[data-theme="light"] .lab-root .lab-telemetry-embedded,
+html[data-theme="light"] .lab-root .lab-mobile-telemetry {
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.9));
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+html[data-theme="light"] .lab-root .lab-telemetry__eq {
+  background: rgba(139, 147, 255, 0.06);
+}
+html[data-theme="light"] .lab-root .lab-telemetry__eq .eq,
+html[data-theme="light"] .lab-root .lab-mobile-telemetry__eq {
+  color: #4338ca;
+  text-shadow: none;
+}
+html[data-theme="light"] .lab-root .corner-glow--tr {
+  opacity: calc(0.1 * var(--ambient, 1));
+}
+html[data-theme="light"] .lab-root .corner-glow--bl {
+  opacity: calc(0.07 * var(--ambient, 1));
+}
+html[data-theme="light"] .lab-root .lab-backdrop--grid {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+    linear-gradient(to right, rgba(15, 23, 42, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  opacity: calc(0.55 * var(--ambient, 1));
+}
+
+/* ---- missing utility flips (both signals) ---- */
+html:not(.dark) .lab-root .text-white,
+html[data-theme="light"] .lab-root .text-white {
+  color: #0f172a;
+}
+html:not(.dark) .lab-root .text-slate-800,
+html[data-theme="light"] .lab-root .text-slate-800 {
+  color: #334155;
+}
+html:not(.dark) .lab-root .bg-slate-500,
+html:not(.dark) .lab-root .bg-slate-600,
+html:not(.dark) .lab-root .bg-slate-800,
+html[data-theme="light"] .lab-root .bg-slate-500,
+html[data-theme="light"] .lab-root .bg-slate-600,
+html[data-theme="light"] .lab-root .bg-slate-800 {
+  background-color: rgba(15, 23, 42, 0.22);
+}
+html:not(.dark) .lab-root .bg-black\/35,
+html[data-theme="light"] .lab-root .bg-black\/35 {
+  background-color: rgba(255, 255, 255, 0.74);
+}
+html:not(.dark) .lab-root .border-white\/30,
+html[data-theme="light"] .lab-root .border-white\/30 {
+  border-color: rgba(15, 23, 42, 0.2);
+}
+html:not(.dark) .lab-root .from-slate-700,
+html[data-theme="light"] .lab-root .from-slate-700 {
+  --tw-gradient-from: rgba(15, 23, 42, 0.12);
+}
+html:not(.dark) .lab-root .from-slate-100,
+html[data-theme="light"] .lab-root .from-slate-100 {
+  --tw-gradient-from: rgba(255, 255, 255, 0.9);
+}
+html:not(.dark) .lab-root .to-slate-700,
+html:not(.dark) .lab-root .to-slate-500,
+html[data-theme="light"] .lab-root .to-slate-700,
+html[data-theme="light"] .lab-root .to-slate-500 {
+  --tw-gradient-to: rgba(15, 23, 42, 0.14);
+}
+html:not(.dark) .lab-root .via-slate-600,
+html:not(.dark) .lab-root .via-slate-300,
+html[data-theme="light"] .lab-root .via-slate-600,
+html[data-theme="light"] .lab-root .via-slate-300 {
+  --tw-gradient-via: rgba(30, 41, 59, 0.18);
+}
+
+/* ============================================================
+   PREMIUM PASS — the live telemetry dock
+
+   It was a bare list of dashed rows under a 10px grey header: readable,
+   and unmistakably a debug readout. It is now a proper instrument card —
+   a tinted header bar with the subject as the title, each reading on its
+   own rounded row with a monospaced value, and the governing equation in
+   a footer that carries the accent. Same data, same live pulse.
+   ============================================================ */
+.lab-telemetry {
+  border-radius: 20px;
+  border-color: var(--lab-border-strong);
+  box-shadow:
+    0 26px 60px -30px rgba(2, 6, 23, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.lab-telemetry__head {
+  gap: 8px;
+  padding: 11px 13px;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  background: linear-gradient(120deg, var(--lab-neon-soft), transparent 70%);
+  border-bottom-color: var(--lab-border);
+}
+.lab-telemetry__body {
+  padding: 12px;
+}
+.lab-telemetry__row {
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: none;
+  border-radius: 11px;
+  background: rgba(148, 163, 184, 0.06);
+  transition: background 0.32s var(--lab-ease), transform 0.32s var(--lab-ease);
+}
+.lab-telemetry__row:hover {
+  background: rgba(148, 163, 184, 0.12);
+  transform: translateX(2px);
+}
+.lab-telemetry__row:last-of-type {
+  margin-bottom: 0;
+}
+.lab-telemetry__row .k {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+.lab-telemetry__row .v {
+  font-size: 12px;
+  font-weight: 600;
+}
+.lab-telemetry__eq {
+  padding: 13px;
+  background: linear-gradient(180deg, rgba(139, 147, 255, 0.05), rgba(139, 147, 255, 0.1));
+}
+.lab-telemetry__eq .eq {
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.lab-telemetry__eq .eq-note {
+  margin-top: 5px;
+  line-height: 1.55;
+}
+html:not(.dark) .lab-root .lab-telemetry__row,
+html[data-theme="light"] .lab-root .lab-telemetry__row {
+  background: rgba(15, 23, 42, 0.035);
+}
+html:not(.dark) .lab-root .lab-telemetry__row:hover,
+html[data-theme="light"] .lab-root .lab-telemetry__row:hover {
+  background: rgba(79, 70, 229, 0.07);
+}
+html:not(.dark) .lab-root .lab-telemetry__head,
+html[data-theme="light"] .lab-root .lab-telemetry__head {
+  background: linear-gradient(120deg, rgba(99, 102, 241, 0.1), transparent 70%);
+}

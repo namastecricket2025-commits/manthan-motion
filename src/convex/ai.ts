@@ -6,6 +6,7 @@ import { action } from "./_generated/server";
 import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
 import { msUntilReset } from "./usage";
 import { v } from "convex/values";
+import { inflateRawSync } from "node:zlib";
 import { extractText, getDocumentProxy } from "unpdf";
 import { z } from "zod";
 
@@ -72,6 +73,231 @@ async function extractPdfText(bytes: Uint8Array) {
   const pdf = await getDocumentProxy(bytes);
   const result = await extractText(pdf, { mergePages: true });
   return Array.isArray(result.text) ? result.text.join("\n\n") : result.text;
+}
+
+/* ---------------- ZIP (a .docx is one) ---------------- */
+
+/**
+ * Pull one file out of a ZIP archive.
+ *
+ * A .docx is a ZIP of XML parts, and the only part worth reading is
+ * `word/document.xml`. Rather than take a dependency for it, the central
+ * directory is walked — it is the one place filenames are guaranteed to be
+ * complete (local headers may be streamed with size 0) — and the entry is
+ * inflated with Node's own zlib. Returns null for anything it cannot read, so
+ * the caller can fall back to a clear "paste the text instead" message.
+ */
+function readZipEntry(buffer: Buffer, wanted: RegExp): Buffer | null {
+  try {
+    // End Of Central Directory: signature 0x06054b50, at most 64 KiB from the
+    // end (ZIP comment limit).
+    let eocd = -1;
+    const floor = Math.max(0, buffer.length - 65_557);
+    for (let i = buffer.length - 22; i >= floor; i--) {
+      if (buffer.readUInt32LE(i) === 0x06054b50) {
+        eocd = i;
+        break;
+      }
+    }
+    if (eocd < 0) return null;
+
+    const count = buffer.readUInt16LE(eocd + 10);
+    let offset = buffer.readUInt32LE(eocd + 16);
+
+    for (let entry = 0; entry < count; entry++) {
+      if (offset + 46 > buffer.length) return null;
+      if (buffer.readUInt32LE(offset) !== 0x02014b50) return null;
+
+      const method = buffer.readUInt16LE(offset + 10);
+      const compressedSize = buffer.readUInt32LE(offset + 20);
+      const nameLen = buffer.readUInt16LE(offset + 28);
+      const extraLen = buffer.readUInt16LE(offset + 30);
+      const commentLen = buffer.readUInt16LE(offset + 32);
+      const localOffset = buffer.readUInt32LE(offset + 42);
+      const name = buffer.toString("utf8", offset + 46, offset + 46 + nameLen);
+
+      if (wanted.test(name)) {
+        const localNameLen = buffer.readUInt16LE(localOffset + 26);
+        const localExtraLen = buffer.readUInt16LE(localOffset + 28);
+        const start = localOffset + 30 + localNameLen + localExtraLen;
+        const raw = buffer.subarray(start, start + compressedSize);
+        if (method === 0) return Buffer.from(raw);
+        if (method === 8) return inflateRawSync(raw);
+        return null;
+      }
+
+      offset += 46 + nameLen + extraLen + commentLen;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const decodeXmlEntities = (value: string) =>
+  value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&amp;/g, "&");
+
+/**
+ * A failure the student can act on. Its message is shown in the source row
+ * verbatim, which is why every throw site below is phrased as advice rather
+ * than as a diagnosis.
+ */
+class UploadUnreadable extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UploadUnreadable";
+  }
+}
+
+/** Word document → plain text, keeping paragraph and line breaks. */
+function extractDocxText(buffer: Buffer): string {
+  const document = readZipEntry(buffer, /^word\/document\.xml$/i);
+  if (!document) {
+    throw new UploadUnreadable(
+      "That Word file could not be opened. Save it as a PDF, or paste its text.",
+    );
+  }
+
+  return decodeXmlEntities(
+    document
+      .toString("utf8")
+      // Paragraph and line breaks are the only structure worth keeping.
+      .replace(/<w:tab\b[^>]*\/?>/gi, " ")
+      .replace(/<w:br\b[^>]*\/?>/gi, "\n")
+      .replace(/<\/w:p>/gi, "\n")
+      .replace(/<w:tr\b[^>]*>/gi, "\n")
+      .replace(/<\/w:tc>/gi, " | ")
+      // Everything else is formatting, styles or revision bookkeeping.
+      .replace(/<[^>]+>/g, " "),
+  );
+}
+
+/* ---------------- Photographs and scans ---------------- */
+
+/** Formats the model can read directly; anything here skips the text layer. */
+const IMAGE_RE = /\.(png|jpe?g|webp|heic|heif|bmp|gif)$/i;
+
+/** ~4 MB of image. A phone photo of a page sits well under this. */
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+const TRANSCRIBE_SYSTEM = [
+  "You transcribe study material from a photograph: a textbook page, a notebook, a whiteboard or a printed question sheet.",
+  "Write the text exactly as it appears, in the SAME language and the SAME script — Hindi stays in Devanagari, English stays in Latin. Never translate and never transliterate.",
+  "Keep numbers, units, symbols, chemical formulae and equations exactly as written. Put each paragraph or question on its own line.",
+  "If the image also contains a diagram or figure, add one short sentence describing it, in the same language, after the text.",
+  "Never summarise, never explain, never add anything that is not in the image. If the image is unreadable, return the single word UNREADABLE as the text.",
+  'Reply with a single JSON object and nothing else: {"language":"hindi"|"english","text":string}.',
+].join(" ");
+
+const transcriptSchema = z.object({
+  language: z.string().catch("english"),
+  text: z.string().min(1),
+});
+
+function imageMimeFor(name: string): string {
+  if (/\.png$/i.test(name)) return "image/png";
+  if (/\.webp$/i.test(name)) return "image/webp";
+  if (/\.gif$/i.test(name)) return "image/gif";
+  if (/\.bmp$/i.test(name)) return "image/bmp";
+  return "image/jpeg";
+}
+
+/**
+ * A photograph or scan → its text, read by the model.
+ *
+ * This is the one place a notebook source needs vision, so the prompt is blunt
+ * about the two failures that matter: translating the page into English, and
+ * inventing content that is not there. A provider without vision answers 400
+ * and the chain moves on; if none can see, the caller reports it instead of
+ * quietly storing an empty source.
+ */
+async function transcribeImage(
+  buffer: Buffer,
+  mime: string,
+  name: string,
+): Promise<{ text: string; language?: "hi" | "en" }> {
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new UploadUnreadable(
+      "That photo is larger than 4 MB. Crop it to the page and add it again.",
+    );
+  }
+
+  const candidates = await resolveCandidates();
+  const { text } = await callModel(
+    candidates,
+    TRANSCRIBE_SYSTEM,
+    `Transcribe every word of this image. It is a file named "${name}". Reply with the JSON object only.`,
+    { mimeType: mime, data: buffer.toString("base64") },
+  );
+
+  let transcript = text;
+  let language: "hi" | "en" | undefined;
+  try {
+    const parsed = transcriptSchema.parse(parseJsonLoose(text));
+    transcript = parsed.text;
+    if (/hindi|devanagari|हिंदी|हिन्दी/i.test(parsed.language)) language = "hi";
+    else if (/english/i.test(parsed.language)) language = "en";
+  } catch {
+    // A model that ignored the JSON contract still gave us the words.
+  }
+
+  return { text: transcript, language };
+}
+
+/* ---------------- One entry point for every upload ---------------- */
+
+interface ReadUpload {
+  text: string;
+  /** Set only when the reader itself knew the language (image transcription). */
+  language?: "hi" | "en";
+}
+
+/**
+ * Any supported upload → text.
+ *
+ * Called by adding a source and by re-running a failed one, so the two paths
+ * can never drift apart in what they accept. Throws with a student-readable
+ * message for anything it cannot read.
+ */
+async function readUpload(
+  buffer: Buffer,
+  name: string,
+  mime: string | undefined,
+): Promise<ReadUpload> {
+  const lower = name.toLowerCase();
+
+  const isText =
+    (mime?.startsWith("text/") ?? false) ||
+    /\.(txt|md|markdown|csv|json|rtf|html?|ts|tsx|js|py)$/i.test(lower);
+  if (isText) {
+    const raw = buffer.toString("utf8");
+    return { text: /\.html?$/i.test(lower) ? stripHtml(raw) : raw };
+  }
+
+  if (mime === "application/pdf" || /\.pdf$/i.test(lower)) {
+    return { text: await extractPdfText(new Uint8Array(buffer)) };
+  }
+
+  if (
+    /\.docx$/i.test(lower) ||
+    mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return { text: extractDocxText(buffer) };
+  }
+
+  if (mime?.startsWith("image/") || IMAGE_RE.test(lower)) {
+    return await transcribeImage(buffer, mime ?? imageMimeFor(lower), name);
+  }
+
+  throw new UploadUnreadable(
+    "Manthan reads PDF, Word (.docx), photos and scans (JPG, PNG, WEBP), and plain text, Markdown or CSV files. Paste this file's text instead.",
+  );
 }
 
 function tidy(text: string) {
@@ -252,13 +478,41 @@ const HINDI_RE = /[\u0900-\u097F]/g;
 function detectLanguage(corpusParts: string[]): "hi" | "en" {
   let devanagari = 0;
   let total = 0;
+
   for (const part of corpusParts) {
-    const sample = part.slice(0, 8_000);
+    // Sample generously: a chapter's Hindi often lives in its body while the
+    // opening page is a list of English technical terms.
+    const sample = part.slice(0, 40_000);
+    if (sample.length === 0) continue;
+    const found = sample.match(HINDI_RE)?.length ?? 0;
+    // Any single source whose text is clearly Devanagari is decisive on its
+    // own — a notebook holding one Hindi chapter and one English handout is a
+    // Hindi request, not a tie.
+    if (found / sample.length > 0.03) return "hi";
     total += sample.length;
-    devanagari += sample.match(HINDI_RE)?.length ?? 0;
+    devanagari += found;
   }
+
   if (total === 0) return "en";
-  return devanagari / total > 0.01 ? "hi" : "en";
+  // A low floor matters more than a high one: English contains no Devanagari
+  // at all, so even a thin trace of it is a signal, and the cost of wrongly
+  // choosing Hindi for an English notebook is a regenerable deck while the
+  // reverse is a summary the student cannot read.
+  return devanagari / total > 0.004 ? "hi" : "en";
+}
+
+/**
+ * The last thing the model reads before it answers.
+ *
+ * Models drift toward the language of their own instructions, which here are
+ * English. Re-stating the rule after the sources — the point where drift
+ * actually happens — is what keeps a Hindi chapter from coming back with an
+ * English title and English section headings.
+ */
+function languageLock(lang: "hi" | "en"): string {
+  return lang === "hi"
+    ? "FINAL CHECK before answering: every student-facing string must be Hindi written in Devanagari script — the title, the overview, every section heading, every point, every question and option, every card face, every mind-map label, every slide bullet. No English words, no Hindi typed in Latin letters. Rewrite anything that breaks this rule."
+    : "FINAL CHECK before answering: every student-facing string must be in English, with no other language mixed in.";
 }
 
 /**
@@ -297,6 +551,8 @@ function buildPrompt(
     "",
     "SOURCES (name — text):",
     corpus,
+    "",
+    languageLock(lang),
   ].join("\n");
 }
 
@@ -348,36 +604,30 @@ export const ingestFile = action({
     if (!blob) throw new Error("The upload did not reach storage. Try again.");
 
     const buffer = Buffer.from(await blob.arrayBuffer());
-    const lower = name.toLowerCase();
-    const isText =
-      (mime?.startsWith("text/") ?? false) ||
-      /\.(txt|md|markdown|csv|json|ts|tsx|js|py|rtf|html?)$/i.test(lower);
-    const isPdf = mime === "application/pdf" || lower.endsWith(".pdf");
 
     let text = "";
     let error: string | undefined;
 
     try {
-      if (isText) {
-        text = buffer.toString("utf8");
-        if (lower.endsWith(".html") || lower.endsWith(".htm")) {
-          text = stripHtml(text);
-        }
-      } else if (isPdf) {
-        text = await extractPdfText(new Uint8Array(buffer));
+      text = (await readUpload(buffer, name, mime)).text;
+    } catch (err) {
+      if (err instanceof UploadUnreadable) {
+        error = err.message;
+      } else if (err instanceof ProviderUnavailable) {
+        // A photo needs a model that can actually see; when none can, say so
+        // rather than storing an empty source.
+        error =
+          "No AI model could read that photo just now. Try again in a minute, or paste the text instead.";
       } else {
         error =
-          "Manthan reads PDF, text, Markdown and CSV files right now. Paste this file's text instead.";
+          "That file could not be read — it may be password protected or corrupted. Paste its text instead.";
       }
-    } catch {
-      error =
-        "That file could not be read — it may be scanned images or password protected. Paste its text instead.";
     }
 
     const clean = tidy(text);
     if (!error && clean.length < 40) {
       error =
-        "No readable text was found in that file — if it is a scan, paste the text instead.";
+        "No readable text was found in that file — if it is a photo of handwriting, take a sharper, straighter picture and add it again.";
     }
 
     return await ctx.runMutation(internal.sources.insertSource, {
@@ -471,19 +721,17 @@ export const reExtract = action({
       const blob = await ctx.storage.get(source.storageId);
       if (!blob) throw new Error("The stored file is gone — add it again.");
       const buffer = Buffer.from(await blob.arrayBuffer());
-      const lower = source.name.toLowerCase();
       try {
-        if (lower.endsWith(".pdf")) {
-          text = await extractPdfText(new Uint8Array(buffer));
-        } else if (
-          /\.(txt|md|markdown|csv|json|ts|tsx|js|py|rtf|html?)$/i.test(lower)
-        ) {
-          text = buffer.toString("utf8");
-        } else {
-          error = "Manthan cannot read that file type yet.";
-        }
-      } catch {
-        error = "That file still cannot be read.";
+        // Same reader the original upload used, so a retry can never accept a
+        // different set of formats than the first pass did.
+        text = (await readUpload(buffer, source.name, undefined)).text;
+      } catch (err) {
+        error =
+          err instanceof UploadUnreadable
+            ? err.message
+            : err instanceof ProviderUnavailable
+              ? "No AI model could read that photo just now. Try again in a minute."
+              : "That file still cannot be read.";
       }
     } else if (source.kind === "link") {
       try {
@@ -786,27 +1034,18 @@ export const cramAnalyze = action({
     // Read once, keep nothing: the bytes are in memory now.
     await ctx.storage.delete(storageId);
 
-    const lower = name.toLowerCase();
-    const isText =
-      (mime?.startsWith("text/") ?? false) ||
-      /\.(txt|md|markdown|csv|json|rtf|html?)$/i.test(lower);
-    const isPdf = mime === "application/pdf" || lower.endsWith(".pdf");
-
     let text = "";
     try {
-      if (isText) {
-        text = buffer.toString("utf8");
-        if (lower.endsWith(".html") || lower.endsWith(".htm")) {
-          text = stripHtml(text);
-        }
-      } else if (isPdf) {
-        text = await extractPdfText(new Uint8Array(buffer));
-      } else {
-        throw new Error("unsupported type");
+      text = (await readUpload(buffer, name, mime)).text;
+    } catch (err) {
+      if (err instanceof UploadUnreadable) throw err;
+      if (err instanceof ProviderUnavailable) {
+        throw new Error(
+          "No AI model could read that upload just now. Try again in a minute, or paste the text instead.",
+        );
       }
-    } catch {
       throw new Error(
-        "Cram Mode reads PDF, text and Markdown files. This one could not be read — if it is a scan, paste its text instead.",
+        "Cram Mode reads PDF, Word, photos and text files. This one could not be read — if it is password protected, paste its text instead.",
       );
     }
 
@@ -827,6 +1066,8 @@ export const cramAnalyze = action({
       "",
       "TEXT:",
       corpus,
+      "",
+      languageLock(language),
     ]
       .filter(Boolean)
       .join("\n");

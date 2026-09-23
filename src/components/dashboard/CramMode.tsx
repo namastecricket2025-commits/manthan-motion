@@ -176,15 +176,15 @@ export function CramMode({
           className={"tool-dropzone" + (dragOver ? " is-over" : "")}
         >
           <Upload className="h-5 w-5 text-[var(--signal)]" />
-          <span className="text-sm font-medium">Drop a textbook or chapter PDF</span>
+          <span className="text-sm font-medium">Drop a textbook chapter, or a photo of the pages</span>
           <span className="text-xs text-text-dim">
-            PDF, text or Markdown — Manthan reads the pages, then compresses them
+            PDF, Word, JPG or PNG, text and Markdown — Manthan reads it, then compresses it
             into exam-ready notes for {notebookName}
           </span>
           <input
             type="file"
             className="hidden"
-            accept=".pdf,.txt,.md,.markdown"
+            accept=".pdf,.docx,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp"
             onChange={(event) => void accept(event.target.files)}
           />
         </label>
@@ -347,7 +347,7 @@ export function CramMode({
             type="file"
             className="hidden"
             disabled={busy}
-            accept=".pdf,.txt,.md,.markdown"
+            accept=".pdf,.docx,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp"
             onChange={(event) => void accept(event.target.files)}
           />
         </label>

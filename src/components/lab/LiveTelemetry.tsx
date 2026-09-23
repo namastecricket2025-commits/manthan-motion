@@ -82,12 +82,13 @@ export function LiveTelemetry({ feed, embedded = false }: { feed: TelemetryFeed;
     <div className={embedded ? "lab-telemetry-embedded" : "lab-telemetry"}>
       <div className="lab-telemetry__head">
         <Activity className="h-3.5 w-3.5" style={{ color: feed.accent }} />
-        <span className="min-w-0 flex-1 truncate">Live Physics / Bio Telemetry</span>
+        <span className="min-w-0 flex-1 truncate" style={{ color: feed.accent }}>
+          {feed.subject}
+        </span>
         <span ref={pulse} className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: feed.accent }} />
       </div>
       <div className="lab-telemetry__body">
-        <p className="mb-1.5 text-[9px] uppercase tracking-[0.16em] text-slate-500">{feed.subject}</p>
-        <div className="mt-1.5">
+        <div>
           {feed.rows.map((r) => (
             <div key={r.k} className="lab-telemetry__row">
               <span className="k">{r.k}</span>
