@@ -171,14 +171,17 @@ function LabShell() {
 
         {/* Workspace — on phones this is the only surface, and it never scrolls */}
         <main className="lab-shell__main mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 md:py-10">
+          {/* Switching instruments is a two-beat move: the outgoing bench
+              blurs away, then the new one settles in from just below with the
+              momentum curve the rest of the site uses. */}
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
               className="lab-fill"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
+              transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
             >
               {tab === "physics" && <PhysicsSim />}
               {tab === "chemistry" && <ChemistryWorkspace />}

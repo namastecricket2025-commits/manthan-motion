@@ -1,26 +1,31 @@
-import { Loader2, RotateCcw, ScanSearch, Upload } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import { useAction } from "convex/react";
+import { AlertTriangle, Loader2, RotateCcw, ScanSearch, Upload } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * AI Canvas Solver.
  *
- * Drop a photographed equation sheet or a physics diagram: the scan beam
- * sweeps the image, then the read is decomposed into three cards — what was
- * seen, the relations that apply, and the path from one to the other.
+ * Drop a photographed equation sheet or a physics diagram. The image is
+ * downscaled in the browser, sent to the model chain with the Canvas Solver
+ * system prompt, and the read comes back decomposed: what was on the sheet,
+ * the relations that govern it, the path through it, and the verified answer.
  *
- * The read reports only what it can actually observe (the file, its
- * resolution and its domain), and pairs that with the formula sheet for that
- * domain. Nothing it cannot see is invented.
+ * Two honest fallbacks sit behind it. If no configured model can see images,
+ * or every key is out, the sheet is still described from what the client can
+ * genuinely observe (file, resolution, shape of the page) and paired with the
+ * formula sheet for the domain its filename suggests — and the card says so,
+ * rather than pretending to have read the maths.
  */
 
 type Domain = "optics" | "mechanics" | "waves" | "algebra" | "general";
 
 const DOMAIN_RULES: { match: RegExp; domain: Domain; label: string }[] = [
-  { match: /optic|lens|mirror|refract|ray/i, domain: "optics", label: "Ray optics" },
-  { match: /force|motion|mechan|newton|friction|incline/i, domain: "mechanics", label: "Mechanics" },
-  { match: /wave|oscill|frequency|sound|interfer/i, domain: "waves", label: "Waves" },
-  { match: /algebra|quadratic|equation|trigono|polynomial/i, domain: "algebra", label: "Algebra" },
+  { match: /optic|lens|mirror|refract|ray|snell/i, domain: "optics", label: "Ray optics" },
+  { match: /force|motion|mechan|newton|friction|incline|kinemat/i, domain: "mechanics", label: "Mechanics" },
+  { match: /wave|oscill|frequency|sound|interfer|shm/i, domain: "waves", label: "Waves" },
+  { match: /algebra|quadratic|trigono|polynomial|calculus|integr|derivat/i, domain: "algebra", label: "Algebra" },
 ];
 
 const FORMULAS: Record<Domain, string[]> = {
@@ -75,65 +80,198 @@ interface Read {
   domain: Domain;
 }
 
+/** What the model read off the sheet, when it could see it. */
+interface Solve {
+  title: string;
+  domain: string;
+  inputs: string[];
+  formulas: string[];
+  steps: string[];
+  answer: string;
+  model: string;
+}
+
 function readableSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+/**
+ * Shrink the upload to something a model can actually take.
+ *
+ * A 12 MP phone photo is 4–6 MB of JPEG, which no free vision endpoint will
+ * accept; at 1400px on the long edge the handwriting is still legible and the
+ * payload lands well under a megabyte. PNGs are flattened onto white first —
+ * transparent background plus JPEG would otherwise turn a page black.
+ */
+async function prepareImage(
+  file: File,
+): Promise<{ dataUrl: string; base64: string; mimeType: string; width: number; height: number }> {
+  const bitmapUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("That image could not be opened."));
+      element.src = bitmapUrl;
+    });
+
+    const maxEdge = 1400;
+    const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("This browser cannot prepare the image.");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.86);
+    return {
+      dataUrl,
+      base64: dataUrl.split(",")[1] ?? "",
+      mimeType: "image/jpeg",
+      width,
+      height,
+    };
+  } finally {
+    URL.revokeObjectURL(bitmapUrl);
+  }
+}
+
 export function CanvasSolver() {
+  const solve = useAction(api.ai.solveCanvas);
+
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [read, setRead] = useState<Read | null>(null);
-  const pending = useRef<Read | null>(null);
-  const timer = useRef<number | null>(null);
+  const [solution, setSolution] = useState<Solve | null>(null);
+  const [fallbackNote, setFallbackNote] = useState<string | null>(null);
+
+  /**
+   * The preview URL is revoked on unmount only.
+   *
+   * The last version revoked it inside an effect keyed on the preview, whose
+   * cleanup also cancelled the pending scan timer — so choosing a file
+   * cancelled its own scan and the beam swept forever. Nothing here is tied to
+   * a render anymore.
+   */
+  const previewRef = useRef<string | null>(null);
 
   useEffect(
     () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      if (preview) URL.revokeObjectURL(preview);
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     },
-    [preview],
+    [],
   );
 
-  const accept = useCallback((file: File | undefined) => {
-    if (!file) return;
-    if (preview) URL.revokeObjectURL(preview);
-    pending.current = {
-      name: file.name,
-      size: readableSize(file.size),
-      dimensions: "reading…",
-      domain: "general",
-      domainLabel: "General relations",
-    };
-    setPreview(URL.createObjectURL(file));
-    setRead(null);
-    setScanning(true);
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
+  const accept = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+
+      const objectUrl = URL.createObjectURL(file);
+      previewRef.current = objectUrl;
+      setPreview(objectUrl);
+      setSolution(null);
+      setFallbackNote(null);
+      setScanning(true);
+
       const rule = DOMAIN_RULES.find((entry) => entry.match.test(file.name));
       const detected = rule
         ? { domain: rule.domain, domainLabel: rule.label }
         : { domain: "general" as Domain, domainLabel: "General relations" };
-      setRead((current) => ({
-        ...(pending.current ?? {
-          name: file.name,
-          size: readableSize(file.size),
-          dimensions: "—",
-        }),
+      setRead({
+        name: file.name,
+        size: readableSize(file.size),
+        dimensions: "reading…",
         ...detected,
-        dimensions: current?.dimensions ?? "—",
-      }));
-      setScanning(false);
-    }, 2400);
-  }, [preview]);
+      });
+
+      const isImage = file.type.startsWith("image/");
+
+      if (!isImage) {
+        setRead((current) =>
+          current
+            ? { ...current, dimensions: `${readableSize(file.size)} · not a raster image` }
+            : current,
+        );
+        setFallbackNote(
+          "Only a photograph or screenshot can be read (PNG, JPG, WEBP). A PDF page cannot be handed to the model as an image — screenshot the page and drop that instead. The formula sheet below is matched from the filename.",
+        );
+        setScanning(false);
+        return;
+      }
+
+      try {
+        const prepared = await prepareImage(file);
+        setRead((current) =>
+          current
+            ? { ...current, dimensions: `${prepared.width} x ${prepared.height} px` }
+            : current,
+        );
+
+        const result = await solve({
+          imageBase64: prepared.base64,
+          mimeType: prepared.mimeType,
+        });
+        setSolution(result);
+      } catch {
+        setFallbackNote(
+          "No configured model could read the image this time (vision needs a Gemini key, and every free key may be out for the day). What follows is matched from the file itself, not from the maths on the sheet.",
+        );
+      } finally {
+        setScanning(false);
+      }
+    },
+    [solve],
+  );
 
   function reset() {
-    if (preview) URL.revokeObjectURL(preview);
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = null;
     setPreview(null);
     setRead(null);
+    setSolution(null);
+    setFallbackNote(null);
     setScanning(false);
   }
+
+  const cards = solution
+    ? [
+        {
+          title: "Inputs read",
+          lines: [
+            `Sheet: ${read?.name ?? "upload"}`,
+            `Resolution: ${read?.dimensions ?? "—"}`,
+            `Domain: ${solution.domain}`,
+            ...solution.inputs,
+          ],
+        },
+        { title: "Governing formulas", lines: solution.formulas },
+        { title: "Step-by-step breakdown", lines: solution.steps },
+        { title: "Final verification", lines: [solution.answer] },
+      ]
+    : read
+      ? [
+          {
+            title: "Inputs read",
+            lines: [
+              `Sheet: ${read.name}`,
+              `File size: ${read.size}`,
+              `Resolution: ${read.dimensions}`,
+              `Domain detected: ${read.domainLabel}`,
+            ],
+          },
+          { title: "Governing formulas", lines: FORMULAS[read.domain] },
+          { title: "Solution path", lines: SOLUTION_STEPS[read.domain] },
+        ]
+      : [];
 
   return (
     <div className="lab-fill flex flex-col gap-4 overflow-y-auto">
@@ -142,8 +280,9 @@ export function CanvasSolver() {
           <div>
             <p className="lab-label">AI Canvas Solver</p>
             <p className="lab-dim mt-1.5 max-w-2xl text-xs leading-relaxed">
-              Photograph the question, or drop the equation sheet as it is. The
-              scan reads the geometry, then returns the relations and the path.
+              Photograph the question, or drop a screenshot of it. The beam reads
+              the sheet, then returns the inputs, the relations and the full
+              worked path.
             </p>
           </div>
           {preview && (
@@ -164,7 +303,7 @@ export function CanvasSolver() {
             onDrop={(event) => {
               event.preventDefault();
               setDragOver(false);
-              accept(event.dataTransfer.files?.[0]);
+              void accept(event.dataTransfer.files?.[0]);
             }}
             className={"tool-dropzone mt-4" + (dragOver ? " is-over" : "")}
           >
@@ -173,33 +312,19 @@ export function CanvasSolver() {
               Drop an equation sheet or diagram
             </span>
             <span className="text-xs text-text-dim">
-              PNG, JPG or PDF page — the beam sweeps it, then it is decomposed
+              PNG, JPG or a screenshot of a PDF page — the beam sweeps it, then
+              it is solved
             </span>
             <input
               type="file"
               className="hidden"
-              accept="image/*,.pdf"
-              onChange={(event) => accept(event.target.files?.[0])}
+              accept="image/*"
+              onChange={(event) => void accept(event.target.files?.[0])}
             />
           </label>
         ) : (
           <div className="mt-4 scan-stage">
-            <img
-              src={preview}
-              alt="Uploaded equation sheet"
-              onLoad={(event) => {
-                const { naturalWidth, naturalHeight } = event.currentTarget;
-                if (naturalWidth && naturalHeight) {
-                  const next = `${naturalWidth} x ${naturalHeight} px`;
-                  pending.current = pending.current
-                    ? { ...pending.current, dimensions: next }
-                    : pending.current;
-                  setRead((current) =>
-                    current ? { ...current, dimensions: next } : current,
-                  );
-                }
-              }}
-            />
+            <img src={preview} alt="Uploaded equation sheet" />
             {scanning && <span className="scan-beam" aria-hidden="true" />}
             <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-center gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
               {scanning ? (
@@ -208,28 +333,36 @@ export function CanvasSolver() {
                 <Upload className="h-3.5 w-3.5 text-[#aab3ff]" />
               )}
               <span className="text-[11px] font-medium text-slate-200">
-                {scanning ? "Scanning the sheet…" : "Scan complete"}
+                {scanning
+                  ? "Reading the sheet…"
+                  : solution
+                    ? "Read complete"
+                    : "Sheet loaded"}
               </span>
             </div>
           </div>
         )}
+
+        {solution && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="lab-chip border-[#8b93ff]/30 bg-[#8b93ff]/10 text-[#aab3ff]">
+              {solution.domain}
+            </span>
+            <span className="lab-dim text-[11px]">{solution.title}</span>
+          </div>
+        )}
+
+        {fallbackNote && (
+          <p className="mt-3 flex gap-2 rounded-xl border border-amber-400/25 bg-amber-400/5 p-3 text-[11.5px] leading-relaxed text-amber-200">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{fallbackNote}</span>
+          </p>
+        )}
       </div>
 
-      {read && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            {
-              title: "Inputs read",
-              lines: [
-                `Sheet: ${read.name}`,
-                `File size: ${read.size}`,
-                `Resolution: ${read.dimensions}`,
-                `Domain detected: ${read.domainLabel}`,
-              ],
-            },
-            { title: "Governing formulas", lines: FORMULAS[read.domain] },
-            { title: "Solution path", lines: SOLUTION_STEPS[read.domain] },
-          ].map((card, index) => (
+      {cards.length > 0 && !scanning && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map((card, index) => (
             <motion.div
               key={card.title}
               initial={{ opacity: 0, y: 16 }}
@@ -248,9 +381,9 @@ export function CanvasSolver() {
                 {card.title}
               </h3>
               <ul className="mt-3 space-y-2">
-                {card.lines.map((line) => (
+                {card.lines.map((line, lineIndex) => (
                   <li
-                    key={line}
+                    key={`${card.title}-${lineIndex}`}
                     className="flex gap-2 text-[12.5px] leading-relaxed text-slate-300"
                   >
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8b93ff]" />

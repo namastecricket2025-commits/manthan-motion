@@ -26,86 +26,163 @@
 
 /* ---------------- the launcher ---------------- */
 
+/* One circular orb, 58px — a comfortable thumb target that reads as a living
+   object rather than a button: a slow halo, a rotating conic spark ring, and a
+   travelling bright dot inside it. State (idle / listening / speaking) is
+   carried by speed, not by extra chrome. */
 .avia-fab {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
-  background: color-mix(in srgb, var(--ink) 78%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
-  backdrop-filter: blur(20px) saturate(170%);
-  box-shadow: 0 22px 60px -28px rgba(0, 0, 0, 0.7);
-  padding: 10px 16px 10px 12px;
-  color: var(--text-main);
-  font-size: 12.5px;
-  font-weight: 600;
-  transition:
-    transform 260ms cubic-bezier(0.25, 1, 0.5, 1),
-    border-color 260ms cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.avia-fab:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--signal) 50%, transparent);
-}
-
-.avia-fab:active {
-  transform: scale(0.97);
-}
-
-.avia-fab__orb {
   position: relative;
-  display: inline-flex;
-  height: 30px;
-  width: 30px;
-  align-items: center;
-  justify-content: center;
+  display: inline-grid;
+  place-items: center;
+  height: 58px;
+  width: 58px;
   border-radius: 999px;
-  /* Filled accent surfaces use --signal-strong: the luminous tone is a text
-     and hairline colour, too light to carry the white glyph. */
-  background: linear-gradient(180deg, var(--signal-strong) 0%, var(--signal-2) 100%);
-  color: var(--primary-foreground);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid color-mix(in srgb, var(--signal) 32%, transparent);
+  background:
+    radial-gradient(120% 120% at 30% 22%, rgba(255, 255, 255, 0.16), transparent 58%),
+    color-mix(in srgb, var(--ink) 74%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  box-shadow:
+    0 22px 60px -26px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--text-main);
+  isolation: isolate;
+  transition: border-color 260ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.avia-fab__orb::after {
-  content: "";
+.avia-fab:hover,
+.avia-fab:focus-visible {
+  border-color: color-mix(in srgb, var(--signal) 62%, transparent);
+}
+
+/* soft breathing halo */
+.avia-fab__halo {
   position: absolute;
-  inset: -4px;
+  inset: -14px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--signal) 45%, transparent);
-  opacity: 0;
-  transition: opacity 260ms ease;
+  z-index: -1;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--signal) 42%, transparent),
+    transparent 68%
+  );
+  filter: blur(9px);
+  opacity: 0.55;
+  animation: avia-halo 5.6s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
-.avia-fab.is-live .avia-fab__orb::after {
-  opacity: 1;
-  animation: avia-ping 1.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+@keyframes avia-halo {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.42;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.7;
+  }
 }
 
-@keyframes avia-ping {
+/* the spark ring: a conic sweep masked to a hairline, always turning */
+.avia-fab__ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--signal) 0%, transparent) 40deg,
+    var(--signal) 140deg,
+    color-mix(in srgb, var(--signal) 35%, transparent) 200deg,
+    transparent 300deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: avia-spin 6.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes avia-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* inner glass core + the travelling spark */
+.avia-fab__core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 42px;
+  width: 42px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 34% 26%,
+    color-mix(in srgb, var(--signal-strong) 92%, #fff 8%),
+    var(--signal-2)
+  );
+  color: var(--primary-foreground);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 6px 18px -8px color-mix(in srgb, var(--signal-strong) 70%, transparent);
+  overflow: hidden;
+}
+
+.avia-fab__spark {
+  position: absolute;
+  top: -30%;
+  left: 10%;
+  height: 46%;
+  width: 46%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 62%);
+  filter: blur(2px);
+  animation: avia-flow 3.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes avia-flow {
   0% {
-    transform: scale(0.9);
+    transform: translate3d(-12%, -8%, 0) scale(0.7);
+    opacity: 0;
+  }
+  30% {
     opacity: 0.9;
   }
+  70% {
+    opacity: 0.75;
+  }
   100% {
-    transform: scale(1.5);
+    transform: translate3d(28%, 96%, 0) scale(1.15);
     opacity: 0;
   }
 }
 
-.avia-fab__label {
-  white-space: nowrap;
+.avia-fab__glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
 }
 
-@media (max-width: 520px) {
-  .avia-fab__label {
-    display: none;
-  }
-  .avia-fab {
-    padding: 10px;
-  }
+/* live: everything speeds up so the state is obvious from across the room */
+.avia-fab.is-live .avia-fab__ring {
+  animation-duration: 2.4s;
+}
+
+.avia-fab.is-live .avia-fab__spark {
+  animation-duration: 1.5s;
+}
+
+.avia-fab.is-live .avia-fab__halo {
+  animation-duration: 2.6s;
 }
 
 /* ---------------- the panel ---------------- */
@@ -224,11 +301,87 @@ html:not(.dark) .avia-bubble--avia {
 
 .avia-status {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   padding: 0 16px 10px;
   font-size: 11px;
   color: var(--text-dim);
+}
+
+.avia-status__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+  transition:
+    color 180ms ease,
+    border-color 220ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.avia-status__action:hover {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--signal) 48%, transparent);
+}
+
+.avia-status__action.is-on {
+  color: var(--primary-foreground);
+  background: var(--signal-strong);
+  border-color: var(--signal-strong);
+}
+
+.avia-status__action.is-on:hover {
+  color: var(--primary-foreground);
+}
+
+.avia-status__action + .avia-status__action {
+  margin-left: 0;
+}
+
+.avia-dot.is-live {
+  animation: avia-halo 1.6s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* three-dot thinking tell */
+.avia-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.avia-typing span {
+  height: 5px;
+  width: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 70%, transparent);
+  animation: avia-typing 1.1s ease-in-out infinite;
+}
+
+.avia-typing span:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.avia-typing span:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes avia-typing {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 .avia-status__bar {
@@ -397,9 +550,13 @@ html:not(.dark) .avia-bubble--avia {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .avia-fab__orb::after,
   .avia-mic.is-live::after,
-  .avia-status__bar span {
+  .avia-status__bar span,
+  .avia-typing span,
+  .avia-fab__halo,
+  .avia-fab__ring,
+  .avia-fab__spark,
+  .avia-dot.is-live {
     animation: none;
   }
 }

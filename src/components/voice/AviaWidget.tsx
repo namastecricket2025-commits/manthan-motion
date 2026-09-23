@@ -1,22 +1,23 @@
 import { api } from "@/convex/_generated/api";
 import {
-  AVIA_GREETING,
-  AVIA_SWITCH_LINE,
   detectStudyTopic,
   fallbackReply,
   pickAviaVoice,
+  pickGreeting,
+  pickSwitchLine,
   speakText,
   stopSpeaking,
 } from "@/components/voice/avia";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowUp,
   Brain,
   Mic,
   MicOff,
+  RotateCcw,
   Sparkles,
   Square,
   Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { useAction } from "convex/react";
@@ -26,11 +27,16 @@ import "./avia.css";
 /**
  * Avia — the floating voice companion.
  *
- * Bottom right on every page. Listening uses the browser's own Web Speech API
- * and speaking uses window.speechSynthesis, so the whole widget runs with no
- * API keys and no cost. The reply itself comes from Manthan's model chain with
- * Avia's personality prompt (see convex/ai.ts); if that chain is out of free
- * capacity she says so in character instead of failing silently.
+ * A single circular orb in the bottom right of every page. Listening uses the
+ * browser's own Web Speech API and speaking uses window.speechSynthesis, so
+ * the whole widget runs with no API keys and no cost. The reply itself comes
+ * from Manthan's model chain with Avia's personality prompt (see
+ * convex/ai.ts); if that chain is out of free capacity she says so in
+ * character instead of failing silently.
+ *
+ * The Study Switch announcement is deliberately one-shot per lock-in. Repeating
+ * the same sentence on every question is what made her sound like a script —
+ * she now says it once, from a rotating pool, and then just tutors.
  */
 
 interface Turn {
@@ -39,11 +45,20 @@ interface Turn {
   text: string;
 }
 
+/** Openers shown to a cold-start visitor who has nothing to say yet. */
 const PROMPTS = [
   "Yo, how's it going",
   "Explain photosynthesis",
   "Solve 2x + 5 = 17",
   "Quiz me on Newton's laws",
+];
+
+/** Persistent nudges — usable at any point in the conversation. */
+const QUICK_ACTIONS = [
+  "Explain that simpler",
+  "Give me an example",
+  "Quiz me on this",
+  "Why does that work?",
 ];
 
 export function AviaWidget() {
@@ -55,10 +70,12 @@ export function AviaWidget() {
   const [speaking, setSpeaking] = useState(false);
   const [studying, setStudying] = useState(false);
   const [draft, setDraft] = useState("");
+  const [handsFree, setHandsFree] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [voiceLabel, setVoiceLabel] = useState("device voice");
+  const [greeting, setGreeting] = useState(() => pickGreeting());
   const [turns, setTurns] = useState<Turn[]>([
-    { id: 0, from: "avia", text: AVIA_GREETING },
+    { id: 0, from: "avia", text: pickGreeting() },
   ]);
 
   const idRef = useRef(1);
@@ -69,9 +86,19 @@ export function AviaWidget() {
   const greetedRef = useRef(false);
   const openRef = useRef(false);
   const logRef = useRef<HTMLDivElement | null>(null);
+  /** Live mirrors for callbacks that must not close over stale state. */
+  const handsFreeRef = useRef(false);
+  const listenRef = useRef<() => void>(() => {});
+  /** The switch has already been announced for the current lock-in. */
+  const switchSpokenRef = useRef(false);
+  /** Last line used, so the pool never repeats back to back. */
+  const lastSwitchRef = useRef<string | undefined>(undefined);
+  const lastGreetingRef = useRef<string | undefined>(undefined);
 
   turnsRef.current = turns;
   openRef.current = open;
+  handsFreeRef.current = handsFree;
+  lastGreetingRef.current = greeting;
 
   const supported = useMemo(
     () =>
@@ -121,6 +148,13 @@ export function AviaWidget() {
     );
   }, []);
 
+  /** Cuts her off mid-sentence without closing the panel. */
+  const hush = useCallback(() => {
+    stopSpeaking();
+    queuedRef.current = 0;
+    setSpeaking(false);
+  }, []);
+
   /* ---------------- conversation ---------------- */
 
   const addTurn = useCallback((from: Turn["from"], text: string) => {
@@ -136,12 +170,18 @@ export function AviaWidget() {
       setNote(null);
 
       // The Study Switch fires here, before the round trip, so the line is
-      // spoken the instant the academic question lands.
+      // spoken the instant the academic question lands — once per lock-in,
+      // never twice in a row with the same words.
       const academic = detectStudyTopic(message);
       const nextStudying = studying || academic;
       if (academic && !studying) {
         setStudying(true);
-        say(AVIA_SWITCH_LINE);
+        if (!switchSpokenRef.current) {
+          switchSpokenRef.current = true;
+          const line = pickSwitchLine(lastSwitchRef.current);
+          lastSwitchRef.current = line;
+          say(line);
+        }
       }
 
       setThinking(true);
@@ -150,15 +190,20 @@ export function AviaWidget() {
         text: turn.text,
       }));
 
+      /** Hands-free: reopen the mic the moment she has finished answering. */
+      const resume = () => {
+        if (handsFreeRef.current && openRef.current) listenRef.current();
+      };
+
       try {
         const result = await askAvia({ message, history, studying: nextStudying });
         addTurn("avia", result.reply);
         if (result.mode === "tutoring" || nextStudying) setStudying(true);
-        say(result.reply, false);
+        say(result.reply, false, resume);
       } catch {
         const reply = fallbackReply(nextStudying);
         addTurn("avia", reply);
-        say(reply, false);
+        say(reply, false, resume);
       } finally {
         setThinking(false);
       }
@@ -229,6 +274,8 @@ export function AviaWidget() {
     }
   }, [stopListening]);
 
+  listenRef.current = startListening;
+
   /* ---------------- lifecycle ---------------- */
 
   useEffect(
@@ -251,7 +298,7 @@ export function AviaWidget() {
       // First click: Avia introduces herself out loud, then the mic opens on
       // its own so the student can simply start talking.
       greetedRef.current = true;
-      say(AVIA_GREETING, true, () => {
+      say(greeting, true, () => {
         if (openRef.current) startListening();
       });
     } else {
@@ -265,6 +312,40 @@ export function AviaWidget() {
     queuedRef.current = 0;
     setSpeaking(false);
     setOpen(false);
+  }
+
+  /**
+   * Hands-free mode: she keeps the microphone open between turns, so a whole
+   * revision session can be held by voice without tapping the mic after every
+   * answer.
+   */
+  function toggleHandsFree() {
+    const next = !handsFree;
+    if (next && !supported) {
+      setNote(
+        "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
+      );
+      return;
+    }
+    setHandsFree(next);
+    setNote(
+      next ? "Hands-free on. I'll listen again as soon as I finish answering." : null,
+    );
+  }
+
+  /** Wipe the thread and let her start over with a different opener. */
+  function newChat() {
+    stopListening();
+    hush();
+    const next = pickGreeting(greeting);
+    setGreeting(next);
+    switchSpokenRef.current = false;
+    setStudying(false);
+    setNote(null);
+    setDraft("");
+    idRef.current = 1;
+    setTurns([{ id: 0, from: "avia", text: next }]);
+    say(next);
   }
 
   const statusLabel = listening
@@ -282,14 +363,20 @@ export function AviaWidget() {
           <motion.section
             key="avia-panel"
             className="avia-panel"
-            initial={{ opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 14, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30, mass: 0.9 }}
+            style={{ transformOrigin: "calc(100% - 30px) calc(100% - 30px)" }}
+            initial={{ opacity: 0, scale: 0.62, y: 26, filter: "blur(14px)" }}
+            animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.7, y: 20, filter: "blur(10px)" }}
+            transition={{
+              type: "spring",
+              stiffness: 380,
+              damping: 32,
+              mass: 0.85,
+            }}
             aria-label="Avia voice tutor"
           >
             <header className="avia-head">
-              <span className="avia-dot" />
+              <span className={"avia-dot" + (listening || speaking ? " is-live" : "")} />
               <div className="min-w-0 flex-1">
                 <p className="avia-name">Avia</p>
                 <p className="avia-sub truncate">
@@ -309,6 +396,14 @@ export function AviaWidget() {
                   </>
                 )}
               </span>
+              <button
+                type="button"
+                aria-label="Start a new chat with Avia"
+                className="avia-icon-btn"
+                onClick={newChat}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
               <button
                 type="button"
                 aria-label="Close Avia"
@@ -337,8 +432,10 @@ export function AviaWidget() {
                 </motion.div>
               ))}
               {thinking && (
-                <div className="avia-bubble avia-bubble--avia text-text-dim">
-                  Avia is thinking…
+                <div className="avia-bubble avia-bubble--avia avia-typing">
+                  <span />
+                  <span />
+                  <span />
                 </div>
               )}
             </div>
@@ -354,36 +451,57 @@ export function AviaWidget() {
                 <Volume2 className="h-3.5 w-3.5" />
               )}
               <span>{statusLabel}</span>
+              {speaking && (
+                <button
+                  type="button"
+                  onClick={hush}
+                  className="avia-status__action"
+                >
+                  <VolumeX className="h-3 w-3" />
+                  Quiet
+                </button>
+              )}
               {studying && (
                 <button
                   type="button"
                   onClick={() => {
                     setStudying(false);
+                    switchSpokenRef.current = false;
                     setNote("Back to banter. Say the word when you want to lock in again.");
                   }}
-                  className="ml-auto text-[11px] font-medium text-text-dim underline-offset-2 hover:text-foreground hover:underline"
+                  className="avia-status__action"
                 >
                   Back to banter
+                </button>
+              )}
+              {supported && (
+                <button
+                  type="button"
+                  onClick={toggleHandsFree}
+                  aria-pressed={handsFree}
+                  className={
+                    "avia-status__action" + (handsFree ? " is-on" : "")
+                  }
+                >
+                  {handsFree ? "Hands-free on" : "Hands-free"}
                 </button>
               )}
             </div>
 
             {note && <p className="avia-note">{note}</p>}
 
-            {turns.length <= 1 && (
-              <div className="avia-chips">
-                {PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className="avia-chip"
-                    onClick={() => void sendRef.current(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="avia-chips">
+              {(turns.length <= 1 ? PROMPTS : QUICK_ACTIONS).map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="avia-chip"
+                  onClick={() => void sendRef.current(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
 
             <form
               className="avia-foot"
@@ -416,31 +534,41 @@ export function AviaWidget() {
                   <MicOff className="h-4 w-4" />
                 )}
               </button>
-              <button
-                type="submit"
-                className="avia-send"
-                disabled={!draft.trim() || thinking}
-                aria-label="Send to Avia"
-              >
-                <ArrowUp className="h-4 w-4" />
-              </button>
             </form>
           </motion.section>
         )}
       </AnimatePresence>
 
-      <button
+      {/* The launcher itself: one circular orb with a living spark inside it.
+          While she is listening or speaking the ring spins up and the halo
+          breathes, so the state is readable at a glance from across the room. */}
+      <motion.button
         type="button"
         onClick={() => (open ? closeWidget() : openWidget())}
         aria-expanded={open}
         aria-label="AI Voice Tutor"
         className={"avia-fab" + (listening || speaking ? " is-live" : "")}
+        initial={false}
+        animate={{ scale: open ? 0.86 : 1, opacity: open ? 0.75 : 1 }}
+        whileHover={{ scale: open ? 0.9 : 1.06 }}
+        whileTap={{ scale: 0.94 }}
+        transition={{ type: "spring", stiffness: 420, damping: 26, mass: 0.6 }}
       >
-        <span className="avia-fab__orb">
-          {listening ? <Mic className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        <span className="avia-fab__halo" aria-hidden="true" />
+        <span className="avia-fab__ring" aria-hidden="true" />
+        <span className="avia-fab__core">
+          <span className="avia-fab__spark" aria-hidden="true" />
+          <span className="avia-fab__glyph">
+            {listening ? (
+              <Square className="h-5 w-5" />
+            ) : speaking ? (
+              <Volume2 className="h-5 w-5" />
+            ) : (
+              <Sparkles className="h-5 w-5" />
+            )}
+          </span>
         </span>
-        <span className="avia-fab__label">AI Voice Tutor</span>
-      </button>
+      </motion.button>
     </div>
   );
 }

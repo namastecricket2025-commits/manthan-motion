@@ -194,6 +194,21 @@
   --chart-3: #b0773c;
   --chart-4: #6d7f63;
   --chart-5: #7d6a64;
+
+  /* ---- Artefact ramp (light) ----------------------------------------
+     One colour per generated artefact kind, plus the three source kinds.
+     These are deliberately deeper and warmer than the dark set: the dark
+     neon (mint, amber, lilac grey) sits close to the cream canvas and reads
+     as washed out, so light mode runs an ochre/sage/clay ramp that stays
+     legible on paper. Dark keeps the bright set it was tuned against. */
+  --kind-summary: #c81f27;
+  --kind-flashcards: #2f6f6b;
+  --kind-quiz: #b0773c;
+  --kind-mindmap: #6d7f63;
+  --kind-slides: #7d6a64;
+  --src-files: #c81f27;
+  --src-links: #2f6f6b;
+  --src-notes: #7d6a64;
   --sidebar: #fbf7f4;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
@@ -341,6 +356,15 @@
   --chart-3: #e8b04b;
   --chart-4: #7dd3fc;
   --chart-5: #a1a1aa;
+  /* Artefact + source ramp (dark) — the bright neon set, unchanged. */
+  --kind-summary: #8b93ff;
+  --kind-flashcards: #5eead4;
+  --kind-quiz: #e8b04b;
+  --kind-mindmap: #7d8f78;
+  --kind-slides: #a1a1aa;
+  --src-files: #8b93ff;
+  --src-links: #5eead4;
+  --src-notes: #a1a1aa;
   --sidebar: #141416;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);

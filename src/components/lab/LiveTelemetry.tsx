@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Activity, Sigma } from "lucide-react";
-import { clamp } from "./use-canvas";
 import { settingsRuntime } from "@/lib/app-settings";
 
 export interface TelemetryRow {
@@ -18,7 +17,7 @@ export interface TelemetryFeed {
   eqNote: string;
   /** a live signal to plot (0..1 normalised) */
   signal: number;
-  /** accent colour for the pulse dot + sparkline */
+  /** accent colour for the pulse dot */
   accent: string;
 }
 
@@ -45,70 +44,17 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
   return <TelemetryCtx.Provider value={{ feed, setFeed }}>{children}</TelemetryCtx.Provider>;
 }
 
-/* ---------- tiny live sparkline (canvas, zero deps) ---------- */
-function Spark({ feed }: { feed: TelemetryFeed }) {
-  const ref = useRef<HTMLCanvasElement | null>(null);
-  const hist = useRef<number[]>([]);
-  const feedRef = useRef(feed);
-  feedRef.current = feed;
-
-  useEffect(() => {
-    let raf = 0;
-    let last = 0;
-    const loop = (now: number) => {
-      raf = requestAnimationFrame(loop);
-      if (settingsRuntime.reduceMotion) return; // Motionless Mode: hold the trace
-      if (now - last < 50) return; // ~20 fps is plenty for a sparkline
-      last = now;
-      const c = ref.current;
-      if (!c) return;
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const w = c.clientWidth;
-      const h = c.clientHeight;
-      if (!w || !h) return;
-      if (c.width !== w * dpr || c.height !== h * dpr) {
-        c.width = w * dpr;
-        c.height = h * dpr;
-      }
-      hist.current.push(clamp(feedRef.current.signal, 0, 1));
-      if (hist.current.length > 90) hist.current.shift();
-      const ctx = c.getContext("2d");
-      if (!ctx) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-      // baseline grid
-      ctx.strokeStyle = "rgba(148,163,184,0.14)";
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 3; i++) {
-        const y = (i / 3) * h;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-      const pts = hist.current;
-      ctx.strokeStyle = feedRef.current.accent;
-      ctx.lineWidth = 1.6;
-      ctx.shadowColor = feedRef.current.accent;
-      ctx.shadowBlur = 5;
-      ctx.beginPath();
-      pts.forEach((p, i) => {
-        const x = (i / (90 - 1)) * w;
-        const y = h - p * (h - 4) - 2;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  return <canvas ref={ref} className="h-9 w-full rounded-md border border-white/10 bg-black/25" />;
-}
-
 /* ---------- the panel ---------- */
+
+/**
+ * The live readout.
+ *
+ * It used to carry a rolling canvas sparkline. A two-line trace on a wide,
+ * short strip reads as a stray graph floating beside the instrument — it told
+ * the student nothing the numeric rows do not, so the panel is now the numbers
+ * and the governing equation only. The signal value still drives the pulse
+ * dot, which is the one piece of continuous motion that earns its place.
+ */
 export function LiveTelemetry({ feed, embedded = false }: { feed: TelemetryFeed; embedded?: boolean }) {
   const pulse = useRef<HTMLSpanElement | null>(null);
   const feedRef = useRef(feed);
@@ -141,7 +87,6 @@ export function LiveTelemetry({ feed, embedded = false }: { feed: TelemetryFeed;
       </div>
       <div className="lab-telemetry__body">
         <p className="mb-1.5 text-[9px] uppercase tracking-[0.16em] text-slate-500">{feed.subject}</p>
-        <Spark feed={feed} />
         <div className="mt-1.5">
           {feed.rows.map((r) => (
             <div key={r.k} className="lab-telemetry__row">

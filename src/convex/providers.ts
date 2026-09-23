@@ -320,10 +320,20 @@ function classifyOpenAiCompatible(
 /* One request                                                        */
 /* ------------------------------------------------------------------ */
 
+/**
+ * An image attached to a prompt, base64 (no data-url prefix) plus its MIME
+ * type. Only the multimodal providers see it — a text-only model answers 400
+ * for the request and the chain simply moves on to the next candidate, which
+ * is why the vision callers always keep a text-only fallback.
+ */
+export type ModelImage = { mimeType: string; data: string };
+
 async function geminiAttempt(
   candidate: Candidate,
   system: string,
   prompt: string,
+  image: ModelImage | undefined,
+  temperature: number,
 ): Promise<AttemptResult> {
   try {
     const response = await fetch(
@@ -336,9 +346,26 @@ async function geminiAttempt(
         },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: prompt },
+                ...(image
+                  ? [
+                      {
+                        inlineData: {
+                          mimeType: image.mimeType,
+                          data: image.data,
+                        },
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          ],
           generationConfig: {
-            temperature: 0.3,
+            temperature,
             responseMimeType: "application/json",
           },
         }),
@@ -386,6 +413,8 @@ async function openAiCompatibleAttempt(
   candidate: Candidate,
   system: string,
   prompt: string,
+  image: ModelImage | undefined,
+  temperature: number,
 ): Promise<AttemptResult> {
   try {
     const response = await fetch(`${candidate.endpoint}/chat/completions`, {
@@ -396,10 +425,23 @@ async function openAiCompatibleAttempt(
       },
       body: JSON.stringify({
         model: candidate.model,
-        temperature: 0.3,
+        temperature,
         messages: [
           { role: "system", content: system },
-          { role: "user", content: prompt },
+          {
+            role: "user",
+            content: image
+              ? [
+                  { type: "text", text: prompt },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:${image.mimeType};base64,${image.data}`,
+                    },
+                  },
+                ]
+              : prompt,
+          },
         ],
       }),
     });
@@ -550,6 +592,13 @@ export async function callModel(
   candidates: Candidate[],
   system: string,
   prompt: string,
+  image?: ModelImage,
+  /**
+   * Sampling temperature. Study material wants to be reproducible (0.3); a
+   * spoken companion does not — at 0.3 every reply converges on the same
+   * phrasing, which is exactly the "she keeps saying the same line" problem.
+   */
+  temperature = 0.3,
 ): Promise<{
   text: string;
   model: string;
@@ -565,8 +614,8 @@ export async function callModel(
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const result =
         candidate.provider === "gemini"
-          ? await geminiAttempt(candidate, system, prompt)
-          : await openAiCompatibleAttempt(candidate, system, prompt);
+          ? await geminiAttempt(candidate, system, prompt, image, temperature)
+          : await openAiCompatibleAttempt(candidate, system, prompt, image, temperature);
 
       if (result.ok) {
         if (result.text.trim()) {

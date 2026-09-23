@@ -11,12 +11,50 @@
  * is spoken before the reply has even been written.
  */
 
-/** Avia's Study Switch line — verbatim, and spoken the moment study starts. */
+/**
+ * The Study Switch, in Avia's own words.
+ *
+ * The canonical line stays first and exact — it is the sentence the product
+ * promises. The rest exist because a companion who greets every single
+ * question with the identical announcement stops sounding like a person and
+ * starts sounding like a broken prompt. The widget speaks exactly one of
+ * these, once per session, the moment the switch first flips.
+ */
 export const AVIA_SWITCH_LINE =
   "Alright, jokes over. Activating 100% brain power. Let's lock in.";
 
-export const AVIA_GREETING =
-  "Yo, I'm Avia. Ask me literally anything, or hit the mic and just talk. I'll keep it real until something school-shaped shows up.";
+export const AVIA_SWITCH_LINES = [
+  AVIA_SWITCH_LINE,
+  "Okay, brain is on. Notes down, vibes parked. Let's work it out together.",
+  "Locked in. I'm not handing you the answer, but I will get you all the way to it.",
+  "Serious mode. One step at a time, and you do the thinking with me.",
+];
+
+/** Rotates through the switch lines without ever repeating the previous one. */
+export function pickSwitchLine(avoid?: string): string {
+  const pool =
+    avoid && AVIA_SWITCH_LINES.length > 1
+      ? AVIA_SWITCH_LINES.filter((line) => line !== avoid)
+      : AVIA_SWITCH_LINES;
+  return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_SWITCH_LINE;
+}
+
+export const AVIA_GREETINGS = [
+  "Yo, I'm Avia. Ask me literally anything, or hit the mic and just talk. I'll keep it real until something school-shaped shows up.",
+  "Hey, Avia here. Talk to me like a friend down the corridor — and when work shows up, I switch on properly.",
+  "I'm Avia. Warm up with whatever, then throw me a topic and watch me get serious.",
+  "Avia, reporting in. Free form chat, or full study mode — your call.",
+];
+
+export function pickGreeting(avoid?: string): string {
+  const pool =
+    avoid && AVIA_GREETINGS.length > 1
+      ? AVIA_GREETINGS.filter((line) => line !== avoid)
+      : AVIA_GREETINGS;
+  return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_GREETING;
+}
+
+export const AVIA_GREETING = AVIA_GREETINGS[0];
 
 /* ------------------------------------------------------------------ */
 /* The Study Switch detector                                           */

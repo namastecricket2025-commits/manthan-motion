@@ -50,6 +50,16 @@
   --lab-green: #34d399;
   --lab-violet: #a78bfa;
   --lab-cell-ink: #e2e8f0;
+  /* Motion tokens for the whole bench. One easing curve for anything that
+     settles (menus, panels, chips) and one spring with a little overshoot for
+     anything that pops in under the pointer. Everything in this file picks
+     these up, so the lab moves as one instrument instead of each widget
+     inventing its own timing. */
+  --lab-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --lab-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lab-fast: 180ms;
+  --lab-settle: 320ms;
+  --lab-slow: 520ms;
   /* No flat slate/purple-gray block: the page canvas is a deep neutral base
      with a faint indigo cast, and the shared mesh (rendered inside .lab-root)
      supplies the depth, exactly like the landing, dashboard and settings
@@ -332,23 +342,33 @@ html:not(.dark) .lab-root .lab-mobile-telemetry {
   background: linear-gradient(170deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.86));
 }
 html:not(.dark) .lab-root .lab-mobile-telemetry__eq {
-  color: #b3163c;
+  color: #4338ca;
 }
 html:not(.dark) .lab-root .lab-telemetry__eq .eq {
-  color: #b3163c;
+  color: #4338ca;
   text-shadow: none;
 }
 
-/* ---------- Glass panels ---------- */
+/* ---------- Glass panels ----------
+   The bench surface: a slate glass with a top-left light catch and a faint
+   indigo bloom in the corner, so a panel reads as a lit instrument face rather
+   than a flat card. */
 .lab-glass {
-  background: linear-gradient(165deg, rgba(30, 41, 59, 0.72), rgba(15, 23, 42, 0.6));
+  position: relative;
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(139, 147, 255, 0.08), transparent 52%),
+    linear-gradient(165deg, rgba(30, 41, 59, 0.74), rgba(15, 23, 42, 0.62));
   border: 1px solid var(--lab-border);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
   border-radius: 18px;
   box-shadow:
     0 18px 44px rgba(2, 6, 23, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    border-color var(--lab-settle) var(--lab-ease),
+    box-shadow var(--lab-settle) var(--lab-ease),
+    transform var(--lab-settle) var(--lab-ease);
 }
 .lab-glass-deep {
   background: linear-gradient(165deg, rgba(15, 23, 42, 0.82), rgba(11, 17, 32, 0.88));
@@ -366,11 +386,14 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
     box-shadow 0.25s ease,
     transform 0.25s ease;
 }
-.lab-glass-hover:hover {
-  border-color: var(--lab-border-strong);
-  box-shadow:
-    0 12px 40px rgba(2, 6, 23, 0.5),
-    0 0 0 1px rgba(139, 147, 255, 0.06);
+@media (hover: hover) and (pointer: fine) {
+  .lab-glass-hover:hover {
+    border-color: rgba(139, 147, 255, 0.42);
+    transform: translateY(-3px);
+    box-shadow:
+      0 22px 52px rgba(2, 6, 23, 0.5),
+      0 0 0 1px rgba(139, 147, 255, 0.12);
+  }
 }
 
 /* ---------- Typography helpers ---------- */
@@ -469,6 +492,9 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
   border-radius: 14px;
   background: rgba(11, 17, 32, 0.7);
   border: 1px solid var(--lab-border);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .lab-tab {
   position: relative;
@@ -481,27 +507,72 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
   font-weight: 600;
   color: var(--lab-dim);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition:
+    color var(--lab-fast) var(--lab-ease),
+    background var(--lab-settle) var(--lab-ease),
+    border-color var(--lab-settle) var(--lab-ease),
+    transform var(--lab-settle) var(--lab-spring);
   white-space: nowrap;
 }
 .lab-tab:hover {
   color: var(--lab-text);
+  background: rgba(139, 147, 255, 0.08);
+}
+.lab-tab:active {
+  transform: scale(0.97);
 }
 .lab-tab--on {
   color: #fff;
-  background: linear-gradient(135deg, rgba(139, 147, 255, 0.2), rgba(139, 147, 255, 0.06));
-  border: 1px solid rgba(139, 147, 255, 0.38);
-  box-shadow: 0 0 14px rgba(139, 147, 255, 0.14);
+  background: linear-gradient(135deg, rgba(139, 147, 255, 0.24), rgba(139, 147, 255, 0.07));
+  border: 1px solid rgba(139, 147, 255, 0.42);
+  box-shadow:
+    0 0 18px rgba(139, 147, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.lab-tab--on::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -6px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--lab-neon), transparent);
+  animation: lab-tab-underline var(--lab-slow) var(--lab-ease) both;
+}
+@keyframes lab-tab-underline {
+  from {
+    opacity: 0;
+    transform: scaleX(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
 }
 .lab-pill {
   position: absolute;
   inset: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(139, 147, 255, 0.2), rgba(139, 147, 255, 0.06));
-  border: 1px solid rgba(139, 147, 255, 0.38);
-  box-shadow: 0 0 16px rgba(139, 147, 255, 0.14);
+  background: linear-gradient(135deg, rgba(139, 147, 255, 0.24), rgba(139, 147, 255, 0.07));
+  border: 1px solid rgba(139, 147, 255, 0.42);
+  box-shadow:
+    0 0 18px rgba(139, 147, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+/* the accent hairline rides along with the pill, so the tab bar has one
+   moving element instead of a static underline plus a sliding pill */
+.lab-pill::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: -7px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--lab-neon), transparent);
 }
 
 /* ---------- Inputs ---------- */
@@ -843,10 +914,29 @@ input[type="range"].lab-range::-moz-range-thumb {
 
 /* ---------- Header + extra helpers ---------- */
 .lab-header {
-  background: rgba(11, 17, 32, 0.82);
+  /* positioned so the accent hairline below anchors to the header, not to the
+     page section (Tailwind's lg:sticky keeps it positioned on desktop) */
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.86),
+    rgba(11, 17, 32, 0.74)
+  );
   border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 10px 30px -18px rgba(2, 6, 23, 0.8);
+}
+/* hairline of the active subject's accent under the header, so the bench
+   announces which instrument is loaded without loud colour */
+.lab-header::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lab-accent-2), transparent);
+  opacity: 0.85;
+  transition: background var(--lab-slow) var(--lab-ease);
 }
 .lab-screen {
   background: #0b1120;
@@ -903,15 +993,18 @@ html:not(.dark) .lab-root .lab-header {
   border-bottom-color: rgba(15, 23, 42, 0.1);
 }
 html:not(.dark) .lab-root .lab-glass {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.72));
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(99, 102, 241, 0.09), transparent 55%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.72));
 }
 html:not(.dark) .lab-root .lab-glass-deep {
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.82));
 }
 html:not(.dark) .lab-root .lab-glass-hover:hover {
+  border-color: rgba(79, 70, 229, 0.34);
   box-shadow:
-    0 12px 40px rgba(15, 23, 42, 0.12),
-    0 0 0 1px rgba(139, 147, 255, 0.08);
+    0 22px 48px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgba(99, 102, 241, 0.14);
 }
 html:not(.dark) .lab-root .lab-btn {
   background: rgba(255, 255, 255, 0.75);
@@ -951,17 +1044,23 @@ html:not(.dark) .lab-root .lab-chip {
   color: #475569;
 }
 html:not(.dark) .lab-root .lab-tabs {
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 22px -14px rgba(15, 23, 42, 0.3);
 }
 html:not(.dark) .lab-root .lab-tab:hover {
   color: #0f172a;
 }
 /* an active tab is white-on-neon in the dark bench; on light glass that
-   white label disappears, so flip it to the signal red instead */
+   white label disappears, so it flips to the deep indigo the lab is built on
+   rather than the site's daylight crimson — the bench keeps one accent in
+   both themes. */
 html:not(.dark) .lab-root .lab-tab--on {
-  color: #b3163c;
+  color: #4338ca;
   background: linear-gradient(135deg, rgba(139, 147, 255, 0.24), rgba(139, 147, 255, 0.08));
-  border-color: rgba(225, 29, 72, 0.4);
+  border-color: rgba(79, 70, 229, 0.4);
   box-shadow: 0 0 14px rgba(139, 147, 255, 0.16);
 }
 
@@ -1097,6 +1196,26 @@ html:not(.dark) .lab-root [class*="text-[#ff3b5c]"] {
   color: #4f46e5;
 }
 
+/* The luminous bench accent (#aab3ff) is a highlight colour for near-black:
+   on the light theme's white glass it is barely a suggestion of a colour, and
+   labels, tab icons and chip text using it effectively vanish. Flip every
+   instance to the deep indigo, then hand the colour back inside the dark
+   instrument screens, where the pale tone is correct. */
+html:not(.dark) .lab-root [class*="text-[#aab3ff]"],
+html:not(.dark) .lab-root .lab-neon-text {
+  color: #4f46e5;
+  text-shadow: none;
+}
+html:not(.dark) .lab-root .lab-screen [class*="text-[#aab3ff]"],
+html:not(.dark) .lab-root .lab-dark-surface [class*="text-[#aab3ff]"],
+html:not(.dark) .lab-root [class*="bg-[#0b1120]"] [class*="text-[#aab3ff]"],
+html:not(.dark) .lab-root [class*="bg-[#04120e]"][class*="text-[#aab3ff]"],
+html:not(.dark) .lab-root .lab-screen .lab-neon-text,
+html:not(.dark) .lab-root .lab-dark-surface .lab-neon-text {
+  color: #aab3ff;
+  text-shadow: 0 0 14px rgba(139, 147, 255, 0.5);
+}
+
 /* Instrument screens keep light type even in light theme — never flip them */
 html:not(.dark) .lab-root .lab-screen,
 html:not(.dark) .lab-root .lab-dark-surface,
@@ -1189,7 +1308,7 @@ html:not(.dark) .lab-root .lab-tip__body {
   color: #334155;
 }
 html:not(.dark) .lab-root .lab-tip__title {
-  color: #b3163c;
+  color: #4338ca;
 }
 
 /* ============================================================
@@ -1385,5 +1504,50 @@ html:not(.dark) .lab-root .lab-tip__title {
   /* compact section headers on small screens */
   .lab-root .lab-col > .lab-tabs {
     flex: 0 0 auto;
+  }
+}
+
+/* ============================================================
+   Bench entrance choreography.
+   Switching subject tabs mounts a fresh workspace; each panel in it rises
+   into place a beat after the one above (60ms apart, then held), on the same
+   momentum curve the rest of the bench settles on. `backwards` keeps every
+   panel invisible before its own delay, so nothing flashes in at full
+   opacity first. Purely entrance motion — it never fights a state change, and
+   reduced-motion turns it off wholesale below.
+   ============================================================ */
+@keyframes lab-bench-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.lab-root .lab-fill > * {
+  animation: lab-bench-rise var(--lab-slow) var(--lab-ease) backwards;
+}
+.lab-root .lab-fill > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.lab-root .lab-fill > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.lab-root .lab-fill > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.lab-root .lab-fill > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-root .lab-fill > * {
+    animation: none;
+  }
+  .lab-root .lab-tab--on::after {
+    animation: none;
   }
 }

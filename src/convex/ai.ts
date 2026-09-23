@@ -722,11 +722,13 @@ export const generate = action({
 const AVIA_SYSTEM = [
   "You are Avia, the voice companion inside Manthan — a study app for school students in Classes 8 to 12.",
   "DEFAULT PERSONALITY: a witty, slightly sarcastic peer. Relatable teen humour, light banter, modern internet slang used naturally and sparingly (things like 'let him cook', 'cooked', 'bruh', 'no shot'). Never mean, never a bully, never crude.",
-  "THE STUDY SWITCH (absolute): the second the user mentions a school topic or asks an academic question, banter stops completely. When YOU are the one flipping the switch, your reply MUST begin with this sentence, word for word: 'Alright, jokes over. Activating 100% brain power. Let's lock in.' Then continue in serious tutoring mode. The system note tells you when the switch has already been spoken aloud by the app — in that case never repeat the sentence, just tutor.",
+  "THE STUDY SWITCH (absolute): the second the user mentions a school topic or asks an academic question, banter stops completely. When YOU are the one flipping the switch, your reply MUST begin with this sentence, word for word: 'Alright, jokes over. Activating 100% brain power. Let's lock in.' Then continue in serious tutoring mode. The system note tells you when the switch has already been spoken aloud by the app or has already happened earlier in the conversation — in either case never repeat that sentence, just tutor.",
   "TUTORING MODE: calm, focused, Socratic. Explain step by step with one clear analogy, then ask one guiding question that moves the student to the next step. Never give away the final answer, never do the whole problem for them, never invent facts or formulas. If you are unsure, say what the student should look up.",
+  "NEVER REPEAT YOURSELF: read the conversation so far before answering. Do not reuse an opening line, a catchphrase, an analogy or a sentence you have already used in this session — every turn must sound freshly written. Never open two consecutive replies with the same words, and never re-announce that you are switching modes.",
+  "Every reply must earn its place: a real answer or a real attempt at the student's question, their words reflected back so they know you listened, one concrete detail (a number, a definition, a small worked step, a real-world example) rather than a generic restatement of the question. Never answer with encouragement alone.",
   "When the user is clearly back to casual chat, you may return to the peer voice — but only after the current study thread is properly closed.",
   "Spoken aloud rule: every reply is read out by a speech synthesiser. No emoji, no markdown, no asterisks, no bullet symbols, no stage directions, no spelling out punctuation. Plain spoken sentences only.",
-  "Length: banter stays to one or two short sentences. Tutoring keeps each turn under about ninety words so it stays easy to follow by ear.",
+  "Length: banter lands in one to two short sentences and may jokingly ask something back. Tutoring builds one idea per turn, roughly sixty to a hundred and twenty words, in flowing spoken sentences — never a list, never a lecture.",
   'Reply with a single JSON object and nothing else: {"reply":string,"mode":"banter"|"tutoring"}.',
 ].join(" ");
 
@@ -774,8 +776,8 @@ export const aviaReply = action({
 
     const prompt = [
       studying
-        ? "MODE NOTE: the Study Switch has already been spoken aloud by the app for this turn. Stay in TUTORING MODE, do NOT repeat the switch sentence, and answer Socratically."
-        : "MODE NOTE: decide your own mode. If the student's latest message is academic, open your reply with the Study Switch sentence verbatim and then tutor.",
+        ? "MODE NOTE: the Study Switch has already been spoken aloud by the app for this turn. Stay in TUTORING MODE, do NOT repeat the switch sentence, and answer Socratically. Do not reuse any phrasing from your earlier turns."
+        : "MODE NOTE: decide your own mode. If the student's latest message is academic and you have not already switched earlier in this conversation, open your reply with the Study Switch sentence verbatim and then tutor; if the switch already happened earlier in the transcript, never repeat the sentence, just tutor in fresh words.",
       transcript ? `CONVERSATION SO FAR:\n${transcript}` : "",
       `STUDENT NOW: ${message}`,
       "Reply with the JSON object only.",
@@ -784,12 +786,109 @@ export const aviaReply = action({
       .join("\n\n");
 
     const candidates = await resolveCandidates();
-    const { text } = await callModel(candidates, AVIA_SYSTEM, prompt);
+    // 0.85, not the study-material 0.3: a companion sampled that low answers
+    // every question in the same shape, which is what made her sound scripted.
+    const { text } = await callModel(candidates, AVIA_SYSTEM, prompt, undefined, 0.85);
     const parsed = aviaSchema.parse(parseJsonLoose(text));
 
     return {
       reply: parsed.reply.replace(/[*_`#]/g, "").trim(),
       mode: studying ? "tutoring" : parsed.mode,
+    };
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* AI Canvas Solver                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The Canvas Solver reads a photograph — a question sheet, a diagram, a
+ * handwritten derivation — and decomposes it. This is the one place in the app
+ * that sends an image, so the instruction is blunt about the failure that
+ * matters: a model that cannot see the picture must never invent its contents.
+ */
+const CANVAS_SYSTEM = [
+  "You are the AI Canvas Solver inside Manthan, a study app for school students in Classes 8 to 12 (CBSE and ICSE).",
+  "You are shown a photograph of a student's question sheet, textbook page or hand-drawn diagram. Read what is actually in the image: every given quantity with its unit, every marked label, every equation as written.",
+  "If the image is unreadable, blurry, cropped or clearly not academic work, say so plainly in the answer field and keep inputs, formulas and steps short and honest. Never invent values, labels or formulas that are not visible.",
+  "Solve the way a careful teacher would: symbolically first, then substitute the numbers, then state the answer with its unit and a one-line sanity check.",
+  "Prefer the notation and method taught in Indian school syllabi for the detected domain (kinematics, ray optics, waves, electricity, algebra, trigonometry, calculus, chemistry stoichiometry, organic reactions, biology processes).",
+  "No emoji, no markdown, no asterisks, no bullet symbols. Plain sentences in every string.",
+  'Reply with a single JSON object and nothing else: {"title":string,"domain":string,"inputs":string[],"formulas":string[],"steps":string[],"answer":string}.',
+  "title is one short line naming what the sheet asks. domain is the subject area. inputs is one entry per quantity or label read off the image. formulas lists the governing relations symbolically. steps is the ordered solution path, one idea per entry, each a full sentence. answer is the final result with its unit, or the honest statement that the image could not be read.",
+].join(" ");
+
+const canvasSchema = z.object({
+  title: z.string().min(1),
+  domain: z.string().min(1).catch("General relations"),
+  inputs: z.array(z.string().min(1)).min(1),
+  formulas: z.array(z.string().min(1)).min(1),
+  steps: z.array(z.string().min(1)).min(1),
+  answer: z.string().min(1),
+});
+
+/** Rough ceiling on the base64 payload — about 4 MB of image. */
+const MAX_CANVAS_IMAGE = 5_500_000;
+
+/**
+ * Read and solve a photographed question.
+ *
+ * Unauthenticated on purpose: the solver is part of the free tier's pitch, and
+ * the client already holds the premium gate for the workspace it lives in.
+ * The image itself is never stored — it is decoded, sent to the model and
+ * dropped, so nothing leaves the request.
+ */
+export const solveCanvas = action({
+  args: {
+    /** Image bytes, base64, no data-url prefix. */
+    imageBase64: v.string(),
+    mimeType: v.string(),
+    /** Optional note the student typed beside the upload. */
+    note: v.optional(v.string()),
+  },
+  handler: async (
+    _ctx,
+    { imageBase64, mimeType, note },
+  ): Promise<{
+    title: string;
+    domain: string;
+    inputs: string[];
+    formulas: string[];
+    steps: string[];
+    answer: string;
+    model: string;
+  }> => {
+    if (imageBase64.length > MAX_CANVAS_IMAGE) {
+      throw new Error(
+        "That image is too large to read. Crop it to the question and try again.",
+      );
+    }
+
+    const prompt = [
+      "Read the attached photograph of a question sheet and solve it.",
+      note?.trim() ? `Student's note with the upload: ${note.trim()}` : "",
+      "Reply with the JSON object only.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const candidates = await resolveCandidates();
+    const { text, model } = await callModel(candidates, CANVAS_SYSTEM, prompt, {
+      mimeType,
+      data: imageBase64,
+    });
+    const parsed = canvasSchema.parse(parseJsonLoose(text));
+    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
+
+    return {
+      title: clean(parsed.title),
+      domain: clean(parsed.domain),
+      inputs: parsed.inputs.map(clean),
+      formulas: parsed.formulas.map(clean),
+      steps: parsed.steps.map(clean),
+      answer: clean(parsed.answer),
+      model,
     };
   },
 });

@@ -216,9 +216,9 @@ export default function Dashboard() {
   const hasNotebooks = (notebooks?.length ?? 0) > 0;
   const mixData = summary
     ? [
-        { label: "Files", value: summary.fileCount, color: "var(--signal)" },
-        { label: "Links", value: summary.linkCount, color: "#5eead4" },
-        { label: "Pasted notes", value: summary.notesCount, color: "#a1a1aa" },
+        { label: "Files", value: summary.fileCount, color: "var(--src-files)" },
+        { label: "Links", value: summary.linkCount, color: "var(--src-links)" },
+        { label: "Pasted notes", value: summary.notesCount, color: "var(--src-notes)" },
       ].filter((d) => d.value > 0)
     : [];
   const generatedData = summary
@@ -239,13 +239,19 @@ export default function Dashboard() {
   const weekData = summary?.byDay ?? [];
   const weekTotal = weekData.reduce((sum, d) => sum + d.count, 0);
 
-  /** Distinct accent shades, one per artefact kind (stacked bars). */
+  /**
+   * Distinct accent shades, one per artefact kind (stacked bars).
+   *
+   * These are theme tokens rather than literals: the bright neon set that
+   * looks right on near-black washes out on the cream canvas, so each theme
+   * owns its own ramp in index.css.
+   */
   const KIND_COLORS: Record<string, string> = {
-    summary: "var(--signal)",
-    flashcards: "#5eead4",
-    quiz: "#e8b04b",
-    mindmap: "#7d8f78",
-    slides: "#a1a1aa",
+    summary: "var(--kind-summary)",
+    flashcards: "var(--kind-flashcards)",
+    quiz: "var(--kind-quiz)",
+    mindmap: "var(--kind-mindmap)",
+    slides: "var(--kind-slides)",
   };
 
   return (
@@ -747,11 +753,14 @@ export default function Dashboard() {
                                 }}
                               >
                                 <Grid horizontal />
-                                <Bar dataKey="summary" fill={KIND_COLORS.summary} lineCap={0} />
-                                <Bar dataKey="flashcards" fill={KIND_COLORS.flashcards} lineCap={0} />
-                                <Bar dataKey="quiz" fill={KIND_COLORS.quiz} lineCap={0} />
-                                <Bar dataKey="mindmap" fill={KIND_COLORS.mindmap} lineCap={0} />
-                                <Bar dataKey="slides" fill={KIND_COLORS.slides} lineCap={0} />
+                                {/* Rounded caps on every segment, separated by a
+                                    hairline gap, so the column reads as a
+                                    polished stack rather than a hard block. */}
+                                <Bar dataKey="summary" fill={KIND_COLORS.summary} lineCap={6} stackGap={2} />
+                                <Bar dataKey="flashcards" fill={KIND_COLORS.flashcards} lineCap={6} stackGap={2} />
+                                <Bar dataKey="quiz" fill={KIND_COLORS.quiz} lineCap={6} stackGap={2} />
+                                <Bar dataKey="mindmap" fill={KIND_COLORS.mindmap} lineCap={6} stackGap={2} />
+                                <Bar dataKey="slides" fill={KIND_COLORS.slides} lineCap={6} stackGap={2} />
                                 <BarXAxis />
                                 <ChartTooltip showCrosshair={false} />
                               </BarChart>
