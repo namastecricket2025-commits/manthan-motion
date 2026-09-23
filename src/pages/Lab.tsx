@@ -1,18 +1,20 @@
 import BiologyExplorer from "@/components/lab/BiologyExplorer";
+import CanvasSolver from "@/components/lab/CanvasSolver";
 import ChemistryWorkspace from "@/components/lab/ChemistryWorkspace";
 import PhysicsSim from "@/components/lab/PhysicsSim";
 import LiveTelemetry, { TelemetryProvider, useTelemetry } from "@/components/lab/LiveTelemetry";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
+import { usePlan } from "@/components/plans/PlanProvider";
 import { SPRING } from "@/components/lab/use-canvas";
 import { isSoundEnabled, setSoundEnabled } from "@/components/lab/lab-sound";
-import { Atom, Beaker, Dna, FlaskConical, ArrowLeft, Radiation, Volume2, VolumeX } from "lucide-react";
+import { Atom, Beaker, Dna, FlaskConical, ArrowLeft, Lock, Radiation, ScanSearch, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import "../components/lab/lab.css";
 
-type LabTab = "physics" | "chemistry" | "biology";
+type LabTab = "physics" | "chemistry" | "biology" | "canvas";
 
 const TABS: { key: LabTab; label: string; icon: typeof Atom; blurb: string }[] = [
   {
@@ -33,6 +35,12 @@ const TABS: { key: LabTab; label: string; icon: typeof Atom; blurb: string }[] =
     icon: Dna,
     blurb: "Deep-zoom cell explorer, DNA transcription and heart anatomy.",
   },
+  {
+    key: "canvas",
+    label: "AI Canvas Solver",
+    icon: ScanSearch,
+    blurb: "Photograph a question sheet — the beam reads it, then decomposes it.",
+  },
 ];
 
 /* per-tab ambient accent: drives the backdrop corner glows */
@@ -40,6 +48,7 @@ const TAB_ACCENT: Record<LabTab, { hex: string; rgba: string }> = {
   physics: { hex: "#38bdf8", rgba: "56, 189, 248" }, // deep sky — Snell/optics
   chemistry: { hex: "#a78bfa", rgba: "167, 139, 250" }, // violet — reagents
   biology: { hex: "#ff3b5c", rgba: "255, 59, 92" }, // signal red — living tissue
+  canvas: { hex: "#f59e0b", rgba: "245, 158, 11" }, // amber — the scan beam
 };
 
 /* Mobile: one slim telemetry dock under the workspace — readouts + the
@@ -69,6 +78,13 @@ function LabShell() {
   const active = TABS.find((t) => t.key === tab)!;
   const feed = useTelemetry();
   const accent = TAB_ACCENT[tab];
+  const { can, requireAccess } = usePlan();
+
+  /** The Canvas Solver is the one premium tab inside the lab. */
+  function openTab(key: LabTab) {
+    if (key === "canvas" && !requireAccess("canvasSolver")) return;
+    setTab(key);
+  }
 
   /* the publisher bus lives inside the sims; clear the readouts when a
      workspace unmounts so the sidebar never shows stale data */
@@ -138,11 +154,13 @@ function LabShell() {
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const isActive = tab === t.key;
+                const gated = t.key === "canvas" && !can("canvasSolver");
                 return (
-                  <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
+                  <button key={t.key} type="button" onClick={() => openTab(t.key)} className="lab-tab">
                     {isActive && <motion.span layoutId="lab-tab-pill" className="lab-pill" transition={SPRING} />}
                     <Icon className={`relative z-10 h-4 w-4 ${isActive ? "text-[#ff647c]" : "text-slate-500"}`} />
                     <span className="relative z-10">{t.label}</span>
+                    {gated && <Lock className="relative z-10 h-3 w-3 text-slate-500" />}
                   </button>
                 );
               })}
@@ -165,6 +183,7 @@ function LabShell() {
               {tab === "physics" && <PhysicsSim />}
               {tab === "chemistry" && <ChemistryWorkspace />}
               {tab === "biology" && <BiologyExplorer />}
+              {tab === "canvas" && <CanvasSolver />}
             </motion.div>
           </AnimatePresence>
 

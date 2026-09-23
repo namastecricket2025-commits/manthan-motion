@@ -12,15 +12,20 @@ import {
   SummaryView,
   type SummaryPayload,
 } from "@/components/dashboard/MaterialViews";
+import { CramMode } from "@/components/dashboard/CramMode";
+import { VoiceTutor } from "@/components/dashboard/VoiceTutor";
+import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
 import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
   AlertCircle,
+  AudioLines,
   Check,
   FileText,
   Link2,
   Loader2,
+  Lock,
   NotebookPen,
   RotateCcw,
   Sparkles,
@@ -28,7 +33,9 @@ import {
   Type,
   Upload,
   X,
+  Zap,
 } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -106,7 +113,9 @@ export function NotebookWorkspace({
   const [running, setRunning] = useState<Kind[]>([]);
   const [tab, setTab] = useState<Kind>("summary");
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [tool, setTool] = useState<"cram" | "voice" | null>(null);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
+  const { can, requireAccess } = usePlan();
 
   const readyCount =
     sources?.filter((s) => s.status !== "failed" && s.characters > 0).length ??
@@ -302,6 +311,68 @@ export function NotebookWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Work-area top bar: the two advanced tools, as text-link actions. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-line)] px-4 py-2.5">
+        <div className="flex items-center gap-5">
+          <button
+            type="button"
+            aria-pressed={tool === "cram"}
+            onClick={() => {
+              if (tool === "cram") setTool(null);
+              else if (requireAccess("cramMode")) setTool("cram");
+            }}
+            className={
+              "inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors " +
+              (tool === "cram"
+                ? "text-[var(--signal)]"
+                : "text-text-dim hover:text-[var(--signal)]")
+            }
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Cram Mode
+            {!can("cramMode") && <Lock className="h-3 w-3 opacity-70" />}
+          </button>
+          <button
+            type="button"
+            aria-pressed={tool === "voice"}
+            onClick={() => {
+              if (tool === "voice") setTool(null);
+              else if (requireAccess("voiceTutor")) setTool("voice");
+            }}
+            className={
+              "inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors " +
+              (tool === "voice"
+                ? "text-[var(--signal)]"
+                : "text-text-dim hover:text-[var(--signal)]")
+            }
+          >
+            <AudioLines className="h-3.5 w-3.5" />
+            Voice Tutor
+            {!can("voiceTutor") && <Lock className="h-3 w-3 opacity-70" />}
+          </button>
+        </div>
+        <span className="text-[11px] text-text-dim">
+          Advanced study tools for this notebook
+        </span>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {tool === "cram" && (
+          <CramMode
+            key="cram"
+            notebookName={notebookName}
+            onClose={() => setTool(null)}
+          />
+        )}
+        {tool === "voice" && (
+          <VoiceTutor
+            key="voice"
+            notebookName={notebookName}
+            onClose={() => setTool(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         {/* ------------------------- sources ------------------------- */}
         <div className="glass-panel flex flex-col gap-4 p-5 sm:p-6">

@@ -2,6 +2,7 @@ import BlobBackground from "@/components/BlobBackground";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { DashboardNav, type DashboardSection } from "@/components/dashboard/DashboardNav";
+import { usePlan } from "@/components/plans/PlanProvider";
 import SettingsDashboard from "@/components/settings/SettingsDashboard";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import { useNavigate } from "react-router";
  */
 export default function Settings() {
   const { signOut } = useAuth();
+  const { requireAccess } = usePlan();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -31,7 +33,10 @@ export default function Settings() {
     setSheetOpen(false);
     if (key === "dashboard") navigate("/dashboard");
     else if (key === "notebooks") navigate("/dashboard?view=notebooks");
-    else if (key === "lab") navigate("/lab");
+    else if (key === "mathlab") {
+      if (requireAccess("mathLabBasic")) navigate("/math-lab");
+    } else if (key === "lab") navigate("/lab");
+    else if (key === "pricing") navigate("/pricing");
     else if (key === "about") navigate("/about");
   };
 

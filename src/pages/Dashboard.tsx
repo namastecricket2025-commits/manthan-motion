@@ -36,6 +36,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { usePlan } from "@/components/plans/PlanProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
@@ -93,6 +94,7 @@ function EmptyHint({
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
+  const { requireAccess } = usePlan();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -190,6 +192,12 @@ export default function Dashboard() {
   /** Sidebar navigation: everything except Dashboard/Notebooks pushes a route. */
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
+    if (key === "mathlab") {
+      // The Math Lab is a premium workspace: a free account gets the frosted
+      // prompt instead of the route.
+      if (requireAccess("mathLabBasic")) navigate("/math-lab");
+      return;
+    }
     if (key === "lab") navigate("/lab");
     else if (key === "settings") navigate("/settings");
     else if (key === "about") navigate("/about");

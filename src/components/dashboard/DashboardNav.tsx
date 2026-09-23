@@ -8,6 +8,7 @@ import {
   NotebookPen,
   Plus,
   Settings2,
+  Sigma,
   Tag,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 export type DashboardSection =
   | "dashboard"
   | "notebooks"
+  | "mathlab"
   | "lab"
   | "settings"
   | "pricing"
@@ -35,6 +37,7 @@ const ITEMS: {
 }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "notebooks", label: "Notebooks", icon: NotebookPen },
+  { key: "mathlab", label: "Math Lab", icon: Sigma },
   { key: "lab", label: "STEM Lab", icon: FlaskConical },
   { key: "pricing", label: "Plans & Pricing", icon: Tag },
   { key: "settings", label: "Settings", icon: Settings2 },
@@ -103,10 +106,12 @@ export function DashboardNav({
               aria-current={isActive ? "page" : undefined}
               onClick={() => onSelect(item.key)}
               className={
-                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors " +
+                "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-sm font-medium " +
+                "transition-[color,border-color,background-color,transform] duration-200 ease-out " +
+                "active:scale-[0.98] " +
                 (isActive
-                  ? "border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
-                  : "border border-transparent text-text-dim hover:text-foreground")
+                  ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                  : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)] hover:text-[var(--signal)]")
               }
             >
               <item.icon className="h-4 w-4" />

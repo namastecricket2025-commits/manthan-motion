@@ -1,5 +1,6 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
+import { PlanProvider } from "@/components/plans/PlanProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
@@ -22,6 +23,7 @@ installCdEngine();
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const MathLab = lazy(() => import("./pages/MathLab.tsx"));
 const Lab = lazy(() => import("./pages/Lab.tsx"));
 const Settings = lazy(() => import("./pages/Settings.tsx"));
 const About = lazy(() => import("./pages/About.tsx"));
@@ -212,6 +214,10 @@ createRoot(document.getElementById("root")!).render(
       <ConvexBridge>
         <SettingsProvider>
         <BrowserRouter>
+          {/* The plan gate lives inside the router: its lock prompt offers a
+              jump to /pricing, and it wraps every route so any workspace can
+              gate a click. */}
+          <PlanProvider>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
@@ -225,6 +231,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/math-lab"
+                element={
+                  <RequireAuth>
+                    <MathLab />
                   </RequireAuth>
                 }
               />
@@ -252,6 +266,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </PlanProvider>
         </BrowserRouter>
         </SettingsProvider>
         <Toaster />
