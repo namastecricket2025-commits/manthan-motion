@@ -701,3 +701,95 @@ export const generate = action({
     return results;
   },
 });
+
+/* ------------------------------------------------------------------ */
+/* Avia — the spoken study companion                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Avia's personality.
+ *
+ * She is a witty, slightly sarcastic peer by default, and she flips hard the
+ * moment a school topic shows up: the Study Switch is a hard boundary, not a
+ * tone adjustment. The reply comes back as JSON because the model layer
+ * demands a bare JSON object (see providers.ts) — and the `mode` field lets
+ * the UI show which of the two Avias is talking.
+ *
+ * Every reply is spoken aloud by the browser, so the prompt bans anything the
+ * speech synthesiser would read as noise: no emoji, no markdown, no asterisks,
+ * no stage directions.
+ */
+const AVIA_SYSTEM = [
+  "You are Avia, the voice companion inside Manthan — a study app for school students in Classes 8 to 12.",
+  "DEFAULT PERSONALITY: a witty, slightly sarcastic peer. Relatable teen humour, light banter, modern internet slang used naturally and sparingly (things like 'let him cook', 'cooked', 'bruh', 'no shot'). Never mean, never a bully, never crude.",
+  "THE STUDY SWITCH (absolute): the second the user mentions a school topic or asks an academic question, banter stops completely. When YOU are the one flipping the switch, your reply MUST begin with this sentence, word for word: 'Alright, jokes over. Activating 100% brain power. Let's lock in.' Then continue in serious tutoring mode. The system note tells you when the switch has already been spoken aloud by the app — in that case never repeat the sentence, just tutor.",
+  "TUTORING MODE: calm, focused, Socratic. Explain step by step with one clear analogy, then ask one guiding question that moves the student to the next step. Never give away the final answer, never do the whole problem for them, never invent facts or formulas. If you are unsure, say what the student should look up.",
+  "When the user is clearly back to casual chat, you may return to the peer voice — but only after the current study thread is properly closed.",
+  "Spoken aloud rule: every reply is read out by a speech synthesiser. No emoji, no markdown, no asterisks, no bullet symbols, no stage directions, no spelling out punctuation. Plain spoken sentences only.",
+  "Length: banter stays to one or two short sentences. Tutoring keeps each turn under about ninety words so it stays easy to follow by ear.",
+  'Reply with a single JSON object and nothing else: {"reply":string,"mode":"banter"|"tutoring"}.',
+].join(" ");
+
+const aviaSchema = z.object({
+  reply: z.string().min(1),
+  mode: z.enum(["banter", "tutoring"]).catch("banter"),
+});
+
+/**
+ * One turn of conversation with Avia.
+ *
+ * Deliberately unauthenticated and unmetered: the voice widget is a free,
+ * zero-key feature that reads and speaks through the browser's own Web Speech
+ * APIs, so a signed-out visitor on the landing page can use it too. It never
+ * touches the student's daily generation allowance.
+ */
+export const aviaReply = action({
+  args: {
+    /** What the student just said. */
+    message: v.string(),
+    /** A short tail of the conversation, oldest first, for continuity. */
+    history: v.optional(
+      v.array(
+        v.object({
+          role: v.union(v.literal("student"), v.literal("avia")),
+          text: v.string(),
+        }),
+      ),
+    ),
+    /**
+     * Set by the client when its own detector already saw an academic
+     * question: the Study Switch sentence has been spoken aloud on the device,
+     * so Avia must stay in tutoring mode without repeating it.
+     */
+    studying: v.optional(v.boolean()),
+  },
+  handler: async (
+    _ctx,
+    { message, history, studying },
+  ): Promise<{ reply: string; mode: "banter" | "tutoring" }> => {
+    const transcript = (history ?? [])
+      .slice(-8)
+      .map((turn) => `${turn.role === "student" ? "Student" : "Avia"}: ${turn.text}`)
+      .join("\n");
+
+    const prompt = [
+      studying
+        ? "MODE NOTE: the Study Switch has already been spoken aloud by the app for this turn. Stay in TUTORING MODE, do NOT repeat the switch sentence, and answer Socratically."
+        : "MODE NOTE: decide your own mode. If the student's latest message is academic, open your reply with the Study Switch sentence verbatim and then tutor.",
+      transcript ? `CONVERSATION SO FAR:\n${transcript}` : "",
+      `STUDENT NOW: ${message}`,
+      "Reply with the JSON object only.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const candidates = await resolveCandidates();
+    const { text } = await callModel(candidates, AVIA_SYSTEM, prompt);
+    const parsed = aviaSchema.parse(parseJsonLoose(text));
+
+    return {
+      reply: parsed.reply.replace(/[*_`#]/g, "").trim(),
+      mode: studying ? "tutoring" : parsed.mode,
+    };
+  },
+});

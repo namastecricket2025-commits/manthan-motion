@@ -1,5 +1,6 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
+import { AviaWidget } from "@/components/voice/AviaWidget";
 import { PlanProvider } from "@/components/plans/PlanProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
@@ -269,6 +270,9 @@ createRoot(document.getElementById("root")!).render(
           </PlanProvider>
         </BrowserRouter>
         </SettingsProvider>
+        {/* Avia floats above every route — she speaks through the browser's
+            own Web Speech APIs, so she needs no keys and costs nothing. */}
+        <AviaWidget />
         <Toaster />
       </ConvexBridge>
     </RootErrorBoundary>

@@ -1,0 +1,399 @@
+/* ============================================================================
+   Avia — the floating voice companion
+   ----------------------------------------------------------------------------
+   Bottom-right on every page. Glass surfaces, one crimson accent, and the
+   momentum curve used everywhere else on the site.
+   ========================================================================== */
+
+.avia-root {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.avia-root > * {
+  pointer-events: auto;
+}
+
+/* ---------------- the launcher ---------------- */
+
+.avia-fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+  background: color-mix(in srgb, var(--ink) 78%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: blur(20px) saturate(170%);
+  box-shadow: 0 22px 60px -28px rgba(0, 0, 0, 0.7);
+  padding: 10px 16px 10px 12px;
+  color: var(--text-main);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    transform 260ms cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 260ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.avia-fab:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--signal) 50%, transparent);
+}
+
+.avia-fab:active {
+  transform: scale(0.97);
+}
+
+.avia-fab__orb {
+  position: relative;
+  display: inline-flex;
+  height: 30px;
+  width: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--signal) 0%, var(--signal-2) 100%);
+  color: var(--primary-foreground);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.avia-fab__orb::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 45%, transparent);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.avia-fab.is-live .avia-fab__orb::after {
+  opacity: 1;
+  animation: avia-ping 1.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes avia-ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.avia-fab__label {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .avia-fab__label {
+    display: none;
+  }
+  .avia-fab {
+    padding: 10px;
+  }
+}
+
+/* ---------------- the panel ---------------- */
+
+.avia-panel {
+  width: min(92vw, 372px);
+  max-height: min(74vh, 620px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(175%);
+  backdrop-filter: blur(26px) saturate(175%);
+  box-shadow: 0 40px 120px -50px rgba(0, 0, 0, 0.8);
+}
+
+html:not(.dark) .avia-panel {
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.avia-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+}
+
+.avia-dot {
+  height: 9px;
+  width: 9px;
+  border-radius: 999px;
+  background: var(--signal);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 22%, transparent);
+}
+
+.avia-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.avia-sub {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.avia-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+  padding: 3px 9px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 88%, var(--text-main));
+  white-space: nowrap;
+}
+
+.avia-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px;
+  color: var(--text-dim);
+  transition: color 180ms ease, background 180ms ease;
+}
+
+.avia-icon-btn:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-dim) 14%, transparent);
+}
+
+.avia-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 140px;
+}
+
+.avia-bubble {
+  max-width: 88%;
+  border-radius: 18px;
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+  padding: 10px 13px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.avia-bubble--avia {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom-left-radius: 6px;
+}
+
+html:not(.dark) .avia-bubble--avia {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+.avia-bubble--student {
+  margin-left: auto;
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 32%, transparent);
+  border-bottom-right-radius: 6px;
+}
+
+.avia-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 16px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.avia-status__bar {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 12px;
+}
+
+.avia-status__bar span {
+  width: 2.5px;
+  border-radius: 999px;
+  background: var(--signal);
+  animation: avia-eq 900ms ease-in-out infinite;
+}
+
+.avia-status__bar span:nth-child(1) {
+  height: 40%;
+  animation-delay: 0ms;
+}
+
+.avia-status__bar span:nth-child(2) {
+  height: 100%;
+  animation-delay: 140ms;
+}
+
+.avia-status__bar span:nth-child(3) {
+  height: 62%;
+  animation-delay: 280ms;
+}
+
+@keyframes avia-eq {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.avia-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+}
+
+.avia-input {
+  min-width: 0;
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 220ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.avia-input::placeholder {
+  color: color-mix(in srgb, var(--text-dim) 75%, transparent);
+}
+
+.avia-input:focus-visible {
+  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
+}
+
+.avia-mic {
+  position: relative;
+  display: inline-flex;
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 42%, transparent);
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+  color: var(--text-main);
+  transition:
+    transform 220ms cubic-bezier(0.25, 1, 0.5, 1),
+    background 220ms ease;
+}
+
+.avia-mic:hover {
+  background: color-mix(in srgb, var(--signal) 20%, transparent);
+}
+
+.avia-mic:active {
+  transform: scale(0.95);
+}
+
+.avia-mic.is-live {
+  background: var(--signal);
+  color: var(--primary-foreground);
+  border-color: var(--signal);
+}
+
+.avia-mic.is-live::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 60%, transparent);
+  animation: avia-ping 1.6s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.avia-send {
+  display: inline-flex;
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--signal) 0%, var(--signal-2) 100%);
+  color: var(--primary-foreground);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: transform 200ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.avia-send:active {
+  transform: scale(0.95);
+}
+
+.avia-send:disabled {
+  opacity: 0.5;
+}
+
+.avia-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 14px;
+}
+
+.avia-chip {
+  border-radius: 999px;
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.1));
+  padding: 6px 11px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  transition:
+    color 200ms ease,
+    border-color 200ms cubic-bezier(0.25, 1, 0.5, 1),
+    transform 200ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.avia-chip:hover {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--signal) 45%, transparent);
+}
+
+.avia-chip:active {
+  transform: scale(0.97);
+}
+
+.avia-note {
+  padding: 0 16px 14px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avia-fab__orb::after,
+  .avia-mic.is-live::after,
+  .avia-status__bar span {
+    animation: none;
+  }
+}
