@@ -9,6 +9,7 @@ import {
   speakText,
   stopSpeaking,
 } from "@/components/voice/avia";
+import { renderBlocks, toSpokenText } from "@/components/voice/format";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Brain,
@@ -140,8 +141,10 @@ export function AviaWidget() {
   const say = useCallback((text: string, interrupt = true, onDone?: () => void) => {
     queuedRef.current += 1;
     setSpeaking(true);
+    // Every path into `say` may carry markdown (switch lines are plain, model
+    // replies are structured); the synthesiser only ever gets prose.
     speakText(
-      text,
+      toSpokenText(text),
       voiceRef.current,
       () => {
         queuedRef.current = Math.max(0, queuedRef.current - 1);
@@ -223,6 +226,7 @@ export function AviaWidget() {
         const result = await askAvia({ message, history, studying: nextStudying });
         addTurn("avia", result.reply);
         if (result.mode === "tutoring" || nextStudying) setStudying(true);
+        // `say` strips markdown for speech; the transcript keeps the structure.
         say(result.reply, false, resume);
       } catch {
         const reply = fallbackReply(nextStudying);
@@ -452,7 +456,9 @@ export function AviaWidget() {
                       : "avia-bubble--avia")
                   }
                 >
-                  {turn.text}
+                  {turn.from === "avia"
+                    ? renderBlocks(turn.text)
+                    : turn.text}
                 </motion.div>
               ))}
               {thinking && (

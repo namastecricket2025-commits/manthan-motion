@@ -46,15 +46,24 @@ export function pickSwitchLine(avoid?: string): string {
 }
 
 export const AVIA_GREETINGS = [
-  "Yo, I'm Avia. Ask me literally anything, or hit the mic and just talk. I'll keep it real until something school-shaped shows up.",
-  "Hey, Avia here. Talk to me like a friend down the corridor — and when work shows up, I switch on properly.",
-  "I'm Avia. Warm up with whatever, then throw me a topic and watch me get serious.",
-  "Avia, reporting in. Free form chat, or full study mode — your call.",
-  "Yo. I'm the one you talk to when the textbook stops making sense. Say the word.",
-  "Hey, I'm Avia. Ask me the thing you're embarrassed to ask your teacher — I don't judge, I just explain.",
-  "Avia here. Hit the mic and talk normally. I'll follow, and when it turns into homework I'll take it seriously.",
-  "I'm Avia. We can chat nonsense for ten minutes, or we can lock in on a chapter. Either works for me.",
+  "Hey there! Welcome to your personal study sanctuary.\nReady to untangle some tricky concepts?\nWhat are we diving into first?",
+  "So glad you dropped by! Let's make some magic happen.\nLet's turn that study stress into absolute clarity.\nShow me what you're working on!",
+  "Standard rules don't apply here — welcome to Manthan!\nYou bring the curiosity, I'll bring the clarity.\nDrop your toughest question right here.",
+  "Hello, brilliant mind — you made it.\nEvery concept gets easier the moment we break it down together.\nSo, what's on today's agenda?",
+  "Look who showed up ready to learn!\nToday's the day that tricky topic finally clicks.\nWhere should we start?",
+  "Welcome back to your study corner.\nYou've handled harder things than whatever's on your plate right now.\nTell me what we're solving first.",
+  "Great to see you! Your study sanctuary awaits.\nNo problem is too big when we take it one clear step at a time.\nWhat are we exploring today?",
+  "Hey you! The session officially starts now.\nConfusion doesn't stand a chance once we break it down together.\nGive me your toughest question — I'm ready.",
 ];
+
+/** Rotates through greetings without ever repeating the previous one. */
+export function pickGreeting(avoid?: string): string {
+  const pool =
+    avoid && AVIA_GREETINGS.length > 1
+      ? AVIA_GREETINGS.filter((line) => line !== avoid)
+      : AVIA_GREETINGS;
+  return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_GREETINGS[0];
+}
 
 /**
  * Backchannels — the short, human noises a person makes while listening.
@@ -86,14 +95,7 @@ export function pickBackchannel(avoid?: string): string {
   return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_BACKCHANNELS[0];
 }
 
-export function pickGreeting(avoid?: string): string {
-  const pool =
-    avoid && AVIA_GREETINGS.length > 1
-      ? AVIA_GREETINGS.filter((line) => line !== avoid)
-      : AVIA_GREETINGS;
-  return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_GREETING;
-}
-
+/** One greeting, used for the very first turn of a fresh session. */
 export const AVIA_GREETING = AVIA_GREETINGS[0];
 
 /* ------------------------------------------------------------------ */
@@ -256,11 +258,11 @@ export function stopSpeaking(): void {
 
 /**
  * Avia still speaks when the model chain is out of free capacity. She says so
- * in her own voice rather than failing silently — and stays in whichever of
- * her two modes the student is in.
+ * in her own voice — warm, never robotic — and stays in whichever of her two
+ * modes the student is in.
  */
 export function fallbackReply(studying: boolean): string {
   return studying
-    ? "My study engine is out of free capacity right now, so I can't think properly yet. Your question is safe with me. Give it a minute and hit me again, and we'll finish it step by step."
-    : "Bruh, my brain is buffering. Every model behind me is slammed for a moment. Give it a minute and say that again.";
+    ? "Okay, deep breath — my study engine is out of free capacity for a moment, so I can't think this one through properly yet. Your question isn't going anywhere, and neither am I. Give it a minute and ask me again, and we'll break it down step by step."
+    : "Hey, my brain is buffering for just a moment — everything behind me is catching its breath. Give it a minute and say that again? I'm not going anywhere.";
 }
