@@ -13,14 +13,12 @@ import {
   type SummaryPayload,
 } from "@/components/dashboard/MaterialViews";
 import { CramMode } from "@/components/dashboard/CramMode";
-import { VoiceTutor } from "@/components/dashboard/VoiceTutor";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
 import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
   AlertCircle,
-  AudioLines,
   Check,
   FileText,
   Link2,
@@ -113,7 +111,7 @@ export function NotebookWorkspace({
   const [running, setRunning] = useState<Kind[]>([]);
   const [tab, setTab] = useState<Kind>("summary");
   const [retrying, setRetrying] = useState<string | null>(null);
-  const [tool, setTool] = useState<"cram" | "voice" | null>(null);
+  const [tool, setTool] = useState<"cram" | null>(null);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
   const { can, requireAccess } = usePlan();
 
@@ -311,9 +309,13 @@ export function NotebookWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Work-area top bar: the two advanced tools, as text-link actions.
-          On phones each link grows to a 40px-tall target and the descriptor
-          drops away, so the bar stays a single tidy row. */}
+      {/* Work-area top bar: the advanced tool, as a text-link action.
+          On phones the link grows to a 40px-tall target and the descriptor
+          drops away, so the bar stays a single tidy row.
+
+          The spoken tutor is deliberately NOT here. It lives as the single
+          floating orb in the corner of every route, so there is one voice and
+          one conversation no matter where the student is working. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-line)] px-3 py-1.5 sm:px-4 sm:py-2.5">
         <div className="flex items-center gap-3 sm:gap-5">
           <button
@@ -334,24 +336,6 @@ export function NotebookWorkspace({
             Cram Mode
             {!can("cramMode") && <Lock className="h-3 w-3 opacity-70" />}
           </button>
-          <button
-            type="button"
-            aria-pressed={tool === "voice"}
-            onClick={() => {
-              if (tool === "voice") setTool(null);
-              else if (requireAccess("voiceTutor")) setTool("voice");
-            }}
-            className={
-              "inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[12.5px] font-semibold transition-colors sm:min-h-0 sm:px-0 " +
-              (tool === "voice"
-                ? "text-[var(--signal)]"
-                : "text-text-dim hover:text-[var(--signal)]")
-            }
-          >
-            <AudioLines className="h-3.5 w-3.5" />
-            Voice Tutor
-            {!can("voiceTutor") && <Lock className="h-3 w-3 opacity-70" />}
-          </button>
         </div>
         <span className="hidden text-[11px] text-text-dim sm:inline">
           Advanced study tools for this notebook
@@ -362,13 +346,6 @@ export function NotebookWorkspace({
         {tool === "cram" && (
           <CramMode
             key="cram"
-            notebookName={notebookName}
-            onClose={() => setTool(null)}
-          />
-        )}
-        {tool === "voice" && (
-          <VoiceTutor
-            key="voice"
             notebookName={notebookName}
             onClose={() => setTool(null)}
           />
