@@ -1,14 +1,31 @@
-import { Loader2, Mic, MicOff, X } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import {
+  detectStudyTopic,
+  fallbackReply,
+  pickAviaVoice,
+  speakText,
+  stopSpeaking,
+} from "@/components/voice/avia";
+import { Loader2, Mic, MicOff, Square, Volume2, X } from "lucide-react";
+import { useAction } from "convex/react";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * AI Voice Tutor.
+ * AI Voice Tutor — the notebook's spoken tutor.
  *
- * A single circular mic owns the state: press it and the sine wave swells,
- * the halo locks on and the log starts taking turns; press it again and the
- * wave settles back to its idle drift. The transcript below is a real log —
- * every line in it was produced by a turn in this session.
+ * This panel is the same tutor as the floating orb, in the place the student is
+ * already working. It listens through the browser's own Web Speech API, asks
+ * Manthan's model chain (with Avia's personality and Study Switch) and reads
+ * the answer back with `speechSynthesis` — so nothing here is scripted, no
+ * reply is pre-written, and no API key is needed on the client.
+ *
+ * It used to be a mock: a mic that only toggled a boolean and four canned
+ * answers behind a timeout. Asking anything real produced the same handful of
+ * paragraphs, which is exactly what a voice tutor must never do.
+ *
+ * The notebook name travels with every question so answers stay anchored to the
+ * chapter that is open.
  */
 
 interface Turn {
@@ -17,27 +34,12 @@ interface Turn {
   text: string;
 }
 
-const PROMPTS: { label: string; reply: string }[] = [
-  {
-    label: "Explain the quadratic formula",
-    reply:
-      "Start from the completed-square step. Move the constant across, divide by a, then add (b/2a) squared to both sides. Everything collapses to x = (−b ± √(b² − 4ac)) / 2a. The discriminant under the root decides whether the parabola meets the x-axis twice, once, or not at all.",
-  },
-  {
-    label: "Walk me through Newton's second law",
-    reply:
-      "F = m a only holds for a constant mass and a net force. Draw the free-body diagram first, resolve along the direction of motion, then write the net force as the vector sum. Acceleration always points the same way as that net force — never the other way round.",
-  },
-  {
-    label: "Quiz me on cell organelles",
-    reply:
-      "Question one: which organelle produces ATP through oxidative phosphorylation? Question two: which structure controls what enters and leaves the cell? Answer both out loud, then I will tell you where the marks are usually lost.",
-  },
-  {
-    label: "Summarise this notebook",
-    reply:
-      "I will read your sources in order. Give me one moment — meanwhile, tell me whether you are revising for a school test or an entrance paper, because that changes what I keep and what I drop.",
-  },
+/** Openers for a cold panel. Sending one asks the real question. */
+const STARTERS = [
+  "Explain the hardest idea in this notebook",
+  "Quiz me on this notebook",
+  "Walk me through a worked example",
+  "What should I revise first?",
 ];
 
 /** Fluid sine wave: one rAF, one path, amplitude eased on activation. */
@@ -104,46 +106,217 @@ export function VoiceTutor({
   notebookName: string;
   onClose: () => void;
 }) {
+  const askAvia = useAction(api.ai.aviaReply);
+
   const [live, setLive] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [studying, setStudying] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const [voiceLabel, setVoiceLabel] = useState("device voice");
   const [turns, setTurns] = useState<Turn[]>([
     {
       id: 0,
       from: "tutor",
-      text: `Voice Tutor ready. I have ${notebookName} open — ask out loud, or pick a prompt below.`,
+      text: `Voice Tutor ready. ${notebookName} is open — ask out loud, or type below.`,
     },
   ]);
-  const idRef = useRef(1);
-  const timers = useRef<number[]>([]);
-  const logRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(
-    () => () => {
-      for (const timer of timers.current) window.clearTimeout(timer);
-    },
+  const idRef = useRef(1);
+  const turnsRef = useRef(turns);
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
+  const queuedRef = useRef(0);
+  const logRef = useRef<HTMLDivElement | null>(null);
+  const studyingRef = useRef(false);
+  const thinkingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  turnsRef.current = turns;
+  studyingRef.current = studying;
+  thinkingRef.current = thinking;
+
+  const supported = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
     [],
   );
+
+  /* ---------------- voice selection ---------------- */
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const synth = window.speechSynthesis;
+
+    const load = () => {
+      const picked = pickAviaVoice(synth.getVoices());
+      voiceRef.current = picked;
+      setVoiceLabel(
+        picked ? picked.name.replace(/^(Microsoft|Google)\s+/i, "") : "device voice",
+      );
+    };
+
+    load();
+    synth.addEventListener?.("voiceschanged", load);
+    // Safari populates the list late and fires nothing when it does.
+    const late = window.setTimeout(load, 800);
+    return () => {
+      synth.removeEventListener?.("voiceschanged", load);
+      window.clearTimeout(late);
+    };
+  }, []);
+
+  /* ---------------- speaking ---------------- */
+
+  const say = useCallback((text: string, interrupt = true, onDone?: () => void) => {
+    queuedRef.current += 1;
+    setSpeaking(true);
+    speakText(
+      text,
+      voiceRef.current,
+      () => {
+        queuedRef.current = Math.max(0, queuedRef.current - 1);
+        if (queuedRef.current === 0 && mountedRef.current) setSpeaking(false);
+        onDone?.();
+      },
+      interrupt,
+    );
+  }, []);
+
+  const hush = useCallback(() => {
+    stopSpeaking();
+    queuedRef.current = 0;
+    setSpeaking(false);
+  }, []);
+
+  /* ---------------- conversation ---------------- */
+
+  const addTurn = useCallback((from: Turn["from"], text: string) => {
+    setTurns((current) => [...current, { id: idRef.current++, from, text }]);
+  }, []);
+
+  const send = useCallback(
+    async (raw: string) => {
+      const message = raw.trim();
+      if (!message || thinkingRef.current) return;
+
+      addTurn("user", message);
+      setNote(null);
+
+      const academic = detectStudyTopic(message);
+      const nextStudying = studyingRef.current || academic;
+      if (nextStudying && !studyingRef.current) setStudying(true);
+
+      setThinking(true);
+      const history = turnsRef.current.slice(-8).map((turn) => ({
+        role: (turn.from === "user" ? "student" : "avia") as "student" | "avia",
+        text: turn.text,
+      }));
+
+      try {
+        const result = await askAvia({ message, history, studying: nextStudying });
+        if (!mountedRef.current) return;
+        addTurn("tutor", result.reply);
+        if (result.mode === "tutoring" || nextStudying) setStudying(true);
+        say(result.reply, false);
+      } catch {
+        const reply = fallbackReply(nextStudying);
+        if (!mountedRef.current) return;
+        addTurn("tutor", reply);
+        say(reply, false);
+      } finally {
+        if (mountedRef.current) setThinking(false);
+      }
+    },
+    [addTurn, askAvia, say],
+  );
+
+  const sendRef = useRef(send);
+  sendRef.current = send;
+
+  /* ---------------- listening ---------------- */
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setLive(false);
+  }, []);
+
+  const startListening = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!Ctor) {
+      setNote(
+        "This browser can't listen in — Chrome, Edge and Safari can. Type your question below instead.",
+      );
+      return;
+    }
+    if (recognitionRef.current) {
+      stopListening();
+      return;
+    }
+
+    stopSpeaking();
+    const recognition = new Ctor();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setLive(true);
+      setNote(null);
+    };
+    recognition.onresult = (event) => {
+      const result = event.results[event.resultIndex] ?? event.results[0];
+      const transcript = result?.[0]?.transcript?.trim();
+      if (transcript) void sendRef.current(transcript);
+    };
+    recognition.onerror = (event) => {
+      setLive(false);
+      recognitionRef.current = null;
+      setNote(
+        event.error === "not-allowed"
+          ? "Microphone permission is needed to hear you. Allow it in the address bar, or type below."
+          : "I didn't catch that. Give the mic another tap and speak clearly.",
+      );
+    };
+    recognition.onend = () => {
+      setLive(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+    }
+  }, [stopListening]);
+
+  /* ---------------- lifecycle ---------------- */
+
+  useEffect(() => {
+    // Set on mount as well as cleared on unmount: StrictMode mounts, cleans up
+    // and mounts again in development, so a cleanup-only flag would latch to
+    // false and silently swallow every reply.
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      stopSpeaking();
+    };
+  }, []);
 
   useEffect(() => {
     const node = logRef.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [turns, thinking]);
+  }, [turns, thinking, note]);
 
-  function ask(label: string, reply: string) {
-    setTurns((current) => [
-      ...current,
-      { id: idRef.current++, from: "user", text: label },
-    ]);
-    setThinking(true);
-    const timer = window.setTimeout(() => {
-      setTurns((current) => [
-        ...current,
-        { id: idRef.current++, from: "tutor", text: reply },
-      ]);
-      setThinking(false);
-    }, 950);
-    timers.current.push(timer);
-  }
+  const questions = turns.filter((turn) => turn.from === "user").length;
 
   return (
     <motion.section
@@ -162,8 +335,8 @@ export function VoiceTutor({
             AI Voice Tutor
           </h2>
           <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-text-dim">
-            A tutor that speaks. Hold the mic, ask in your own words, and the
-            turns land in the transcript below.
+            A tutor that speaks. Tap the mic, ask in your own words, and the
+            answer is read back turn by turn. {voiceLabel} · pitch 1.0 · rate 1.05
           </p>
         </div>
         <button
@@ -178,12 +351,12 @@ export function VoiceTutor({
 
       {/* Mic + reactive wave */}
       <div className="relative flex flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-[var(--glass-line)] px-4 py-6">
-        <SineWave active={live} />
+        <SineWave active={live || speaking} />
         <button
           type="button"
           aria-pressed={live}
           aria-label={live ? "Stop the voice tutor" : "Start the voice tutor"}
-          onClick={() => setLive((current) => !current)}
+          onClick={startListening}
           className={"voice-mic" + (live ? " is-live" : "")}
         >
           {live && (
@@ -193,11 +366,40 @@ export function VoiceTutor({
               transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
             />
           )}
-          {live ? <Mic className="h-7 w-7" /> : <MicOff className="h-7 w-7" />}
+          {live ? (
+            <Square className="h-6 w-6" />
+          ) : supported ? (
+            <Mic className="h-7 w-7" />
+          ) : (
+            <MicOff className="h-7 w-7" />
+          )}
         </button>
         <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-dim">
-          {live ? "Listening" : "Tap to speak"}
+          {live
+            ? "Listening"
+            : thinking
+              ? "Thinking"
+              : speaking
+                ? "Speaking"
+                : "Tap to speak"}
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {speaking && (
+            <button
+              type="button"
+              onClick={hush}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-line)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground"
+            >
+              <Volume2 className="h-3 w-3" />
+              Quiet
+            </button>
+          )}
+          {studying && (
+            <span className="rounded-full border border-[color-mix(in_srgb,var(--signal)_40%,transparent)] px-3 py-1 text-[11px] font-medium text-[var(--signal)]">
+              Locked in
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Transcript */}
@@ -207,8 +409,7 @@ export function VoiceTutor({
             Transcript
           </h3>
           <span className="text-[11px] text-text-dim">
-            {turns.filter((turn) => turn.from === "user").length} question
-            {turns.filter((turn) => turn.from === "user").length === 1 ? "" : "s"}
+            {questions} question{questions === 1 ? "" : "s"}
           </span>
         </div>
         <div ref={logRef} className="voice-log mt-3">
@@ -233,18 +434,49 @@ export function VoiceTutor({
           )}
         </div>
 
+        {note && (
+          <p className="mt-3 text-[11.5px] leading-relaxed text-text-dim">
+            {note}
+          </p>
+        )}
+
         <div className="mt-4 flex flex-wrap gap-2">
-          {PROMPTS.map((prompt) => (
+          {STARTERS.map((prompt) => (
             <button
-              key={prompt.label}
+              key={prompt}
               type="button"
-              onClick={() => ask(prompt.label, prompt.reply)}
+              onClick={() => void sendRef.current(`${prompt} (${notebookName})`)}
               className="rounded-full border border-[var(--glass-line)] px-3.5 py-1.5 text-[12px] font-medium text-text-dim transition-all duration-200 hover:border-[color-mix(in_srgb,var(--signal)_50%,transparent)] hover:text-foreground active:scale-[0.98]"
             >
-              {prompt.label}
+              {prompt}
             </button>
           ))}
         </div>
+
+        <form
+          className="mt-3 flex items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const value = draft;
+            setDraft("");
+            void sendRef.current(value);
+          }}
+        >
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Or type a question…"
+            aria-label="Type a question for the voice tutor"
+            className="min-w-0 flex-1 rounded-full border border-[var(--glass-line)] bg-transparent px-4 py-2.5 text-[16px] outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:text-sm"
+          />
+          <button
+            type="submit"
+            disabled={!draft.trim() || thinking}
+            className="rounded-full border border-[var(--glass-line)] px-4 py-2.5 text-[13px] font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-50"
+          >
+            Ask
+          </button>
+        </form>
       </div>
     </motion.section>
   );

@@ -703,6 +703,158 @@ export const generate = action({
 });
 
 /* ------------------------------------------------------------------ */
+/* Cram Mode — a textbook in, exam-ready notes out                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cram Mode's contract.
+ *
+ * It reads a whole textbook chapter — not a notebook of small sources — and
+ * compresses it into revision notes, then ranks that chapter against the
+ * syllabus benchmarks of its subject. `covered` is the honest half of the
+ * output: it says whether the supplied text actually teaches a benchmark, so a
+ * student can see the gaps instead of trusting a confidence score.
+ */
+const CRAM_SYSTEM = [
+  "You are Cram Mode inside Manthan, a study app for Indian school students in Classes 8 to 12 (CBSE and ICSE).",
+  "You are given the text of a textbook chapter, a school PDF or a student's notes. Compress it into exam-ready revision notes, and rank how far it covers the syllabus benchmarks of its subject.",
+  "Work ONLY from the supplied text. Never add facts, formulas, dates, examples or citations that are not in it, and keep the student's own terminology.",
+  "The user message carries a LANGUAGE directive — always follow it: every student-facing string is written in that language only, with no mixing.",
+  "No emoji, no markdown, no asterisks, no bullet symbols. Plain sentences in every string.",
+  'Reply with a single JSON object and nothing else: {"subject":string,"notes":[{"topic":string,"points":[string]}],"benchmarks":[{"topic":string,"weight":number,"note":string,"covered":boolean}]}.',
+  "subject is the school subject the text belongs to. Give 4 to 8 notes, each a distinct topic with 3 to 5 short points (one idea per point). benchmarks are 5 to 8 syllabus topics for that subject, ordered most important first: weight is 0 to 1 for how heavily the board papers weigh it, note is one line describing what it covers, and covered is true only when the supplied text genuinely teaches it.",
+].join(" ");
+
+const cramSchema = z.object({
+  subject: z.string().min(1),
+  notes: z
+    .array(
+      z.object({
+        topic: z.string().min(1),
+        points: z.array(z.string().min(1)).min(1),
+      }),
+    )
+    .min(1),
+  benchmarks: z
+    .array(
+      z.object({
+        topic: z.string().min(1),
+        weight: z.number(),
+        note: z.string().min(1),
+        covered: z.boolean().catch(false),
+      }),
+    )
+    .min(1),
+});
+
+/**
+ * Read a textbook upload and compress it against its syllabus.
+ *
+ * The file arrives through Convex storage (the browser PUTs the bytes, exactly
+ * like a notebook source), is decoded here, and is deleted again the moment its
+ * text is in memory — a textbook is read once and has no business sitting in
+ * storage afterwards.
+ *
+ * Signed-in only: the workspace that hosts Cram Mode is behind auth, and unlike
+ * the free voice companion this one spends a real model call on a large corpus.
+ */
+export const cramAnalyze = action({
+  args: {
+    storageId: v.id("_storage"),
+    name: v.string(),
+    mime: v.optional(v.string()),
+    /** Optional line the student typed beside the upload. */
+    note: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    { storageId, name, mime, note },
+  ): Promise<{
+    subject: string;
+    notes: { topic: string; points: string[] }[];
+    benchmarks: { topic: string; weight: number; note: string; covered: boolean }[];
+    characters: number;
+    model: string;
+  }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Sign in to run Cram Mode.");
+
+    const blob = await ctx.storage.get(storageId);
+    if (!blob) throw new Error("The upload did not reach storage. Try again.");
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    // Read once, keep nothing: the bytes are in memory now.
+    await ctx.storage.delete(storageId);
+
+    const lower = name.toLowerCase();
+    const isText =
+      (mime?.startsWith("text/") ?? false) ||
+      /\.(txt|md|markdown|csv|json|rtf|html?)$/i.test(lower);
+    const isPdf = mime === "application/pdf" || lower.endsWith(".pdf");
+
+    let text = "";
+    try {
+      if (isText) {
+        text = buffer.toString("utf8");
+        if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+          text = stripHtml(text);
+        }
+      } else if (isPdf) {
+        text = await extractPdfText(new Uint8Array(buffer));
+      } else {
+        throw new Error("unsupported type");
+      }
+    } catch {
+      throw new Error(
+        "Cram Mode reads PDF, text and Markdown files. This one could not be read — if it is a scan, paste its text instead.",
+      );
+    }
+
+    const corpus = tidy(text).slice(0, MAX_CORPUS);
+    if (corpus.length < 40) {
+      throw new Error(
+        "No readable text was found in that file — if it is a scan or images, paste the text instead.",
+      );
+    }
+
+    // The chapter's own language decides the output language.
+    const language = detectLanguage([corpus]);
+    const prompt = [
+      `Textbook: ${name}`,
+      ...languageDirective(language),
+      note?.trim() ? `Student's note with the upload: ${note.trim()}` : "",
+      'Return exactly this shape: {"subject":string,"notes":[{"topic":string,"points":[string]}],"benchmarks":[{"topic":string,"weight":number,"note":string,"covered":boolean}]}',
+      "",
+      "TEXT:",
+      corpus,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const candidates = await resolveCandidates();
+    const { text: raw, model } = await callModel(candidates, CRAM_SYSTEM, prompt);
+    const parsed = cramSchema.parse(parseJsonLoose(raw));
+    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
+
+    return {
+      subject: clean(parsed.subject),
+      notes: parsed.notes.map((entry) => ({
+        topic: clean(entry.topic),
+        points: entry.points.map(clean),
+      })),
+      benchmarks: parsed.benchmarks.map((entry) => ({
+        topic: clean(entry.topic),
+        weight: Math.min(1, Math.max(0, entry.weight)),
+        note: clean(entry.note),
+        covered: entry.covered,
+      })),
+      characters: corpus.length,
+      model,
+    };
+  },
+});
+
+/* ------------------------------------------------------------------ */
 /* Avia — the spoken study companion                                    */
 /* ------------------------------------------------------------------ */
 

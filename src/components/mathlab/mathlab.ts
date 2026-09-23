@@ -737,8 +737,12 @@ export function solveEquation(raw: string, grade: GradeSpec, chapter: Chapter): 
 }
 
 /**
- * Framework for a dropped document: the selected chapter's governing
- * formulas, with the document named so the student can see what was read.
+ * Framework for a dropped document.
+ *
+ * The document is not parsed here — this pane solves what the student types,
+ * and a dropped file has no text extraction behind it yet. So the framework is
+ * the selected chapter's, with the document recorded by name; the wording says
+ * exactly that instead of claiming to have read the file.
  */
 export function documentSolution(
   fileName: string,
@@ -748,9 +752,9 @@ export function documentSolution(
   const base = fallbackSolution(grade, chapter, "");
   return {
     ...base,
-    headline: `Framework extracted from ${fileName}.`,
+    headline: `${chapter.name} framework, matched to ${fileName}.`,
     given: [
-      `Document: ${fileName}`,
+      `Document added: ${fileName} (not parsed — type the equation to solve it).`,
       `Grade: ${grade.label} (${grade.level}).`,
       `Chapter: ${chapter.name} — ${chapter.focus}`,
     ],
