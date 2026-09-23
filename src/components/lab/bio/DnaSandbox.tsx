@@ -444,7 +444,7 @@ export default function DnaSandbox() {
                   key={i}
                   type="button"
                   onClick={() => selectedTile !== null && snapTile(selectedTile, i)}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${wrongSlot === i ? "lab-shake border-red-400 bg-red-400/20 text-red-300" : matched.has(i) ? "border-white/30 bg-white/10 text-slate-300" : "border-dashed border-slate-500/50 text-slate-400 hover:border-[#ff3b5c]"}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-bold transition-all ${wrongSlot === i ? "lab-shake border-red-400 bg-red-400/20 text-red-300" : matched.has(i) ? "border-white/30 bg-white/10 text-slate-300" : "border-dashed border-slate-500/50 text-slate-400 hover:border-[#8b93ff]"}`}
                 >
                   {b}
                 </button>
@@ -467,7 +467,7 @@ export default function DnaSandbox() {
             transition={SPRING}
             className="lab-glass-deep flex items-center gap-3 p-4"
           >
-            <Dna className="h-6 w-6 text-[#ff647c]" />
+            <Dna className="h-6 w-6 text-[#aab3ff]" />
             <div>
               <p className="text-sm font-bold text-slate-100">Strand synthesised!</p>
               <p className="text-[11px] text-slate-400">

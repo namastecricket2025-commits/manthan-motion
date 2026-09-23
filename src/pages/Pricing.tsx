@@ -102,8 +102,11 @@ export default function Pricing() {
                     "premium-card" + (tier.featured ? " premium-card--featured" : "")
                   }
                 >
+                  {/* Filled with --signal-strong, not --signal: the luminous
+                      accent is a text tone, and white on it would fail
+                      contrast in dark mode. */}
                   {tier.featured && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--signal)] px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--primary-foreground)]">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--signal-strong)] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--primary-foreground)]">
                       Most popular
                     </span>
                   )}

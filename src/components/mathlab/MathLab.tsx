@@ -317,20 +317,22 @@ export function MathLab() {
                 event.preventDefault();
                 runEngine(formula);
               }}
-              className="flex gap-2"
+              className="flex flex-col gap-2 sm:flex-row"
             >
               <input
                 value={formula}
                 onChange={(event) => setFormula(event.target.value)}
                 placeholder="Type an equation — e.g. 2x^2 - 5x + 3 = 0"
-                className="min-w-0 flex-1 rounded-full border border-[var(--glass-line)] bg-transparent px-4 py-2.5 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                /* 16px on phones so iOS Safari does not zoom the page when
+                   the field takes focus; the desktop step stays at 14px. */
+                className="w-full min-w-0 rounded-full border border-[var(--glass-line)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:flex-1 sm:py-2.5 sm:text-sm"
               />
               <MovingBorderButton
                 type="submit"
                 disabled={solving || !formula.trim()}
                 loading={solving}
-                className="shrink-0"
-                innerClassName="px-5 py-2.5 text-[13px]"
+                className="w-full shrink-0 sm:w-auto"
+                innerClassName="w-full px-5 py-3 text-sm sm:w-auto sm:py-2.5 sm:text-[13px]"
               >
                 Solve
               </MovingBorderButton>

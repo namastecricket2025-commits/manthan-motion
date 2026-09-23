@@ -66,7 +66,10 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
         <h3 className="font-display text-lg font-bold tracking-tight">
           {payload.title}
         </h3>
-        <p className="mt-2 text-sm leading-relaxed text-text-dim">
+        {/* Reading copy steps up to 15px on a phone and returns to the 14px
+            desktop step from sm up — the artefact is read on a small screen
+            far more often than on a laptop. */}
+        <p className="mt-2 text-[15px] leading-relaxed text-text-dim sm:text-sm">
           {payload.overview}
         </p>
       </div>
@@ -88,7 +91,7 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
             </p>
             <ul className="mt-2.5 space-y-1.5">
               {section.points.map((point, j) => (
-                <li key={j} className="flex gap-2 text-sm leading-relaxed">
+                <li key={j} className="flex gap-2 text-[15px] leading-relaxed sm:text-sm">
                   <span
                     aria-hidden="true"
                     className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--signal)]"
@@ -118,7 +121,7 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
                 className="rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
               >
                 <dt className="text-sm font-medium">{term.term}</dt>
-                <dd className="mt-0.5 text-xs leading-relaxed text-text-dim">
+                <dd className="mt-0.5 text-[13px] leading-relaxed text-text-dim sm:text-xs">
                   {term.meaning}
                 </dd>
               </div>
@@ -241,7 +244,7 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
           {score}
           <span className="text-text-dim">/{total}</span>
         </p>
-        <p className="text-sm text-text-dim">
+        <p className="text-[15px] text-text-dim sm:text-sm">
           {percent}% correct — {message}
         </p>
         <button
@@ -290,7 +293,7 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
                   if (isAnswer) setScore((s) => s + 1);
                 }}
                 className={
-                  "flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm transition-colors " +
+                  "flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-[15px] transition-colors sm:text-sm " +
                   (revealed && isAnswer
                     ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)]"
                     : revealed && isPicked
@@ -324,7 +327,7 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
       {picked !== null && (
         <div className="rounded-2xl border border-[var(--card-border)] p-4">
           {question.explanation && (
-            <p className="flex gap-2 text-sm leading-relaxed text-text-dim">
+            <p className="flex gap-2 text-[15px] leading-relaxed text-text-dim sm:text-sm">
               <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[var(--signal)]" />
               {question.explanation}
             </p>
@@ -675,8 +678,14 @@ export function MindmapView({ payload }: { payload: MindmapPayload }) {
             );
           })}
 
-          {/* the core */}
-          <circle cx="0" cy="0" r={layout.rootRadius} fill="var(--signal)" />
+          {/* the core — the deep fill tone, because the label sitting on it is
+              white and the luminous accent tone cannot carry it */}
+          <circle
+            cx="0"
+            cy="0"
+            r={layout.rootRadius}
+            fill="var(--signal-strong)"
+          />
           <text
             data-label="root"
             x="0"
@@ -734,7 +743,7 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
         </div>
         <ul className="flex flex-col gap-2.5 px-4 py-5 sm:px-6">
           {slide.bullets.map((bullet, i) => (
-            <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
+            <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed sm:text-sm">
               <span
                 aria-hidden="true"
                 className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signal)]"

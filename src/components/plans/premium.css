@@ -143,9 +143,12 @@ html:not(.dark) .premium-card {
   inset: 0;
   z-index: 140;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(16px, env(safe-area-inset-top)) 16px
+    max(16px, env(safe-area-inset-bottom));
   /* Exactly as specified: saturate(180%) + a 40% white wash, so the whole
      workspace reads as frosted glass behind the prompt. */
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -155,6 +158,10 @@ html:not(.dark) .premium-card {
 
 .lock-card {
   position: relative;
+  /* flex-start on the veil + auto margins here keeps the prompt optically
+     centred on a tall screen and top-aligned (scrollable, never clipped) on
+     a short one. */
+  margin: auto;
   width: 100%;
   max-width: 440px;
   overflow: hidden;
@@ -197,10 +204,12 @@ html:not(.dark) .lock-card {
   inset: 0;
   z-index: 150;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow-y: auto;
-  padding: 18px;
+  overscroll-behavior: contain;
+  padding: max(16px, env(safe-area-inset-top)) 16px
+    max(16px, env(safe-area-inset-bottom));
   background: rgba(6, 6, 8, 0.55);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
@@ -208,6 +217,7 @@ html:not(.dark) .lock-card {
 
 .checkout-card {
   position: relative;
+  margin: auto;
   width: 100%;
   max-width: 520px;
   border-radius: 28px;
@@ -627,5 +637,113 @@ html:not(.dark) .checkout-field {
   .scan-beam,
   .spin-micro {
     animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Phones                                                              */
+/* ------------------------------------------------------------------ */
+/* The premium surfaces are authored for a 360px-first canvas; this is
+   the last tightening pass. Rules of the block:
+     1. every control grows to a 44px thumb target,
+     2. every surface stays inside the viewport (fluid width, tighter
+        gutter) instead of relying on the layout to squeeze it,
+     3. reading type goes up, never down — a plan card read on a phone in
+        portrait is the primary use case. */
+@media (max-width: 640px) {
+  .premium-card {
+    padding: 20px 18px;
+    border-radius: 20px;
+  }
+
+  .premium-select select {
+    padding: 13px 38px 13px 14px;
+    /* 16px, not 14 — anything smaller makes iOS Safari zoom the whole page
+       when the control receives focus. */
+    font-size: 16px;
+  }
+
+  .lock-card {
+    padding: 24px 18px;
+    border-radius: 22px;
+  }
+
+  .checkout-card {
+    padding: 20px 16px;
+    border-radius: 22px;
+  }
+
+  .checkout-field,
+  .checkout-bank {
+    padding-top: 13px;
+    padding-bottom: 13px;
+    /* See above: 16px keeps iOS from zooming in on focus. */
+    font-size: 16px;
+  }
+
+  .checkout-method {
+    padding: 12px 6px;
+  }
+
+  .checkout-qr {
+    width: 104px;
+    height: 104px;
+  }
+
+  /* Grade tabs become a full-width segmented control — four thumbs, no
+     precision tapping. */
+  .mathlab-grades {
+    width: 100%;
+    border-radius: 18px;
+    gap: 2px;
+  }
+
+  .mathlab-grade {
+    flex: 1 1 0;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .mathlab-chapter,
+  .mathlab-model {
+    padding: 12px;
+    font-size: 13.5px;
+  }
+
+  .mathlab-param {
+    padding: 14px;
+  }
+
+  .mathlab-range {
+    height: 6px;
+  }
+
+  .mathlab-range::-webkit-slider-thumb,
+  .mathlab-range::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+  }
+
+  .tool-dropzone {
+    padding: 26px 16px;
+  }
+
+  .scan-stage img {
+    max-height: 190px;
+  }
+
+  .voice-mic {
+    height: 92px;
+    width: 92px;
+  }
+
+  .voice-log {
+    max-height: 210px;
+  }
+
+  .voice-bubble {
+    padding: 11px 13px;
+    font-size: 14px;
   }
 }

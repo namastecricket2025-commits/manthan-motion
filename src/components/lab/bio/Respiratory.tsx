@@ -19,7 +19,7 @@ const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   bronchusR: { name: "Right primary bronchus", def: "Wider, shorter and steeper (~25° from vertical) than the left. Because it is so steep, inhaled objects usually lodge in the right lung.", accent: "#fbbf24" },
   bronchusL: { name: "Left primary bronchus", def: "Narrower and more horizontal (~45°) because it must clear the aortic arch and the heart as it enters the left hilum.", accent: "#fbbf24" },
   rSup: { name: "Right superior lobe", def: "The upper lobe of the right lung — the only lobe that extends above the first rib into the neck. Split from the middle lobe by the horizontal fissure.", accent: "#fda4af" },
-  rMid: { name: "Right middle lobe", def: "A small wedge-shaped lobe on the front of the right lung, unique to the right side. It is separated by the horizontal fissure above and the oblique fissure behind.", accent: "#fb7185" },
+  rMid: { name: "Right middle lobe", def: "A small wedge-shaped lobe on the front of the right lung, unique to the right side. It is separated by the horizontal fissure above and the oblique fissure behind.", accent: "#aab3ff" },
   rInf: { name: "Right inferior lobe", def: "The largest lobe, sitting behind and below the oblique fissure and resting on the diaphragm. Its base is the lowest point of the lung.", accent: "#f43f5e" },
   lSup: { name: "Left superior lobe", def: "Upper-left lobe plus the lingula — a tongue-like projection that is the left equivalent of the right middle lobe.", accent: "#f9a8d4" },
   lInf: { name: "Left inferior lobe", def: "Lower-left lobe below the oblique fissure, resting on the left dome of the diaphragm.", accent: "#db2777" },
@@ -648,7 +648,7 @@ export default function Respiratory() {
                 Right 3 lobes · left 2 lobes + cardiac notch
               </span>
             )}
-            {view === "right" && <span className="lab-chip border-[#ff647c]/30 bg-black/55 text-[10px] text-[#ff8a9a]">Right lung — 3 lobes</span>}
+            {view === "right" && <span className="lab-chip border-[#aab3ff]/30 bg-black/55 text-[10px] text-[#ff8a9a]">Right lung — 3 lobes</span>}
             {view === "left" && <span className="lab-chip border-[#a78bfa]/30 bg-black/55 text-[10px] text-[#c4b5fd]">Left lung — 2 lobes + notch</span>}
           </div>
           <CursorTip tip={tip} hostRef={wrapRef} width={268} />

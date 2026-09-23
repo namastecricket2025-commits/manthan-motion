@@ -311,9 +311,11 @@ export function NotebookWorkspace({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Work-area top bar: the two advanced tools, as text-link actions. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-line)] px-4 py-2.5">
-        <div className="flex items-center gap-5">
+      {/* Work-area top bar: the two advanced tools, as text-link actions.
+          On phones each link grows to a 40px-tall target and the descriptor
+          drops away, so the bar stays a single tidy row. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-line)] px-3 py-1.5 sm:px-4 sm:py-2.5">
+        <div className="flex items-center gap-3 sm:gap-5">
           <button
             type="button"
             aria-pressed={tool === "cram"}
@@ -322,7 +324,7 @@ export function NotebookWorkspace({
               else if (requireAccess("cramMode")) setTool("cram");
             }}
             className={
-              "inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors " +
+              "inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[12.5px] font-semibold transition-colors sm:min-h-0 sm:px-0 " +
               (tool === "cram"
                 ? "text-[var(--signal)]"
                 : "text-text-dim hover:text-[var(--signal)]")
@@ -340,7 +342,7 @@ export function NotebookWorkspace({
               else if (requireAccess("voiceTutor")) setTool("voice");
             }}
             className={
-              "inline-flex items-center gap-1.5 text-[12.5px] font-semibold transition-colors " +
+              "inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[12.5px] font-semibold transition-colors sm:min-h-0 sm:px-0 " +
               (tool === "voice"
                 ? "text-[var(--signal)]"
                 : "text-text-dim hover:text-[var(--signal)]")
@@ -351,7 +353,7 @@ export function NotebookWorkspace({
             {!can("voiceTutor") && <Lock className="h-3 w-3 opacity-70" />}
           </button>
         </div>
-        <span className="text-[11px] text-text-dim">
+        <span className="hidden text-[11px] text-text-dim sm:inline">
           Advanced study tools for this notebook
         </span>
       </div>
@@ -430,7 +432,7 @@ export function NotebookWorkspace({
                 onChange={(e) => setLinkValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void submitLink()}
                 placeholder="Paste a link to read…"
-                className="w-full rounded-full border border-[var(--card-border)] bg-transparent py-2.5 pl-9 pr-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                className="w-full rounded-full border border-[var(--card-border)] bg-transparent py-2.5 pl-9 pr-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:text-sm"
               />
             </div>
             <MovingBorderButton
@@ -454,7 +456,7 @@ export function NotebookWorkspace({
                 value={notesTitle}
                 onChange={(e) => setNotesTitle(e.target.value)}
                 placeholder="Title (optional)"
-                className="w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                className="w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:py-2 sm:text-sm"
               />
               <textarea
                 value={notesBody}
@@ -707,7 +709,7 @@ export function NotebookWorkspace({
                   type="button"
                   onClick={() => setTab(meta.kind)}
                   className={
-                    "rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
+                    "rounded-full border px-4 py-2 text-[13.5px] font-medium transition-colors sm:py-1.5 " +
                     (activeKind === meta.kind
                       ? "border-[var(--signal)] text-foreground"
                       : "border-[var(--card-border)] text-text-dim hover:text-foreground")

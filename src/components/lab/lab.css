@@ -1,7 +1,7 @@
 /* ============================================================
    STEM Lab design system — strictly scoped to .lab-root.
-   Slate-charcoal aesthetic (#0F172A / #1E293B); red is reserved
-   for neon accents, laser beams and active execution buttons.
+   Slate-charcoal aesthetic (#0F172A / #1E293B); the indigo accent is
+   reserved for neon highlights, laser beams and active execution buttons.
    Global site theme files are untouched.
    Light overrides are ONLY under html:not(.dark) .lab-root.
    ============================================================ */
@@ -42,21 +42,26 @@
   --lab-text: #e2e8f0;
   --lab-dim: #9fb0c6;
   --lab-faint: #8296ae;
-  --lab-neon: #ff3b5c;
-  --lab-neon-2: #e11d48;
-  --lab-neon-soft: rgba(255, 59, 92, 0.14);
+  --lab-neon: #8b93ff;
+  --lab-neon-2: #6366f1;
+  --lab-neon-soft: rgba(139, 147, 255, 0.14);
   --lab-cyan: #22d3ee;
   --lab-amber: #fbbf24;
   --lab-green: #34d399;
   --lab-violet: #a78bfa;
   --lab-cell-ink: #e2e8f0;
-  /* No flat slate/purple-gray block: the page canvas is a deep warm base and
-     the shared crimson mesh (rendered inside .lab-root) supplies the depth,
-     exactly like the landing, dashboard and settings routes. The bench panels
-     keep their slate tokens so the instruments stay readable. */
-  background: linear-gradient(180deg, #12080a 0%, #0e0607 46%, #0a0506 100%);
+  /* No flat slate/purple-gray block: the page canvas is a deep neutral base
+     with a faint indigo cast, and the shared mesh (rendered inside .lab-root)
+     supplies the depth, exactly like the landing, dashboard and settings
+     routes. The bench panels keep their slate tokens so the instruments stay
+     readable. */
+  background: linear-gradient(180deg, #0a0a14 0%, #08080f 46%, #06060b 100%);
   color: var(--lab-text);
   min-height: 100vh;
+  /* Phones: 100vh includes the browser chrome, which made the bench taller
+     than the visible screen and forced a stray scroll. dvh is the real
+     viewport height; the vh line above stays as the fallback. */
+  min-height: 100dvh;
 }
 
 /* ---------- Backdrop: blueprint grid + ambient accent glow ----------
@@ -65,8 +70,8 @@
    --lab-accent so the backdrop breathes with the active subject tab.
    Purely static — no animations, no cost. */
 .lab-root {
-  --lab-accent: #ff3b5c;
-  --lab-accent-2: rgba(255, 59, 92, 0.55);
+  --lab-accent: #8b93ff;
+  --lab-accent-2: rgba(139, 147, 255, 0.55);
 }
 .lab-backdrop {
   position: absolute;
@@ -208,15 +213,15 @@
 .lab-telemetry__eq {
   border-top: 1px solid var(--lab-border);
   padding: 10px 12px;
-  background: rgba(255, 59, 92, 0.05);
+  background: rgba(139, 147, 255, 0.05);
 }
 .lab-telemetry__eq .eq {
   display: block;
   font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
-  color: #ff8a9a;
-  text-shadow: 0 0 12px rgba(255, 59, 92, 0.3);
+  color: #aab3ff;
+  text-shadow: 0 0 12px rgba(139, 147, 255, 0.3);
   overflow-wrap: anywhere;
 }
 .lab-telemetry__eq .eq-note {
@@ -304,7 +309,7 @@
     font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
     font-size: 11px;
     font-weight: 600;
-    color: #ff8a9a;
+    color: #aab3ff;
   }
 }
 
@@ -321,7 +326,7 @@ html:not(.dark) .lab-root .lab-telemetry-embedded {
   background: linear-gradient(170deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.88));
 }
 html:not(.dark) .lab-root .lab-telemetry__eq {
-  background: rgba(255, 59, 92, 0.06);
+  background: rgba(139, 147, 255, 0.06);
 }
 html:not(.dark) .lab-root .lab-mobile-telemetry {
   background: linear-gradient(170deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.86));
@@ -365,7 +370,7 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
   border-color: var(--lab-border-strong);
   box-shadow:
     0 12px 40px rgba(2, 6, 23, 0.5),
-    0 0 0 1px rgba(255, 59, 92, 0.06);
+    0 0 0 1px rgba(139, 147, 255, 0.06);
 }
 
 /* ---------- Typography helpers ---------- */
@@ -385,8 +390,8 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
   color: var(--lab-text);
 }
 .lab-neon-text {
-  color: #ff647c;
-  text-shadow: 0 0 14px rgba(255, 59, 92, 0.5);
+  color: #aab3ff;
+  text-shadow: 0 0 14px rgba(139, 147, 255, 0.5);
 }
 .lab-rule {
   height: 1px;
@@ -424,22 +429,22 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
 }
 .lab-btn--active {
   color: #fff;
-  border-color: rgba(255, 59, 92, 0.45);
+  border-color: rgba(139, 147, 255, 0.45);
   background: var(--lab-neon-soft);
-  box-shadow: 0 0 16px rgba(255, 59, 92, 0.14);
+  box-shadow: 0 0 16px rgba(139, 147, 255, 0.14);
 }
 .lab-btn-neon {
   color: #fff;
   border: none;
-  background: linear-gradient(135deg, #ff2e55, #e11d48);
+  background: linear-gradient(135deg, #6d78ff, #6366f1);
   box-shadow:
-    0 0 20px rgba(255, 59, 92, 0.35),
+    0 0 20px rgba(139, 147, 255, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .lab-btn-neon:hover {
   color: #fff;
   box-shadow:
-    0 0 30px rgba(255, 59, 92, 0.55),
+    0 0 30px rgba(139, 147, 255, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
@@ -486,17 +491,17 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
 }
 .lab-tab--on {
   color: #fff;
-  background: linear-gradient(135deg, rgba(255, 59, 92, 0.2), rgba(255, 59, 92, 0.06));
-  border: 1px solid rgba(255, 59, 92, 0.38);
-  box-shadow: 0 0 14px rgba(255, 59, 92, 0.14);
+  background: linear-gradient(135deg, rgba(139, 147, 255, 0.2), rgba(139, 147, 255, 0.06));
+  border: 1px solid rgba(139, 147, 255, 0.38);
+  box-shadow: 0 0 14px rgba(139, 147, 255, 0.14);
 }
 .lab-pill {
   position: absolute;
   inset: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(255, 59, 92, 0.2), rgba(255, 59, 92, 0.06));
-  border: 1px solid rgba(255, 59, 92, 0.38);
-  box-shadow: 0 0 16px rgba(255, 59, 92, 0.14);
+  background: linear-gradient(135deg, rgba(139, 147, 255, 0.2), rgba(139, 147, 255, 0.06));
+  border: 1px solid rgba(139, 147, 255, 0.38);
+  box-shadow: 0 0 16px rgba(139, 147, 255, 0.14);
 }
 
 /* ---------- Inputs ---------- */
@@ -512,8 +517,8 @@ html:not(.dark) .lab-root .lab-telemetry__eq .eq {
 }
 .lab-input:focus {
   outline: none;
-  border-color: rgba(255, 59, 92, 0.55);
-  box-shadow: 0 0 0 3px rgba(255, 59, 92, 0.12);
+  border-color: rgba(139, 147, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(139, 147, 255, 0.12);
 }
 
 input[type="range"].lab-range {
@@ -522,7 +527,7 @@ input[type="range"].lab-range {
   width: 100%;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--lab-neon), rgba(255, 59, 92, 0.18));
+  background: linear-gradient(90deg, var(--lab-neon), rgba(139, 147, 255, 0.18));
   cursor: pointer;
   outline: none;
 }
@@ -534,7 +539,7 @@ input[type="range"].lab-range::-webkit-slider-thumb {
   border-radius: 50%;
   background: #fdeef0;
   border: 2px solid var(--lab-neon);
-  box-shadow: 0 0 10px rgba(255, 59, 92, 0.7);
+  box-shadow: 0 0 10px rgba(139, 147, 255, 0.7);
   cursor: grab;
 }
 input[type="range"].lab-range::-moz-range-thumb {
@@ -543,7 +548,7 @@ input[type="range"].lab-range::-moz-range-thumb {
   border-radius: 50%;
   background: #fdeef0;
   border: 2px solid var(--lab-neon);
-  box-shadow: 0 0 10px rgba(255, 59, 92, 0.7);
+  box-shadow: 0 0 10px rgba(139, 147, 255, 0.7);
   cursor: grab;
 }
 
@@ -607,7 +612,7 @@ input[type="range"].lab-range::-moz-range-thumb {
 .lab-slot--over {
   border-color: var(--lab-neon);
   background: var(--lab-neon-soft);
-  box-shadow: 0 0 24px rgba(255, 59, 92, 0.18);
+  box-shadow: 0 0 24px rgba(139, 147, 255, 0.18);
 }
 
 /* ---------- Motion helpers ---------- */
@@ -621,8 +626,8 @@ input[type="range"].lab-range::-moz-range-thumb {
   }
 }
 .lab-flow-red {
-  stroke: #ff647c;
-  filter: drop-shadow(0 0 5px rgba(255, 59, 92, 0.85));
+  stroke: #aab3ff;
+  filter: drop-shadow(0 0 5px rgba(139, 147, 255, 0.85));
 }
 .lab-flow-blue {
   stroke: #38bdf8;
@@ -858,8 +863,8 @@ input[type="range"].lab-range::-moz-range-thumb {
 }
 .lab-search:focus {
   outline: none;
-  border-color: rgba(255, 59, 92, 0.55);
-  box-shadow: 0 0 0 3px rgba(255, 59, 92, 0.12);
+  border-color: rgba(139, 147, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(139, 147, 255, 0.12);
 }
 .lab-stat {
   border: 1px solid var(--lab-border);
@@ -906,7 +911,7 @@ html:not(.dark) .lab-root .lab-glass-deep {
 html:not(.dark) .lab-root .lab-glass-hover:hover {
   box-shadow:
     0 12px 40px rgba(15, 23, 42, 0.12),
-    0 0 0 1px rgba(255, 59, 92, 0.08);
+    0 0 0 1px rgba(139, 147, 255, 0.08);
 }
 html:not(.dark) .lab-root .lab-btn {
   background: rgba(255, 255, 255, 0.75);
@@ -917,9 +922,9 @@ html:not(.dark) .lab-root .lab-btn:hover {
 }
 html:not(.dark) .lab-root .lab-btn--active {
   color: #fff;
-  background: linear-gradient(135deg, #ff2e55, #e11d48);
-  border-color: rgba(255, 59, 92, 0.55);
-  box-shadow: 0 0 16px rgba(255, 59, 92, 0.22);
+  background: linear-gradient(135deg, #6d78ff, #6366f1);
+  border-color: rgba(139, 147, 255, 0.55);
+  box-shadow: 0 0 16px rgba(139, 147, 255, 0.22);
 }
 /* the Run action keeps a solid, high-contrast neon fill in light mode.
    The generic light .lab-btn rule above has the same specificity but sits
@@ -929,11 +934,11 @@ html:not(.dark) .lab-root .lab-btn-neon,
 html:not(.dark) .lab-root .lab-btn-neon:hover {
   color: #fff;
   border: none;
-  background: linear-gradient(135deg, #ff2e55, #e11d48);
+  background: linear-gradient(135deg, #6d78ff, #6366f1);
 }
 html:not(.dark) .lab-root .lab-btn-neon:hover {
   box-shadow:
-    0 0 30px rgba(255, 59, 92, 0.5),
+    0 0 30px rgba(139, 147, 255, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .lab-btn-neon:disabled {
@@ -955,9 +960,9 @@ html:not(.dark) .lab-root .lab-tab:hover {
    white label disappears, so flip it to the signal red instead */
 html:not(.dark) .lab-root .lab-tab--on {
   color: #b3163c;
-  background: linear-gradient(135deg, rgba(255, 59, 92, 0.24), rgba(255, 59, 92, 0.08));
+  background: linear-gradient(135deg, rgba(139, 147, 255, 0.24), rgba(139, 147, 255, 0.08));
   border-color: rgba(225, 29, 72, 0.4);
-  box-shadow: 0 0 14px rgba(255, 59, 92, 0.16);
+  box-shadow: 0 0 14px rgba(139, 147, 255, 0.16);
 }
 
 /* ---------- Backdrop: light-mode adaptation ----------
@@ -1063,7 +1068,33 @@ html:not(.dark) .lab-root .bg-white\/10 {
 }
 /* neon accents read fine on light frosted glass, but pure red text needs darkening */
 html:not(.dark) .lab-root .text-\[\#ff8a9a\] {
-  color: #e11d48;
+  color: #6366f1;
+}
+
+/* Legacy crimson chrome inside the lab explorers (tags, live pills, telemetry
+   accents) still carries literal colour utilities in the 3D views. Rather than
+   rewriting every scene, retint those fragments here so the whole bench speaks
+   the single indigo accent — the red that remains in the models is anatomy
+   (blood, heart muscle, polymerase), never interface. */
+.lab-root [class*="text-[#ff8a9a]"],
+.lab-root [class*="text-[#ff647c]"],
+.lab-root [class*="text-[#ff3b5c]"] {
+  color: #aab3ff;
+}
+.lab-root [class*="border-[#ff8a9a]"],
+.lab-root [class*="border-[#ff647c]"],
+.lab-root [class*="border-[#ff3b5c]"] {
+  border-color: rgba(139, 147, 255, 0.34);
+}
+.lab-root [class*="bg-[#ff8a9a]"],
+.lab-root [class*="bg-[#ff647c]"],
+.lab-root [class*="bg-[#ff3b5c]"] {
+  background-color: rgba(139, 147, 255, 0.12);
+}
+html:not(.dark) .lab-root [class*="text-[#ff8a9a]"],
+html:not(.dark) .lab-root [class*="text-[#ff647c]"],
+html:not(.dark) .lab-root [class*="text-[#ff3b5c]"] {
+  color: #4f46e5;
 }
 
 /* Instrument screens keep light type even in light theme — never flip them */

@@ -274,7 +274,7 @@ function Beaker({
               exit={{ opacity: 0 }}
               className="pb-6 text-center"
             >
-              <BeakerIcon className={`mx-auto h-8 w-8 ${over ? "text-[#ff647c]" : "text-slate-500"}`} />
+              <BeakerIcon className={`mx-auto h-8 w-8 ${over ? "text-[#aab3ff]" : "text-slate-500"}`} />
               <p className="mt-1 text-[11px] text-slate-500">
                 Drag or tap a substance here
               </p>
@@ -314,7 +314,7 @@ export default function ReactionBench() {
       equation: "k = A·e^(−Ea/RT)",
       eqNote: "Arrhenius: raise T and the collision-energy tail crosses the activation-energy barrier more often.",
       signal: temp,
-      accent: "#ff8a9a",
+      accent: "#aab3ff",
     });
   }, [slotA, slotB, temp, phase, result, publish]);
 
@@ -398,7 +398,7 @@ export default function ReactionBench() {
           <button
             type="button"
             onClick={() => setGroup("all")}
-            className={`lab-chip shrink-0 !cursor-pointer ${group === "all" ? "!border-[#ff3b5c]/60 !text-[#ff647c]" : ""}`}
+            className={`lab-chip shrink-0 !cursor-pointer ${group === "all" ? "!border-[#8b93ff]/60 !text-[#aab3ff]" : ""}`}
           >
             All
           </button>
@@ -407,7 +407,7 @@ export default function ReactionBench() {
               key={g.key}
               type="button"
               onClick={() => setGroup(group === g.key ? "all" : g.key)}
-              className={`lab-chip shrink-0 !cursor-pointer ${group === g.key ? "!border-[#ff3b5c]/60 !text-[#ff647c]" : ""}`}
+              className={`lab-chip shrink-0 !cursor-pointer ${group === g.key ? "!border-[#8b93ff]/60 !text-[#aab3ff]" : ""}`}
             >
               {g.label}
               <span className="text-slate-500">{g.ids.length}</span>
@@ -442,7 +442,7 @@ export default function ReactionBench() {
                 <span className="max-w-[76px] truncate text-[9px] text-slate-400">{s.name}</span>
                 <span className="text-[8px] uppercase tracking-widest text-slate-500">{s.state}</span>
                 {inSlot && (
-                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#ff3b5c] shadow-[0_0_8px_rgba(255,59,92,0.9)]" />
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#8b93ff] shadow-[0_0_8px_rgba(139,147,255,0.9)]" />
                 )}
               </div>
             );
@@ -554,7 +554,7 @@ export default function ReactionBench() {
                             {result.b.formula}
                           </span>
                           <span className="text-slate-400">→</span>
-                          <span className="rounded-md bg-[#ff3b5c] px-2 py-0.5 text-[10px] font-bold text-white shadow-[0_0_12px_rgba(255,59,92,0.5)]">
+                          <span className="rounded-md bg-[#8b93ff] px-2 py-0.5 text-[10px] font-bold text-white shadow-[0_0_12px_rgba(139,147,255,0.5)]">
                             products
                           </span>
                         </div>
@@ -562,7 +562,7 @@ export default function ReactionBench() {
                           <Chem text={result.r.eq} />
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#ff647c]">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#aab3ff]">
                             {result.r.type}
                           </p>
                           {result.r.energy === "exo" && (
@@ -595,7 +595,7 @@ export default function ReactionBench() {
                     animate={{ opacity: 1 }}
                     className="mt-3 text-center text-[11px] text-slate-500"
                   >
-                    Press <span className="font-semibold text-[#ff647c]">React</span> to observe the collision chamber.
+                    Press <span className="font-semibold text-[#aab3ff]">React</span> to observe the collision chamber.
                   </motion.div>
                 )}
               </AnimatePresence>

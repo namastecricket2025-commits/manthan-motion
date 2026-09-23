@@ -47,7 +47,7 @@ const TABS: { key: LabTab; label: string; icon: typeof Atom; blurb: string }[] =
 const TAB_ACCENT: Record<LabTab, { hex: string; rgba: string }> = {
   physics: { hex: "#38bdf8", rgba: "56, 189, 248" }, // deep sky — Snell/optics
   chemistry: { hex: "#a78bfa", rgba: "167, 139, 250" }, // violet — reagents
-  biology: { hex: "#ff3b5c", rgba: "255, 59, 92" }, // signal red — living tissue
+  biology: { hex: "#34d399", rgba: "52, 211, 153" }, // mint — living tissue
   canvas: { hex: "#f59e0b", rgba: "245, 158, 11" }, // amber — the scan beam
 };
 
@@ -116,7 +116,7 @@ function LabShell() {
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 to="/dashboard"
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-[#ff3b5c] hover:text-[#ff647c]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-[#8b93ff] hover:text-[#aab3ff]"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -127,7 +127,7 @@ function LabShell() {
                 STEM Lab
               </span>
               <span className="lab-chip hidden md:inline-flex">
-                <Radiation className="h-3 w-3 text-[#ff647c]" />
+                <Radiation className="h-3 w-3 text-[#aab3ff]" />
                 sandboxed · no real chemicals
               </span>
             </div>
@@ -158,7 +158,7 @@ function LabShell() {
                 return (
                   <button key={t.key} type="button" onClick={() => openTab(t.key)} className="lab-tab">
                     {isActive && <motion.span layoutId="lab-tab-pill" className="lab-pill" transition={SPRING} />}
-                    <Icon className={`relative z-10 h-4 w-4 ${isActive ? "text-[#ff647c]" : "text-slate-500"}`} />
+                    <Icon className={`relative z-10 h-4 w-4 ${isActive ? "text-[#aab3ff]" : "text-slate-500"}`} />
                     <span className="relative z-10">{t.label}</span>
                     {gated && <Lock className="relative z-10 h-3 w-3 text-slate-500" />}
                   </button>
@@ -191,7 +191,7 @@ function LabShell() {
           <MobileTelemetry />
 
           <p className="mt-8 hidden items-center justify-center gap-2 text-center text-[11px] text-slate-500 lg:flex">
-            <Beaker className="h-3.5 w-3.5 text-[#ff647c]" />
+            <Beaker className="h-3.5 w-3.5 text-[#aab3ff]" />
             Manthan STEM Lab — interactive models for revision, not substitutes for a teacher.
           </p>
         </main>

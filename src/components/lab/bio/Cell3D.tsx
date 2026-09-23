@@ -235,7 +235,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     const rim = new THREE.DirectionalLight(0x67e8f9, 0.9);
     rim.position.set(-50, -30, -60);
     sc.add(rim);
-    const point = new THREE.PointLight(0xff647c, 0.8, 220);
+    const point = new THREE.PointLight(0xaab3ff, 0.8, 220);
     point.position.set(0, 0, 0);
     sc.add(point);
     const hemi = new THREE.HemisphereLight(0x93c5fd, 0x1e293b, 0.35);
@@ -342,7 +342,7 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       // outer protein ring
       const ring = new THREE.Mesh(
         new THREE.TorusGeometry(2.6, 0.55, 12, 24),
-        new THREE.MeshStandardMaterial({ color: 0xff3b5c, emissive: 0x991b1b, emissiveIntensity: 0.6, roughness: 0.35 })
+        new THREE.MeshStandardMaterial({ color: 0x8b93ff, emissive: 0x4338ca, emissiveIntensity: 0.6, roughness: 0.35 })
       );
       ring.rotation.x = Math.PI / 2;
       g.add(ring);

@@ -113,14 +113,14 @@ const ElementCell = memo(function ElementCell({
       className={`relative flex min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1.5 text-center transition-all duration-200 ${
         dimmed
           ? "opacity-15"
-          : "hover:z-10 hover:scale-[1.18] hover:shadow-[0_0_18px_rgba(255,59,92,0.35)]"
+          : "hover:z-10 hover:scale-[1.18] hover:shadow-[0_0_18px_rgba(139,147,255,0.35)]"
       }`}
       style={{
-        borderColor: selected ? "#ff3b5c" : `${color}55`,
+        borderColor: selected ? "#8b93ff" : `${color}55`,
         background: selected
-          ? "linear-gradient(160deg, rgba(255,59,92,0.22), rgba(255,59,92,0.06))"
+          ? "linear-gradient(160deg, rgba(139,147,255,0.22), rgba(139,147,255,0.06))"
           : `linear-gradient(160deg, ${color}26, ${color}0d)`,
-        boxShadow: selected ? "0 0 18px rgba(255,59,92,0.35)" : "none",
+        boxShadow: selected ? "0 0 18px rgba(139,147,255,0.35)" : "none",
         cursor: "pointer",
       }}
     >
@@ -130,7 +130,7 @@ const ElementCell = memo(function ElementCell({
         className="font-display text-[13px] font-bold leading-tight sm:text-sm"
         style={{
           color: "var(--lab-cell-ink)",
-          textShadow: selected ? "0 0 8px rgba(255,59,92,0.8)" : "none",
+          textShadow: selected ? "0 0 8px rgba(139,147,255,0.8)" : "none",
         }}
       >
         {el.sym}
@@ -214,9 +214,9 @@ function ElementProfile({
               type="button"
               onClick={() => setOrbitals(!orbitals)}
               className="lab-btn"
-              style={orbitals ? { borderColor: "rgba(255,59,92,0.5)", color: "#fff", background: "rgba(255,59,92,0.12)" } : undefined}
+              style={orbitals ? { borderColor: "rgba(139,147,255,0.5)", color: "#fff", background: "rgba(139,147,255,0.12)" } : undefined}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${orbitals ? "bg-[#ff3b5c] shadow-[0_0_6px_rgba(255,59,92,0.9)]" : "bg-slate-600"}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${orbitals ? "bg-[#8b93ff] shadow-[0_0_6px_rgba(139,147,255,0.9)]" : "bg-slate-600"}`} />
               3D quantum orbitals
             </button>
           </div>
@@ -235,8 +235,8 @@ function ElementProfile({
         </div>
 
         {useNote && (
-          <div className="rounded-xl border border-[#ff3b5c]/25 bg-[#ff3b5c]/5 p-3">
-            <p className="lab-label mb-1 text-[#ff647c]">Where you meet it</p>
+          <div className="rounded-xl border border-[#8b93ff]/25 bg-[#8b93ff]/5 p-3">
+            <p className="lab-label mb-1 text-[#aab3ff]">Where you meet it</p>
             <p className="text-[12px] leading-relaxed text-slate-300">{useNote}</p>
           </div>
         )}
@@ -386,7 +386,7 @@ export default function ChemistryWorkspace() {
           <p className="text-sm font-bold text-slate-100">Periodic table</p>
           <p className="text-[11px] text-slate-500">
             {hover && groupChip ? (
-              <span className="text-[#ff647c]">{groupChip} highlighted</span>
+              <span className="text-[#aab3ff]">{groupChip} highlighted</span>
             ) : (
               "Hover a group · click an element for its 3D profile"
             )}
@@ -409,7 +409,7 @@ export default function ChemistryWorkspace() {
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="lab-stat">
           <p className="lab-label">Elements</p>
-          <p className="lab-value mt-1 text-sm text-[#ff647c]">
+          <p className="lab-value mt-1 text-sm text-[#aab3ff]">
             <CountUp to={ELEMENTS.length} />
           </p>
         </div>
@@ -436,7 +436,7 @@ export default function ChemistryWorkspace() {
         <button
           type="button"
           onClick={() => setCatFilter("all")}
-          className={`lab-chip shrink-0 !cursor-pointer ${catFilter === "all" ? "!border-[#ff3b5c]/60 !text-[#ff647c]" : ""}`}
+          className={`lab-chip shrink-0 !cursor-pointer ${catFilter === "all" ? "!border-[#8b93ff]/60 !text-[#aab3ff]" : ""}`}
         >
           All
         </button>
@@ -445,7 +445,7 @@ export default function ChemistryWorkspace() {
             key={c}
             type="button"
             onClick={() => setCatFilter(catFilter === c ? "all" : c)}
-            className={`lab-chip shrink-0 !cursor-pointer ${catFilter === c ? "!border-[#ff3b5c]/60 !text-[#ff647c]" : ""}`}
+            className={`lab-chip shrink-0 !cursor-pointer ${catFilter === c ? "!border-[#8b93ff]/60 !text-[#aab3ff]" : ""}`}
             style={catFilter === c ? undefined : { ["--tile-c" as string]: CAT_COLOR[c] }}
           >
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: CAT_COLOR[c] }} />
@@ -524,7 +524,7 @@ export default function ChemistryWorkspace() {
           return (
             <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
               {active && <motion.span layoutId="chem-sub-pill" className="lab-pill" transition={SPRING} />}
-              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#ff647c]" : "text-slate-500"}`} />
+              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#aab3ff]" : "text-slate-500"}`} />
               <span className="relative z-10">{t.label}</span>
             </button>
           );

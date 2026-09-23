@@ -4,6 +4,7 @@ import {
   Atom,
   LayoutDashboard,
   LogIn,
+  Sigma,
   Tag,
   User,
 } from "lucide-react";
@@ -68,6 +69,12 @@ export function MobileMenu() {
           },
         ]
       : []),
+    {
+      title: "Math Lab",
+      sub: "Grades 8-11 graphing and equation engine",
+      href: "/math-lab",
+      icon: <Sigma className="h-full w-full" strokeWidth={1.7} />,
+    },
     {
       title: "STEM Lab",
       sub: "Physics, chemistry, biology sandboxes",

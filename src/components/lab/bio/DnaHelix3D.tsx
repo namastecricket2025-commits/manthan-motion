@@ -250,7 +250,7 @@ export default function DnaHelix3D() {
 
     // polymerase + mRNA
     const polG = new THREE.Group();
-    const core = new THREE.Mesh(new THREE.SphereGeometry(1.9, 18, 18), new THREE.MeshStandardMaterial({ color: 0xff3b5c, emissive: 0x991b1b, emissiveIntensity: 0.45 }));
+    const core = new THREE.Mesh(new THREE.SphereGeometry(1.9, 18, 18), new THREE.MeshStandardMaterial({ color: 0x8b93ff, emissive: 0x991b1b, emissiveIntensity: 0.45 }));
     polG.add(core);
     const clampL = new THREE.Mesh(new THREE.CapsuleGeometry(0.55, 2.2, 8, 16), new THREE.MeshStandardMaterial({ color: 0xfda4af, emissive: 0xe11d48, emissiveIntensity: 0.22 }));
     clampL.position.set(-1.1, 0.2, 0.6);
@@ -528,7 +528,7 @@ export default function DnaHelix3D() {
     <div ref={wrapRef} className="relative overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_50%_30%,#16233b_0%,#0b1120_78%)]">
       <div className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/35 px-3 py-2 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <span className="lab-chip border-[#ff3b5c]/30 bg-[#ff3b5c]/10 text-[#ff8a9a]">DNA · B-form · right-handed</span>
+          <span className="lab-chip border-[#8b93ff]/30 bg-[#8b93ff]/10 text-[#ff8a9a]">DNA · B-form · right-handed</span>
           <span className="hidden text-xs font-semibold text-slate-200 sm:inline">10 bp / turn · 3.4 Å rise · Major ↔ Minor alternating</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -617,7 +617,7 @@ export default function DnaHelix3D() {
                     ))}
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#22d3ee] to-[#ff3b5c]" style={{ width: `${(gameIdx / BP) * 100}%`, transition: "width .3s ease" }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#22d3ee] to-[#8b93ff]" style={{ width: `${(gameIdx / BP) * 100}%`, transition: "width .3s ease" }} />
                   </div>
                   <p className="mt-1.5 text-[10px] text-slate-500">
                     {gameIdx}/{BP} base pairs zipped · A pairs with T, G pairs with C

@@ -2,31 +2,34 @@
    About Us (/about)
    Inherits the global Manthan theme — background, ink and signal
    tokens — and layers authentic Apple-style glassmorphism on top.
-   No slate-charcoal: every colour here resolves from the theme,
-   with one muted crimson accent (#C81E1E) instead of a hot red.
+   No slate-charcoal: every colour here resolves from the theme, so
+   the page follows the accent (indigo by night, warm crimson by day)
+   instead of pinning a red of its own.
    ============================================================ */
 
 .about-root {
-  /* ---- Accent + ink, stated once so nothing drifts back to a hot tint ----
-     Accent   #C81E1E (muted crimson) / rgba(200, 30, 30, 0.85) for washes
-     Secondary ink  #E2E8F0 · #94A3B8 (dark) — #374151 · #1E293B (light)   */
-  --about-signal: #c81e1e;
-  --about-signal-glow: rgba(200, 30, 30, 0.85);
+  /* ---- Accent + ink ----------------------------------------------------
+     Dark mode inherits the app accent straight from the theme (electric
+     indigo), so this page can never fall out of step with the rest of the
+     product. The light theme re-points the same tokens to the warm crimson
+     below (see the html:not(.dark) block) — one page, two honest palettes. */
+  --about-signal: var(--signal);
+  --about-signal-glow: color-mix(in srgb, var(--signal) 85%, transparent);
   --about-dim: #94a3b8; /* secondary paragraphs — silver-gray, always legible */
   --about-faint: #b3c2d4; /* labels / indices */
-  /* Re-point the theme's signal tokens inside this container only, so the
-     hero's accent word, kicker dots, hairlines and the CTA's orbiting
-     border all resolve to the muted crimson instead of the hot #e0323a. */
-  --signal: #c81e1e;
-  --signal-2: #8f1d22;
-  --card-border: rgba(200, 30, 30, 0.22);
-  --gt-tail: #c8404a;
 }
 html:not(.dark) .about-root {
-  --about-signal: #c81f27;
-  --about-signal-glow: rgba(200, 30, 30, 0.85);
   --about-dim: #374151;
   --about-faint: #1e293b;
+  /* Warm-day palette: the accent word, kicker dots, hairlines and the CTA's
+     orbiting border all resolve to the muted crimson here. */
+  --about-signal: #c81f27;
+  --about-signal-glow: rgba(200, 30, 30, 0.85);
+}
+html:not(.dark) .about-root .apple-glass,
+html:not(.dark) .about-root .apple-card {
+  /* glass edges keep their contrast on the pale canvas */
+  --card-border: rgba(200, 30, 30, 0.22);
 }
 
 /* ---------- 1. Authentic Apple glass ----------

@@ -127,7 +127,7 @@ export function ExamSketchPanel({
           <ol className="mt-2.5 space-y-2">
             {steps.map((s, i) => (
               <li key={s.t} className="flex gap-2.5">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#ff3b5c]/40 bg-[#ff3b5c]/10 text-[10px] font-bold text-[#ff8a9a]">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#8b93ff]/40 bg-[#8b93ff]/10 text-[10px] font-bold text-[#ff8a9a]">
                   {i + 1}
                 </span>
                 <span>

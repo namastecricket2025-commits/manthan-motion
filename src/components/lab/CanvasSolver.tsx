@@ -203,9 +203,9 @@ export function CanvasSolver() {
             {scanning && <span className="scan-beam" aria-hidden="true" />}
             <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-center gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
               {scanning ? (
-                <Loader2 className="spin-micro h-3.5 w-3.5 text-[#ff647c]" />
+                <Loader2 className="spin-micro h-3.5 w-3.5 text-[#aab3ff]" />
               ) : (
-                <Upload className="h-3.5 w-3.5 text-[#ff647c]" />
+                <Upload className="h-3.5 w-3.5 text-[#aab3ff]" />
               )}
               <span className="text-[11px] font-medium text-slate-200">
                 {scanning ? "Scanning the sheet…" : "Scan complete"}
@@ -253,7 +253,7 @@ export function CanvasSolver() {
                     key={line}
                     className="flex gap-2 text-[12.5px] leading-relaxed text-slate-300"
                   >
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff3b5c]" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8b93ff]" />
                     <span>{line}</span>
                   </li>
                 ))}

@@ -105,6 +105,10 @@
      field is the only saturated thing on the page. */
   --ink: #f7f3f0;
   --signal: #c81f27;
+  /* The filled-action tone. In the warm light theme it is the same crimson as
+     the accent; the dark theme splits them (see the .dark block) so button
+     fills can be deep enough for white text while the accent stays luminous. */
+  --signal-strong: #c81f27;
   --signal-2: #8f1d22;
   --text-main: #1b1110;
   --text-dim: #333f4b;
@@ -229,22 +233,36 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — neutral near-black ink so "blobs off" reads as
-     true dark mode; crimson stays the accent painted over it. */
+  /* Brand palette (dark) — neutral near-black ink, and an electric indigo as
+     the single accent.
+
+     The old dark theme used a saturated crimson, which read as harsh against
+     black and strained the eye over a long revision session. Indigo sits at
+     the premium end of dark UI: it stays vivid on near-black, it is calm
+     enough to look at for an hour, and it separates the two themes honestly —
+     the warm crimson stays the daylight palette, indigo owns the night.
+
+     Two tones are in play on purpose:
+       --signal         the luminous one: text accents, hairlines, rings,
+                        chart strokes, glow tints. Chosen to clear 7:1 against
+                        the ink so labels stay legible.
+       --signal-strong  the filled one: button and badge bodies that carry
+                        white text, deep enough to clear 6:1 with it. */
   --ink: #0a0a0b;
-  --signal: #e0323a;
-  --signal-2: #8f1d22;
+  --signal: #8b93ff;
+  --signal-strong: #4f46e5;
+  --signal-2: #4338ca;
   --text-main: #f7f7f8;
   --text-dim: #cbd5e1;
-  --card-border: rgba(224, 50, 58, 0.2);
-  --panel-bg: rgba(10, 10, 11, 0.6);
+  --card-border: rgba(139, 147, 255, 0.22);
+  --panel-bg: rgba(10, 10, 12, 0.62);
 
   /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
      The metaball field's three stops and its opacity ceiling. In dark the
-     field is at full strength (0.9) over the espresso ink, which is the
-     signature look. */
-  --bg-canvas-a: #e0323a;
-  --bg-canvas-b: #8f1d22;
+     field is at full strength (0.9) over the near-black ink, and it carries
+     the same indigo as the accent, so the aura and the interface agree. */
+  --bg-canvas-a: #8b93ff;
+  --bg-canvas-b: #4338ca;
   --bg-canvas-c: #0a0a0b;
   --bg-canvas-opacity: 0.9;
   /* Neutral segment of the primary-button ring (dark). */
@@ -257,19 +275,19 @@
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
      heading warm-white (`--text-main`) and holds it for just over half the
-     word, then blends through a pale rose into a bright signal red on the
+     word, then blends through pale periwinkle into the bright accent on the
      final letters. Matching the heading colour exactly plus two intermediate
-     stops keeps the word reading as heading text while the tail ignites
+     stops keeps the word reading as heading text while the tail lights up
      smoothly. */
-  --gt-head: #f4f4f5;
-  --gt-tail: #ff4f58;
+  --gt-head: #f5f6ff;
+  --gt-tail: #aab3ff;
 
-  /* Stroke-text display gradient (dark): a white-hot ember sweep — pale
-     gold through amber into signal red, so the filled display word glows
-     like an ember against the dark canvas. */
-  --stroke-a: #ffe8c2;
-  --stroke-b: #ffb35c;
-  --stroke-c: #ff4f58;
+  /* Stroke-text display gradient (dark): a cool arc-lamp sweep — ice white
+     through periwinkle into indigo, so the filled display word glows against
+     the near-black canvas without the glare a warm sweep produced. */
+  --stroke-a: #e2e8ff;
+  --stroke-b: #9aa4ff;
+  --stroke-c: #6366f1;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -284,42 +302,44 @@
   ----chart-crosshair: rgba(244, 236, 233, 0.18);
   ----chart-label: var(--text-dim);
   ----chart-line-primary: var(--signal);
-  ----chart-line-secondary: #fb7185;
+  ----chart-line-secondary: #5eead4;
   ----chart-tooltip-background: #17171a;
   ----chart-tooltip-foreground: var(--text-main);
   ----chart-tooltip-muted: var(--text-dim);
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(224, 50, 58, 0.12);
-  ----chart-segment-line: rgba(224, 50, 58, 0.3);
+  ----chart-segment-background: rgba(139, 147, 255, 0.12);
+  ----chart-segment-line: rgba(139, 147, 255, 0.3);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
   --foreground: var(--text-main);
   /* Neutral dark surface ramp (dialogs, popovers, menus, muted wells) built
      on the same base as `--ink`, so no primitive falls back to a default
-     grey template or a mismatched warm fill. Crimson stays the only accent. */
+     grey template or a mismatched warm fill. Indigo stays the only accent. */
   --card: #141416;
   --card-foreground: var(--text-main);
   --popover: #141416;
   --popover-foreground: var(--text-main);
-  --primary: var(--signal);
-  --primary-foreground: #fff7f5;
+  --primary: var(--signal-strong);
+  --primary-foreground: #f6f7ff;
   --secondary: #1c1c1f;
   --secondary-foreground: #f4f4f5;
   --muted: #19191c;
   --muted-foreground: #a1a1aa;
   --accent: #232326;
   --accent-foreground: #f4f4f5;
-  --destructive: #e0323a;
+  /* Red survives only where it carries meaning — a wrong answer, a failed
+     read — never as decoration. */
+  --destructive: #f87171;
   --border: rgba(244, 236, 233, 0.12);
   --input: rgba(244, 236, 233, 0.14);
   --ring: var(--signal);
-  --chart-1: #e0323a;
-  --chart-2: #fb7185;
+  --chart-1: #8b93ff;
+  --chart-2: #5eead4;
   --chart-3: #e8b04b;
-  --chart-4: #7d8f78;
+  --chart-4: #7dd3fc;
   --chart-5: #a1a1aa;
   --sidebar: #141416;
   --sidebar-foreground: var(--text-main);
@@ -372,7 +392,7 @@
     text-size-adjust: 100%;
   }
   ::selection {
-    background: color-mix(in srgb, var(--signal) 75%, transparent);
+    background: color-mix(in srgb, var(--signal-strong) 82%, transparent);
     color: #fff;
   }
   button:not([disabled]),
@@ -394,13 +414,30 @@
 }
 
 /* ============================================================
+   Phone form controls — the 16px floor
+   ============================================================ */
+/* iOS Safari zooms the entire page whenever a focused field renders under
+   16px, and the page then stays zoomed after the keyboard closes — the
+   "it opens zoomed in on my phone" complaint. The base-layer rule above
+   sets 16px, but any utility (`text-sm`, `text-[13px]`) or bespoke class
+   outranks a layered rule, so this one is deliberately unlayered: it sits
+   above every utility layer and re-seats the floor on small screens. */
+@media (max-width: 640px) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ============================================================
    Manthan surface language
    ============================================================ */
 @layer components {
   /* ------------------------------------------------
      Apple glass — the single surface language for every card, grid item,
      pipeline block, stats module and CTA wrapper on the home page (and
-     everywhere else that shares these classes). The crimson canvas field
+     everywhere else that shares these classes). The accent canvas field
      glints through all of them:
 
        fill      rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
@@ -511,8 +548,8 @@
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
-      #eeb3ae 66%,
-      #d9505c 80%,
+      #c7cdff 66%,
+      #7b86ff 80%,
       var(--gt-tail) 100%
     );
   }
@@ -587,7 +624,7 @@
     position: relative;
     overflow: hidden;
     border-radius: calc(999px - 1.5px);
-    background: linear-gradient(180deg, var(--signal) 0%, var(--signal-2) 100%);
+    background: linear-gradient(180deg, var(--signal-strong) 0%, var(--signal-2) 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       inset 0 0 0 1px rgba(255, 255, 255, 0.07);
@@ -737,7 +774,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .moving-border {
-      /* static crimson ring instead of the travelling conic sweep */
+      /* static accent ring instead of the travelling conic sweep */
       background: linear-gradient(120deg, var(--signal), var(--signal-2));
     }
     .cd-face::before {
@@ -1037,5 +1074,77 @@ html[data-motion="reduced"] .flip-card__inner {
 @media (prefers-reduced-motion: reduce) {
   .lab-beam {
     animation: none;
+  }
+}
+
+/* ============================================================
+   Mobile-first foundations
+   ------------------------------------------------------------
+   Most students revise on a phone, so the small screen is the
+   canvas these rules protect. Nothing here touches the desktop
+   layout: every rule is either media-scoped, or a property no
+   component sets on its own.
+   ============================================================ */
+
+/* 1. Media can never be the reason a page is wider than the screen. */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+svg,
+canvas {
+  max-width: 100%;
+}
+
+/* 2. Long unbroken tokens — URLs, file names, model output in Devanagari —
+   wrap instead of pushing the layout past the viewport edge. This is the
+   single most common cause of "the page opens zoomed out and I have to pinch
+   back in". */
+p,
+li,
+dd,
+dt,
+blockquote,
+figcaption,
+td,
+th,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: anywhere;
+}
+
+/* 3. Touch hygiene: no 300ms tap delay, no grey flash over the glass panels,
+   and no double-tap zoom on controls. */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 900px) {
+  /* 4. Flex and grid children may shrink below their content. Without this a
+     single long label drags its whole row — and the page — wider than the
+     phone. Scoped to phones so the desktop grid maths is untouched. */
+  .flex > *,
+  .grid > * {
+    min-width: 0;
+  }
+
+  /* 5. Phones get the roomier card radius; the panel already reads as one
+     floating sheet at this width. */
+  .glass-panel {
+    border-radius: 20px;
   }
 }

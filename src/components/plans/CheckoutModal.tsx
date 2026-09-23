@@ -301,8 +301,10 @@ export function CheckoutModal({
               disabled={paying}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 font-display text-sm font-semibold tracking-wide text-[var(--primary-foreground)] transition-transform duration-200 active:scale-[0.98] disabled:opacity-80"
               style={{
+                /* Deep fill tone, same as .btn-primary: this pill carries white
+                   type, which the luminous accent tone cannot support. */
                 background:
-                  "linear-gradient(180deg, var(--signal) 0%, var(--signal-2) 100%)",
+                  "linear-gradient(180deg, var(--signal-strong) 0%, var(--signal-2) 100%)",
                 boxShadow:
                   "inset 0 1px 0 rgba(255,255,255,0.22), 0 18px 50px -24px rgba(0,0,0,0.6)",
               }}

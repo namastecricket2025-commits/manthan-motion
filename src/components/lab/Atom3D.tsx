@@ -84,13 +84,13 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     atom.current = grp;
 
     sc.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const pl = new THREE.PointLight(0xff3b5c, 2.2, 420);
+    const pl = new THREE.PointLight(0x8b93ff, 2.2, 420);
     sc.add(pl);
 
     // nucleus
     const nuc = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
-      new THREE.MeshStandardMaterial({ color: 0xff5c76, emissive: 0xff2e55, emissiveIntensity: 0.9, roughness: 0.25 }),
+      new THREE.MeshStandardMaterial({ color: 0x9aa4ff, emissive: 0x6d78ff, emissiveIntensity: 0.9, roughness: 0.25 }),
     );
     grp.add(nuc);
     nucleus.current = nuc;
@@ -160,7 +160,7 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     );
     og.add(sCloud);
     const lobeMat = new THREE.MeshBasicMaterial({
-      color: 0xff3b5c,
+      color: 0x8b93ff,
       transparent: true,
       opacity: 0.16,
       depthWrite: false,

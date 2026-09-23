@@ -10,12 +10,12 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
       type="button"
       onClick={() => onChange(!on)}
       className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-left"
-      style={{ borderColor: on ? "rgba(255,59,92,0.45)" : undefined }}
+      style={{ borderColor: on ? "rgba(139,147,255,0.45)" : undefined }}
     >
       <span className={`text-[11px] font-semibold ${on ? "text-slate-100" : "text-slate-500"}`}>{label}</span>
       <span
         className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
-        style={{ background: on ? "linear-gradient(135deg,#ff2e55,#e11d48)" : "rgba(51,65,85,0.9)", boxShadow: on ? "0 0 12px rgba(255,59,92,0.45)" : "none" }}
+        style={{ background: on ? "linear-gradient(135deg,#6d78ff,#6366f1)" : "rgba(51,65,85,0.9)", boxShadow: on ? "0 0 12px rgba(139,147,255,0.45)" : "none" }}
       >
         {/* transform-only knob: a `layout` animation here would force Framer
             to re-measure the probe each frame and jitter the whole panel. */}
@@ -89,7 +89,7 @@ function Scope({ V, f, I, phi }: { V: number; f: number; I: number; phi: number 
       ctx.stroke();
       ctx.shadowBlur = 0;
     };
-    draw(ampV, 0, "#ff3b5c");
+    draw(ampV, 0, "#8b93ff");
     draw(ampI, -S.phi, "#22d3ee");
 
     // phase annotation
@@ -184,11 +184,11 @@ export default function ACCircuit() {
         <svg viewBox="0 0 360 284" className="w-full rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_30%,#101b30_0%,#0b1120_80%)]">
           {/* wires */}
           <path d={path} fill="none" stroke="rgba(148,163,184,0.55)" strokeWidth="2.4" />
-          <path d={path} fill="none" stroke="rgba(255,59,92,0.8)" strokeWidth="2.4" className="lab-dash" />
+          <path d={path} fill="none" stroke="rgba(139,147,255,0.8)" strokeWidth="2.4" className="lab-dash" />
 
           {/* AC source */}
-          <circle cx="60" cy="44" r="26" fill="#1e293b" stroke="rgba(255,59,92,0.55)" />
-          <path d="M 45 44 q 5 -9 10 0 q 5 9 10 0 q 5 -9 10 0" fill="none" stroke="#ff647c" strokeWidth="2" />
+          <circle cx="60" cy="44" r="26" fill="#1e293b" stroke="rgba(139,147,255,0.55)" />
+          <path d="M 45 44 q 5 -9 10 0 q 5 9 10 0 q 5 -9 10 0" fill="none" stroke="#aab3ff" strokeWidth="2" />
           <text x="60" y="18" fontSize="9" fill="rgba(148,163,184,0.8)" textAnchor="middle" fontFamily="monospace">AC</text>
 
           {/* R */}
@@ -226,7 +226,7 @@ export default function ACCircuit() {
 
           {/* flowing electrons */}
           {[0, 0.5].map((off) => (
-            <circle key={off} r="4" fill="#ff647c" opacity="0.9">
+            <circle key={off} r="4" fill="#aab3ff" opacity="0.9">
               <animateMotion dur={`${flowDur}s`} repeatCount="indefinite" begin={`${off * flowDur}s`} path={path} />
             </circle>
           ))}
@@ -239,7 +239,7 @@ export default function ACCircuit() {
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between">
             <p className="lab-label">
-              <Activity className="mr-1 inline h-3 w-3 text-[#ff647c]" /> Oscilloscope — voltage vs current
+              <Activity className="mr-1 inline h-3 w-3 text-[#aab3ff]" /> Oscilloscope — voltage vs current
             </p>
             <span className="lab-chip">CH1 V (red) · CH2 I (cyan)</span>
           </div>

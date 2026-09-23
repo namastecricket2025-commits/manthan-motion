@@ -122,22 +122,22 @@ function Curve({
     // equivalence marker
     const ex = X(Veq);
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = "rgba(255,59,92,0.5)";
+    ctx.strokeStyle = "rgba(139,147,255,0.5)";
     ctx.beginPath();
     ctx.moveTo(ex, 8);
     ctx.lineTo(ex, h - 8);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = "#ff647c";
+    ctx.fillStyle = "#aab3ff";
     ctx.font = "bold 10px ui-monospace, monospace";
     const eqPh = phAt(Veq, S.mode, S.weak, S.C0, S.Ct, S.V0);
     ctx.fillText(`EQ ${Veq.toFixed(1)} mL · pH ${eqPh.toFixed(2)}`, ex + 5, 18);
 
     // live segment
     const vNow = S.vol;
-    ctx.strokeStyle = "#ff647c";
+    ctx.strokeStyle = "#aab3ff";
     ctx.lineWidth = 2.2;
-    ctx.shadowColor = "rgba(255,59,92,0.8)";
+    ctx.shadowColor = "rgba(139,147,255,0.8)";
     ctx.shadowBlur = 8;
     ctx.beginPath();
     let started = false;
@@ -160,7 +160,7 @@ function Curve({
     ctx.beginPath();
     ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#ff3b5c";
+    ctx.strokeStyle = "#8b93ff";
     ctx.lineWidth = 2;
     ctx.stroke();
   });
@@ -243,7 +243,7 @@ export default function Titration() {
     publish({
       subject: "Chemistry · Titration",
       rows: [
-        { k: "pH", v: ph.toFixed(2), accent: "#ff8a9a" },
+        { k: "pH", v: ph.toFixed(2), accent: "#aab3ff" },
         { k: "Titrant added", v: `${vol.toFixed(1)} mL` },
         { k: "Equivalence", v: `${Veq.toFixed(1)} mL` },
         { k: "OH⁻ excess", v: `${excessOH >= 0 ? "+" : ""}${(excessOH * 1000).toFixed(2)} mmol` },
@@ -349,8 +349,8 @@ export default function Titration() {
               }}
               onPointerMove={(e) => e.buttons > 0 && handleRotate(e)}
             >
-              <line x1="60" y1="262" x2="42" y2="262" stroke="#ff647c" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="42" cy="262" r="3.5" fill="#ff647c" />
+              <line x1="60" y1="262" x2="42" y2="262" stroke="#aab3ff" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="42" cy="262" r="3.5" fill="#aab3ff" />
             </g>
             {flowing && (
               <circle key={dropTick} cx="60" cy="292" r="2.6" fill="rgba(165,243,252,0.9)">
@@ -498,7 +498,7 @@ export default function Titration() {
           </div>
           <Curve vol={vol} mode={mode} weak={weak} C0={C0} Ct={Ct} V0={25} />
           <p className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
-            <span className="lab-pulse inline-block h-1.5 w-1.5 rounded-full bg-[#ff3b5c]" />
+            <span className="lab-pulse inline-block h-1.5 w-1.5 rounded-full bg-[#8b93ff]" />
             {status}
           </p>
           {indicator === "mo" && (

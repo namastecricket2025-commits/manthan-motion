@@ -222,10 +222,10 @@ function MotionLab() {
                   className="absolute bottom-2 z-10 flex items-center gap-0.5 transition-all duration-100"
                   style={{ left: `calc(${clamp(x, 0, 100)}% - 64px)` }}
                 >
-                  <span className="mr-1 text-[8px] text-[#ff647c]">friction</span>
-                  <span className="h-0 w-0 border-y-[4px] border-r-[7px] border-y-transparent border-r-[#ff647c]" />
+                  <span className="mr-1 text-[8px] text-[#aab3ff]">friction</span>
+                  <span className="h-0 w-0 border-y-[4px] border-r-[7px] border-y-transparent border-r-[#aab3ff]" />
                   {Array.from({ length: 3 }, (_, i) => (
-                    <span key={i} className="h-[3px] w-3 rounded-full bg-[#ff647c]" style={{ opacity: 0.5 - i * 0.15 }} />
+                    <span key={i} className="h-[3px] w-3 rounded-full bg-[#aab3ff]" style={{ opacity: 0.5 - i * 0.15 }} />
                   ))}
                 </div>
               </>
@@ -299,7 +299,7 @@ function MotionLab() {
                 [
                   { key: "pos", label: "position", color: "#22d3ee" },
                   { key: "vel", label: "velocity", color: "#a78bfa" },
-                  { key: "acc", label: "accel", color: "#ff647c" },
+                  { key: "acc", label: "accel", color: "#aab3ff" },
                 ] as const
               ).map((tr) => (
                 <button
@@ -481,7 +481,7 @@ function Graph({
     };
     if (traces.pos) plot((d) => d.x, 100, "#22d3ee");
     if (traces.vel) plot((d) => d.v, p.current.v0, "#a78bfa");
-    if (traces.acc) plot((d) => -d.a, 10, "#ff647c");
+    if (traces.acc) plot((d) => -d.a, 10, "#aab3ff");
 
     ctx.fillStyle = "rgba(226,232,240,0.7)";
     ctx.font = "9px ui-monospace, monospace";
@@ -525,7 +525,7 @@ export default function PhysicsSim() {
           return (
             <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
               {active && <motion.span layoutId="phys-sub-pill" className="lab-pill" transition={SPRING} />}
-              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#ff647c]" : "text-slate-500"}`} />
+              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#aab3ff]" : "text-slate-500"}`} />
               <span className="relative z-10">{t.label}</span>
             </button>
           );

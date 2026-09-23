@@ -99,20 +99,24 @@ function Hero() {
               labelled, and ready to revise.
             </p>
 
+            {/* Mobile-first: on a phone both actions run the full column width at
+                a 48px height, so the primary CTA is unmissable and thumb-sized.
+                From sm up they snap back to the inline pair. */}
             <div
               data-hero-fade
-              className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center"
+              className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
             >
               <MovingBorderButton
                 to={ctaTarget}
-                innerClassName="px-7 py-3.5 text-sm"
+                className="w-full sm:w-auto"
+                innerClassName="w-full justify-center px-7 py-3.5 text-sm sm:w-auto"
               >
                 Generate study material
                 <ArrowRight className="h-4 w-4" />
               </MovingBorderButton>
               <a
                 href="#how"
-                className="btn-ghost glass-chip inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-foreground"
+                className="btn-ghost glass-chip inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-foreground sm:w-auto"
               >
                 <Sparkles className="h-4 w-4 text-[var(--signal)]" />
                 See how it works

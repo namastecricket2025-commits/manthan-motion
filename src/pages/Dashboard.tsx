@@ -217,7 +217,7 @@ export default function Dashboard() {
   const mixData = summary
     ? [
         { label: "Files", value: summary.fileCount, color: "var(--signal)" },
-        { label: "Links", value: summary.linkCount, color: "#fb7185" },
+        { label: "Links", value: summary.linkCount, color: "#5eead4" },
         { label: "Pasted notes", value: summary.notesCount, color: "#a1a1aa" },
       ].filter((d) => d.value > 0)
     : [];
@@ -242,7 +242,7 @@ export default function Dashboard() {
   /** Distinct accent shades, one per artefact kind (stacked bars). */
   const KIND_COLORS: Record<string, string> = {
     summary: "var(--signal)",
-    flashcards: "#fb7185",
+    flashcards: "#5eead4",
     quiz: "#e8b04b",
     mindmap: "#7d8f78",
     slides: "#a1a1aa",
@@ -383,7 +383,7 @@ export default function Dashboard() {
                       value={draftName}
                       onChange={(e) => setDraftName(e.target.value)}
                       placeholder="e.g. Physics — Electrostatics"
-                      className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                      className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:text-sm"
                     />
                     <MovingBorderButton
                       type="submit"
@@ -563,7 +563,7 @@ export default function Dashboard() {
                         value={draftName}
                         onChange={(e) => setDraftName(e.target.value)}
                         placeholder="Name it — e.g. Biology — Respiration"
-                        className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                        className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:text-sm"
                       />
                       <MovingBorderButton
                         type="submit"
@@ -663,6 +663,12 @@ export default function Dashboard() {
                                       onMouseLeave={() => setHovered(null)}
                                       onFocus={() => setHovered(i)}
                                       onBlur={() => setHovered(null)}
+                                      /* Touch devices never hover: a tap toggles the
+                                         slice instead, so the legend stays useful
+                                         on a phone. */
+                                      onClick={() =>
+                                        setHovered((h) => (h === i ? null : i))
+                                      }
                                       className={
                                         "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors " +
                                         (hovered === i

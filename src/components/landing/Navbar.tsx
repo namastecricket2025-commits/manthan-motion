@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LogIn,
   Settings,
+  Sigma,
   Tag,
   User,
 } from "lucide-react";
@@ -27,9 +28,15 @@ const AUTH_URL = "/auth?returnTo=%2Fdashboard";
  * Routes only. Homepage section anchors (Features / How it works / Impact)
  * are deliberately absent — a visitor can scroll the page themselves, and a
  * nav button that merely scrolls is noise. The logo at the left returns home.
- * The workspace path is Dashboard -> STEM Lab -> Settings -> About Us.
+ * The workspace path is Dashboard -> Math Lab -> STEM Lab -> Settings ->
+ * About Us.
  */
 const DOCK_LINKS: DockItem[] = [
+  {
+    title: "Math Lab",
+    icon: <Sigma className="h-full w-full" strokeWidth={1.7} />,
+    href: "/math-lab",
+  },
   {
     title: "STEM Lab",
     icon: <Atom className="h-full w-full" strokeWidth={1.7} />,

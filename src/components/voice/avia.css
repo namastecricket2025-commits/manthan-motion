@@ -1,8 +1,11 @@
 /* ============================================================================
    Avia — the floating voice companion
    ----------------------------------------------------------------------------
-   Bottom-right on every page. Glass surfaces, one crimson accent, and the
-   momentum curve used everywhere else on the site.
+   Bottom-right on every page, sized for a phone first: the launcher is a
+   44px thumb target, the panel never exceeds 92vw, and its height is
+   measured in dvh so the mobile browser chrome cannot hide the composer.
+   Glass surfaces, the single theme accent, and the momentum curve used
+   everywhere else on the site.
    ========================================================================== */
 
 .avia-root {
@@ -59,7 +62,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--signal) 0%, var(--signal-2) 100%);
+  /* Filled accent surfaces use --signal-strong: the luminous tone is a text
+     and hairline colour, too light to carry the white glyph. */
+  background: linear-gradient(180deg, var(--signal-strong) 0%, var(--signal-2) 100%);
   color: var(--primary-foreground);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
@@ -108,6 +113,7 @@
 .avia-panel {
   width: min(92vw, 372px);
   max-height: min(74vh, 620px);
+  max-height: min(74dvh, 620px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -319,7 +325,7 @@ html:not(.dark) .avia-bubble--avia {
 }
 
 .avia-mic.is-live {
-  background: var(--signal);
+  background: var(--signal-strong);
   color: var(--primary-foreground);
   border-color: var(--signal);
 }

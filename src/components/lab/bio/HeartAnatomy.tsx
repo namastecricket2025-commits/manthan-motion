@@ -13,22 +13,22 @@ import { disposeSurfaceMaps, muscleMaps, vesselMaps, tissueMaterial } from "../l
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   ra: { name: "Right atrium", def: "Thin-walled chamber that collects deoxygenated blood from the superior and inferior venae cavae. It contracts weakly, topping up the right ventricle.", accent: "#38bdf8" },
   rv: { name: "Right ventricle", def: "A thin crescent that wraps around the front of the heart and pumps blood into the pulmonary trunk at only ~25 mmHg. Its wall is about a third as thick as the left ventricle's.", accent: "#38bdf8" },
-  la: { name: "Left atrium", def: "Posterior chamber receiving oxygenated blood from the four pulmonary veins. It is the most posterior chamber, sitting right in front of the oesophagus.", accent: "#ff647c" },
-  lv: { name: "Left ventricle", def: "The thick, conical muscle (10–15 mm wall) whose apex forms the heart's tip. It generates ~120 mmHg to push blood around the whole systemic circuit.", accent: "#ff647c" },
+  la: { name: "Left atrium", def: "Posterior chamber receiving oxygenated blood from the four pulmonary veins. It is the most posterior chamber, sitting right in front of the oesophagus.", accent: "#aab3ff" },
+  lv: { name: "Left ventricle", def: "The thick, conical muscle (10–15 mm wall) whose apex forms the heart's tip. It generates ~120 mmHg to push blood around the whole systemic circuit.", accent: "#aab3ff" },
   septum: { name: "Interventricular septum", def: "Muscular wall dividing the two ventricles. It bows into the right ventricle because left-sided pressure is about five times higher.", accent: "#f87171" },
-  aorta: { name: "Aortic arch", def: "The body's largest artery: it ascends, arches over the left pulmonary artery, then descends behind the heart. Three branches rise from the top of the arch to supply head and arms.", accent: "#ff647c" },
-  brachio: { name: "Brachiocephalic trunk", def: "The first and widest arch branch. It immediately splits into the right common carotid artery and the right subclavian artery.", accent: "#ff647c" },
-  carotid: { name: "Left common carotid artery", def: "Second arch branch, ascending in the neck to supply the left side of the head and brain.", accent: "#ff647c" },
-  subclavian: { name: "Left subclavian artery", def: "Third arch branch, arching under the collarbone to feed the left arm and part of the chest wall.", accent: "#ff647c" },
+  aorta: { name: "Aortic arch", def: "The body's largest artery: it ascends, arches over the left pulmonary artery, then descends behind the heart. Three branches rise from the top of the arch to supply head and arms.", accent: "#aab3ff" },
+  brachio: { name: "Brachiocephalic trunk", def: "The first and widest arch branch. It immediately splits into the right common carotid artery and the right subclavian artery.", accent: "#aab3ff" },
+  carotid: { name: "Left common carotid artery", def: "Second arch branch, ascending in the neck to supply the left side of the head and brain.", accent: "#aab3ff" },
+  subclavian: { name: "Left subclavian artery", def: "Third arch branch, arching under the collarbone to feed the left arm and part of the chest wall.", accent: "#aab3ff" },
   pulmTrunk: { name: "Pulmonary trunk", def: "Carries deoxygenated blood out of the right ventricle. It is anterior to the aorta — it physically crosses in FRONT of it before splitting.", accent: "#38bdf8" },
   pulmL: { name: "Left pulmonary artery", def: "Runs from the bifurcation underneath the aortic arch to the left lung. It is one of only two arteries carrying deoxygenated blood.", accent: "#38bdf8" },
   pulmR: { name: "Right pulmonary artery", def: "Passes behind the ascending aorta and the superior vena cava to reach the right lung — the classic radiological 'posterior' relationship.", accent: "#38bdf8" },
   svc: { name: "Superior vena cava", def: "Wide vertical blue vessel draining the head, neck and upper limbs. It enters the top of the right atrium straight from above.", accent: "#38bdf8" },
   ivc: { name: "Inferior vena cava", def: "The body's largest vein, draining everything below the diaphragm. It punches vertically up through the diaphragm to enter the right atrium from below.", accent: "#38bdf8" },
   pulmVein: { name: "Pulmonary veins", def: "Four veins (two left, two right) returning oxygenated blood to the left atrium. They are the only veins in the body that carry oxygen-rich blood.", accent: "#f472b6" },
-  lad: { name: "Left anterior descending artery", def: "The coronary artery running down the front interventricular groove. Blocking it causes the classic anterior heart attack.", accent: "#ff647c" },
-  rca: { name: "Right coronary artery", def: "Runs in the groove between the right atrium and right ventricle and supplies the right side of the heart plus the pacemaker node.", accent: "#ff647c" },
-  circumflex: { name: "Left circumflex artery", def: "Curves around the left atrioventricular groove, feeding the left atrium and the back/side wall of the left ventricle.", accent: "#ff647c" },
+  lad: { name: "Left anterior descending artery", def: "The coronary artery running down the front interventricular groove. Blocking it causes the classic anterior heart attack.", accent: "#aab3ff" },
+  rca: { name: "Right coronary artery", def: "Runs in the groove between the right atrium and right ventricle and supplies the right side of the heart plus the pacemaker node.", accent: "#aab3ff" },
+  circumflex: { name: "Left circumflex artery", def: "Curves around the left atrioventricular groove, feeding the left atrium and the back/side wall of the left ventricle.", accent: "#aab3ff" },
   cs: { name: "Coronary sinus", def: "The heart's own drainage vein running along the back groove. All coronary venous blood collects here and empties into the right atrium.", accent: "#38bdf8" },
   tricuspid: { name: "Tricuspid valve", def: "Three-flap valve between right atrium and right ventricle. It closes during ventricular contraction so blood cannot leak backwards.", accent: "#a78bfa" },
   mitral: { name: "Mitral valve", def: "Two-flap valve between left atrium and left ventricle. Its leaflets are anchored by chordae tendineae so they cannot blow inside-out under 120 mmHg.", accent: "#a78bfa" },
@@ -548,7 +548,7 @@ export default function HeartAnatomy() {
     publish({
       subject: "Biology · Heart",
       rows: [
-        { k: "Heart rate", v: `${bpm} bpm`, accent: "#ff647c" },
+        { k: "Heart rate", v: `${bpm} bpm`, accent: "#aab3ff" },
         { k: "Stroke volume", v: `${sv} mL` },
         { k: "Cardiac output", v: `${co.toFixed(2)} L/min` },
         { k: "Systolic / diastolic", v: `${Math.round(80 + bpm * 0.55)}/${Math.round(58 + sv * 0.12)} mmHg` },
@@ -557,7 +557,7 @@ export default function HeartAnatomy() {
       equation: "CO = HR × SV",
       eqNote: "Cardiac output is heart rate times stroke volume — roughly 5 L/min at rest.",
       signal: clamp01(Math.sin((performance.now() / 1000) * ((bpm / 60) * Math.PI * 2)) * 0.5 + 0.5),
-      accent: "#ff647c",
+      accent: "#aab3ff",
     });
   }, [bpm, sv, paused, publish]);
 
@@ -613,8 +613,8 @@ export default function HeartAnatomy() {
           />
           {/* live readouts live on the glass, so the deck stays free for controls */}
           <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap gap-1.5">
-            <span className="lab-chip border-[#ff647c]/30 bg-black/55 text-[10px] text-[#ff8a9a]">
-              <span className="h-2 w-2 rounded-full bg-[#ff647c]" /> oxygenated
+            <span className="lab-chip border-[#aab3ff]/30 bg-black/55 text-[10px] text-[#ff8a9a]">
+              <span className="h-2 w-2 rounded-full bg-[#aab3ff]" /> oxygenated
             </span>
             <span className="lab-chip border-[#38bdf8]/30 bg-black/55 text-[10px] text-[#7dd3fc]">
               <span className="h-2 w-2 rounded-full bg-[#38bdf8]" /> deoxygenated
@@ -622,7 +622,7 @@ export default function HeartAnatomy() {
           </div>
           <div className="pointer-events-none absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5">
             <span className="lab-chip border-white/15 bg-black/55 text-[10px]">
-              <Activity className="h-3 w-3 text-[#ff647c]" /> {bpm} bpm · CO {cardiacOutput.toFixed(1)} L/min
+              <Activity className="h-3 w-3 text-[#aab3ff]" /> {bpm} bpm · CO {cardiacOutput.toFixed(1)} L/min
             </span>
           </div>
           <CursorTip tip={tip} hostRef={wrapRef} width={262} />
@@ -631,7 +631,7 @@ export default function HeartAnatomy() {
         {/* pressure gauges — side by side under the model, compact */}
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
           {[
-            { k: "Left ventricle", color: "#ff647c", end: String(lvPeak), lo: "5" },
+            { k: "Left ventricle", color: "#aab3ff", end: String(lvPeak), lo: "5" },
             { k: "Aortic pressure", color: "#22d3ee", end: "120", lo: "80" },
           ].map((g) => (
             <div key={g.k} className="rounded-xl border border-white/10 bg-black/20 p-2.5 lab-dark-surface">
@@ -664,7 +664,7 @@ export default function HeartAnatomy() {
 
         <div>
           <p className="lab-label mb-2">
-            <Activity className="mr-1 inline h-3 w-3 text-[#ff647c]" /> Haemodynamics
+            <Activity className="mr-1 inline h-3 w-3 text-[#aab3ff]" /> Haemodynamics
           </p>
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-400">Heart rate</span>
@@ -715,7 +715,7 @@ export default function HeartAnatomy() {
                           ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-300"
                           : shown && chosen
                             ? "border-red-400/60 bg-red-400/10 text-red-300"
-                            : "border-white/10 bg-black/20 text-slate-300 hover:border-[#ff3b5c]/50"
+                            : "border-white/10 bg-black/20 text-slate-300 hover:border-[#8b93ff]/50"
                       }`}
                     >
                       {opt}
@@ -746,7 +746,7 @@ export default function HeartAnatomy() {
             </>
           ) : (
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={SPRING} className="rounded-xl border border-white/10 bg-black/25 p-3 text-center">
-              <p className="font-display text-2xl font-bold text-[#ff647c]">
+              <p className="font-display text-2xl font-bold text-[#aab3ff]">
                 {score}/{QUESTIONS.length}
               </p>
               <p className="mt-1 text-[11px] text-slate-400">

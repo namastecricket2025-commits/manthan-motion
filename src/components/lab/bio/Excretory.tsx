@@ -12,7 +12,7 @@ import { useTelemetryPublisher } from "../PhysicsSim";
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
-  aorta: { name: "Abdominal aorta", def: "The midline artery behind the kidneys. It gives off a renal artery to each kidney near the L1–L2 vertebrae.", accent: "#ff647c" },
+  aorta: { name: "Abdominal aorta", def: "The midline artery behind the kidneys. It gives off a renal artery to each kidney near the L1–L2 vertebrae.", accent: "#aab3ff" },
   vena: { name: "Inferior vena cava", def: "Lies to the right of the aorta and takes the renal veins away. The right renal vein is short because the kidney is already close to it.", accent: "#38bdf8" },
   kidneyL: { name: "Left kidney", def: "Sits higher (about T12–L3) because there is no liver above it on the left side. Its hilum faces medially toward the aorta.", accent: "#fbbf24" },
   kidneyR: { name: "Right kidney", def: "Roughly 1–2 cm lower than the left, pushed down by the bulk of the liver. It is usually marginally smaller than the left kidney.", accent: "#fbbf24" },
@@ -22,8 +22,8 @@ const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   calyx: { name: "Minor & major calyces", def: "Cup-shaped funnels that catch urine from each papilla. Minor calyces merge into 2–3 major calyces.", accent: "#fde68a" },
   pelvis: { name: "Renal pelvis", def: "The wide funnel inside the hilum where all the calyces converge. It narrows into the ureter and acts as the kidney's collecting tank.", accent: "#fde68a" },
   hilum: { name: "Renal hilum", def: "The concave notch on the medial border where the renal artery, renal vein and ureter enter and leave. The vein is in front of the artery.", accent: "#a78bfa" },
-  arteryL: { name: "Left renal artery", def: "A short direct branch of the aorta. Because the aorta is slightly left of midline, the left artery is shorter than the right one.", accent: "#ff647c" },
-  arteryR: { name: "Right renal artery", def: "Longer than the left and passes behind the inferior vena cava on its way to the right hilum — a classic exam detail.", accent: "#ff647c" },
+  arteryL: { name: "Left renal artery", def: "A short direct branch of the aorta. Because the aorta is slightly left of midline, the left artery is shorter than the right one.", accent: "#aab3ff" },
+  arteryR: { name: "Right renal artery", def: "Longer than the left and passes behind the inferior vena cava on its way to the right hilum — a classic exam detail.", accent: "#aab3ff" },
   veinL: { name: "Left renal vein", def: "Much longer, and crosses in front of the aorta to reach the IVC. It also receives the left gonadal and suprarenal veins.", accent: "#38bdf8" },
   veinR: { name: "Right renal vein", def: "Short and direct — it drains straight into the adjacent inferior vena cava without crossing anything.", accent: "#38bdf8" },
   ureter: { name: "Ureter", def: "A muscular tube that carries urine from the pelvis to the bladder. Peristaltic waves push it along about three times a minute.", accent: "#facc15" },

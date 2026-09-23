@@ -59,7 +59,7 @@ function traceRays(angleDeg: number, slots: Slot[]): { rays: Ray[]; foci: { x: n
     // beam and the light sails straight past it
     if (Math.abs(yE - slot.y) > HALF[slot.type] + 4) continue;
 
-    rays.push({ pts: [start, { x: slot.x, y: yE }], color: "#ff647c" });
+    rays.push({ pts: [start, { x: slot.x, y: yE }], color: "#aab3ff" });
     start = { x: slot.x, y: yE };
 
     switch (slot.type) {
@@ -107,7 +107,7 @@ function traceRays(angleDeg: number, slots: Slot[]): { rays: Ray[]; foci: { x: n
         const tb = 22;
         const off = (tb * Math.sin(thI - thR)) / Math.cos(thR);
         const exit = { x: slot.x + tb, y: yE + off };
-        rays.push({ pts: [start, exit], color: "#ff647c" });
+        rays.push({ pts: [start, exit], color: "#aab3ff" });
         cx0 = exit.x;
         cy0 = exit.y;
         start = exit;
@@ -118,7 +118,7 @@ function traceRays(angleDeg: number, slots: Slot[]): { rays: Ray[]; foci: { x: n
 
   if (active) {
     const end = { x: 890, y: cy0 + (ddy / ddx) * (890 - cx0) };
-    rays.push({ pts: [start, end], color: "#ff647c" });
+    rays.push({ pts: [start, end], color: "#aab3ff" });
   }
   return { rays, foci };
 }
@@ -195,7 +195,7 @@ export default function OpticsBench() {
           ? "Snell's law at the air–glass face; the exit face bends it back, shifting the beam sideways."
           : "Thin-lens relation — parallel rays through a +90 px focal-length lens converge at F.",
       signal: clamp(Math.abs(landing ? landing.y - 200 : 120) / 120, 0, 1),
-      accent: "#ff647c",
+      accent: "#aab3ff",
     });
   }, [angle, slots, rays, foci, landing, publish]);
 
@@ -237,7 +237,7 @@ export default function OpticsBench() {
             </p>
           </div>
           <span className="lab-chip">
-            <Zap className="h-3.5 w-3.5 text-[#ff647c]" /> source angle {angle}°
+            <Zap className="h-3.5 w-3.5 text-[#aab3ff]" /> source angle {angle}°
           </span>
         </div>
 
@@ -258,8 +258,8 @@ export default function OpticsBench() {
             </linearGradient>
             <radialGradient id="laser-dot" cx="0.5" cy="0.5" r="0.5">
               <stop offset="0" stopColor="#fff" />
-              <stop offset="0.35" stopColor="#ff647c" />
-              <stop offset="1" stopColor="rgba(255,59,92,0)" />
+              <stop offset="0.35" stopColor="#aab3ff" />
+              <stop offset="1" stopColor="rgba(139,147,255,0)" />
             </radialGradient>
             {/* high-intensity bloom for the beam */}
             <filter id="laser-bloom" x="-30%" y="-30%" width="160%" height="160%">
@@ -282,7 +282,7 @@ export default function OpticsBench() {
 
           {/* source */}
           <g>
-            <rect x="24" y="188" width="36" height="24" rx="5" fill="#111a2c" stroke="rgba(255,59,92,0.75)" />
+            <rect x="24" y="188" width="36" height="24" rx="5" fill="#111a2c" stroke="rgba(139,147,255,0.75)" />
             <circle cx="66" cy="200" r="12" fill="url(#laser-dot)" opacity="0.85" />
             <circle cx="66" cy="200" r="4.5" fill="#fff" />
             <text x="42" y="180" fontSize="9" fill="rgba(148,163,184,0.85)" textAnchor="middle" fontFamily="monospace">
@@ -293,7 +293,7 @@ export default function OpticsBench() {
           {/* beams: wide bloom + mid glow + white-hot core */}
           {rays.map((r, i) => {
             const pts = r.pts.map((p) => `${p.x},${p.y}`).join(" ");
-            const tint = r.color === "#ff647c" ? "#ff3b5c" : r.color;
+            const tint = r.color === "#aab3ff" ? "#8b93ff" : r.color;
             return (
               <g key={i} style={{ filter: "url(#laser-bloom)" }}>
                 <polyline points={pts} fill="none" stroke={tint} strokeWidth="9" strokeLinecap="round" opacity="0.2" />
@@ -307,11 +307,11 @@ export default function OpticsBench() {
           {/* focal markers */}
           {foci.map((f, i) => (
             <g key={`${f.x}-${i}`}>
-              <line x1={f.x} y1="150" x2={f.x} y2="250" stroke="rgba(255,59,92,0.28)" strokeWidth="1" strokeDasharray="3 5" />
-              <circle cx={f.x} cy={f.y} r="5" fill="rgba(255,59,92,0.95)">
+              <line x1={f.x} y1="150" x2={f.x} y2="250" stroke="rgba(139,147,255,0.28)" strokeWidth="1" strokeDasharray="3 5" />
+              <circle cx={f.x} cy={f.y} r="5" fill="rgba(139,147,255,0.95)">
                 <animate attributeName="opacity" values="0.45;1;0.45" dur="2s" repeatCount="indefinite" />
               </circle>
-              <text x={f.x} y={f.y + 22} fontSize="11" fill="#ff647c" textAnchor="middle" fontFamily="monospace" fontWeight="700">
+              <text x={f.x} y={f.y + 22} fontSize="11" fill="#aab3ff" textAnchor="middle" fontFamily="monospace" fontWeight="700">
                 {f.label}
               </text>
             </g>
@@ -328,7 +328,7 @@ export default function OpticsBench() {
                 <circle cx="861" cy={landing.y} r="7" fill="url(#laser-dot)">
                   <animate attributeName="r" values="5;9;5" dur="1.6s" repeatCount="indefinite" />
                 </circle>
-                <text x="876" y={landing.y + 4} fontSize="10" fill="#ff647c" fontFamily="monospace" fontWeight="700">
+                <text x="876" y={landing.y + 4} fontSize="10" fill="#aab3ff" fontFamily="monospace" fontWeight="700">
                   {Math.round(landing.y)}
                 </text>
               </>
@@ -350,7 +350,7 @@ export default function OpticsBench() {
                   onPointerCancel={endDrag}
                   onDoubleClick={() => setSlots((ss) => ss.map((x, j) => (j === i ? { ...x, type: null } : x)))}
                 >
-                  {dragIdx === i && <circle cx={s.x} cy={s.y} r="56" fill="rgba(255,59,92,0.07)" />}
+                  {dragIdx === i && <circle cx={s.x} cy={s.y} r="56" fill="rgba(139,147,255,0.07)" />}
                   <OpticShape type={s.type} x={s.x} y={s.y} />
                   <circle cx={s.x} cy={s.y + 56} r="6" fill="#111a2c" stroke="rgba(148,163,184,0.45)" />
                   <text x={s.x} y={s.y + 74} fontSize="9" fill="rgba(203,213,225,0.8)" textAnchor="middle" fontFamily="monospace">
@@ -366,7 +366,7 @@ export default function OpticsBench() {
                     height="92"
                     rx="10"
                     fill="none"
-                    stroke={pending ? "rgba(255,59,92,0.6)" : "rgba(148,163,184,0.22)"}
+                    stroke={pending ? "rgba(139,147,255,0.6)" : "rgba(148,163,184,0.22)"}
                     strokeWidth="1.5"
                     strokeDasharray="5 5"
                   />
@@ -402,7 +402,7 @@ export default function OpticsBench() {
         <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
           <div className="flex items-center justify-between">
             <span className="lab-label">Beam angle (from optical axis)</span>
-            <span className="lab-value text-xs text-[#ff647c]">{angle}°</span>
+            <span className="lab-value text-xs text-[#aab3ff]">{angle}°</span>
           </div>
           <input type="range" className="lab-range mt-2" min={-35} max={35} step={1} value={angle} onChange={(e) => setAngle(Number(e.target.value))} />
         </div>

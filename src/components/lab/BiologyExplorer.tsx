@@ -46,7 +46,7 @@ function ExplorerTab() {
               return (
                 <button key={t.id} type="button" onClick={() => setCellType(t.id)} className="lab-tab !px-3 !py-1.5 text-xs">
                   {active && <motion.span layoutId="cell-type-pill" className="lab-pill" transition={SPRING} />}
-                  <Icon className={`relative z-10 h-3.5 w-3.5 ${active ? "text-[#ff647c]" : "text-slate-500"}`} />
+                  <Icon className={`relative z-10 h-3.5 w-3.5 ${active ? "text-[#aab3ff]" : "text-slate-500"}`} />
                   <span className="relative z-10">{t.label}</span>
                 </button>
               );
@@ -105,7 +105,7 @@ export default function BiologyExplorer() {
           return (
             <button key={t.key} type="button" onClick={() => setTab(t.key)} className="lab-tab">
               {active && <motion.span layoutId="bio-sub-pill" className="lab-pill" transition={SPRING} />}
-              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#ff647c]" : "text-slate-500"}`} />
+              <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#aab3ff]" : "text-slate-500"}`} />
               <span className="relative z-10">{t.label}</span>
             </button>
           );
