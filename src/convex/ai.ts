@@ -1222,6 +1222,29 @@ const MATH_SYSTEM = [
   "headline is one short line naming the result. given lists the quantities and constraints read off the problem. formulas lists the governing relations symbolically. steps is the ordered working, one idea per entry, each opening with the rule it applies in square brackets. verification is the check. answer is the final result with its unit, or the honest statement that the input could not be read.",
 ].join(" ");
 
+/**
+ * The three ways a student can be walked through the same problem.
+ *
+ * Same algebra, same answer — only the explanation changes, because a student
+ * who has seen a proof three times still gets something from a number line.
+ */
+const SOLVE_METHODS = {
+  standard: [
+    "Explain the working as a standard algebraic proof: state the identity or formula being used, substitute into it, and simplify symbolically until the answer is reached.",
+    "Prefer algebra over diagrams. Every line must be a manipulation of the line above it.",
+  ].join(" "),
+  visual: [
+    "Explain the working visually. Use fraction blocks, a bar model, a number line, a coordinate plane or a labelled diagram in words, and say exactly what each block, tick or segment represents.",
+    "Where a picture would help, describe it concretely enough that the student can draw it: how many equal parts, which part is shaded, where the marker sits.",
+    "Keep every number exact. Never replace a fraction with a rounded decimal.",
+  ].join(" "),
+  analogy: [
+    "Explain the working as a real-world analogy first, then tighten it into the formal steps.",
+    "Open with a situation a student has actually stood in — sharing, queues, budgets, distances, containers — and map each part of the problem onto it before doing any algebra.",
+    "After the analogy has done its work, show the formal calculation in full so the method transfers to the exam.",
+  ].join(" "),
+} as const;
+
 const mathSolutionSchema = z.object({
   headline: z.string().min(1),
   given: z.array(z.string().min(1)).min(1),
