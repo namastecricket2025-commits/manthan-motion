@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { inflateRawSync } from "node:zlib";
 import { extractText, getDocumentProxy } from "unpdf";
 import { z } from "zod";
+import { solveExactly } from "./exactMath";
 
 /**
  * The generation pipeline.
@@ -1200,8 +1201,8 @@ export const aviaReply = action({
  * The Math Lab tutor.
  *
  * It solves what the student actually pasted — a typed equation, a photograph
- * of a question sheet, or an uploaded problem file — and returns the four
- * structured blocks the lab's accordion renders. Follow-up turns ("is this
+ * of a question sheet, or an uploaded problem file — and returns a structured
+ * notebook the lab renders as one continuous stream. Follow-up turns ("is this
  * true?", "why step 2?") arrive as the same action with the conversation so
  * far, so the engine answers about its own working instead of starting over.
  *
@@ -1210,8 +1211,8 @@ export const aviaReply = action({
  * daily generation allowance.
  */
 const MATH_SYSTEM = [
-  "You are the equation engine inside Manthan's Math Lab, a study app for school students in Classes 8 to 11 (CBSE and ICSE).",
-  "Solve the mathematics problem you are given the way a careful teacher would: state what is given, name the governing formulas, then work the solution step by step. Use the notation and methods taught in Indian school syllabi.",
+  "You are the equation engine inside Manthan's Math Lab, a connected school mathematics workspace.",
+  "Solve the mathematics problem you are given the way a careful teacher would: state what is given, name the governing formulas, then work the solution step by step. Adapt the notation to the selected curriculum track (CBSE, NCERT, IB or IGCSE).",
   "Every step entry is ONE idea: the move being made and the line of working that carries it out, e.g. 'Subtract 5 from both sides to isolate the x term: 2x + 5 - 5 = 17 - 5, so 2x = 12.' Show the arithmetic inside the step, never bury it in prose.",
   "Begin EVERY entry in steps with the property, theorem or rule that step applies, in square brackets, then a dash. Examples: [Transpose Rule] - move the constant across the equals sign, changing its sign: 5x = 25. [Quadratic Formula] - x = (-b ± √(b² - 4ac)) / 2a. [Power Rule] - d/dx (xⁿ) = n xⁿ⁻¹. The label is short, two to four words, and it is the actual rule name a teacher would write in the margin. Never leave an entry unlabelled.",
   "The verification block must genuinely check the result: substitute the answer back into the original relation, restate sum/product or dimensional checks, and say plainly whether both sides match.",
@@ -1268,10 +1269,14 @@ export const mathSolve = action({
     storageId: v.optional(v.id("_storage")),
     name: v.optional(v.string()),
     mime: v.optional(v.string()),
-    /** Syllabus context for the currently selected class and chapter. */
+    /** Syllabus context for the currently selected curriculum track and skill. */
     gradeLabel: v.optional(v.string()),
     chapterName: v.optional(v.string()),
     chapterFormulas: v.optional(v.array(v.string())),
+    /** Which voice explains the working. The algebra does not change. */
+    method: v.optional(
+      v.union(v.literal("standard"), v.literal("visual"), v.literal("analogy")),
+    ),
     /** Follow-up conversation, oldest first. */
     history: v.optional(
       v.array(
@@ -1294,6 +1299,7 @@ export const mathSolve = action({
       gradeLabel,
       chapterName,
       chapterFormulas,
+      method,
       history,
     },
   ): Promise<{
@@ -1304,6 +1310,10 @@ export const mathSolve = action({
     verification: string[];
     answer: string;
     model: string;
+    /** The result recomputed in exact rationals, when the checker could. */
+    exactAnswer?: string;
+    /** True when `exactAnswer` supersedes the model's own arithmetic. */
+    exactVerified?: boolean;
   }> => {
     const trimmedQuestion = question?.trim() ?? "";
     if (!trimmedQuestion && !imageBase64 && !storageId) {
@@ -1355,6 +1365,7 @@ export const mathSolve = action({
       transcript
         ? `This is a follow-up turn. CONVERSATION SO FAR:\n${transcript}`
         : "",
+      SOLVE_METHODS[method ?? "standard"],
       ...languageDirective(language),
       "Reply with the JSON object only.",
       languageLock(language),
@@ -1373,14 +1384,36 @@ export const mathSolve = action({
     const parsed = mathSolutionSchema.parse(parseJsonLoose(text));
     const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
 
+    /*
+     * The model writes the explanation; the arithmetic is checked here.
+     *
+     * A language model is very good at prose and occasionally wrong at
+     * arithmetic, and a maths app that prints 0.666 for 2/3 has failed at the
+     * one thing it exists to do. So wherever the exact engine can parse the
+     * question, its answer, its derivation and its substitution check are the
+     * ones the student sees. The model keeps the explanation.
+     */
+    const exact = trimmedQuestion ? solveExactly(trimmedQuestion) : null;
+    const exactWorked = exact !== null && exact.kind !== "unsupported";
+    const steps = exactWorked
+      ? [
+          ...parsed.steps.map(clean),
+          ...exact.steps.map((entry) => `[${entry.rule}] ${entry.latex}`),
+        ]
+      : parsed.steps.map(clean);
+
     return {
       headline: clean(parsed.headline),
       given: parsed.given.map(clean),
       formulas: parsed.formulas.map(clean),
-      steps: parsed.steps.map(clean),
-      verification: parsed.verification.map(clean),
-      answer: clean(parsed.answer),
+      steps,
+      verification: exactWorked
+        ? [exact.verification]
+        : parsed.verification.map(clean),
+      answer: exactWorked ? exact.answerLatex : clean(parsed.answer),
       model,
+      exactAnswer: exactWorked ? exact.answerLatex : undefined,
+      exactVerified: exactWorked,
     };
   },
 });
