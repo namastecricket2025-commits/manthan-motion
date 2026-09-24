@@ -14,7 +14,7 @@ import { isMathLine, toLatex, type WorkedStep } from "@/components/mathlab/mathf
  */
 
 export type { WorkedStep, RuleTone } from "@/components/mathlab/mathformat";
-export { toLatex, toWorkedStep } from "@/components/mathlab/mathformat";
+export { toLatex, toWorkedStep, toWorkedSteps } from "@/components/mathlab/mathformat";
 
 /** Render LaTeX source, falling back to the original characters on any error. */
 export function MathTex({

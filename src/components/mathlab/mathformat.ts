@@ -77,6 +77,31 @@ const SYMBOLS: [RegExp, string][] = [
 ];
 
 const FUNCTIONS = /\b(sin|cos|tan|sec|csc|cot|log|ln|exp|lim|max|min|mod)\b/g;
+const SPOKEN_MATH = /\b(plusorminus(?:squarerootof)?|squarerootof|dividedby|multipliedby|rootof|powerof|squared|cubed)\b/i;
+
+/** Voice-to-text engines occasionally return names instead of symbols. */
+function normalizeSpokenMath(input: string): string {
+  return input
+    // Longest phrases first: the radical phrase contains the plus/minus one.
+    .replace(/\bplusorminussquarerootof\b/gi, " ±√ ")
+    .replace(/\bminusorminussquarerootof\b/gi, " ±√ ")
+    .replace(/\bplusorminus\b/gi, " ± ")
+    .replace(/\bminusorminus\b/gi, " ± ")
+    .replace(/\bsquarerootof\b/gi, " √ ")
+    .replace(/\brootof\b/gi, " √ ")
+    .replace(/\bpowerof\b/gi, " ^ ")
+    .replace(/\bsquared\b/gi, "²")
+    .replace(/\bcubed\b/gi, "³")
+    .replace(/\bdividedby\b/gi, " / ")
+    .replace(/\bmultipliedby\b/gi, " \\cdot ")
+    .replace(/\bplus\b/gi, " + ")
+    .replace(/\bminus\b/gi, " - ")
+    .replace(/\bover\b/gi, " / ")
+    .replace(/\bequals\b/gi, " = ")
+    .replace(/\bnot equal to\b/gi, " ≠ ")
+    .replace(/\bgreater than or equal to\b/gi, " ≥ ")
+    .replace(/\bless than or equal to\b/gi, " ≤ ");
+}
 
 /* ------------------------------------------------------------------ */
 /* conversion                                                          */
@@ -235,6 +260,7 @@ function expandRadicals(input: string): string {
       continue;
     }
     i += 1;
+    while (input[i] === " ") i += 1;
     let operand = "";
     if (input[i] === "(") {
       let depth = 0;
@@ -254,7 +280,7 @@ function expandRadicals(input: string): string {
         i += 1;
       }
     }
-    out += `\\sqrt{${operand}}`;
+    out += operand ? `\\sqrt{${operand}}` : "\\sqrt{}";
   }
   return out;
 }
@@ -267,7 +293,7 @@ export function toLatex(input: string): string {
   const text = input.trim();
   if (!text) return "";
 
-  let out = text;
+  let out = normalizeSpokenMath(text);
   for (const [pattern, replacement] of SYMBOLS) out = out.replace(pattern, replacement);
   out = out.replace(FUNCTIONS, "\\$1 ");
   out = groupScripts(out);
@@ -387,6 +413,14 @@ export interface WorkedStep {
 const RULE_PREFIX = /^\s*\[([^\]]{2,56})\]\s*(?:[—–:.-]\s*)?/;
 const CLAUSE_SPLIT = /(?<=[.;:])\s+/;
 
+/** Split comma-joined outcomes, e.g. `x_1 = ..., x_2 = ...`, into lines. */
+function splitOutcomeLines(body: string): string[] {
+  const candidates = body.split(/\s*[,;]\s*/).map((part) => part.trim()).filter(Boolean);
+  if (candidates.length < 2) return [body];
+  const allMath = candidates.every((part) => /[=±√^]/.test(part) && proseWordCount(part.replace(/\\[a-zA-Z]+/g, " ")) === 0);
+  return allMath ? candidates : [body];
+}
+
 /** Words that belong to an expression rather than to a sentence. */
 const MATH_WORDS = new Set([
   "sin",
@@ -472,6 +506,16 @@ function isMathToken(token: string): boolean {
  * and the instant local solver do not, so the rule is inferred from the wording
  * when the prefix is absent.
  */
+export function toWorkedSteps(raw: string, fallbackRule: string): WorkedStep[] {
+  const text = raw.trim();
+  const prefixed = RULE_PREFIX.exec(text);
+  const body = (prefixed ? text.slice(prefixed[0].length) : text).trim();
+  const outcomes = splitOutcomeLines(body);
+  if (outcomes.length === 1) return [toWorkedStep(text, fallbackRule)];
+  const rule = prefixed?.[1]?.trim() ?? inferRule(body, fallbackRule);
+  return outcomes.map((outcome) => toWorkedStep(`[${rule}] ${outcome}`, fallbackRule));
+}
+
 export function toWorkedStep(raw: string, fallbackRule: string): WorkedStep {
   const text = raw.trim();
   const prefixed = RULE_PREFIX.exec(text);
@@ -482,14 +526,14 @@ export function toWorkedStep(raw: string, fallbackRule: string): WorkedStep {
   const clauses = body.split(CLAUSE_SPLIT).filter(Boolean);
   let mathClause = "";
   for (const clause of clauses) {
-    if (/[=±√^]/.test(clause) || looksMathematical(clause)) {
+    if (/[=±√^]/.test(clause) || SPOKEN_MATH.test(clause) || looksMathematical(clause)) {
       mathClause = clause;
       break;
     }
   }
   if (!mathClause) mathClause = clauses[0] ?? "";
 
-  const isMath = /[=±√^]/.test(mathClause) || looksMathematical(mathClause);
+  const isMath = /[=±√^]/.test(mathClause) || SPOKEN_MATH.test(mathClause) || looksMathematical(mathClause);
   let math = "";
   let note = body;
 
@@ -516,6 +560,9 @@ export function toWorkedStep(raw: string, fallbackRule: string): WorkedStep {
  * and is left as text rather than typeset into nonsense.
  */
 export function isMathLine(text: string): boolean {
+  if (SPOKEN_MATH.test(text)) {
+    return proseWordCount(text.replace(SPOKEN_MATH, " ")) === 0;
+  }
   if (!/[=±√^]/.test(text) && !/\\[a-zA-Z]/.test(text)) return false;
   return proseWordCount(text) === 0;
 }
