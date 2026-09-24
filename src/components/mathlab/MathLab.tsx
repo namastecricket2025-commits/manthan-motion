@@ -13,12 +13,15 @@ import {
   documentSolution,
   GRADES,
   getGrade,
+  modelById,
   SOLUTION_BLOCKS,
   solveEquation,
+  type CheatEntry,
   type GradeSpec,
   type PlotModel,
   type Solution,
 } from "@/components/mathlab/mathlab";
+import { MathLine, MathTex, toWorkedStep, type WorkedStep } from "@/components/mathlab/latex";
 import { GraphCanvas } from "@/components/mathlab/GraphCanvas";
 import {
   ArrowRight,
@@ -64,6 +67,48 @@ function defaultsFor(model: PlotModel): Record<string, number> {
   return values;
 }
 
+/**
+ * One step of the working, as a card: the equation typeset on the left, the
+ * rule it applied badged on the right. A plain sentence becomes readable the
+ * moment the two are separated.
+ */
+function StepCard({ step, index }: { step: WorkedStep; index: number }) {
+  return (
+    <motion.li
+      className="mathlab-step"
+      data-tone={step.tone}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.24), ease: [0.25, 1, 0.5, 1] }}
+    >
+      <span className="mathlab-step__num" aria-hidden>
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <div className="mathlab-step__body">
+        {step.math ? <MathTex source={step.math} fallback={step.math} display /> : null}
+        {step.note ? <p className="mathlab-step__note">{step.note}</p> : null}
+      </div>
+      <span className="mathlab-rule" data-tone={step.tone}>
+        {step.rule}
+      </span>
+    </motion.li>
+  );
+}
+
+/** A cheat-sheet line: title, typeset formula, and an optional definition. */
+function CheatRow({ entry }: { entry: CheatEntry }) {
+  return (
+    <li className="mathlab-cheat" data-kind={entry.kind}>
+      <span className="mathlab-cheat__kind">{entry.kind}</span>
+      <div className="min-w-0">
+        <p className="mathlab-cheat__title">{entry.title}</p>
+        <MathTex source={entry.latex} fallback={entry.latex} display />
+        {entry.note ? <p className="mathlab-cheat__note">{entry.note}</p> : null}
+      </div>
+    </li>
+  );
+}
+
 export function MathLab() {
   const navigate = useNavigate();
   const { can, requireAccess } = usePlan();
@@ -74,11 +119,17 @@ export function MathLab() {
   const [chapterIndex, setChapterIndex] = useState(0);
   const chapter = grade.chapters[chapterIndex] ?? grade.chapters[0];
 
-  const [modelId, setModelId] = useState(grade.models[0].id);
-  const model = grade.models.find((entry) => entry.id === modelId) ?? grade.models[0];
-  const [params, setParams] = useState<Record<string, number>>(() =>
-    defaultsFor(grade.models[0]),
+  const [modelId, setModelId] = useState<string | null>(null);
+  /** The plot this chapter opens on; the model picker can still override it. */
+  const chapterModel = useMemo(
+    () => modelById(chapter.plot, grade.models[0]),
+    [chapter, grade],
   );
+  const model = useMemo(
+    () => grade.models.find((entry) => entry.id === modelId) ?? chapterModel,
+    [chapterModel, grade.models, modelId],
+  );
+  const [params, setParams] = useState<Record<string, number>>(() => defaultsFor(chapterModel));
 
   const [formula, setFormula] = useState("");
   const [solution, setSolution] = useState<Solution | null>(null);
@@ -111,13 +162,41 @@ export function MathLab() {
       if (next.advanced && !requireAccess("mathLabFull")) return;
       setGradeId(next.id);
       setChapterIndex(0);
-      const first = next.models[0];
+      // A class opens on the plot its first chapter asks for.
+      const firstChapter = next.chapters[0];
+      const first = firstChapter ? modelById(firstChapter.plot, next.models[0]) : next.models[0];
       setModelId(first.id);
       setParams(defaultsFor(first));
       setSolution(null);
+      setTurns([]);
+      setFollowUp("");
+      setEngineError(null);
       setFormula("");
     },
     [requireAccess],
+  );
+
+  /**
+   * Choosing a chapter re-tunes the whole lab to it: the canvas pre-loads the
+   * plot that chapter is about, the engine's hint becomes one of its classic
+   * questions, and any working from the previous chapter is cleared so nothing
+   * on screen is answering a question the student is no longer looking at.
+   */
+  const selectChapter = useCallback(
+    (index: number) => {
+      const next = grade.chapters[index];
+      if (!next) return;
+      setChapterIndex(index);
+      const nextModel = modelById(next.plot, grade.models[0]);
+      setModelId(nextModel.id);
+      setParams(defaultsFor(nextModel));
+      setSolution(null);
+      setTurns([]);
+      setFollowUp("");
+      setEngineError(null);
+      setFormula("");
+    },
+    [grade],
   );
 
   const selectModel = useCallback((next: PlotModel) => {
@@ -247,6 +326,30 @@ export function MathLab() {
       }
     : null;
 
+  /**
+   * The cheat-sheet is the lab's floor, not a fallback: with nothing solved
+   * yet, the two formula panels show the active chapter's own definitions,
+   * theorems and formulae. A solved problem replaces them with its givens.
+   */
+  const cheatFormulas = useMemo(
+    () => chapter.cheat.filter((entry) => entry.kind !== "definition"),
+    [chapter],
+  );
+  const cheatDefinitions = useMemo(
+    () => chapter.cheat.filter((entry) => entry.kind === "definition"),
+    [chapter],
+  );
+  const cheatFor: Record<string, CheatEntry[]> = {
+    given: cheatDefinitions,
+    formulas: cheatFormulas,
+  };
+
+  /** The working, decomposed into equation-plus-rule cards. */
+  const workedSteps = useMemo(
+    () => (blocks?.steps ?? []).map((line) => toWorkedStep(line, chapter.rule)),
+    [blocks, chapter.rule],
+  );
+
   return (
     <div className="relative">
       <div
@@ -327,7 +430,8 @@ export function MathLab() {
                       visible: { opacity: 1, x: 0 },
                     }}
                     transition={{ duration: 0.34, ease: [0.25, 1, 0.5, 1] }}
-                    onClick={() => setChapterIndex(index)}
+                    onClick={() => selectChapter(index)}
+                    aria-current={index === chapterIndex}
                     className={
                       "mathlab-chapter" + (index === chapterIndex ? " is-active" : "")
                     }
@@ -336,6 +440,11 @@ export function MathLab() {
                     <span className="shrink-0 text-[11px] opacity-80">
                       {entry.focus.split(" ").slice(0, 5).join(" ")}…
                     </span>
+                    {index === chapterIndex ? (
+                      <span className="mathlab-chapter__go" aria-hidden>
+                        <Check className="h-3 w-3" />
+                      </span>
+                    ) : null}
                   </motion.button>
                 ))}
               </motion.div>
@@ -348,10 +457,15 @@ export function MathLab() {
           {/* ---------------- Left: graphing canvas ---------------- */}
           <div className="premium-glass flex flex-col gap-4 p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-base font-bold tracking-tight">
-                Visual graphing canvas
-              </h2>
-              <span className="text-[11px] font-medium text-text-dim">
+              <div className="min-w-0">
+                <h2 className="font-display text-base font-bold tracking-tight">
+                  Visual graphing canvas
+                </h2>
+                <p className="mt-0.5 truncate text-[11px] text-text-dim">
+                  {chapter.name} — {model.label}
+                </p>
+              </div>
+              <span className="shrink-0 text-[11px] font-medium text-text-dim">
                 {model.formula}
               </span>
             </div>
@@ -440,7 +554,7 @@ export function MathLab() {
               <input
                 value={formula}
                 onChange={(event) => setFormula(event.target.value)}
-                placeholder="Paste or type a problem — e.g. 2x^2 - 5x + 3 = 0"
+                placeholder={`Paste or type a problem — ${chapter.example}`}
                 /* 16px on phones so iOS Safari does not zoom the page when
                    the field takes focus; the desktop step stays at 14px. */
                 className="w-full min-w-0 rounded-full border border-[var(--glass-line)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:flex-1 sm:py-2.5 sm:text-sm"
@@ -510,25 +624,58 @@ export function MathLab() {
                 <AccordionItem key={block.key} value={block.key}>
                   <AccordionTrigger className="py-3 text-[13px] font-semibold tracking-tight text-foreground hover:no-underline">
                     {block.title}
+                    {block.key !== "steps" ? (
+                      <span className="ml-2 text-[10px] font-normal uppercase tracking-[0.14em] text-text-dim">
+                        {blocks ? "Your working" : "Chapter cheat-sheet"}
+                      </span>
+                    ) : null}
                   </AccordionTrigger>
                   <AccordionContent className="pb-3">
-                    {blocks ? (
+                    {/* The working, as equation + rule cards. */}
+                    {block.key === "steps" ? (
+                      workedSteps.length > 0 ? (
+                        <ol className="mathlab-steps">
+                          {workedSteps.map((step, index) => (
+                            <StepCard key={`step-${index}`} step={step} index={index} />
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="text-[12.5px] leading-relaxed text-text-dim">
+                          Solve something and each step appears here as a card: the
+                          equation on one side, the rule it used on the other.
+                        </p>
+                      )
+                    ) : blocks ? (
                       <ul className="space-y-2">
                         {blocks[block.key].map((line, lineIndex) => (
                           <li
                             key={`${block.key}-${lineIndex}`}
-                            className="flex gap-2.5 text-[12.5px] leading-relaxed text-text-dim"
+                            className="mathlab-line"
                           >
-                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signal)]" />
-                            <span>{line}</span>
+                            <span className="mathlab-line__dot" aria-hidden />
+                            <MathLine text={line} />
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-[12.5px] leading-relaxed text-text-dim">
-                        Enter an equation or drop a question sheet and this block
-                        fills in.
-                      </p>
+                      /* Nothing solved yet: the chapter's own cheat-sheet. */
+                      (cheatFor[block.key]?.length ?? 0) > 0 ? (
+                        <>
+                          <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-text-dim">
+                            {chapter.name} · {grade.label}
+                          </p>
+                          <ul className="mathlab-cheats">
+                            {cheatFor[block.key].map((entry) => (
+                              <CheatRow key={`${block.key}-${entry.title}`} entry={entry} />
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <p className="text-[12.5px] leading-relaxed text-text-dim">
+                          Enter an equation or drop a question sheet and this block
+                          fills in.
+                        </p>
+                      )
                     )}
                   </AccordionContent>
                 </AccordionItem>

@@ -44,6 +44,25 @@ export interface Chapter {
   focus: string;
   formulas: string[];
   method: string[];
+  /** A classic, board-level example the engine input offers as a hint. */
+  example: string;
+  /** The plot the canvas pre-loads for this chapter. */
+  plot: string;
+  /** The rule a step wears when the engine does not name one itself. */
+  rule: string;
+  /** The cheat-sheet: the exact formulas, theorems and definitions to revise. */
+  cheat: CheatEntry[];
+}
+
+export type CheatKind = "formula" | "theorem" | "definition";
+
+export interface CheatEntry {
+  kind: CheatKind;
+  title: string;
+  /** LaTeX source, authored so the cheat-sheet is typeset rather than typed. */
+  latex: string;
+  /** A definition is a sentence, not an expression. */
+  note?: string;
 }
 
 export interface GradeSpec {
@@ -161,6 +180,123 @@ const tangentModel: PlotModel = {
   ],
 };
 
+const circleModel: PlotModel = {
+  id: "circle",
+  label: "Circle",
+  formula: "(x − h)² + (y − k)² = r²",
+  note: "The centre is (h, k) and r is the radius; every point on the curve sits exactly r from it.",
+  params: [
+    { key: "r", label: "r (radius)", min: 1, max: 9, step: 0.1, value: 5 },
+    { key: "h", label: "h (centre x)", min: -5, max: 5, step: 0.1, value: 0 },
+    { key: "k", label: "k (centre y)", min: -5, max: 5, step: 0.1, value: 0 },
+  ],
+  branches: [
+    {
+      label: "upper semicircle",
+      evaluate: (x, p) => {
+        const inner = p.r * p.r - (x - p.h) * (x - p.h);
+        return inner < 0 ? null : p.k + Math.sqrt(inner);
+      },
+    },
+    {
+      label: "lower semicircle",
+      dashed: true,
+      evaluate: (x, p) => {
+        const inner = p.r * p.r - (x - p.h) * (x - p.h);
+        return inner < 0 ? null : p.k - Math.sqrt(inner);
+      },
+    },
+  ],
+};
+
+const hyperbolaModel: PlotModel = {
+  id: "hyperbola",
+  label: "Hyperbola",
+  formula: "x²/a² − y²/b² = 1",
+  note: "The vertices sit at (±a, 0) and the asymptotes are the lines y = ±(b/a)x.",
+  params: [
+    { key: "a", label: "a (transverse)", min: 0.5, max: 8, step: 0.1, value: 3 },
+    { key: "b", label: "b (conjugate)", min: 0.5, max: 8, step: 0.1, value: 2 },
+  ],
+  branches: [
+    {
+      label: "upper branch",
+      evaluate: (x, p) => {
+        const inner = (x * x) / (p.a * p.a) - 1;
+        return inner < 0 ? null : p.b * Math.sqrt(inner);
+      },
+    },
+    {
+      label: "lower branch",
+      dashed: true,
+      evaluate: (x, p) => {
+        const inner = (x * x) / (p.a * p.a) - 1;
+        return inner < 0 ? null : -p.b * Math.sqrt(inner);
+      },
+    },
+  ],
+};
+
+const sqrtModel: PlotModel = {
+  id: "sqrt",
+  label: "Square-root curve",
+  formula: "y = k √x",
+  note: "The curve starts at the origin, rises fast then flattens: the exponent is a half, not a whole number.",
+  params: [{ key: "k", label: "k (stretch)", min: 0.5, max: 3, step: 0.1, value: 1.5 }],
+  branches: [{ label: "y = k √x", evaluate: (x, p) => (x < 0 ? null : p.k * Math.sqrt(x)) }],
+};
+
+const reciprocalModel: PlotModel = {
+  id: "reciprocal",
+  label: "Reciprocal (÷ in fractions)",
+  formula: "y = k / x",
+  note: "Dividing by a fraction means multiplying by its reciprocal — the same reason the curve flips through the origin.",
+  params: [
+    { key: "k", label: "k (numerator)", min: -4, max: 4, step: 0.1, value: 2 },
+    { key: "n", label: "n (denominator)", min: 1, max: 8, step: 1, value: 2 },
+  ],
+  branches: [{ label: "y = k / n", evaluate: (_x, p) => p.k / p.n }],
+};
+
+const sequenceModel: PlotModel = {
+  id: "sequence",
+  label: "AP terms and partial sums",
+  formula: "aₙ = a + (n − 1) d",
+  note: "The n-th term is a straight line in n; the partial sums curve because Sₙ grows with n².",
+  params: [
+    { key: "a", label: "a (first term)", min: -6, max: 10, step: 0.5, value: 2 },
+    { key: "d", label: "d (common difference)", min: -4, max: 6, step: 0.5, value: 2.5 },
+  ],
+  branches: [
+    { label: "aₙ", evaluate: (x, p) => p.a + (x - 1) * p.d },
+    {
+      label: "Sₙ",
+      dashed: true,
+      evaluate: (x, p) => (x <= 0 ? null : (x / 2) * (2 * p.a + (x - 1) * p.d)),
+    },
+  ],
+};
+
+/** Every plot the lab can draw; a chapter names its default by id. */
+export const PLOT_MODELS: PlotModel[] = [
+  linearModel,
+  variationModel,
+  quadraticModel,
+  trigModel,
+  ellipseModel,
+  tangentModel,
+  circleModel,
+  hyperbolaModel,
+  sqrtModel,
+  reciprocalModel,
+  sequenceModel,
+];
+
+/** Look up a plot by id, with a safe fallback for a stale curriculum entry. */
+export function modelById(id: string, fallback: PlotModel): PlotModel {
+  return PLOT_MODELS.find((entry) => entry.id === id) ?? fallback;
+}
+
 /* ------------------------------------------------------------------ */
 /* Grade tracks                                                        */
 /* ------------------------------------------------------------------ */
@@ -185,6 +321,16 @@ export const GRADES: GradeSpec[] = [
           "Bring both terms to a common denominator before adding or subtracting.",
           "Multiply by the reciprocal to divide, then reduce with the HCF.",
         ],
+        example: "e.g. 2/3 + 1/6, and 3/4 ÷ 9/10",
+        plot: "reciprocal",
+        rule: "LCM of Denominators",
+        cheat: [
+          { kind: "formula", title: "Addition of fractions", latex: String.raw`\frac{a}{b} + \frac{c}{d} = \frac{ad + bc}{bd}` },
+          { kind: "formula", title: "Division flips the divisor", latex: String.raw`\frac{a}{b} \div \frac{c}{d} = \frac{a}{b} \times \frac{d}{c}` },
+          { kind: "formula", title: "Equivalent fractions", latex: String.raw`\frac{a}{b} = \frac{a \times k}{b \times k},\quad k \neq 0` },
+          { kind: "definition", title: "Rational number", latex: String.raw`q = \frac{p}{r},\ p, r \in \mathbb{Z},\ r \neq 0`, note: "Any number that can be written as a ratio of two integers with a non-zero denominator." },
+          { kind: "theorem", title: "Closure under addition", latex: String.raw`\frac{a}{b} + \frac{c}{b} = \frac{a + c}{b}`, note: "A common denominator lets the numerators simply add." },
+        ],
       },
       {
         name: "Linear Equations in One Variable",
@@ -197,6 +343,16 @@ export const GRADES: GradeSpec[] = [
         method: [
           "Collect every variable term on one side and every constant on the other.",
           "Divide by the coefficient of x, then substitute the root back to confirm.",
+        ],
+        example: "e.g. 5x - 7 = 18",
+        plot: "linear",
+        rule: "Transpose Rule",
+        cheat: [
+          { kind: "formula", title: "Root of a linear equation", latex: String.raw`ax + b = 0 \;\Rightarrow\; x = -\frac{b}{a}` },
+          { kind: "formula", title: "Slope-intercept form", latex: String.raw`y = mx + c` },
+          { kind: "theorem", title: "Transposition", latex: String.raw`a + x = b \;\Rightarrow\; x = b - a`, note: "A term moved across the equals sign changes its sign." },
+          { kind: "definition", title: "Linear equation", latex: String.raw`ax + b = 0`, note: "The highest power of the variable is one, so the graph is a straight line." },
+          { kind: "formula", title: "Verification", latex: String.raw`x = k \;\Rightarrow\; a(k) + b \stackrel{?}{=} 0` },
         ],
       },
       {
@@ -211,6 +367,16 @@ export const GRADES: GradeSpec[] = [
           "Pair the digits from the right and use the long-division method for roots.",
           "Check the identity by expanding both sides term by term.",
         ],
+        example: "e.g. Solve (x + 3)² = 64",
+        plot: "sqrt",
+        rule: "Perfect Square Identity",
+        cheat: [
+          { kind: "formula", title: "Square of a sum", latex: String.raw`(a + b)^2 = a^2 + 2ab + b^2` },
+          { kind: "formula", title: "Square of a difference", latex: String.raw`(a - b)^2 = a^2 - 2ab + b^2` },
+          { kind: "formula", title: "Product of roots", latex: String.raw`\sqrt{ab} = \sqrt{a}\,\sqrt{b}` },
+          { kind: "theorem", title: "Pythagorean triplets", latex: String.raw`(2m,\; m^2 - 1,\; m^2 + 1)`, note: "Generate any primitive triplet from a whole number m greater than 1." },
+          { kind: "definition", title: "Perfect square", latex: String.raw`n = k^2,\ k \in \mathbb{Z}`, note: "A whole number that is the square of another whole number." },
+        ],
       },
       {
         name: "Mensuration",
@@ -224,9 +390,19 @@ export const GRADES: GradeSpec[] = [
           "Write down every given dimension with its unit before choosing a formula.",
           "Keep units consistent, then convert the final answer to the asked unit.",
         ],
+        example: "e.g. Area of a trapezium with a = 6 cm, b = 4 cm, h = 5 cm",
+        plot: "circle",
+        rule: "Area Formula",
+        cheat: [
+          { kind: "formula", title: "Trapezium", latex: String.raw`A = \frac{1}{2}(a + b)h` },
+          { kind: "formula", title: "Cylinder", latex: String.raw`V = \pi r^2 h, \quad \text{TSA} = 2\pi r(r + h)` },
+          { kind: "formula", title: "Cube", latex: String.raw`V = a^3, \quad \text{TSA} = 6a^2` },
+          { kind: "formula", title: "Cone", latex: String.raw`V = \frac{1}{3}\pi r^2 h` },
+          { kind: "definition", title: "Curved surface area of a cylinder", latex: String.raw`\text{CSA} = 2\pi r h`, note: "The curved surface is the tube; a cylinder has two flat circular faces as well." },
+        ],
       },
     ],
-    models: [linearModel, variationModel],
+    models: [reciprocalModel, linearModel, sqrtModel, circleModel],
   },
   {
     id: "9",
@@ -247,6 +423,15 @@ export const GRADES: GradeSpec[] = [
           "Multiply numerator and denominator by the conjugate to clear a root.",
           "Apply the exponent laws before any numerical substitution.",
         ],
+        example: "e.g. Rationalise 1/(√5 − √3)",
+        plot: "sqrt",
+        rule: "Conjugate Multiplication",
+        cheat: [
+          { kind: "formula", title: "Conjugate product", latex: String.raw`(\sqrt{a} + \sqrt{b})(\sqrt{a} - \sqrt{b}) = a - b` },
+          { kind: "formula", title: "Rationalising a denominator", latex: String.raw`\frac{1}{\sqrt{a} + \sqrt{b}} = \frac{\sqrt{a} - \sqrt{b}}{a - b}` },
+          { kind: "formula", title: "Exponent laws", latex: String.raw`a^m \cdot a^n = a^{m+n}, \quad \frac{a^m}{a^n} = a^{m-n}, \quad (a^m)^n = a^{mn}` },
+          { kind: "definition", title: "Rational vs irrational", latex: String.raw`\frac{p}{q} \in \mathbb{Q} \quad \text{but} \quad \sqrt{2} \notin \mathbb{Q}`, note: "A rational number is a ratio of integers; an irrational one cannot be written that way however you try." },
+        ],
       },
       {
         name: "Polynomials",
@@ -259,6 +444,16 @@ export const GRADES: GradeSpec[] = [
         method: [
           "Substitute the zero of the divisor to evaluate the remainder directly.",
           "Factorise, then test each candidate root with the factor theorem.",
+        ],
+        example: "e.g. Find the remainder when x³ - 3x² + 4 is divided by (x - 2)",
+        plot: "quadratic",
+        rule: "Remainder Theorem",
+        cheat: [
+          { kind: "theorem", title: "Remainder theorem", latex: String.raw`p(x) \div (x - a) \text{ leaves remainder } p(a)` },
+          { kind: "theorem", title: "Factor theorem", latex: String.raw`(x - a) \text{ is a factor of } p(x) \iff p(a) = 0` },
+          { kind: "formula", title: "Cube of a sum", latex: String.raw`(a + b)^3 = a^3 + b^3 + 3ab(a + b)` },
+          { kind: "formula", title: "Difference of squares", latex: String.raw`a^2 - b^2 = (a - b)(a + b)` },
+          { kind: "definition", title: "Polynomial", latex: String.raw`p(x) = a_nx^n + \cdots + a_1x + a_0`, note: "Every coefficient is a real number and the exponents are whole numbers." },
         ],
       },
       {
@@ -273,6 +468,15 @@ export const GRADES: GradeSpec[] = [
           "Express y in terms of x, then plot two convenient points.",
           "Verify each solution by substituting the pair back into the equation.",
         ],
+        example: "e.g. For 2x + 3y = 12, find all integer solutions",
+        plot: "linear",
+        rule: "Standard Form",
+        cheat: [
+          { kind: "formula", title: "General form", latex: String.raw`ax + by + c = 0` },
+          { kind: "formula", title: "Slope-intercept form", latex: String.raw`y = mx + c` },
+          { kind: "formula", title: "Intercept form", latex: String.raw`\frac{x}{a} + \frac{y}{b} = 1` },
+          { kind: "definition", title: "Number of solutions", latex: String.raw`\text{one equation} \Rightarrow \text{infinitely many points}`, note: "A single line of solutions; you need two independent equations to pin down one point." },
+        ],
       },
       {
         name: "Coordinate Geometry",
@@ -286,9 +490,18 @@ export const GRADES: GradeSpec[] = [
           "Mark the axes and scale before plotting any point.",
           "Subtract coordinates consistently — the order inside each bracket must match.",
         ],
+        example: "e.g. Find the distance between (2, -1) and (-3, 4)",
+        plot: "circle",
+        rule: "Distance Formula",
+        cheat: [
+          { kind: "formula", title: "Distance between two points", latex: String.raw`d = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}` },
+          { kind: "formula", title: "Midpoint", latex: String.raw`M = \left(\frac{x_1 + x_2}{2},\ \frac{y_1 + y_2}{2}\right)` },
+          { kind: "definition", title: "Quadrants", latex: String.raw`(+,+)\ I \quad (-,+)\ II \quad (-,-)\ III \quad (+,-)\ IV`, note: "The signs of x and y, read anticlockwise from the positive x-axis." },
+          { kind: "theorem", title: "Section formula", latex: String.raw`P = \left(\frac{mx_2 + nx_1}{m+n},\ \frac{my_2 + ny_1}{m+n}\right)`, note: "Divides the segment joining (x₁,y₁) and (x₂,y₂) in the ratio m : n." },
+        ],
       },
     ],
-    models: [linearModel, variationModel],
+    models: [quadraticModel, linearModel, circleModel, sqrtModel],
   },
   {
     id: "10",
@@ -309,6 +522,16 @@ export const GRADES: GradeSpec[] = [
           "Write the equation in standard form a x² + b x + c = 0 and read off a, b, c.",
           "Evaluate the discriminant; its sign tells you whether the roots are real and distinct.",
         ],
+        example: "e.g. 3x² - 5x + 2 = 0",
+        plot: "quadratic",
+        rule: "Quadratic Formula",
+        cheat: [
+          { kind: "formula", title: "Quadratic formula", latex: String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}` },
+          { kind: "definition", title: "Discriminant", latex: String.raw`D = b^2 - 4ac`, note: "Its sign decides the roots: D greater than 0 gives two distinct real roots, D equal to 0 one repeated root, D less than 0 no real roots." },
+          { kind: "theorem", title: "Vieta's formulas", latex: String.raw`\alpha + \beta = -\frac{b}{a}, \qquad \alpha\beta = \frac{c}{a}` },
+          { kind: "formula", title: "Vertex and axis", latex: String.raw`x_v = -\frac{b}{2a}, \qquad y_v = c - \frac{b^2}{4a}` },
+          { kind: "theorem", title: "Zero-product rule", latex: String.raw`PQ = 0 \Rightarrow P = 0 \ \text{or}\ Q = 0`, note: "The factorised route: solve each factor separately." },
+        ],
       },
       {
         name: "Arithmetic Progressions",
@@ -321,6 +544,15 @@ export const GRADES: GradeSpec[] = [
         method: [
           "Find the common difference, then substitute into the nth-term formula.",
           "For a sum question, decide whether aₙ or Sₙ is actually being asked for.",
+        ],
+        example: "e.g. Find a₁₀ when a₁ = 3 and d = 4",
+        plot: "sequence",
+        rule: "nth-Term Formula",
+        cheat: [
+          { kind: "formula", title: "nth term", latex: String.raw`a_n = a + (n - 1)d` },
+          { kind: "formula", title: "Sum of n terms", latex: String.raw`S_n = \frac{n}{2}\left[2a + (n - 1)d\right]` },
+          { kind: "formula", title: "nth term from the sum", latex: String.raw`a_n = S_n - S_{n-1}` },
+          { kind: "definition", title: "Arithmetic progression", latex: String.raw`a_{n+1} - a_n = d`, note: "The difference between every term and the one before it is the same constant d." },
         ],
       },
       {
@@ -335,6 +567,15 @@ export const GRADES: GradeSpec[] = [
           "Convert every ratio into sin and cos before simplifying.",
           "Verify the identity by working on the more complicated side only.",
         ],
+        example: "e.g. If sin θ = 3/5, find cos θ and tan θ",
+        plot: "trig",
+        rule: "Trigonometric Identity",
+        cheat: [
+          { kind: "formula", title: "Pythagorean identity", latex: String.raw`\sin^2\theta + \cos^2\theta = 1` },
+          { kind: "formula", title: "Reciprocal identity", latex: String.raw`1 + \tan^2\theta = \sec^2\theta` },
+          { kind: "formula", title: "Ratio of ratios", latex: String.raw`\tan\theta = \frac{\sin\theta}{\cos\theta}` },
+          { kind: "definition", title: "Standard angles", latex: String.raw`0^\circ,\ 30^\circ,\ 45^\circ,\ 60^\circ,\ 90^\circ`, note: "Half the diagonal is 1 over root 2, and the equilateral triangle fixes the 30 and 60 values." },
+        ],
       },
       {
         name: "Coordinate Geometry",
@@ -348,9 +589,18 @@ export const GRADES: GradeSpec[] = [
           "Label the points (x₁, y₁), (x₂, y₂), (x₃, y₃) before substituting.",
           "Keep the modulus until the final line so a sign slip cannot distort the area.",
         ],
+        example: "e.g. Area of the triangle with (0,0), (4,3) and (1,5)",
+        plot: "circle",
+        rule: "Area Formula",
+        cheat: [
+          { kind: "formula", title: "Distance", latex: String.raw`d = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}` },
+          { kind: "formula", title: "Section formula", latex: String.raw`\left(\frac{mx_2 + nx_1}{m+n},\ \frac{my_2 + ny_1}{m+n}\right)` },
+          { kind: "formula", title: "Area of a triangle", latex: String.raw`\Delta = \frac{1}{2}\left|x_1(y_2 - y_3) + x_2(y_3 - y_1) + x_3(y_1 - y_2)\right|` },
+          { kind: "definition", title: "Collinear points", latex: String.raw`\Delta = 0`, note: "Three points lie on one straight line exactly when the determinant of their coordinates is zero." },
+        ],
       },
     ],
-    models: [quadraticModel, trigModel],
+    models: [quadraticModel, sequenceModel, trigModel, circleModel],
   },
   {
     id: "11",
@@ -371,6 +621,16 @@ export const GRADES: GradeSpec[] = [
           "Reduce the equation to standard form by completing the square.",
           "Read a, b and the centre straight off the standard form before sketching.",
         ],
+        example: "e.g. Find the eccentricity of x²/25 + y²/9 = 1",
+        plot: "ellipse",
+        rule: "Standard Form",
+        cheat: [
+          { kind: "formula", title: "Circle", latex: String.raw`(x - h)^2 + (y - k)^2 = r^2` },
+          { kind: "formula", title: "Ellipse", latex: String.raw`\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1, \qquad c^2 = a^2 - b^2` },
+          { kind: "formula", title: "Hyperbola", latex: String.raw`\frac{x^2}{a^2} - \frac{y^2}{b^2} = 1, \qquad e = \frac{c}{a}` },
+          { kind: "formula", title: "Parabola", latex: String.raw`y^2 = 4ax \ \Rightarrow\ \text{focus } (a, 0)` },
+          { kind: "definition", title: "Eccentricity", latex: String.raw`e = \frac{c}{a}`, note: "The ellipse has e below 1, the parabola exactly 1, the hyperbola above 1; a circle is e equal to 0." },
+        ],
       },
       {
         name: "Straight Lines",
@@ -383,6 +643,16 @@ export const GRADES: GradeSpec[] = [
         method: [
           "Find the slope first; every other form follows from it.",
           "For a distance, substitute the point into the line with the modulus in place.",
+        ],
+        example: "e.g. Distance of (3, -2) from 3x + 4y - 5 = 0",
+        plot: "linear",
+        rule: "Distance Formula",
+        cheat: [
+          { kind: "formula", title: "Slope of a line", latex: String.raw`m = \frac{y_2 - y_1}{x_2 - x_1}` },
+          { kind: "formula", title: "Point-slope form", latex: String.raw`y - y_1 = m(x - x_1)` },
+          { kind: "formula", title: "Two-point form", latex: String.raw`y - y_1 = \frac{y_2 - y_1}{x_2 - x_1}(x - x_1)` },
+          { kind: "formula", title: "Distance from a point", latex: String.raw`d = \frac{\left|a x_1 + b y_1 + c\right|}{\sqrt{a^2 + b^2}}` },
+          { kind: "definition", title: "Collinearity of three points", latex: String.raw`\frac{y_2 - y_1}{x_2 - x_1} = \frac{y_3 - y_1}{x_3 - x_1}`, note: "Equal slopes from a common point is the quickest test that three points lie on one line." },
         ],
       },
       {
@@ -397,6 +667,15 @@ export const GRADES: GradeSpec[] = [
           "Move to radians before any calculus-style manipulation.",
           "Expand compound angles, then collect like trigonometric terms.",
         ],
+        example: "e.g. Simplify sin 75° using compound angles",
+        plot: "trig",
+        rule: "Compound Angle Formula",
+        cheat: [
+          { kind: "formula", title: "Radians and degrees", latex: String.raw`1\text{ radian} = \frac{180^\circ}{\pi}, \qquad \pi \text{ rad} = 180^\circ` },
+          { kind: "formula", title: "Sine of a sum", latex: String.raw`\sin(A + B) = \sin A\cos B + \cos A\sin B` },
+          { kind: "formula", title: "Double-angle forms", latex: String.raw`\cos 2A = 1 - 2\sin^2 A = 2\cos^2 A - 1` },
+          { kind: "definition", title: "Period and fundamental period", latex: String.raw`\sin, \cos: 2\pi \qquad \tan: \pi`, note: "A function is periodic when the graph repeats itself after a fixed interval; the smallest such interval is the fundamental period." },
+        ],
       },
       {
         name: "Limits and Derivatives",
@@ -410,9 +689,19 @@ export const GRADES: GradeSpec[] = [
           "Apply the power rule term by term before substituting a value.",
           "For a tangent, evaluate the derivative at the point to get its slope.",
         ],
+        example: "e.g. Differentiate y = 3x² - 5x + 2",
+        plot: "tangent",
+        rule: "Power Rule",
+        cheat: [
+          { kind: "definition", title: "Derivative", latex: String.raw`f'(x) = \lim_{h \to 0}\frac{f(x + h) - f(x)}{h}` },
+          { kind: "formula", title: "Power rule", latex: String.raw`\frac{d}{dx}\left(x^n\right) = n x^{n-1}` },
+          { kind: "formula", title: "Derivative of sine and cosine", latex: String.raw`\frac{d}{dx}\sin x = \cos x, \qquad \frac{d}{dx}\cos x = -\sin x` },
+          { kind: "formula", title: "Tangent at a point", latex: String.raw`y - f(a) = f'(a)(x - a)` },
+          { kind: "definition", title: "Instantaneous rate of change", latex: String.raw`f'(a) = \lim_{x \to a}\frac{f(x) - f(a)}{x - a}`, note: "The slope of the tangent at a, and the whole meaning of the derivative." },
+        ],
       },
     ],
-    models: [ellipseModel, tangentModel],
+    models: [ellipseModel, hyperbolaModel, circleModel, trigModel, linearModel, tangentModel],
   },
 ];
 

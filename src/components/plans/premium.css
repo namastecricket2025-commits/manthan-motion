@@ -470,6 +470,229 @@ html:not(.dark) .checkout-field {
   background: color-mix(in srgb, var(--signal) 8%, transparent);
 }
 
+/* the small tick on the chapter the whole lab is currently tuned to */
+.mathlab-chapter__go {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 999px;
+  color: var(--signal);
+  background: color-mix(in srgb, var(--signal) 16%, transparent);
+}
+
+/* ============================================================
+   MATH LAB — typeset working, cheat-sheet and step cards
+
+   The equation engine used to answer with one flat list of grey
+   sentences. It now splits each line into the maths it contains and
+   the rule that produced it: the equation is set in real LaTeX on
+   the left of a glass card, and the rule is a coloured badge on the
+   right. Same information, arranged the way a teacher writes it on
+   the board.
+   ============================================================ */
+
+/* KaTeX emits its own font stack; we only set the scale and the colour so
+   the typesetting inherits the app's ink in both themes. */
+.mathlab-tex {
+  font-size: 1.02em;
+  line-height: 1.5;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+.mathlab-tex--display {
+  display: block;
+  margin: 0;
+  text-align: left;
+  font-size: 1.1em;
+}
+.mathlab-tex--plain {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.95em;
+}
+
+/* ---- one step: number, equation, rule badge ---- */
+.mathlab-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+.mathlab-step {
+  --step-tint: var(--signal);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 22%, transparent);
+  background:
+    linear-gradient(
+      130deg,
+      color-mix(in srgb, var(--step-tint) 9%, transparent),
+      color-mix(in srgb, var(--step-tint) 2%, transparent) 62%
+    ),
+    color-mix(in srgb, var(--text-main) 3%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text-main) 8%, transparent),
+    0 10px 26px -18px color-mix(in srgb, var(--step-tint) 70%, transparent);
+  transition:
+    transform 260ms var(--ease-momentum),
+    border-color 260ms var(--ease-momentum);
+}
+.mathlab-step:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--step-tint) 40%, transparent);
+}
+.mathlab-step__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 32%, transparent);
+  background: color-mix(in srgb, var(--step-tint) 12%, transparent);
+  color: color-mix(in srgb, var(--step-tint) 70%, var(--text-main));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mathlab-step__body {
+  min-width: 0;
+}
+.mathlab-step__note {
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+/* ---- the rule badge ---- */
+.mathlab-rule {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 5px;
+  max-width: 170px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 38%, transparent);
+  background: color-mix(in srgb, var(--step-tint) 15%, transparent);
+  color: color-mix(in srgb, var(--step-tint) 62%, var(--text-main));
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  text-align: right;
+}
+
+/* Badge palette — one hue per family of rule, so the same rule always
+   wears the same colour and a glance down the list reads as a method. */
+.mathlab-step[data-tone="factor"],
+.mathlab-rule[data-tone="factor"] {
+  --step-tint: #e0a13a;
+}
+.mathlab-step[data-tone="discriminant"],
+.mathlab-rule[data-tone="discriminant"] {
+  --step-tint: #e2607a;
+}
+.mathlab-step[data-tone="chain"],
+.mathlab-rule[data-tone="chain"] {
+  --step-tint: #9b7bf0;
+}
+.mathlab-step[data-tone="power"],
+.mathlab-rule[data-tone="power"] {
+  --step-tint: #3fbb92;
+}
+.mathlab-step[data-tone="identity"],
+.mathlab-rule[data-tone="identity"] {
+  --step-tint: #4aa8de;
+}
+.mathlab-step[data-tone="standard"],
+.mathlab-rule[data-tone="standard"] {
+  --step-tint: #6f8cf5;
+}
+.mathlab-step[data-tone="verify"],
+.mathlab-rule[data-tone="verify"] {
+  --step-tint: #56b8b0;
+}
+
+/* ---- chapter cheat-sheet ---- */
+.mathlab-cheats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mathlab-cheat {
+  display: flex;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--glass-line));
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+}
+.mathlab-cheat__kind {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--signal) 13%, transparent);
+  color: color-mix(in srgb, var(--signal) 75%, var(--text-main));
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.mathlab-cheat__title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.mathlab-cheat__note {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+/* ---- a plain reading inside the working blocks ---- */
+.mathlab-line {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.mathlab-line__dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 70%, transparent);
+}
+
+@media (max-width: 640px) {
+  .mathlab-step {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 9px;
+  }
+  .mathlab-rule {
+    grid-column: 2;
+    justify-self: start;
+    max-width: none;
+    text-align: left;
+  }
+}
+
 .mathlab-model {
   display: flex;
   align-items: center;
