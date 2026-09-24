@@ -145,43 +145,38 @@ function groupScripts(input: string): string {
   return out;
 }
 
-/** The exclusive end of the operand that finishes at `from`. */
-function operandEnd(text: string, from: number): number {
-  let i = from;
-  if (i > 0 && text[i - 1] === ")") {
+/** The index where the operand whose last character sits at `last` begins. */
+function operandStartBack(text: string, last: number): number {
+  if (text[last] === ")") {
     let depth = 0;
-    while (i > 0) {
-      i -= 1;
+    for (let i = last; i >= 0; i -= 1) {
       if (text[i] === ")") depth += 1;
       else if (text[i] === "(") {
         depth -= 1;
-        if (depth === 0) break;
+        if (depth === 0) return i;
       }
     }
-    return i;
+    return last;
   }
+  let i = last + 1;
   while (i > 0 && /[A-Za-z0-9.^{}]/.test(text[i - 1])) i -= 1;
   return i;
 }
 
-/** The index just past the operand that starts at `from`. */
-function operandStart(text: string, from: number): number {
-  let i = from;
-  if (text[i] === "(") {
+/** The index just past the operand whose first character sits at `first`. */
+function operandEndForward(text: string, first: number): number {
+  if (text[first] === "(") {
     let depth = 0;
-    while (i < text.length) {
+    for (let i = first; i < text.length; i += 1) {
       if (text[i] === "(") depth += 1;
       else if (text[i] === ")") {
         depth -= 1;
-        if (depth === 0) {
-          i += 1;
-          break;
-        }
+        if (depth === 0) return i + 1;
       }
-      i += 1;
     }
-    return i;
+    return text.length;
   }
+  let i = first;
   while (i < text.length && /[A-Za-z0-9.^{}]/.test(text[i])) i += 1;
   return i;
 }
@@ -199,12 +194,13 @@ function toFractions(input: string): string {
   for (let pass = 0; pass < 4; pass += 1) {
     const slash = out.indexOf("/");
     if (slash < 0) break;
-    let left = slash;
-    while (left > 0 && out[left - 1] === " ") left -= 1;
+    let left = slash - 1;
+    while (left >= 0 && out[left] === " ") left -= 1;
     let right = slash + 1;
     while (right < out.length && out[right] === " ") right += 1;
-    const start = operandEnd(out, left + 1);
-    const end = operandStart(out, right);
+    if (left < 0 || right >= out.length) break;
+    const start = operandStartBack(out, left);
+    const end = operandEndForward(out, right);
     const numerator = out.slice(start, slash).trim();
     const denominator = out.slice(slash + 1, end).trim();
     if (
@@ -437,6 +433,9 @@ const STOPWORDS = new Set([
  */
 export function proseWordCount(text: string): number {
   return text
+    // Command names are ours, not the student's: `\cdot` must not read as the
+    // English word "cdot".
+    .replace(/\\[a-zA-Z]+/g, " ")
     .split(/[^A-Za-z]+/)
     .filter((word) => {
       if (word.length <= 1) return false;

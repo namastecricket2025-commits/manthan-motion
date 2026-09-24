@@ -402,86 +402,281 @@ html:not(.dark) .checkout-field {
   touch-action: none;
 }
 
-.mathlab-param {
-  border-radius: 16px;
-  border: 1px solid var(--glass-line);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 12px 14px;
-}
+/* ============================================================
+   MATH LAB — the one-click workspace
 
-.mathlab-range {
-  width: 100%;
-  appearance: none;
-  height: 4px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-dim) 35%, transparent);
-  outline: none;
-}
+   A chapter is a switch, not a form. Press one and the curve, the
+   cheat-sheet and the question in the box all change together, so
+   there is nothing on this page to configure and nothing to tidy
+   away afterwards.
+   ============================================================ */
 
-.mathlab-range::-webkit-slider-thumb {
-  appearance: none;
-  height: 15px;
-  width: 15px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #fff 55%, transparent);
-  background: var(--signal);
-  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.6);
-  transition: transform 220ms var(--ease-momentum);
-}
-
-.mathlab-range::-webkit-slider-thumb:active {
-  transform: scale(1.15);
-}
-
-.mathlab-range::-moz-range-thumb {
-  height: 15px;
-  width: 15px;
-  border: 1px solid color-mix(in srgb, #fff 55%, transparent);
-  border-radius: 999px;
-  background: var(--signal);
-}
-
-.mathlab-chapter {
+/* ---- chapters: one row of quiet pills ---- */
+.mathlab-chapterbar {
   display: flex;
-  width: 100%;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mathlab-chapter {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-radius: 13px;
-  border: 1px solid transparent;
-  padding: 9px 12px;
-  text-align: left;
-  font-size: 13px;
+  gap: 7px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--text-dim);
   transition:
-    color 240ms var(--ease-momentum),
-    border-color 240ms var(--ease-momentum),
-    background 240ms var(--ease-momentum);
+    color 260ms var(--ease-momentum),
+    border-color 260ms var(--ease-momentum);
 }
-
 .mathlab-chapter:hover {
   color: var(--text-main);
-  border-color: var(--glass-line);
+  border-color: color-mix(in srgb, var(--signal) 32%, transparent);
 }
-
 .mathlab-chapter.is-active {
   color: var(--text-main);
-  border-color: color-mix(in srgb, var(--signal) 40%, transparent);
-  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 45%, transparent);
+}
+.mathlab-chapter__name {
+  position: relative;
+  z-index: 10;
+}
+.mathlab-chapter__tick {
+  position: relative;
+  z-index: 10;
+  color: var(--signal);
 }
 
-/* the small tick on the chapter the whole lab is currently tuned to */
-.mathlab-chapter__go {
+/* ---- the two cards ---- */
+.mathlab-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-radius: 22px;
+  border: 1px solid var(--glass-line);
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+  padding: 20px;
+  box-shadow: 0 30px 70px -40px rgba(0, 0, 0, 0.8);
+}
+.mathlab-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mathlab-card__kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.mathlab-card__title {
+  margin-top: 3px;
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.mathlab-card__formula {
+  flex: 0 0 auto;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--signal) 22%, transparent);
+  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  padding: 5px 10px;
+  font-size: 11.5px;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+.mathlab-caption {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* ---- Avia's voice badge ---- */
+.mathlab-voice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+}
+.mathlab-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 13px;
+}
+.mathlab-wave i {
+  display: block;
+  width: 2px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.55;
+  animation: mathlab-wave 1.5s var(--ease-momentum) infinite;
+}
+.mathlab-wave i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.mathlab-wave i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+.mathlab-wave i:nth-child(4) {
+  animation-delay: 0.54s;
+}
+.mathlab-voice[data-on="true"] .mathlab-wave i {
+  animation-duration: 0.7s;
+  opacity: 1;
+}
+@keyframes mathlab-wave {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mathlab-wave i {
+    animation: none;
+    height: 8px;
+  }
+}
+
+/* ---- the single input line ---- */
+.mathlab-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 6px 6px 18px;
+  transition:
+    border-color 260ms var(--ease-momentum),
+    box-shadow 260ms var(--ease-momentum);
+}
+.mathlab-input:focus-within {
+  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal) 12%, transparent);
+}
+.mathlab-input__field {
+  min-width: 0;
+  flex: 1 1 auto;
+  background: transparent;
+  border: 0;
+  outline: none;
+  /* 16px on phones so iOS Safari does not zoom when the field takes focus. */
+  font-size: 16px;
+  color: var(--text-main);
+  padding: 8px 0;
+}
+@media (min-width: 640px) {
+  .mathlab-input__field {
+    font-size: 14px;
+  }
+}
+.mathlab-input__field::placeholder {
+  color: color-mix(in srgb, var(--text-dim) 75%, transparent);
+}
+.mathlab-input__tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+.mathlab-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: var(--text-dim);
+  transition:
+    color 220ms var(--ease-momentum),
+    background 220ms var(--ease-momentum),
+    transform 220ms var(--ease-momentum);
+}
+.mathlab-tool:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.mathlab-tool:active {
+  transform: scale(0.92);
+}
+.mathlab-tool.is-live {
+  color: #ff5a5a;
+  background: color-mix(in srgb, #ff5a5a 16%, transparent);
+  animation: mathlab-mic 1.4s ease-in-out infinite;
+}
+@keyframes mathlab-mic {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, #ff5a5a 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mathlab-tool.is-live {
+    animation: none;
+  }
+}
+.mathlab-solve {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin-left: auto;
+  gap: 7px;
   border-radius: 999px;
-  color: var(--signal);
-  background: color-mix(in srgb, var(--signal) 16%, transparent);
+  background: var(--signal-strong);
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  transition:
+    opacity 220ms var(--ease-momentum),
+    transform 220ms var(--ease-momentum);
+}
+.mathlab-solve:disabled {
+  opacity: 0.45;
+}
+.mathlab-solve:not(:disabled):active {
+  transform: scale(0.97);
+}
+.mathlab-solving {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.mathlab-error {
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  background: color-mix(in srgb, #f59e0b 8%, transparent);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f4c77a;
+}
+.mathlab-hint {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
 }
 
 /* ============================================================
@@ -514,62 +709,133 @@ html:not(.dark) .checkout-field {
   font-size: 0.95em;
 }
 
-/* ---- one step: number, equation, rule badge ---- */
+/* ---- the notebook flow ---- */
+.mathlab-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mathlab-flow__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mathlab-listen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 38%, transparent);
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+  transition:
+    background 240ms var(--ease-momentum),
+    transform 240ms var(--ease-momentum);
+}
+.mathlab-listen:hover {
+  background: color-mix(in srgb, var(--signal) 20%, transparent);
+}
+.mathlab-listen:active {
+  transform: scale(0.97);
+}
+.mathlab-listen.is-on {
+  border-color: color-mix(in srgb, #ff5a5a 45%, transparent);
+  background: color-mix(in srgb, #ff5a5a 14%, transparent);
+  color: #ff8f8f;
+}
+.mathlab-flow__meta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ---- one step: equation on the left, rule on the right ---- */
 .mathlab-steps {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .mathlab-step {
   --step-tint: var(--signal);
+  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--step-tint) 22%, transparent);
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 24%, transparent);
   background:
     linear-gradient(
-      130deg,
-      color-mix(in srgb, var(--step-tint) 9%, transparent),
-      color-mix(in srgb, var(--step-tint) 2%, transparent) 62%
+      120deg,
+      color-mix(in srgb, var(--step-tint) 8%, transparent),
+      color-mix(in srgb, var(--step-tint) 1.5%, transparent) 70%
     ),
     color-mix(in srgb, var(--text-main) 3%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--text-main) 8%, transparent),
-    0 10px 26px -18px color-mix(in srgb, var(--step-tint) 70%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--text-main) 7%, transparent),
+    0 12px 28px -22px color-mix(in srgb, var(--step-tint) 80%, transparent);
   transition:
     transform 260ms var(--ease-momentum),
     border-color 260ms var(--ease-momentum);
 }
 .mathlab-step:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--step-tint) 40%, transparent);
+  border-color: color-mix(in srgb, var(--step-tint) 42%, transparent);
 }
-.mathlab-step__num {
+.mathlab-step__index {
+  position: absolute;
+  top: -8px;
+  left: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  height: 26px;
-  border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--step-tint) 32%, transparent);
-  background: color-mix(in srgb, var(--step-tint) 12%, transparent);
-  color: color-mix(in srgb, var(--step-tint) 70%, var(--text-main));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10.5px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 40%, transparent);
+  background: color-mix(in srgb, var(--card, #101322), 92%, transparent);
+  color: color-mix(in srgb, var(--step-tint) 74%, var(--text-main));
+  font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.mathlab-step__body {
+/* the equation, alone in its own centred plate */
+.mathlab-step__formula {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 18%, transparent);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 10px 12px;
+  overflow-x: auto;
+}
+.mathlab-step__prose {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  text-align: center;
+}
+.mathlab-step__side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding-right: 30px;
 }
 .mathlab-step__note {
-  margin-top: 5px;
   font-size: 11.5px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--text-dim);
 }
 
@@ -577,20 +843,44 @@ html:not(.dark) .checkout-field {
 .mathlab-rule {
   display: inline-flex;
   align-items: center;
-  justify-self: end;
-  gap: 5px;
-  max-width: 170px;
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--step-tint) 42%, transparent);
+  background: color-mix(in srgb, var(--step-tint) 16%, transparent);
   padding: 4px 9px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--step-tint) 38%, transparent);
-  background: color-mix(in srgb, var(--step-tint) 15%, transparent);
-  color: color-mix(in srgb, var(--step-tint) 62%, var(--text-main));
   font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  line-height: 1.3;
-  text-align: right;
+  line-height: 1.35;
+  text-align: left;
+  color: color-mix(in srgb, var(--step-tint) 70%, var(--text-main));
+}
+
+/* read this one step aloud */
+.mathlab-speak {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  color: var(--text-dim);
+  transition:
+    color 220ms var(--ease-momentum),
+    background 220ms var(--ease-momentum);
+}
+.mathlab-speak:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 10%, transparent);
+}
+.mathlab-speak.is-speaking {
+  color: var(--signal);
+  background: color-mix(in srgb, var(--signal) 16%, transparent);
+  animation: mathlab-mic 1.4s ease-in-out infinite;
 }
 
 /* Badge palette — one hue per family of rule, so the same rule always
@@ -624,94 +914,191 @@ html:not(.dark) .checkout-field {
   --step-tint: #56b8b0;
 }
 
-/* ---- chapter cheat-sheet ---- */
-.mathlab-cheats {
+/* ---- the final answer: the one card that is meant to be noticed ---- */
+.mathlab-final {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-.mathlab-cheat {
-  display: flex;
   gap: 10px;
-  padding: 10px 11px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--glass-line));
-  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  border-radius: 20px;
+  border: 2px solid color-mix(in srgb, #34c98a 55%, transparent);
+  background: color-mix(in srgb, #34c98a 8%, transparent);
+  padding: 16px 16px 14px;
+  box-shadow: 0 18px 40px -30px color-mix(in srgb, #34c98a 90%, transparent);
 }
-.mathlab-cheat__kind {
-  flex: 0 0 auto;
-  align-self: flex-start;
-  padding: 3px 7px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--signal) 13%, transparent);
-  color: color-mix(in srgb, var(--signal) 75%, var(--text-main));
-  font-size: 8.5px;
+.mathlab-final__label {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  color: #6fe0ad;
 }
-.mathlab-cheat__title {
-  font-size: 11.5px;
-  font-weight: 600;
+.mathlab-final__value {
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 12px 14px;
+  font-size: 15px;
   color: var(--text-main);
+  overflow-x: auto;
 }
-.mathlab-cheat__note {
-  margin-top: 4px;
-  font-size: 11px;
+.mathlab-final__check {
+  display: flex;
+  gap: 7px;
+  font-size: 11.5px;
   line-height: 1.55;
   color: var(--text-dim);
 }
-
-/* ---- a plain reading inside the working blocks ---- */
-.mathlab-line {
+.mathlab-final__check svg {
+  margin-top: 3px;
+  color: #6fe0ad;
+}
+.mathlab-final__actions {
   display: flex;
-  gap: 9px;
-  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mathlab-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #34c98a 45%, transparent);
+  background: color-mix(in srgb, #34c98a 16%, transparent);
+  padding: 9px 16px;
   font-size: 12.5px;
-  line-height: 1.6;
+  font-weight: 600;
+  color: #8fe9c0;
+  transition:
+    background 240ms var(--ease-momentum),
+    transform 240ms var(--ease-momentum);
+}
+.mathlab-copy:hover {
+  background: color-mix(in srgb, #34c98a 26%, transparent);
+}
+.mathlab-copy:active {
+  transform: scale(0.97);
+}
+.mathlab-copy--quiet {
+  border-color: var(--glass-line);
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
   color: var(--text-dim);
 }
-.mathlab-line__dot {
-  flex: 0 0 auto;
-  width: 5px;
-  height: 5px;
-  margin-top: 7px;
+.mathlab-copy--quiet:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 9%, transparent);
+}
+
+/* ---- the chapter's cheat-sheet ---- */
+.mathlab-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .mathlab-panels {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.mathlab-panel {
+  border-radius: 18px;
+  border: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  padding: 14px 15px;
+}
+.mathlab-panel__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+.mathlab-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.mathlab-panel__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  padding: 9px 11px;
+  overflow-x: auto;
+}
+.mathlab-panel__name {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+/* ---- ask about the answer ---- */
+.mathlab-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--signal) 70%, transparent);
+  border: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  padding: 5px 5px 5px 16px;
+}
+.mathlab-ask__field {
+  min-width: 0;
+  flex: 1 1 auto;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 16px;
+  color: var(--text-main);
+  padding: 7px 0;
+}
+@media (min-width: 640px) {
+  .mathlab-ask__field {
+    font-size: 13px;
+  }
+}
+.mathlab-ask__field::placeholder {
+  color: color-mix(in srgb, var(--text-dim) 72%, transparent);
+}
+.mathlab-ask__field:disabled {
+  opacity: 0.5;
+}
+.mathlab-ask__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--signal-strong);
+  color: #fff;
+  transition:
+    opacity 220ms var(--ease-momentum),
+    transform 220ms var(--ease-momentum);
+}
+.mathlab-ask__send:disabled {
+  opacity: 0.4;
+}
+.mathlab-ask__send:not(:disabled):active {
+  transform: scale(0.93);
 }
 
 @media (max-width: 640px) {
   .mathlab-step {
-    grid-template-columns: auto minmax(0, 1fr);
-    row-gap: 9px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
   }
-  .mathlab-rule {
-    grid-column: 2;
-    justify-self: start;
-    max-width: none;
-    text-align: left;
+  .mathlab-step__side {
+    padding-right: 0;
   }
-}
-
-.mathlab-model {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 13px;
-  border: 1px solid var(--glass-line);
-  padding: 9px 12px;
-  font-size: 12.5px;
-  color: var(--text-dim);
-  transition:
-    color 240ms var(--ease-momentum),
-    border-color 240ms var(--ease-momentum),
-    background 240ms var(--ease-momentum);
-}
-
-.mathlab-model.is-active {
-  color: var(--text-main);
-  border-color: color-mix(in srgb, var(--signal) 50%, transparent);
-  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  .mathlab-speak {
+    top: 8px;
+    right: 8px;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -928,18 +1315,9 @@ html:not(.dark) .checkout-field {
     font-size: 13px;
   }
 
-  .mathlab-chapter,
-  .mathlab-model {
-    padding: 12px;
+  .mathlab-chapter {
+    padding: 10px 14px;
     font-size: 13.5px;
-  }
-
-  .mathlab-param {
-    padding: 14px;
-  }
-
-  .mathlab-range {
-    height: 6px;
   }
 
   .mathlab-range::-webkit-slider-thumb,
@@ -971,118 +1349,3 @@ html:not(.dark) .checkout-field {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Avia, docked inside the Math Lab                                    */
-/* ------------------------------------------------------------------ */
-
-.lab-avia {
-  border-radius: 18px;
-  border: 1px solid var(--glass-line);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 12px 14px 10px;
-}
-
-.lab-avia__log {
-  max-height: 200px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-  scrollbar-width: thin;
-}
-
-.lab-avia__turn {
-  border-radius: 13px;
-  padding: 8px 11px;
-  font-size: 12.5px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
-
-.lab-avia__turn--student {
-  margin-left: 14%;
-  border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
-  background: color-mix(in srgb, var(--signal) 8%, transparent);
-  color: var(--text-main);
-}
-
-.lab-avia__turn--avia {
-  margin-right: 14%;
-  border: 1px solid var(--glass-line);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-dim);
-}
-
-html:not(.dark) .lab-avia__turn--avia {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.lab-avia__who {
-  display: inline-block;
-  margin-right: 7px;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--signal) 82%, var(--text-main));
-}
-
-.lab-avia__turn--thinking {
-  opacity: 0.65;
-  font-style: italic;
-}
-
-.lab-avia__note {
-  margin-top: 6px;
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-
-.lab-avia__mic {
-  display: inline-flex;
-  height: 36px;
-  width: 36px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--signal) 40%, transparent);
-  background: color-mix(in srgb, var(--signal) 10%, transparent);
-  color: var(--text-main);
-  transition:
-    transform 200ms cubic-bezier(0.25, 1, 0.5, 1),
-    background 200ms ease;
-}
-
-.lab-avia__mic:hover {
-  background: color-mix(in srgb, var(--signal) 18%, transparent);
-}
-
-.lab-avia__mic:active {
-  transform: scale(0.95);
-}
-
-.lab-avia__mic.is-live {
-  background: var(--signal-strong);
-  border-color: var(--signal);
-  color: #fff;
-  animation: lab-avia-pulse 1.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-}
-
-@keyframes lab-avia-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--signal) 45%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 0 7px transparent;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lab-avia__mic.is-live {
-    animation: none;
-  }
-}

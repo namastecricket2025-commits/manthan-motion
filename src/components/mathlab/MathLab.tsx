@@ -1,63 +1,58 @@
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { usePlan } from "@/components/plans/PlanProvider";
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { LabAviaChat } from "@/components/mathlab/LabAviaChat";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  documentSolution,
-  GRADES,
+  coreDefinitions,
+  coreFormulas,
   getGrade,
+  GRADES,
   modelById,
-  SOLUTION_BLOCKS,
   solveEquation,
   type CheatEntry,
   type GradeSpec,
   type PlotModel,
   type Solution,
 } from "@/components/mathlab/mathlab";
-import { MathLine, MathTex, toWorkedStep, type WorkedStep } from "@/components/mathlab/latex";
 import { GraphCanvas } from "@/components/mathlab/GraphCanvas";
+import { MathTex, toWorkedStep, type WorkedStep } from "@/components/mathlab/latex";
+import { isMathLine, toLatex } from "@/components/mathlab/mathformat";
+import { pickAviaVoice, speakText, stopSpeaking } from "@/components/voice/avia";
 import {
   ArrowRight,
+  Camera,
   Check,
+  Copy,
   CornerDownLeft,
-  FileUp,
   Loader2,
   Lock,
   Mic,
-  RotateCcw,
-  SendHorizontal,
-  Sigma,
-  Sparkles,
+  Play,
+  Square,
+  Volume2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation } from "convex/react";
 import { useNavigate } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 
 /**
  * Math Lab — the Class 8 to 11 mathematics workspace.
  *
- * Left: a live coordinate plane whose curve glides to every parameter change,
- * with the plottable models for the selected class. Right: an equation engine
- * that takes a typed formula or a dropped document and returns the four
- * structured blocks a student revises from.
+ * One click and the whole room changes. Choosing a chapter swaps the curve on
+ * the canvas, the two cheat-sheet panels and the question sitting in the input
+ * box; there is nothing else to configure and no sliders to hunt for.
  *
- * The whole lab sits behind the EduVantage plan; Classes 10 and 11 need the
- * full Prime suite.
+ * The engine answers in a notebook, not a paragraph: each step is a card with
+ * the equation typeset on one side and the rule that produced it badged on the
+ * other, and the last card is the answer. Avia is woven into the input line —
+ * the microphone dictates, and every step can be read aloud on demand. Nothing
+ * ever plays by itself.
  */
 
-/** One past turn in the engine conversation. */
+/** One past turn in the engine conversation: follow-ups read this. */
 interface EngineTurn {
   role: "student" | "lab";
-  /** For the student: the question. For the lab: the answer line. */
   text: string;
 }
 
@@ -67,45 +62,84 @@ function defaultsFor(model: PlotModel): Record<string, number> {
   return values;
 }
 
+/** Typeset when the line is an expression, plain text when it is a sentence. */
+function Typeset({ text }: { text: string }) {
+  if (!isMathLine(text)) return <>{text}</>;
+  return <MathTex source={toLatex(text)} fallback={text} />;
+}
+
+/** One cheat-sheet panel: a title and the two or three relations that matter. */
+function CheatPanel({ title, entries }: { title: string; entries: CheatEntry[] }) {
+  return (
+    <section className="mathlab-panel">
+      <h3 className="mathlab-panel__title">{title}</h3>
+      <ul className="mathlab-panel__list">
+        {entries.map((entry) => (
+          <li key={entry.title} className="mathlab-panel__row">
+            <span className="mathlab-panel__name">{entry.title}</span>
+            <MathTex source={entry.latex} fallback={entry.latex} display />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /**
- * One step of the working, as a card: the equation typeset on the left, the
- * rule it applied badged on the right. A plain sentence becomes readable the
- * moment the two are separated.
+ * One step of the working.
+ *
+ * Strictly two columns: the equation, centred in its own formula box on the
+ * left; the rule it used, with whatever the step had to say, on the right. The
+ * speaker sits in the corner and reads only this step.
  */
-function StepCard({ step, index }: { step: WorkedStep; index: number }) {
+function StepCard({
+  step,
+  index,
+  speaking,
+  onSpeak,
+}: {
+  step: WorkedStep;
+  index: number;
+  speaking: boolean;
+  onSpeak: () => void;
+}) {
   return (
     <motion.li
       className="mathlab-step"
       data-tone={step.tone}
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.24), ease: [0.25, 1, 0.5, 1] }}
+      transition={{ duration: 0.34, delay: Math.min(index * 0.05, 0.3), ease: [0.25, 1, 0.5, 1] }}
     >
-      <span className="mathlab-step__num" aria-hidden>
-        {String(index + 1).padStart(2, "0")}
+      <span className="mathlab-step__index" aria-hidden>
+        {index + 1}
       </span>
-      <div className="mathlab-step__body">
-        {step.math ? <MathTex source={step.math} fallback={step.math} display /> : null}
-        {step.note ? <p className="mathlab-step__note">{step.note}</p> : null}
-      </div>
-      <span className="mathlab-rule" data-tone={step.tone}>
-        {step.rule}
-      </span>
-    </motion.li>
-  );
-}
 
-/** A cheat-sheet line: title, typeset formula, and an optional definition. */
-function CheatRow({ entry }: { entry: CheatEntry }) {
-  return (
-    <li className="mathlab-cheat" data-kind={entry.kind}>
-      <span className="mathlab-cheat__kind">{entry.kind}</span>
-      <div className="min-w-0">
-        <p className="mathlab-cheat__title">{entry.title}</p>
-        <MathTex source={entry.latex} fallback={entry.latex} display />
-        {entry.note ? <p className="mathlab-cheat__note">{entry.note}</p> : null}
+      <div className="mathlab-step__formula">
+        {step.math ? (
+          <MathTex source={step.math} fallback={step.math} display />
+        ) : (
+          <p className="mathlab-step__prose">{step.note}</p>
+        )}
       </div>
-    </li>
+
+      <div className="mathlab-step__side">
+        <span className="mathlab-rule" data-tone={step.tone}>
+          {step.rule}
+        </span>
+        {step.math && step.note ? <p className="mathlab-step__note">{step.note}</p> : null}
+      </div>
+
+      <button
+        type="button"
+        className={"mathlab-speak" + (speaking ? " is-speaking" : "")}
+        onClick={onSpeak}
+        aria-label={`Read step ${index + 1} aloud`}
+        title="Read this step aloud"
+      >
+        <Volume2 className="h-3.5 w-3.5" />
+      </button>
+    </motion.li>
   );
 }
 
@@ -113,115 +147,101 @@ export function MathLab() {
   const navigate = useNavigate();
   const { can, requireAccess } = usePlan();
   const solve = useAction(api.ai.mathSolve);
+  const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
 
+  /* ---- curriculum position ---- */
   const [gradeId, setGradeId] = useState<string>(GRADES[0].id);
   const grade: GradeSpec = useMemo(() => getGrade(gradeId as GradeSpec["id"]), [gradeId]);
   const [chapterIndex, setChapterIndex] = useState(0);
   const chapter = grade.chapters[chapterIndex] ?? grade.chapters[0];
 
-  const [modelId, setModelId] = useState<string | null>(null);
-  /** The plot this chapter opens on; the model picker can still override it. */
-  const chapterModel = useMemo(
+  /** The curve this chapter is about. Nothing to configure — it is just drawn. */
+  const model = useMemo(
     () => modelById(chapter.plot, grade.models[0]),
     [chapter, grade],
   );
-  const model = useMemo(
-    () => grade.models.find((entry) => entry.id === modelId) ?? chapterModel,
-    [chapterModel, grade.models, modelId],
-  );
-  const [params, setParams] = useState<Record<string, number>>(() => defaultsFor(chapterModel));
+  const params = useMemo(() => defaultsFor(model), [model]);
 
-  const [formula, setFormula] = useState("");
+  /* ---- engine state ---- */
+  const [formula, setFormula] = useState(chapter.example);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [solving, setSolving] = useState(false);
   const [engineError, setEngineError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-
-  /** The conversation behind the structured blocks: follow-ups read this. */
   const [turns, setTurns] = useState<EngineTurn[]>([]);
   const [followUp, setFollowUp] = useState("");
 
-  /** True once the engine has answered from the real model this session. */
-  const [engineLive, setEngineLive] = useState(false);
-  const [engineModel, setEngineModel] = useState<string | null>(null);
-  const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
-
-  const uploadTimer = useRef<number | null>(null);
+  /* ---- voice ---- */
+  const [listening, setListening] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const [walking, setWalking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const copiedTimer = useRef<number | null>(null);
 
   const locked = !can("mathLabBasic");
 
+  /** Avia's voice, resolved lazily — the voice list is empty on first paint. */
+  const aviaVoice = useCallback((): SpeechSynthesisVoice | null => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voiceRef.current || !voices.includes(voiceRef.current)) {
+      voiceRef.current = pickAviaVoice(voices) ?? voices[0] ?? null;
+    }
+    return voiceRef.current;
+  }, []);
+
+  /** Silence everything and clear the voice flags — used on every chapter change. */
+  const hush = useCallback(() => {
+    stopSpeaking();
+    setSpeakingIndex(null);
+    setWalking(false);
+  }, []);
+
   useEffect(
     () => () => {
-      if (uploadTimer.current !== null) window.clearTimeout(uploadTimer.current);
+      recognitionRef.current?.abort();
+      stopSpeaking();
+      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
     },
     [],
   );
 
+  /* ---- one click retunes the whole page ---- */
   const selectGrade = useCallback(
     (next: GradeSpec) => {
       if (next.advanced && !requireAccess("mathLabFull")) return;
+      hush();
       setGradeId(next.id);
       setChapterIndex(0);
-      // A class opens on the plot its first chapter asks for.
-      const firstChapter = next.chapters[0];
-      const first = firstChapter ? modelById(firstChapter.plot, next.models[0]) : next.models[0];
-      setModelId(first.id);
-      setParams(defaultsFor(first));
       setSolution(null);
       setTurns([]);
       setFollowUp("");
       setEngineError(null);
-      setFormula("");
+      // The first question of the class is already waiting in the box.
+      setFormula(next.chapters[0].example);
     },
-    [requireAccess],
+    [hush, requireAccess],
   );
 
-  /**
-   * Choosing a chapter re-tunes the whole lab to it: the canvas pre-loads the
-   * plot that chapter is about, the engine's hint becomes one of its classic
-   * questions, and any working from the previous chapter is cleared so nothing
-   * on screen is answering a question the student is no longer looking at.
-   */
   const selectChapter = useCallback(
     (index: number) => {
       const next = grade.chapters[index];
-      if (!next) return;
+      if (!next || index === chapterIndex) return;
+      hush();
       setChapterIndex(index);
-      const nextModel = modelById(next.plot, grade.models[0]);
-      setModelId(nextModel.id);
-      setParams(defaultsFor(nextModel));
       setSolution(null);
       setTurns([]);
       setFollowUp("");
       setEngineError(null);
-      setFormula("");
+      // A sample problem from this chapter, ready to solve.
+      setFormula(next.example);
     },
-    [grade],
+    [chapterIndex, grade, hush],
   );
 
-  const selectModel = useCallback((next: PlotModel) => {
-    setModelId(next.id);
-    setParams(defaultsFor(next));
-  }, []);
-
-  const runEngine = useCallback(
-    (input: string) => {
-      if (!input.trim()) return;
-      setSolving(true);
-      setEngineError(null);
-      // The instant local solve keeps standard equations responsive while
-      // the model works; whichever finishes second overwrites the first.
-      setSolution(solveEquation(input, grade, chapter));
-      setTurns((current) => [...current, { role: "student", text: input.trim() }]);
-    },
-    [grade, chapter],
-  );
-
-  /**
-   * Ask the real engine — a first problem, a dropped file, or a follow-up
-   * like "is this true?". Returns the model's structured answer and appends
-   * it to the conversation the next follow-up reads.
-   */
+  /* ---- the engine ---- */
   const askEngine = useCallback(
     async (parts: {
       question?: string;
@@ -241,10 +261,9 @@ export function MathLab() {
           chapterFormulas: chapter.formulas,
           history: parts.followUp ? turns.slice(-6) : undefined,
         });
-        setEngineLive(true);
-        setEngineModel(result.model);
         setSolution({
           headline: result.headline,
+          answer: result.answer,
           given: result.given,
           formulas: result.formulas,
           steps: result.steps,
@@ -257,25 +276,31 @@ export function MathLab() {
             { role: "lab", text: result.answer },
           ]);
         } else if (parts.question) {
-          setTurns((current) => [
-            ...current,
-            { role: "lab", text: `${result.headline} ${result.answer}` },
-          ]);
+          setTurns((current) => [...current, { role: "lab", text: result.answer }]);
         }
       } catch (err) {
-        const message =
+        setEngineError(
           err instanceof Error && err.message
             ? err.message
-            : "The engine could not reach a model just now. Try again in a minute.";
-        setEngineError(message);
+            : "The engine could not reach a model just now. Try again in a minute.",
+        );
       } finally {
         setSolving(false);
       }
     },
-    [chapter, grade.label, solve, turns],
+    [chapter.formulas, chapter.name, grade.label, solve, turns],
   );
 
-  /** Submit the follow-up box: a question about the working just shown. */
+  /** Solve: the local engine answers instantly, the model refines after. */
+  const onSubmit = useCallback(() => {
+    const input = formula.trim();
+    if (!input || solving) return;
+    hush();
+    setSolution(solveEquation(input, grade, chapter));
+    setTurns((current) => [...current, { role: "student", text: input }]);
+    void askEngine({ question: input });
+  }, [askEngine, chapter, formula, grade, hush, solving]);
+
   const sendFollowUp = useCallback(() => {
     const text = followUp.trim();
     if (!text || solving) return;
@@ -284,11 +309,14 @@ export function MathLab() {
     void askEngine({ followUp: text });
   }, [askEngine, followUp, solving]);
 
-  const readDocument = useCallback(
+  /** A photo of the question, read and solved by the engine. */
+  const readPhoto = useCallback(
     async (file: File | undefined) => {
       if (!file) return;
+      hush();
       setSolving(true);
       setEngineError(null);
+      setSolution(null);
       try {
         const url = await generateUploadUrl();
         const response = await fetch(url, {
@@ -296,59 +324,118 @@ export function MathLab() {
           headers: { "Content-Type": file.type || "application/octet-stream" },
           body: file,
         });
+        if (!response.ok) throw new Error("upload rejected");
         const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
-        setSolution(null);
         await askEngine({ file: { storageId, name: file.name, mime: file.type } });
       } catch {
         setEngineError(
-          "The upload did not make it to the engine. Check your connection and try again — or paste the equation instead.",
+          "That photo did not reach the engine. Check your connection, or type the problem instead.",
         );
         setSolving(false);
       }
     },
-    [askEngine, generateUploadUrl],
+    [askEngine, generateUploadUrl, hush],
   );
 
-  const resetEngine = useCallback(() => {
-    setSolution(null);
-    setTurns([]);
-    setFollowUp("");
-    setEngineError(null);
-    setFormula("");
-  }, []);
-
-  const blocks = solution
-    ? {
-        given: solution.given,
-        formulas: solution.formulas,
-        steps: solution.steps,
-        verification: solution.verification,
+  /* ---- speech to text: dictate the problem into the box ---- */
+  const toggleMic = useCallback(() => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!Recognition) {
+      setEngineError("This browser has no speech recognition — type the problem instead.");
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = (event: AviaSpeechRecognitionEvent) => {
+      let heard = "";
+      for (let i = 0; i < event.results.length; i += 1) {
+        heard += event.results[i][0].transcript;
       }
-    : null;
+      setFormula(heard.trim());
+    };
+    recognition.onerror = () => {
+      setListening(false);
+      setEngineError("I did not catch that. Tap the microphone again, or type the problem.");
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setEngineError(null);
+    setListening(true);
+    recognition.start();
+  }, [listening]);
 
-  /**
-   * The cheat-sheet is the lab's floor, not a fallback: with nothing solved
-   * yet, the two formula panels show the active chapter's own definitions,
-   * theorems and formulae. A solved problem replaces them with its givens.
-   */
-  const cheatFormulas = useMemo(
-    () => chapter.cheat.filter((entry) => entry.kind !== "definition"),
-    [chapter],
-  );
-  const cheatDefinitions = useMemo(
-    () => chapter.cheat.filter((entry) => entry.kind === "definition"),
-    [chapter],
-  );
-  const cheatFor: Record<string, CheatEntry[]> = {
-    given: cheatDefinitions,
-    formulas: cheatFormulas,
-  };
-
-  /** The working, decomposed into equation-plus-rule cards. */
+  /* ---- text to speech: one step, or the whole walkthrough ---- */
   const workedSteps = useMemo(
-    () => (blocks?.steps ?? []).map((line) => toWorkedStep(line, chapter.rule)),
-    [blocks, chapter.rule],
+    () => (solution?.steps ?? []).map((line) => toWorkedStep(line, chapter.rule)),
+    [chapter.rule, solution],
   );
+
+  const readStep = useCallback(
+    (index: number) => {
+      const step = workedSteps[index];
+      if (!step) return;
+      setWalking(false);
+      setSpeakingIndex(index);
+      speakText(step.raw, aviaVoice(), () => setSpeakingIndex(null), true);
+    },
+    [aviaVoice, workedSteps],
+  );
+
+  const readAll = useCallback(() => {
+    if (walking) {
+      hush();
+      return;
+    }
+    const script = [...workedSteps.map((step) => step.raw)];
+    if (solution?.answer) script.push(`And the final answer is: ${solution.answer}`);
+    if (script.length === 0) return;
+    let cursor = 0;
+    setWalking(true);
+    const next = () => {
+      if (cursor >= script.length) {
+        setWalking(false);
+        setSpeakingIndex(null);
+        return;
+      }
+      const index = cursor;
+      cursor += 1;
+      setSpeakingIndex(index < workedSteps.length ? index : null);
+      // The first line interrupts anything already playing; the rest queue.
+      speakText(script[index], aviaVoice(), next, index === 0);
+    };
+    next();
+  }, [aviaVoice, hush, solution, workedSteps, walking]);
+
+  const copySolution = useCallback(() => {
+    if (!solution) return;
+    const text = [
+      solution.headline,
+      "",
+      ...workedSteps.map(
+        (step, index) => `${index + 1}. [${step.rule}] ${step.math || step.note}`,
+      ),
+      "",
+      `Final answer: ${solution.answer}`,
+    ].join("\n");
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => {
+        setCopied(true);
+        if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
+        copiedTimer.current = window.setTimeout(() => setCopied(false), 1800);
+      })
+      .catch(() => setEngineError("Your browser blocked the copy. Select the text instead."));
+  }, [solution, workedSteps]);
+
+  const givens = useMemo(() => coreDefinitions(chapter), [chapter]);
+  const formulas = useMemo(() => coreFormulas(chapter), [chapter]);
+  const lastCheck = solution?.verification.at(-1);
 
   return (
     <div className="relative">
@@ -358,400 +445,295 @@ export function MathLab() {
         }
         aria-hidden={locked}
       >
-        {/* Grade selector + chapter menu */}
-        <div className="flex flex-col gap-4">
-          <div className="mathlab-grades" role="tablist" aria-label="Class selector">
-            {GRADES.map((entry) => {
-              const active = entry.id === grade.id;
-              const needsPrime = entry.advanced && !can("mathLabFull");
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => selectGrade(entry)}
-                  className={"mathlab-grade" + (active ? " is-active" : "")}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="mathlab-grade-pill"
-                      className="mathlab-grade__pill"
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                    />
-                  )}
-                  <span className="relative z-10 inline-flex items-center gap-1.5">
-                    {entry.label}
-                    {needsPrime && <Lock className="h-3 w-3 opacity-70" />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={grade.id}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 12 }}
-              transition={{ duration: 0.38, ease: [0.25, 1, 0.5, 1] }}
-              className="premium-glass p-5"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-dim">
-                    {grade.level}
-                  </p>
-                  <h2 className="mt-1 font-display text-lg font-bold tracking-tight">
-                    {grade.label}
-                  </h2>
-                </div>
-                <p className="max-w-md text-xs leading-relaxed text-text-dim">
-                  {grade.blurb}
-                </p>
-              </div>
-
-              <motion.div
-                className="mt-4 grid gap-1.5"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: {},
-                  visible: { transition: { staggerChildren: 0.05, delayChildren: 0.08 } },
-                }}
+        {/* ---------------- Class selector ---------------- */}
+        <div className="mathlab-grades" role="tablist" aria-label="Class selector">
+          {GRADES.map((entry) => {
+            const active = entry.id === grade.id;
+            const needsPrime = entry.advanced && !can("mathLabFull");
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => selectGrade(entry)}
+                className={"mathlab-grade" + (active ? " is-active" : "")}
               >
-                {grade.chapters.map((entry, index) => (
-                  <motion.button
-                    key={entry.name}
-                    type="button"
-                    variants={{
-                      hidden: { opacity: 0, x: -14 },
-                      visible: { opacity: 1, x: 0 },
-                    }}
-                    transition={{ duration: 0.34, ease: [0.25, 1, 0.5, 1] }}
-                    onClick={() => selectChapter(index)}
-                    aria-current={index === chapterIndex}
-                    className={
-                      "mathlab-chapter" + (index === chapterIndex ? " is-active" : "")
-                    }
-                  >
-                    <span className="min-w-0 truncate font-medium">{entry.name}</span>
-                    <span className="shrink-0 text-[11px] opacity-80">
-                      {entry.focus.split(" ").slice(0, 5).join(" ")}…
-                    </span>
-                    {index === chapterIndex ? (
-                      <span className="mathlab-chapter__go" aria-hidden>
-                        <Check className="h-3 w-3" />
-                      </span>
-                    ) : null}
-                  </motion.button>
-                ))}
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>
+                {active && (
+                  <motion.span
+                    layoutId="mathlab-grade-pill"
+                    className="mathlab-grade__pill"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className="relative z-10 inline-flex items-center gap-1.5">
+                  {entry.label}
+                  {needsPrime && <Lock className="h-3 w-3 opacity-70" />}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Split workspace */}
-        <div className="mathlab-split mt-4">
-          {/* ---------------- Left: graphing canvas ---------------- */}
-          <div className="premium-glass flex flex-col gap-4 p-5">
-            <div className="flex items-center justify-between gap-3">
+        {/* ---------------- Chapters: one click changes everything ---------------- */}
+        <div className="mathlab-chapterbar" role="tablist" aria-label={`${grade.label} chapters`}>
+          {grade.chapters.map((entry, index) => {
+            const active = index === chapterIndex;
+            return (
+              <button
+                key={entry.name}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => selectChapter(index)}
+                className={"mathlab-chapter" + (active ? " is-active" : "")}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="mathlab-chapter-pill"
+                    className="mathlab-grade__pill"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className="mathlab-chapter__name">{entry.name}</span>
+                {active ? <Check className="mathlab-chapter__tick h-3.5 w-3.5" /> : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ---------------- Workspace ---------------- */}
+        <div className="mathlab-split">
+          {/* ---- the curve this chapter is about ---- */}
+          <section className="mathlab-card">
+            <header className="mathlab-card__head">
               <div className="min-w-0">
-                <h2 className="font-display text-base font-bold tracking-tight">
-                  Visual graphing canvas
-                </h2>
-                <p className="mt-0.5 truncate text-[11px] text-text-dim">
-                  {chapter.name} — {model.label}
+                <p className="mathlab-card__kicker">{grade.label}</p>
+                <h2 className="mathlab-card__title">{chapter.name}</h2>
+              </div>
+              <span className="mathlab-card__formula">{model.formula}</span>
+            </header>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={model.id}
+                className="mathlab-canvas-wrap"
+                initial={{ opacity: 0, scale: 0.985 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.99 }}
+                transition={{ duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+              >
+                <GraphCanvas model={model} params={params} />
+              </motion.div>
+            </AnimatePresence>
+
+            <p className="mathlab-caption">
+              {model.label} — {model.note}
+            </p>
+          </section>
+
+          {/* ---- the engine ---- */}
+          <section className="mathlab-card">
+            <header className="mathlab-card__head">
+              <div className="min-w-0">
+                <h2 className="mathlab-card__title">AI equation engine</h2>
+                <p className="mathlab-voice" data-on={listening}>
+                  <span className="mathlab-wave" aria-hidden>
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  AVIA AI Voice Tutor
                 </p>
               </div>
-              <span className="shrink-0 text-[11px] font-medium text-text-dim">
-                {model.formula}
-              </span>
-            </div>
+              <AnimatePresence>
+                {solving ? (
+                  <motion.span
+                    key="solving"
+                    className="mathlab-solving"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <Loader2 className="spin-micro h-3.5 w-3.5" />
+                    Working
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
+            </header>
 
-            <div className="flex flex-wrap gap-2">
-              {grade.models.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => selectModel(entry)}
-                  className={
-                    "mathlab-model" +
-                    (entry.id === model.id ? " is-active" : "") +
-                    (entry.id === model.id ? "" : " opacity-90")
-                  }
-                >
-                  {entry.id === model.id ? (
-                    <Check className="h-3.5 w-3.5 text-[var(--signal)]" />
-                  ) : (
-                    <Sigma className="h-3.5 w-3.5" />
-                  )}
-                  {entry.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mathlab-canvas-wrap">
-              <GraphCanvas model={model} params={params} />
-            </div>
-
-            <p className="text-[11px] leading-relaxed text-text-dim">{model.note}</p>
-
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {model.params.map((param) => (
-                <div key={param.key} className="mathlab-param">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor={`param-${param.key}`}
-                      className="text-[11px] font-medium text-text-dim"
-                    >
-                      {param.label}
-                    </label>
-                    <span className="font-display text-xs font-bold tabular-nums">
-                      {(params[param.key] ?? param.value).toFixed(1)}
-                    </span>
-                  </div>
-                  <input
-                    id={`param-${param.key}`}
-                    type="range"
-                    className="mathlab-range mt-2.5"
-                    min={param.min}
-                    max={param.max}
-                    step={param.step}
-                    value={params[param.key] ?? param.value}
-                    onChange={(event) =>
-                      setParams((current) => ({
-                        ...current,
-                        [param.key]: Number(event.target.value),
-                      }))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ---------------- Right: equation engine ---------------- */}
-          <div className="premium-glass flex flex-col gap-4 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-base font-bold tracking-tight">
-                Step-by-step AI equation engine
-              </h2>
-              <Sparkles className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-            </div>
-
+            {/* one line: type it, say it, or photograph it */}
             <form
+              className="mathlab-input"
               onSubmit={(event) => {
                 event.preventDefault();
-                const input = formula.trim();
-                if (!input || solving) return;
-                runEngine(input);
-                void askEngine({ question: input });
+                onSubmit();
               }}
-              className="flex flex-col gap-2 sm:flex-row"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                void readPhoto(event.dataTransfer.files?.[0]);
+              }}
             >
               <input
                 value={formula}
                 onChange={(event) => setFormula(event.target.value)}
-                placeholder={`Paste or type a problem — ${chapter.example}`}
-                /* 16px on phones so iOS Safari does not zoom the page when
-                   the field takes focus; the desktop step stays at 14px. */
-                className="w-full min-w-0 rounded-full border border-[var(--glass-line)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:flex-1 sm:py-2.5 sm:text-sm"
+                placeholder={`e.g. ${chapter.example}`}
+                aria-label="Your maths problem"
+                className="mathlab-input__field"
               />
-              <MovingBorderButton
+              <div className="mathlab-input__tools">
+                <button
+                  type="button"
+                  className={"mathlab-tool" + (listening ? " is-live" : "")}
+                  onClick={toggleMic}
+                  aria-label={listening ? "Stop dictating" : "Dictate the problem"}
+                  title={listening ? "Stop" : "Speak the problem"}
+                >
+                  <Mic className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  className="mathlab-tool"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Photograph the question"
+                  title="Photograph or upload the question"
+                >
+                  <Camera className="h-4 w-4" />
+                </button>
+              </div>
+              <button
                 type="submit"
+                className="mathlab-solve"
                 disabled={solving || !formula.trim()}
-                loading={solving}
-                className="w-full shrink-0 sm:w-auto"
-                innerClassName="w-full px-5 py-3 text-sm sm:w-auto sm:py-2.5 sm:text-[13px]"
               >
+                {solving ? <Loader2 className="spin-micro h-4 w-4" /> : null}
                 Solve
-              </MovingBorderButton>
+              </button>
             </form>
 
-            <label
-              onDragOver={(event) => {
-                event.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(event) => {
-                event.preventDefault();
-                setDragOver(false);
-                void readDocument(event.dataTransfer.files?.[0]);
-              }}
-              className={"tool-dropzone" + (dragOver ? " is-over" : "")}
-            >
-              {solving ? (
-                <Loader2 className="spin-micro h-5 w-5 text-[var(--signal)]" />
-              ) : (
-                <FileUp className="h-5 w-5 text-[var(--signal)]" />
-              )}
-              <span className="text-sm font-medium">
-                {solving ? "Reading the question…" : "Drop a question sheet or photo"}
-              </span>
-              <span className="text-xs text-text-dim">
-                PDF, Word, PNG or JPG — the engine reads it and solves what it shows
-              </span>
-              <input
-                type="file"
-                className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.md,.csv"
-                onChange={(event) => void readDocument(event.target.files?.[0] ?? undefined)}
-              />
-            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+              onChange={(event) => void readPhoto(event.target.files?.[0] ?? undefined)}
+            />
 
-            {engineError && (
-              <p className="rounded-2xl border border-amber-400/30 bg-amber-400/5 px-4 py-3 text-[12px] leading-relaxed text-amber-200">
-                {engineError}
-              </p>
-            )}
+            {engineError && <p className="mathlab-error">{engineError}</p>}
 
-            {solution && (
-              <p className="rounded-2xl border border-[var(--glass-line)] px-4 py-3 text-[12px] leading-relaxed">
-                <span className="font-semibold text-[var(--signal)]">Result: </span>
-                {solution.headline}
-              </p>
-            )}
-
-            <Accordion
-              type="multiple"
-              defaultValue={["given", "formulas", "steps", "verification"]}
-              className="rounded-2xl border border-[var(--glass-line)] px-4"
-            >
-              {SOLUTION_BLOCKS.map((block) => (
-                <AccordionItem key={block.key} value={block.key}>
-                  <AccordionTrigger className="py-3 text-[13px] font-semibold tracking-tight text-foreground hover:no-underline">
-                    {block.title}
-                    {block.key !== "steps" ? (
-                      <span className="ml-2 text-[10px] font-normal uppercase tracking-[0.14em] text-text-dim">
-                        {blocks ? "Your working" : "Chapter cheat-sheet"}
-                      </span>
-                    ) : null}
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-3">
-                    {/* The working, as equation + rule cards. */}
-                    {block.key === "steps" ? (
-                      workedSteps.length > 0 ? (
-                        <ol className="mathlab-steps">
-                          {workedSteps.map((step, index) => (
-                            <StepCard key={`step-${index}`} step={step} index={index} />
-                          ))}
-                        </ol>
-                      ) : (
-                        <p className="text-[12.5px] leading-relaxed text-text-dim">
-                          Solve something and each step appears here as a card: the
-                          equation on one side, the rule it used on the other.
-                        </p>
-                      )
-                    ) : blocks ? (
-                      <ul className="space-y-2">
-                        {blocks[block.key].map((line, lineIndex) => (
-                          <li
-                            key={`${block.key}-${lineIndex}`}
-                            className="mathlab-line"
-                          >
-                            <span className="mathlab-line__dot" aria-hidden />
-                            <MathLine text={line} />
-                          </li>
-                        ))}
-                      </ul>
+            {/* ---- the notebook ---- */}
+            {workedSteps.length > 0 && solution ? (
+              <div className="mathlab-flow">
+                <div className="mathlab-flow__bar">
+                  <button
+                    type="button"
+                    className={"mathlab-listen" + (walking ? " is-on" : "")}
+                    onClick={readAll}
+                  >
+                    {walking ? (
+                      <Square className="h-3.5 w-3.5" />
                     ) : (
-                      /* Nothing solved yet: the chapter's own cheat-sheet. */
-                      (cheatFor[block.key]?.length ?? 0) > 0 ? (
-                        <>
-                          <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-text-dim">
-                            {chapter.name} · {grade.label}
-                          </p>
-                          <ul className="mathlab-cheats">
-                            {cheatFor[block.key].map((entry) => (
-                              <CheatRow key={`${block.key}-${entry.title}`} entry={entry} />
-                            ))}
-                          </ul>
-                        </>
-                      ) : (
-                        <p className="text-[12.5px] leading-relaxed text-text-dim">
-                          Enter an equation or drop a question sheet and this block
-                          fills in.
-                        </p>
-                      )
+                      <Play className="h-3.5 w-3.5" />
                     )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-
-            {/* Ask back: verify, question a step, or take the answer further */}
-            <div className="rounded-2xl border border-[var(--glass-line)] p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">
-                Ask about this solution
-              </p>
-              {turns.length > 0 && (
-                <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto pr-1">
-                  {turns.map((turn, index) => (
-                    <p
-                      key={`turn-${index}`}
-                      className={
-                        "text-[12px] leading-relaxed " +
-                        (turn.role === "student" ? "font-medium text-foreground" : "text-text-dim")
-                      }
-                    >
-                      <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--signal)]">
-                        {turn.role === "student" ? "You" : "Engine"}
-                      </span>
-                      {turn.text}
-                    </p>
-                  ))}
+                    {walking ? "Stop walkthrough" : "Listen to Full Walkthrough"}
+                  </button>
+                  <span className="mathlab-flow__meta">
+                    {workedSteps.length} {workedSteps.length === 1 ? "step" : "steps"}
+                  </span>
                 </div>
-              )}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {["Is this correct?", "Explain step 2 slower", "Give a similar question"].map(
-                  (prompt) => (
-                    <button
-                      key={prompt}
-                      type="button"
-                      disabled={solving || !solution}
-                      onClick={() => {
-                        setFollowUp("");
-                        setTurns((current) => [...current, { role: "student", text: prompt }]);
-                        void askEngine({ followUp: prompt });
-                      }}
-                      className="rounded-full border border-[var(--glass-line)] px-3 py-1 text-[11px] text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground disabled:opacity-40"
-                    >
-                      {prompt}
-                    </button>
-                  ),
-                )}
-              </div>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  sendFollowUp();
-                }}
-                className="mt-2 flex items-center gap-2"
-              >
-                <input
-                  value={followUp}
-                  onChange={(event) => setFollowUp(event.target.value)}
-                  placeholder={solution ? "Ask whether it is true, or about any step…" : "Solve something first, then ask here"}
-                  disabled={!solution || solving}
-                  className="min-w-0 flex-1 rounded-full border border-[var(--glass-line)] bg-transparent px-3.5 py-2 text-[13px] outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  aria-label="Send follow-up"
-                  disabled={!solution || solving || !followUp.trim()}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--signal-strong)] text-white transition-transform active:scale-95 disabled:opacity-40"
+
+                <ol className="mathlab-steps">
+                  {workedSteps.map((step, index) => (
+                    <StepCard
+                      key={`step-${index}`}
+                      step={step}
+                      index={index}
+                      speaking={speakingIndex === index}
+                      onSpeak={() => readStep(index)}
+                    />
+                  ))}
+                </ol>
+
+                <motion.div
+                  className="mathlab-final"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
                 >
-                  <CornerDownLeft className="h-4 w-4" />
-                </button>
-              </form>
+                  <div className="mathlab-final__label">Final Answer</div>
+                  <div className="mathlab-final__value">
+                    <Typeset text={solution.answer} />
+                  </div>
+                  {lastCheck ? (
+                    <p className="mathlab-final__check">
+                      <Check className="h-3 w-3 shrink-0" />
+                      {lastCheck}
+                    </p>
+                  ) : null}
+                  <div className="mathlab-final__actions">
+                    <button type="button" className="mathlab-copy" onClick={copySolution}>
+                      <Copy className="h-3.5 w-3.5" />
+                      {copied ? "Copied" : "Copy Solution"}
+                    </button>
+                    <button
+                      type="button"
+                      className="mathlab-copy mathlab-copy--quiet"
+                      onClick={() => {
+                        hush();
+                        const script = [...workedSteps.map((step) => step.raw), solution.answer];
+                        speakText(script.join(". "), aviaVoice(), undefined, true);
+                      }}
+                    >
+                      <Volume2 className="h-3.5 w-3.5" />
+                      Read it aloud
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            ) : (
+              <p className="mathlab-hint">
+                {solving
+                  ? "Reading the problem…"
+                  : `A ${chapter.name} question is already in the box. Press Solve, or speak and photograph your own.`}
+              </p>
+            )}
+
+            {/* ---- the chapter's cheat-sheet ---- */}
+            <div className="mathlab-panels">
+              <CheatPanel title="Given Data" entries={givens} />
+              <CheatPanel title="Governing Formulas" entries={formulas} />
             </div>
 
-            {/* Avia, in the lab: talk or type about this problem */}
-            <LabAviaChat context={solution ? `Math Lab, ${grade.label}, chapter ${chapter.name}. Current result: ${solution.headline} Answer: ${blocks?.verification.at(-1) ?? ""}` : undefined} />
-          </div>
+            {/* ---- ask about the answer ---- */}
+            <div className="mathlab-ask">
+              <input
+                value={followUp}
+                onChange={(event) => setFollowUp(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    sendFollowUp();
+                  }
+                }}
+                placeholder={solution ? "Is this correct? Ask about any step…" : "Solve something first, then ask here"}
+                disabled={!solution || solving}
+                aria-label="Ask about this solution"
+                className="mathlab-ask__field"
+              />
+              <button
+                type="button"
+                className="mathlab-ask__send"
+                disabled={!solution || solving || !followUp.trim()}
+                onClick={sendFollowUp}
+                aria-label="Send"
+              >
+                <CornerDownLeft className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -765,9 +747,7 @@ export function MathLab() {
             <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
               Premium workspace
             </p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">
-              Math Lab
-            </h2>
+            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Math Lab</h2>
             <p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-text-dim">
               Live graphs and the step-by-step engine for Classes 8 to 11. Unlock
               basic graphs with EduVantage, and the full suite with Manthan Prime.

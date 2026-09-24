@@ -14,6 +14,11 @@
 
 export type GradeId = "8" | "9" | "10" | "11";
 
+/** A number in a label reads as short as possible: 2, never 2.0000001. */
+function shortNum(value: number): string {
+  return String(Math.round(value * 1000) / 1000);
+}
+
 export interface ParameterSpec {
   key: string;
   label: string;
@@ -30,6 +35,14 @@ export interface PlotBranch {
   dashed?: boolean;
 }
 
+export interface PlotMark {
+  x: number;
+  y: number;
+  label: string;
+  /** "point" marks the spot; "x" and "y" mark the intercept on that axis. */
+  kind?: "point" | "x" | "y";
+}
+
 export interface PlotModel {
   id: string;
   label: string;
@@ -37,6 +50,12 @@ export interface PlotModel {
   note: string;
   params: ParameterSpec[];
   branches: PlotBranch[];
+  /**
+   * The few points that make this curve readable at a glance — the vertex of a
+   * parabola, the vertices of an ellipse, the roots of a quadratic. Computed
+   * from the parameters so the labels stay true whatever the curve is showing.
+   */
+  marks?: (params: Record<string, number>) => PlotMark[];
 }
 
 export interface Chapter {
@@ -92,6 +111,10 @@ const linearModel: PlotModel = {
   branches: [
     { label: "y = m x + c", evaluate: (x, p) => p.m * x + p.c },
   ],
+  marks: (p) => [
+    { x: 0, y: p.c, kind: "y", label: `c = ${shortNum(p.c)}` },
+    { x: Math.abs(p.m) < 1e-6 ? 0 : -p.c / p.m, y: 0, kind: "x", label: "x-intercept" },
+  ],
 };
 
 const variationModel: PlotModel = {
@@ -119,6 +142,23 @@ const quadraticModel: PlotModel = {
       evaluate: (x, p) => p.a * x * x + p.b * x + p.c,
     },
   ],
+  marks: (p) => {
+    if (Math.abs(p.a) < 1e-6) return [];
+    const vertexX = -p.b / (2 * p.a);
+    const vertexY = p.c - (p.b * p.b) / (4 * p.a);
+    const out: PlotMark[] = [
+      { x: vertexX, y: vertexY, kind: "point", label: "vertex" },
+    ];
+    const discriminant = p.b * p.b - 4 * p.a * p.c;
+    if (discriminant >= 0) {
+      const root = Math.sqrt(discriminant);
+      out.push(
+        { x: (-p.b - root) / (2 * p.a), y: 0, kind: "x", label: "root" },
+        { x: (-p.b + root) / (2 * p.a), y: 0, kind: "x", label: "root" },
+      );
+    }
+    return out;
+  },
 };
 
 const trigModel: PlotModel = {
@@ -133,6 +173,10 @@ const trigModel: PlotModel = {
   ],
   branches: [
     { label: "y = A sin(B x + C)", evaluate: (x, p) => p.A * Math.sin(p.B * x + p.C) },
+  ],
+  marks: (p) => [
+    { x: 0, y: 0, kind: "point", label: "origin" },
+    { x: (2 * Math.PI) / p.B, y: 0, kind: "x", label: "one period" },
   ],
 };
 
@@ -162,6 +206,11 @@ const ellipseModel: PlotModel = {
       },
     },
   ],
+  marks: (p) => [
+    { x: p.a, y: 0, kind: "x", label: "a" },
+    { x: 0, y: p.b, kind: "y", label: "b" },
+    { x: 0, y: 0, kind: "point", label: "centre" },
+  ],
 };
 
 const tangentModel: PlotModel = {
@@ -177,6 +226,9 @@ const tangentModel: PlotModel = {
       dashed: true,
       evaluate: (x, p) => 2 * p.x0 * (x - p.x0) + p.x0 * p.x0,
     },
+  ],
+  marks: (p) => [
+    { x: p.x0, y: p.x0 * p.x0, kind: "point", label: "point of contact" },
   ],
 };
 
@@ -207,6 +259,10 @@ const circleModel: PlotModel = {
       },
     },
   ],
+  marks: (p) => [
+    { x: p.h, y: p.k, kind: "point", label: "centre (h, k)" },
+    { x: p.h + p.r, y: p.k, kind: "x", label: "radius r" },
+  ],
 };
 
 const hyperbolaModel: PlotModel = {
@@ -235,6 +291,10 @@ const hyperbolaModel: PlotModel = {
       },
     },
   ],
+  marks: (p) => [
+    { x: p.a, y: 0, kind: "x", label: "vertex a" },
+    { x: 0, y: p.b, kind: "y", label: "asymptote" },
+  ],
 };
 
 const sqrtModel: PlotModel = {
@@ -244,18 +304,23 @@ const sqrtModel: PlotModel = {
   note: "The curve starts at the origin, rises fast then flattens: the exponent is a half, not a whole number.",
   params: [{ key: "k", label: "k (stretch)", min: 0.5, max: 3, step: 0.1, value: 1.5 }],
   branches: [{ label: "y = k √x", evaluate: (x, p) => (x < 0 ? null : p.k * Math.sqrt(x)) }],
+  marks: (p) => [
+    { x: 0, y: 0, kind: "point", label: "origin" },
+    { x: 4, y: 2 * p.k, kind: "point", label: "√4 = 2" },
+  ],
 };
 
 const reciprocalModel: PlotModel = {
   id: "reciprocal",
-  label: "Reciprocal (÷ in fractions)",
+  label: "Reciprocal of a fraction",
   formula: "y = k / x",
   note: "Dividing by a fraction means multiplying by its reciprocal — the same reason the curve flips through the origin.",
-  params: [
-    { key: "k", label: "k (numerator)", min: -4, max: 4, step: 0.1, value: 2 },
-    { key: "n", label: "n (denominator)", min: 1, max: 8, step: 1, value: 2 },
+  params: [{ key: "k", label: "k", min: -4, max: 4, step: 0.1, value: 2 }],
+  branches: [{ label: "y = k / x", evaluate: (x, p) => (x === 0 ? null : p.k / x) }],
+  marks: (p) => [
+    { x: 1, y: p.k, kind: "point", label: "1 / 1 = k" },
+    { x: 0.5, y: p.k / 0.5, kind: "point", label: "1 / 0.5 = 2k" },
   ],
-  branches: [{ label: "y = k / n", evaluate: (_x, p) => p.k / p.n }],
 };
 
 const sequenceModel: PlotModel = {
@@ -274,6 +339,10 @@ const sequenceModel: PlotModel = {
       dashed: true,
       evaluate: (x, p) => (x <= 0 ? null : (x / 2) * (2 * p.a + (x - 1) * p.d)),
     },
+  ],
+  marks: (p) => [
+    { x: 1, y: p.a, kind: "point", label: "a₁" },
+    { x: 5, y: p.a + 4 * p.d, kind: "point", label: "a₅" },
   ],
 };
 
@@ -321,7 +390,7 @@ export const GRADES: GradeSpec[] = [
           "Bring both terms to a common denominator before adding or subtracting.",
           "Multiply by the reciprocal to divide, then reduce with the HCF.",
         ],
-        example: "e.g. 2/3 + 1/6, and 3/4 ÷ 9/10",
+        example: "2/3 + 1/6, and 3/4 ÷ 9/10",
         plot: "reciprocal",
         rule: "LCM of Denominators",
         cheat: [
@@ -344,7 +413,7 @@ export const GRADES: GradeSpec[] = [
           "Collect every variable term on one side and every constant on the other.",
           "Divide by the coefficient of x, then substitute the root back to confirm.",
         ],
-        example: "e.g. 5x - 7 = 18",
+        example: "5x - 7 = 18",
         plot: "linear",
         rule: "Transpose Rule",
         cheat: [
@@ -367,7 +436,7 @@ export const GRADES: GradeSpec[] = [
           "Pair the digits from the right and use the long-division method for roots.",
           "Check the identity by expanding both sides term by term.",
         ],
-        example: "e.g. Solve (x + 3)² = 64",
+        example: "Solve (x + 3)² = 64",
         plot: "sqrt",
         rule: "Perfect Square Identity",
         cheat: [
@@ -390,7 +459,7 @@ export const GRADES: GradeSpec[] = [
           "Write down every given dimension with its unit before choosing a formula.",
           "Keep units consistent, then convert the final answer to the asked unit.",
         ],
-        example: "e.g. Area of a trapezium with a = 6 cm, b = 4 cm, h = 5 cm",
+        example: "Area of a trapezium with a = 6 cm, b = 4 cm, h = 5 cm",
         plot: "circle",
         rule: "Area Formula",
         cheat: [
@@ -423,7 +492,7 @@ export const GRADES: GradeSpec[] = [
           "Multiply numerator and denominator by the conjugate to clear a root.",
           "Apply the exponent laws before any numerical substitution.",
         ],
-        example: "e.g. Rationalise 1/(√5 − √3)",
+        example: "Rationalise 1/(√5 − √3)",
         plot: "sqrt",
         rule: "Conjugate Multiplication",
         cheat: [
@@ -445,7 +514,7 @@ export const GRADES: GradeSpec[] = [
           "Substitute the zero of the divisor to evaluate the remainder directly.",
           "Factorise, then test each candidate root with the factor theorem.",
         ],
-        example: "e.g. Find the remainder when x³ - 3x² + 4 is divided by (x - 2)",
+        example: "Find the remainder when x³ - 3x² + 4 is divided by (x - 2)",
         plot: "quadratic",
         rule: "Remainder Theorem",
         cheat: [
@@ -468,7 +537,7 @@ export const GRADES: GradeSpec[] = [
           "Express y in terms of x, then plot two convenient points.",
           "Verify each solution by substituting the pair back into the equation.",
         ],
-        example: "e.g. For 2x + 3y = 12, find all integer solutions",
+        example: "For 2x + 3y = 12, find all integer solutions",
         plot: "linear",
         rule: "Standard Form",
         cheat: [
@@ -490,7 +559,7 @@ export const GRADES: GradeSpec[] = [
           "Mark the axes and scale before plotting any point.",
           "Subtract coordinates consistently — the order inside each bracket must match.",
         ],
-        example: "e.g. Find the distance between (2, -1) and (-3, 4)",
+        example: "Find the distance between (2, -1) and (-3, 4)",
         plot: "circle",
         rule: "Distance Formula",
         cheat: [
@@ -522,7 +591,7 @@ export const GRADES: GradeSpec[] = [
           "Write the equation in standard form a x² + b x + c = 0 and read off a, b, c.",
           "Evaluate the discriminant; its sign tells you whether the roots are real and distinct.",
         ],
-        example: "e.g. 3x² - 5x + 2 = 0",
+        example: "3x² - 5x + 2 = 0",
         plot: "quadratic",
         rule: "Quadratic Formula",
         cheat: [
@@ -545,7 +614,7 @@ export const GRADES: GradeSpec[] = [
           "Find the common difference, then substitute into the nth-term formula.",
           "For a sum question, decide whether aₙ or Sₙ is actually being asked for.",
         ],
-        example: "e.g. Find a₁₀ when a₁ = 3 and d = 4",
+        example: "Find a₁₀ when a₁ = 3 and d = 4",
         plot: "sequence",
         rule: "nth-Term Formula",
         cheat: [
@@ -567,7 +636,7 @@ export const GRADES: GradeSpec[] = [
           "Convert every ratio into sin and cos before simplifying.",
           "Verify the identity by working on the more complicated side only.",
         ],
-        example: "e.g. If sin θ = 3/5, find cos θ and tan θ",
+        example: "If sin θ = 3/5, find cos θ and tan θ",
         plot: "trig",
         rule: "Trigonometric Identity",
         cheat: [
@@ -589,7 +658,7 @@ export const GRADES: GradeSpec[] = [
           "Label the points (x₁, y₁), (x₂, y₂), (x₃, y₃) before substituting.",
           "Keep the modulus until the final line so a sign slip cannot distort the area.",
         ],
-        example: "e.g. Area of the triangle with (0,0), (4,3) and (1,5)",
+        example: "Area of the triangle with (0,0), (4,3) and (1,5)",
         plot: "circle",
         rule: "Area Formula",
         cheat: [
@@ -621,7 +690,7 @@ export const GRADES: GradeSpec[] = [
           "Reduce the equation to standard form by completing the square.",
           "Read a, b and the centre straight off the standard form before sketching.",
         ],
-        example: "e.g. Find the eccentricity of x²/25 + y²/9 = 1",
+        example: "Find the eccentricity of x²/25 + y²/9 = 1",
         plot: "ellipse",
         rule: "Standard Form",
         cheat: [
@@ -644,7 +713,7 @@ export const GRADES: GradeSpec[] = [
           "Find the slope first; every other form follows from it.",
           "For a distance, substitute the point into the line with the modulus in place.",
         ],
-        example: "e.g. Distance of (3, -2) from 3x + 4y - 5 = 0",
+        example: "Distance of (3, -2) from 3x + 4y - 5 = 0",
         plot: "linear",
         rule: "Distance Formula",
         cheat: [
@@ -667,7 +736,7 @@ export const GRADES: GradeSpec[] = [
           "Move to radians before any calculus-style manipulation.",
           "Expand compound angles, then collect like trigonometric terms.",
         ],
-        example: "e.g. Simplify sin 75° using compound angles",
+        example: "Simplify sin 75° using compound angles",
         plot: "trig",
         rule: "Compound Angle Formula",
         cheat: [
@@ -689,7 +758,7 @@ export const GRADES: GradeSpec[] = [
           "Apply the power rule term by term before substituting a value.",
           "For a tangent, evaluate the derivative at the point to get its slope.",
         ],
-        example: "e.g. Differentiate y = 3x² - 5x + 2",
+        example: "Differentiate y = 3x² - 5x + 2",
         plot: "tangent",
         rule: "Power Rule",
         cheat: [
@@ -709,12 +778,31 @@ export function getGrade(id: GradeId): GradeSpec {
   return GRADES.find((grade) => grade.id === id) ?? GRADES[0];
 }
 
+/**
+ * The two or three relations a student most needs from a chapter — the ones
+ * worth memorising. The lab shows these and nothing else, so the cheat-sheet
+ * stays something a person reads rather than skims.
+ */
+export function coreFormulas(chapter: Chapter, count = 3): CheatEntry[] {
+  const relations = chapter.cheat.filter((entry) => entry.kind !== "definition");
+  return relations.slice(0, count);
+}
+
+/** The chapter's key definitions, or its leading relations when it has none. */
+export function coreDefinitions(chapter: Chapter, count = 2): CheatEntry[] {
+  const definitions = chapter.cheat.filter((entry) => entry.kind === "definition");
+  if (definitions.length > 0) return definitions.slice(0, count);
+  return coreFormulas(chapter, count);
+}
+
 /* ------------------------------------------------------------------ */
 /* Equation engine                                                     */
 /* ------------------------------------------------------------------ */
 
 export interface Solution {
   headline: string;
+  /** The result, stated once, for the final-answer card. */
+  answer: string;
   given: string[];
   formulas: string[];
   steps: string[];
@@ -796,6 +884,7 @@ function quadraticSolution(a: number, b: number, c: number): Solution {
   ];
 
   const verification: string[] = [];
+  let answer: string;
 
   if (discriminant > 0) {
     const root = Math.sqrt(discriminant);
@@ -811,6 +900,7 @@ function quadraticSolution(a: number, b: number, c: number): Solution {
       `Substitute x₂: a x₂² + b x₂ + c = ${num(a * x2 * x2 + b * x2 + c)} — expected 0.`,
       `Sum of roots −b/a = ${num(-b / a)} and product c/a = ${num(c / a)} both match.`,
     );
+    answer = `x₁ = ${num(x1)}, x₂ = ${num(x2)}`;
   } else if (ZERO(discriminant)) {
     const x = vertexX;
     steps.push(
@@ -821,6 +911,7 @@ function quadraticSolution(a: number, b: number, c: number): Solution {
     verification.push(
       `Substitute x = ${num(x)}: ${num(a * x * x + b * x + c)} — expected 0.`,
     );
+    answer = `x = ${num(x)} (repeated root)`;
   } else {
     const real = -b / (2 * a);
     const imaginary = Math.sqrt(-discriminant) / (2 * a);
@@ -833,6 +924,7 @@ function quadraticSolution(a: number, b: number, c: number): Solution {
       `Substitute x = ${num(real)}: real part of a x² + b x + c is ${num(a * real * real + b * real + c)} and the imaginary part cancels.`,
       "A negative discriminant is confirmed by the curve sitting entirely on one side of the x-axis.",
     );
+    answer = `x = ${num(real)} ± ${num(Math.abs(imaginary))}i — no real roots`;
   }
 
   return {
@@ -842,6 +934,7 @@ function quadraticSolution(a: number, b: number, c: number): Solution {
         : ZERO(discriminant)
           ? "One repeated real root — the curve touches the x-axis."
           : "No real roots — the curve never meets the x-axis.",
+    answer,
     given,
     formulas,
     steps,
@@ -856,6 +949,7 @@ function linearSolution(m: number, c: number): Solution {
         ZERO(c)
           ? "Every value of x satisfies this equation — it is an identity."
           : "No value of x satisfies this equation — it is a contradiction.",
+      answer: ZERO(c) ? "Every value of x satisfies it" : "No value of x satisfies it",
       given: [`m = ${num(m)}, c = ${num(c)}`],
       formulas: ["m x + c = 0 ⇒ x = −c / m"],
       steps: [
@@ -873,6 +967,7 @@ function linearSolution(m: number, c: number): Solution {
   const x = -c / m;
   return {
     headline: `A single root at x = ${num(x)}.`,
+    answer: `x = ${num(x)}`,
     given: [`Standard form m x + c = 0 with m = ${num(m)}, c = ${num(c)}.`],
     formulas: ["m x + c = 0 ⇒ x = −c / m", "The graph is a straight line of slope m"],
     steps: [
@@ -898,6 +993,7 @@ function trigSolution(input: string): Solution {
 
   return {
     headline: `Amplitude ${num(Math.abs(amplitude))}, period ${num(period)}, phase shift ${num(phase)}.`,
+    answer: `Amplitude ${num(Math.abs(amplitude))}, period ${num(period)}, phase shift ${num(phase)}`,
     given: [
       `Model y = A ${fn}(B x + C) with A = ${num(amplitude)}, B = ${num(safeFrequency)}, C = ${num(shift)}.`,
       `Radians are assumed unless the question states degrees.`,
@@ -931,6 +1027,7 @@ function derivativeSolution(input: string, polynomial: Polynomial): Solution {
 
   return {
     headline: `Slope at x = ${num(x0)} is ${num(slope)}; tangent: y = ${num(slope)}x + ${num(value - slope * x0)}.`,
+    answer: `f′(x) = ${num(2 * a2)}x + ${num(a1)}, and the tangent at x = ${num(x0)} is y = ${num(slope)}x + ${num(value - slope * x0)}`,
     given: [
       `f(x) = ${num(a2)}x² + ${num(a1)}x + ${num(a0)}`,
       `Point of contact x₀ = ${num(x0)}, so f(x₀) = ${num(value)}.`,
@@ -956,6 +1053,9 @@ function derivativeSolution(input: string, polynomial: Polynomial): Solution {
 function fallbackSolution(grade: GradeSpec, chapter: Chapter, input: string): Solution {
   return {
     headline: `${chapter.name} — worked framework for the question as typed.`,
+    answer: input.trim()
+      ? "Work the chapter's governing formula above with the values in the question."
+      : `Type a problem from ${chapter.name} to get a worked answer.`,
     given: [
       `Grade: ${grade.label} (${grade.level}).`,
       `Chapter: ${chapter.name} — ${chapter.focus}`,
@@ -1024,36 +1124,3 @@ export function solveEquation(raw: string, grade: GradeSpec, chapter: Chapter): 
 
   return fallbackSolution(grade, chapter, input);
 }
-
-/**
- * Framework for a dropped document.
- *
- * The document is not parsed here — this pane solves what the student types,
- * and a dropped file has no text extraction behind it yet. So the framework is
- * the selected chapter's, with the document recorded by name; the wording says
- * exactly that instead of claiming to have read the file.
- */
-export function documentSolution(
-  fileName: string,
-  grade: GradeSpec,
-  chapter: Chapter,
-): Solution {
-  const base = fallbackSolution(grade, chapter, "");
-  return {
-    ...base,
-    headline: `${chapter.name} framework, matched to ${fileName}.`,
-    given: [
-      `Document added: ${fileName} (not parsed — type the equation to solve it).`,
-      `Grade: ${grade.label} (${grade.level}).`,
-      `Chapter: ${chapter.name} — ${chapter.focus}`,
-    ],
-  };
-}
-
-/** The four blocks, in the order a student reads them. */
-export const SOLUTION_BLOCKS = [
-  { key: "given", title: "Given Data" },
-  { key: "formulas", title: "Governing Formulas" },
-  { key: "steps", title: "Step-by-Step Breakdown" },
-  { key: "verification", title: "Final Verification" },
-] as const;

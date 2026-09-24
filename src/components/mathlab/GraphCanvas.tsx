@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 const X_MIN = -10;
 const X_MAX = 10;
-const PAD = { left: 30, right: 14, top: 14, bottom: 22 };
+const PAD = { left: 34, right: 18, top: 18, bottom: 26 };
 const DURATION = 620;
 
 type Values = Record<string, number>;
@@ -69,6 +69,7 @@ function readPalette() {
     // values always come from --signal, so the curve follows the theme accent.
     curve: read("--signal", "#8b93ff"),
     label: read("--text-dim", "#cbd5e1"),
+    surface: read("--card", "rgba(15, 23, 42, 0.4)"),
   };
 }
 
@@ -160,6 +161,14 @@ export function GraphCanvas({
       ctx.fillText(String(y), PAD.left - 5, toPy(y));
     }
 
+    // Axis names, so an unlabelled plot is never ambiguous.
+    ctx.fillStyle = palette.axis;
+    ctx.font = "600 11px Inter, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("x", width - PAD.right + 3, axisY + 10);
+    ctx.fillText("y", axisX - 8, PAD.top - 5);
+
     // Curves
     const values = displayRef.current;
     const active = modelRef.current;
@@ -197,6 +206,69 @@ export function GraphCanvas({
       ctx.globalAlpha = 1;
     }
     ctx.restore();
+
+    // The marks that make the shape readable: a vertex, a focus, the roots.
+    // Each is a dot on the curve plus a small caption on a tinted plate, so it
+    // stays legible over both the grid and the line itself.
+    const marks = active.marks?.(values) ?? [];
+    ctx.font = "600 10px Inter, system-ui, sans-serif";
+    ctx.textBaseline = "middle";
+    for (const mark of marks) {
+      const px = toPx(mark.x);
+      const py = toPy(mark.y);
+      if (
+        !Number.isFinite(px) ||
+        !Number.isFinite(py) ||
+        px < PAD.left - 2 ||
+        px > width - PAD.right + 2 ||
+        py < PAD.top - 2 ||
+        py > height - PAD.bottom + 2
+      ) {
+        continue;
+      }
+      if (mark.kind === "x") {
+        ctx.strokeStyle = palette.curve;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(px, axisY - 5);
+        ctx.lineTo(px, axisY + 5);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (mark.kind === "y") {
+        ctx.strokeStyle = palette.curve;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(axisX - 5, py);
+        ctx.lineTo(axisX + 5, py);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.fillStyle = palette.curve;
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Caption above the point, flipped below near the top edge.
+      const textWidth = ctx.measureText(mark.label).width;
+      const above = py - PAD.top > 18;
+      const boxX = Math.min(
+        Math.max(px - textWidth / 2 - 5, PAD.left),
+        width - PAD.right - textWidth - 10,
+      );
+      const boxY = above ? py - 19 : py + 8;
+      ctx.fillStyle = palette.surface;
+      ctx.globalAlpha = 0.82;
+      ctx.beginPath();
+      ctx.roundRect(boxX, boxY, textWidth + 10, 14, 7);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = palette.label;
+      ctx.textAlign = "left";
+      ctx.fillText(mark.label, boxX + 5, boxY + 7);
+    }
 
     // Pointer readout
     const pointer = pointerRef.current;
