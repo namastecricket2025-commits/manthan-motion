@@ -2,7 +2,12 @@ import BiologyExplorer from "@/components/lab/BiologyExplorer";
 import CanvasSolver from "@/components/lab/CanvasSolver";
 import ChemistryWorkspace from "@/components/lab/ChemistryWorkspace";
 import PhysicsSim from "@/components/lab/PhysicsSim";
-import LiveTelemetry, { TelemetryProvider, useTelemetry } from "@/components/lab/LiveTelemetry";
+import LiveTelemetry, {
+  TelemetryProvider,
+  useTelemetry,
+  useTelemetrySetter,
+  type TelemetryFeed,
+} from "@/components/lab/LiveTelemetry";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { usePlan } from "@/components/plans/PlanProvider";
@@ -51,6 +56,59 @@ const TAB_ACCENT: Record<LabTab, { hex: string; rgba: string }> = {
   canvas: { hex: "#f59e0b", rgba: "245, 158, 11" }, // amber — the scan beam
 };
 
+/* A quiet default readout per instrument. Shown the moment a tab opens, so
+   the sidebar never displays the previous lab's numbers while the new
+   simulation is still loading — the stale-heartbeat-over-chemistry bug. */
+const TAB_DEFAULT_FEED: Record<LabTab, TelemetryFeed> = {
+  physics: {
+    subject: "Physics · Bench",
+    rows: [
+      { k: "Instrument", v: "Motion rig" },
+      { k: "Status", v: "Ready" },
+      { k: "Units", v: "SI" },
+    ],
+    equation: "F = m a",
+    eqNote: "Pick a simulation and press Run — the readouts go live with it.",
+    signal: 0.2,
+    accent: "#38bdf8",
+  },
+  chemistry: {
+    subject: "Chemistry · Bench",
+    rows: [
+      { k: "Instrument", v: "Table / bench" },
+      { k: "Status", v: "Ready" },
+      { k: "Model", v: "Bohr · Arrhenius" },
+    ],
+    equation: "k = A·e^(−Ea/RT)",
+    eqNote: "Select an element or open the bench — the readouts go live with it.",
+    signal: 0.2,
+    accent: "#a78bfa",
+  },
+  biology: {
+    subject: "Biology · Bench",
+    rows: [
+      { k: "Instrument", v: "Systems lab" },
+      { k: "Status", v: "Ready" },
+      { k: "Models", v: "Cell · DNA · Heart" },
+    ],
+    equation: "CO = HR × SV",
+    eqNote: "Open a system — the readouts go live with it.",
+    signal: 0.2,
+    accent: "#34d399",
+  },
+  canvas: {
+    subject: "Canvas Solver",
+    rows: [
+      { k: "Input", v: "Photograph" },
+      { k: "Status", v: "Awaiting sheet" },
+    ],
+    equation: "read → decompose → solve",
+    eqNote: "Drop a question sheet and the beam reads it.",
+    signal: 0.1,
+    accent: "#f59e0b",
+  },
+};
+
 /* Mobile: one slim telemetry dock under the workspace — readouts + the
    governing equation in a single non-scrolling strip. */
 function MobileTelemetry() {
@@ -77,6 +135,7 @@ function LabShell() {
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const active = TABS.find((t) => t.key === tab)!;
   const feed = useTelemetry();
+  const setFeed = useTelemetrySetter();
   const accent = TAB_ACCENT[tab];
   const { can, requireAccess } = usePlan();
 
@@ -85,6 +144,13 @@ function LabShell() {
     if (key === "canvas" && !requireAccess("canvasSolver")) return;
     setTab(key);
   }
+
+  /* Switching instruments resets the readouts to that instrument's own
+     quiet default before the simulation publishes its first numbers — the
+     previous lab's telemetry never outlives its tab. */
+  useEffect(() => {
+    setFeed(TAB_DEFAULT_FEED[tab]);
+  }, [tab, setFeed]);
 
   /* the publisher bus lives inside the sims; clear the readouts when a
      workspace unmounts so the sidebar never shows stale data */
@@ -200,8 +266,22 @@ function LabShell() {
         </main>
       </div>
 
-      {/* desktop: floating telemetry sidebar (≥1280px only, via CSS) */}
-      {feed && <LiveTelemetry feed={feed} />}
+      {/* desktop: floating telemetry sidebar (≥1280px only, via CSS).
+          Keyed on the subject so switching instruments re-runs the settle-in
+          motion instead of the numbers hard-cutting. */}
+      <AnimatePresence mode="wait">
+        {feed && (
+          <motion.div
+            key={feed.subject}
+            initial={{ opacity: 0, x: 18 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 12 }}
+            transition={{ duration: 0.34, ease: [0.25, 1, 0.5, 1] }}
+          >
+            <LiveTelemetry feed={feed} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

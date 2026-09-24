@@ -747,3 +747,119 @@ html:not(.dark) .checkout-field {
     font-size: 14px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Avia, docked inside the Math Lab                                    */
+/* ------------------------------------------------------------------ */
+
+.lab-avia {
+  border-radius: 18px;
+  border: 1px solid var(--glass-line);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 14px 10px;
+}
+
+.lab-avia__log {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  scrollbar-width: thin;
+}
+
+.lab-avia__turn {
+  border-radius: 13px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.lab-avia__turn--student {
+  margin-left: 14%;
+  border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
+  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  color: var(--text-main);
+}
+
+.lab-avia__turn--avia {
+  margin-right: 14%;
+  border: 1px solid var(--glass-line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+}
+
+html:not(.dark) .lab-avia__turn--avia {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.lab-avia__who {
+  display: inline-block;
+  margin-right: 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 82%, var(--text-main));
+}
+
+.lab-avia__turn--thinking {
+  opacity: 0.65;
+  font-style: italic;
+}
+
+.lab-avia__note {
+  margin-top: 6px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.lab-avia__mic {
+  display: inline-flex;
+  height: 36px;
+  width: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 40%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+  color: var(--text-main);
+  transition:
+    transform 200ms cubic-bezier(0.25, 1, 0.5, 1),
+    background 200ms ease;
+}
+
+.lab-avia__mic:hover {
+  background: color-mix(in srgb, var(--signal) 18%, transparent);
+}
+
+.lab-avia__mic:active {
+  transform: scale(0.95);
+}
+
+.lab-avia__mic.is-live {
+  background: var(--signal-strong);
+  border-color: var(--signal);
+  color: #fff;
+  animation: lab-avia-pulse 1.4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes lab-avia-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--signal) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-avia__mic.is-live {
+    animation: none;
+  }
+}

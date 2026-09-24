@@ -1193,6 +1193,175 @@ export const aviaReply = action({
 });
 
 /* ------------------------------------------------------------------ */
+/* Math Lab — the AI equation engine                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The Math Lab tutor.
+ *
+ * It solves what the student actually pasted — a typed equation, a photograph
+ * of a question sheet, or an uploaded problem file — and returns the four
+ * structured blocks the lab's accordion renders. Follow-up turns ("is this
+ * true?", "why step 2?") arrive as the same action with the conversation so
+ * far, so the engine answers about its own working instead of starting over.
+ *
+ * Unauthenticated on purpose: the lab itself is plan-gated in the UI, and this
+ * mirrors the Canvas Solver's contract. Nothing here touches the student's
+ * daily generation allowance.
+ */
+const MATH_SYSTEM = [
+  "You are the equation engine inside Manthan's Math Lab, a study app for school students in Classes 8 to 11 (CBSE and ICSE).",
+  "Solve the mathematics problem you are given the way a careful teacher would: state what is given, name the governing formulas, then work the solution step by step. Use the notation and methods taught in Indian school syllabi.",
+  "Every step entry is ONE idea: the move being made and the line of working that carries it out, e.g. 'Subtract 5 from both sides to isolate the x term: 2x + 5 - 5 = 17 - 5, so 2x = 12.' Show the arithmetic inside the step, never bury it in prose.",
+  "The verification block must genuinely check the result: substitute the answer back into the original relation, restate sum/product or dimensional checks, and say plainly whether both sides match.",
+  "If the question is a follow-up about a previous solution, answer THAT question — verify the working if asked whether it is true, correct any error you actually find (saying exactly which step is wrong and why), or explain the named step more slowly. Do not re-solve the whole problem from scratch unless the student restates it.",
+  "If the photograph or extract is unreadable, blurry or clearly not mathematics, say so plainly in the answer field and keep the other blocks short and honest. Never invent values or equations that are not visible.",
+  "No emoji, no markdown, no asterisks, no bullet symbols. Plain sentences and plain math in every string.",
+  'Reply with a single JSON object and nothing else: {"headline":string,"given":string[],"formulas":string[],"steps":string[],"verification":string[],"answer":string}.',
+  "headline is one short line naming the result. given lists the quantities and constraints read off the problem. formulas lists the governing relations symbolically. steps is the ordered working, one idea per entry. verification is the check. answer is the final result with its unit, or the honest statement that the input could not be read.",
+].join(" ");
+
+const mathSolutionSchema = z.object({
+  headline: z.string().min(1),
+  given: z.array(z.string().min(1)).min(1),
+  formulas: z.array(z.string().min(1)).min(1),
+  steps: z.array(z.string().min(1)).min(1),
+  verification: z.array(z.string().min(1)).min(1),
+  answer: z.string().min(1),
+});
+
+/** Rough ceiling on the base64 payload — about 4 MB of image. */
+const MAX_MATH_IMAGE = 5_500_000;
+
+export const mathSolve = action({
+  args: {
+    /** The typed question, when the student pasted or typed one. */
+    question: v.optional(v.string()),
+    /** A photographed question sheet, base64, no data-url prefix. */
+    imageBase64: v.optional(v.string()),
+    mimeType: v.optional(v.string()),
+    /** Or an uploaded file, read through the same pipeline as notebooks. */
+    storageId: v.optional(v.id("_storage")),
+    name: v.optional(v.string()),
+    mime: v.optional(v.string()),
+    /** Syllabus context for the currently selected class and chapter. */
+    gradeLabel: v.optional(v.string()),
+    chapterName: v.optional(v.string()),
+    chapterFormulas: v.optional(v.array(v.string())),
+    /** Follow-up conversation, oldest first. */
+    history: v.optional(
+      v.array(
+        v.object({
+          role: v.union(v.literal("student"), v.literal("lab")),
+          text: v.string(),
+        }),
+      ),
+    ),
+  },
+  handler: async (
+    _ctx,
+    {
+      question,
+      imageBase64,
+      mimeType,
+      storageId,
+      name,
+      mime,
+      gradeLabel,
+      chapterName,
+      chapterFormulas,
+      history,
+    },
+  ): Promise<{
+    headline: string;
+    given: string[];
+    formulas: string[];
+    steps: string[];
+    verification: string[];
+    answer: string;
+    model: string;
+  }> => {
+    const trimmedQuestion = question?.trim() ?? "";
+    if (!trimmedQuestion && !imageBase64 && !storageId) {
+      throw new Error("Give the engine something to solve — a typed equation, a photo or a file.");
+    }
+    if (imageBase64 && imageBase64.length > MAX_MATH_IMAGE) {
+      throw new Error("That image is too large to read. Crop it to the question and try again.");
+    }
+
+    // An uploaded file is read once and dropped — the text is all we keep.
+    let fileText = "";
+    let fileName = name ?? "";
+    if (storageId) {
+      const blob = await _ctx.storage.get(storageId);
+      if (!blob) throw new Error("The upload did not reach storage. Try again.");
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      await _ctx.storage.delete(storageId);
+      try {
+        fileText = (await readUpload(buffer, fileName, mime)).text;
+      } catch (err) {
+        if (err instanceof UploadUnreadable) throw err;
+        throw new Error(
+          "The engine reads PDF, Word, photos and text files. This one could not be read — paste the equation instead.",
+        );
+      }
+      fileText = tidy(fileText).slice(0, MAX_CORPUS);
+      if (fileText.length < 20) {
+        throw new Error("No readable problem was found in that file — paste the equation instead.");
+      }
+    }
+
+    // The question's own language decides the reply's language.
+    const language = detectLanguage([fileText, trimmedQuestion].filter(Boolean));
+    const transcript = (history ?? [])
+      .slice(-6)
+      .map((turn) => `${turn.role === "student" ? "Student" : "Engine"}: ${turn.text}`)
+      .join("\n");
+
+    const prompt = [
+      imageBase64
+        ? "Solve the mathematics problem shown in the attached photograph."
+        : "Solve the mathematics problem below.",
+      fileText ? `ATTACHED EXTRACT${fileName ? ` (${fileName})` : ""}:\n${fileText}` : "",
+      trimmedQuestion ? `PROBLEM: ${trimmedQuestion}` : "",
+      gradeLabel ? `Syllabus context: ${gradeLabel}${chapterName ? `, chapter ${chapterName}` : ""}.` : "",
+      chapterFormulas && chapterFormulas.length > 0
+        ? `Formulas this chapter is examined on (use the one that fits, or say why none does):\n- ${chapterFormulas.join("\n- ")}`
+        : "",
+      transcript
+        ? `This is a follow-up turn. CONVERSATION SO FAR:\n${transcript}`
+        : "",
+      ...languageDirective(language),
+      "Reply with the JSON object only.",
+      languageLock(language),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const candidates = await resolveCandidates();
+    const { text, model } = await callModel(
+      candidates,
+      MATH_SYSTEM,
+      prompt,
+      imageBase64 && mimeType ? { mimeType, data: imageBase64 } : undefined,
+      0.2,
+    );
+    const parsed = mathSolutionSchema.parse(parseJsonLoose(text));
+    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
+
+    return {
+      headline: clean(parsed.headline),
+      given: parsed.given.map(clean),
+      formulas: parsed.formulas.map(clean),
+      steps: parsed.steps.map(clean),
+      verification: parsed.verification.map(clean),
+      answer: clean(parsed.answer),
+      model,
+    };
+  },
+});
+
+/* ------------------------------------------------------------------ */
 /* AI Canvas Solver                                                    */
 /* ------------------------------------------------------------------ */
 

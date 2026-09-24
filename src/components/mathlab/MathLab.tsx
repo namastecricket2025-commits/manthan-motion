@@ -1,5 +1,8 @@
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { usePlan } from "@/components/plans/PlanProvider";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { LabAviaChat } from "@/components/mathlab/LabAviaChat";
 import {
   Accordion,
   AccordionContent,
@@ -20,15 +23,21 @@ import { GraphCanvas } from "@/components/mathlab/GraphCanvas";
 import {
   ArrowRight,
   Check,
+  CornerDownLeft,
   FileUp,
   Loader2,
   Lock,
+  Mic,
+  RotateCcw,
+  SendHorizontal,
   Sigma,
   Sparkles,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "convex/react";
 import { useNavigate } from "react-router";
+import type { Id } from "@/convex/_generated/dataModel";
 
 /**
  * Math Lab — the Class 8 to 11 mathematics workspace.
@@ -42,6 +51,13 @@ import { useNavigate } from "react-router";
  * full Prime suite.
  */
 
+/** One past turn in the engine conversation. */
+interface EngineTurn {
+  role: "student" | "lab";
+  /** For the student: the question. For the lab: the answer line. */
+  text: string;
+}
+
 function defaultsFor(model: PlotModel): Record<string, number> {
   const values: Record<string, number> = {};
   for (const param of model.params) values[param.key] = param.value;
@@ -51,6 +67,7 @@ function defaultsFor(model: PlotModel): Record<string, number> {
 export function MathLab() {
   const navigate = useNavigate();
   const { can, requireAccess } = usePlan();
+  const solve = useAction(api.ai.mathSolve);
 
   const [gradeId, setGradeId] = useState<string>(GRADES[0].id);
   const grade: GradeSpec = useMemo(() => getGrade(gradeId as GradeSpec["id"]), [gradeId]);
@@ -66,14 +83,25 @@ export function MathLab() {
   const [formula, setFormula] = useState("");
   const [solution, setSolution] = useState<Solution | null>(null);
   const [solving, setSolving] = useState(false);
+  const [engineError, setEngineError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const timer = useRef<number | null>(null);
+
+  /** The conversation behind the structured blocks: follow-ups read this. */
+  const [turns, setTurns] = useState<EngineTurn[]>([]);
+  const [followUp, setFollowUp] = useState("");
+
+  /** True once the engine has answered from the real model this session. */
+  const [engineLive, setEngineLive] = useState(false);
+  const [engineModel, setEngineModel] = useState<string | null>(null);
+  const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
+
+  const uploadTimer = useRef<number | null>(null);
 
   const locked = !can("mathLabBasic");
 
   useEffect(
     () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
+      if (uploadTimer.current !== null) window.clearTimeout(uploadTimer.current);
     },
     [],
   );
@@ -101,27 +129,114 @@ export function MathLab() {
     (input: string) => {
       if (!input.trim()) return;
       setSolving(true);
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => {
-        setSolution(solveEquation(input, grade, chapter));
-        setSolving(false);
-      }, 420);
+      setEngineError(null);
+      // The instant local solve keeps standard equations responsive while
+      // the model works; whichever finishes second overwrites the first.
+      setSolution(solveEquation(input, grade, chapter));
+      setTurns((current) => [...current, { role: "student", text: input.trim() }]);
     },
     [grade, chapter],
   );
 
+  /**
+   * Ask the real engine — a first problem, a dropped file, or a follow-up
+   * like "is this true?". Returns the model's structured answer and appends
+   * it to the conversation the next follow-up reads.
+   */
+  const askEngine = useCallback(
+    async (parts: {
+      question?: string;
+      file?: { storageId: Id<"_storage">; name: string; mime?: string };
+      followUp?: string;
+    }) => {
+      setSolving(true);
+      setEngineError(null);
+      try {
+        const result = await solve({
+          question: parts.question,
+          storageId: parts.file?.storageId,
+          name: parts.file?.name,
+          mime: parts.file?.mime,
+          gradeLabel: grade.label,
+          chapterName: chapter.name,
+          chapterFormulas: chapter.formulas,
+          history: parts.followUp ? turns.slice(-6) : undefined,
+        });
+        setEngineLive(true);
+        setEngineModel(result.model);
+        setSolution({
+          headline: result.headline,
+          given: result.given,
+          formulas: result.formulas,
+          steps: result.steps,
+          verification: result.verification,
+        });
+        if (parts.followUp) {
+          setTurns((current) => [
+            ...current,
+            { role: "student", text: parts.followUp! },
+            { role: "lab", text: result.answer },
+          ]);
+        } else if (parts.question) {
+          setTurns((current) => [
+            ...current,
+            { role: "lab", text: `${result.headline} ${result.answer}` },
+          ]);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : "The engine could not reach a model just now. Try again in a minute.";
+        setEngineError(message);
+      } finally {
+        setSolving(false);
+      }
+    },
+    [chapter, grade.label, solve, turns],
+  );
+
+  /** Submit the follow-up box: a question about the working just shown. */
+  const sendFollowUp = useCallback(() => {
+    const text = followUp.trim();
+    if (!text || solving) return;
+    setFollowUp("");
+    setTurns((current) => [...current, { role: "student", text }]);
+    void askEngine({ followUp: text });
+  }, [askEngine, followUp, solving]);
+
   const readDocument = useCallback(
-    (file: File | undefined) => {
+    async (file: File | undefined) => {
       if (!file) return;
       setSolving(true);
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => {
-        setSolution(documentSolution(file.name, grade, chapter));
+      setEngineError(null);
+      try {
+        const url = await generateUploadUrl();
+        const response = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
+        setSolution(null);
+        await askEngine({ file: { storageId, name: file.name, mime: file.type } });
+      } catch {
+        setEngineError(
+          "The upload did not make it to the engine. Check your connection and try again — or paste the equation instead.",
+        );
         setSolving(false);
-      }, 900);
+      }
     },
-    [grade, chapter],
+    [askEngine, generateUploadUrl],
   );
+
+  const resetEngine = useCallback(() => {
+    setSolution(null);
+    setTurns([]);
+    setFollowUp("");
+    setEngineError(null);
+    setFormula("");
+  }, []);
 
   const blocks = solution
     ? {
@@ -315,14 +430,17 @@ export function MathLab() {
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                runEngine(formula);
+                const input = formula.trim();
+                if (!input || solving) return;
+                runEngine(input);
+                void askEngine({ question: input });
               }}
               className="flex flex-col gap-2 sm:flex-row"
             >
               <input
                 value={formula}
                 onChange={(event) => setFormula(event.target.value)}
-                placeholder="Type an equation — e.g. 2x^2 - 5x + 3 = 0"
+                placeholder="Paste or type a problem — e.g. 2x^2 - 5x + 3 = 0"
                 /* 16px on phones so iOS Safari does not zoom the page when
                    the field takes focus; the desktop step stays at 14px. */
                 className="w-full min-w-0 rounded-full border border-[var(--glass-line)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:flex-1 sm:py-2.5 sm:text-sm"
@@ -347,7 +465,7 @@ export function MathLab() {
               onDrop={(event) => {
                 event.preventDefault();
                 setDragOver(false);
-                readDocument(event.dataTransfer.files?.[0]);
+                void readDocument(event.dataTransfer.files?.[0]);
               }}
               className={"tool-dropzone" + (dragOver ? " is-over" : "")}
             >
@@ -360,15 +478,21 @@ export function MathLab() {
                 {solving ? "Reading the question…" : "Drop a question sheet or photo"}
               </span>
               <span className="text-xs text-text-dim">
-                PDF, PNG or JPG — the chapter framework below is built from it
+                PDF, Word, PNG or JPG — the engine reads it and solves what it shows
               </span>
               <input
                 type="file"
                 className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.txt"
-                onChange={(event) => readDocument(event.target.files?.[0] ?? undefined)}
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.md,.csv"
+                onChange={(event) => void readDocument(event.target.files?.[0] ?? undefined)}
               />
             </label>
+
+            {engineError && (
+              <p className="rounded-2xl border border-amber-400/30 bg-amber-400/5 px-4 py-3 text-[12px] leading-relaxed text-amber-200">
+                {engineError}
+              </p>
+            )}
 
             {solution && (
               <p className="rounded-2xl border border-[var(--glass-line)] px-4 py-3 text-[12px] leading-relaxed">
@@ -390,9 +514,9 @@ export function MathLab() {
                   <AccordionContent className="pb-3">
                     {blocks ? (
                       <ul className="space-y-2">
-                        {blocks[block.key].map((line) => (
+                        {blocks[block.key].map((line, lineIndex) => (
                           <li
-                            key={line}
+                            key={`${block.key}-${lineIndex}`}
                             className="flex gap-2.5 text-[12.5px] leading-relaxed text-text-dim"
                           >
                             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signal)]" />
@@ -410,6 +534,76 @@ export function MathLab() {
                 </AccordionItem>
               ))}
             </Accordion>
+
+            {/* Ask back: verify, question a step, or take the answer further */}
+            <div className="rounded-2xl border border-[var(--glass-line)] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+                Ask about this solution
+              </p>
+              {turns.length > 0 && (
+                <div className="mt-2 max-h-36 space-y-1.5 overflow-y-auto pr-1">
+                  {turns.map((turn, index) => (
+                    <p
+                      key={`turn-${index}`}
+                      className={
+                        "text-[12px] leading-relaxed " +
+                        (turn.role === "student" ? "font-medium text-foreground" : "text-text-dim")
+                      }
+                    >
+                      <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--signal)]">
+                        {turn.role === "student" ? "You" : "Engine"}
+                      </span>
+                      {turn.text}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {["Is this correct?", "Explain step 2 slower", "Give a similar question"].map(
+                  (prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      disabled={solving || !solution}
+                      onClick={() => {
+                        setFollowUp("");
+                        setTurns((current) => [...current, { role: "student", text: prompt }]);
+                        void askEngine({ followUp: prompt });
+                      }}
+                      className="rounded-full border border-[var(--glass-line)] px-3 py-1 text-[11px] text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground disabled:opacity-40"
+                    >
+                      {prompt}
+                    </button>
+                  ),
+                )}
+              </div>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendFollowUp();
+                }}
+                className="mt-2 flex items-center gap-2"
+              >
+                <input
+                  value={followUp}
+                  onChange={(event) => setFollowUp(event.target.value)}
+                  placeholder={solution ? "Ask whether it is true, or about any step…" : "Solve something first, then ask here"}
+                  disabled={!solution || solving}
+                  className="min-w-0 flex-1 rounded-full border border-[var(--glass-line)] bg-transparent px-3.5 py-2 text-[13px] outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  aria-label="Send follow-up"
+                  disabled={!solution || solving || !followUp.trim()}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--signal-strong)] text-white transition-transform active:scale-95 disabled:opacity-40"
+                >
+                  <CornerDownLeft className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+
+            {/* Avia, in the lab: talk or type about this problem */}
+            <LabAviaChat context={solution ? `Math Lab, ${grade.label}, chapter ${chapter.name}. Current result: ${solution.headline} Answer: ${blocks?.verification.at(-1) ?? ""}` : undefined} />
           </div>
         </div>
       </div>

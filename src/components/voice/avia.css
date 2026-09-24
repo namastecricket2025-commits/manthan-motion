@@ -691,22 +691,34 @@ html:not(.dark) .avia-bubble--avia {
   --avia-orb-edge: rgba(255, 255, 255, 0.16);
   --avia-strand-blur: 3.5px;
   --avia-strand-mix: screen;
+  --avia-strand-opacity: 0.92;
   --avia-orbit-glow: 0 16px 44px -14px rgba(139, 147, 255, 0.6);
   --avia-halo-alpha: 0.5;
+  --avia-orb-inner: inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -8px 18px -10px rgba(0, 0, 0, 0.6);
 }
 
 html:not(.dark) .avia-root {
-  /* light: pearl glass with cobalt / rose / teal strands */
-  --avia-1: #4f6bff;
-  --avia-2: #b45cf0;
-  --avia-3: #14b8d4;
-  --avia-4: #f2679c;
-  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #ffffff 0%, #eef2ff 56%, #e2e8f5 100%);
-  --avia-orb-edge: rgba(15, 23, 42, 0.12);
-  --avia-strand-blur: 5px;
+  /* light: pearl glass with soft cobalt / rose / teal strands.
+     Tuned away from the dark aurora: the raw strand colours that glow on
+     near-black look electric and slightly harsh on white glass, so the light
+     palette is desaturated, deepened and cooled — more watercolour than
+     neon — and the orb base is a warm pearl that sits quietly on the
+     sand-white canvas instead of fighting it. */
+  --avia-1: #5b74e8;
+  --avia-2: #b06ad8;
+  --avia-3: #2aa7c4;
+  --avia-4: #e0729f;
+  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #ffffff 0%, #f4f2fb 52%, #e6e4f2 100%);
+  --avia-orb-edge: rgba(30, 27, 75, 0.14);
+  --avia-strand-blur: 6px;
   --avia-strand-mix: multiply;
-  --avia-orbit-glow: 0 16px 40px -16px rgba(79, 107, 255, 0.45);
-  --avia-halo-alpha: 0.34;
+  --avia-strand-opacity: 0.62;
+  --avia-orbit-glow: 0 14px 34px -16px rgba(91, 116, 232, 0.4);
+  --avia-halo-alpha: 0.22;
+  /* on white, the multi-blend inner light becomes a smudge; soften it */
+  --avia-orb-inner: inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -6px 14px -10px rgba(30, 27, 75, 0.28);
 }
 
 .avia-fab {
@@ -765,9 +777,7 @@ html:not(.dark) .avia-root {
   width: 50px;
   border-radius: 999px;
   background: var(--avia-orb-base);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -8px 18px -10px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--avia-orb-inner);
   overflow: hidden;
   isolation: isolate;
 }
@@ -781,7 +791,7 @@ html:not(.dark) .avia-root {
   display: block;
   mix-blend-mode: var(--avia-strand-mix);
   filter: blur(var(--avia-strand-blur));
-  opacity: 0.92;
+  opacity: var(--avia-strand-opacity, 0.92);
 }
 
 .avia-fab__strands span {

@@ -39,6 +39,14 @@ export function useTelemetry() {
   return useContext(TelemetryCtx).feed;
 }
 
+/**
+ * Write the feed directly — used by the shell to clear stale readouts when
+ * the student switches instruments, so a heart rate never outlives its lab.
+ */
+export function useTelemetrySetter() {
+  return useContext(TelemetryCtx).setFeed;
+}
+
 export function TelemetryProvider({ children }: { children: React.ReactNode }) {
   const [feed, setFeed] = useState<TelemetryFeed | null>(null);
   return <TelemetryCtx.Provider value={{ feed, setFeed }}>{children}</TelemetryCtx.Provider>;
