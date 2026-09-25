@@ -252,7 +252,7 @@ export default function Dashboard() {
 
         {/* ---- Main ---- */}
         <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
-          <div className="mx-auto flex max-w-6xl flex-col gap-6">
+          <div className="mx-auto flex max-w-5xl flex-col gap-6">
             <div
               className="flex flex-wrap items-end justify-between gap-4"
             >
@@ -281,8 +281,8 @@ export default function Dashboard() {
                     : view === "notebooks"
                       ? "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."
                       : hasNotebooks
-                        ? "Your sources, study material and weekly momentum in one calm view."
-                        : "Create your first notebook, drop in your notes, and Manthan turns them into study material."}
+                        ? "Your study dashboard."
+                        : "Create your first notebook to get started."}
                 </p>
               </div>
               {openNotebook && (

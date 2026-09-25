@@ -12,11 +12,9 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { SPRING } from "@/lib/motion";
 
 /**
  * Every destination reachable from the app sidebar.
@@ -97,24 +95,16 @@ export function DashboardNav({
   }
 
   return (
-    <motion.nav
-      className="flex flex-col gap-1"
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={SPRING}
-    >
+    <nav className="flex flex-col gap-1">
       {ITEMS.map((item) => {
         const isActive =
           item.key === "notebooks" ? notebooksActive : item.key === active;
         return (
           <div key={item.key} className="flex flex-col gap-1">
-            <motion.button
+            <button
               type="button"
               aria-current={isActive ? "page" : undefined}
               onClick={() => onSelect(item.key)}
-              whileHover={{ x: 2, scale: 1.008 }}
-              whileTap={{ scale: 0.975 }}
-              transition={SPRING}
               className={
                 "flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm font-medium " +
                 "transition-[color,border-color,background-color] duration-200 " +
@@ -125,7 +115,7 @@ export function DashboardNav({
             >
               <item.icon className="h-4 w-4" />
               {item.label}
-            </motion.button>
+            </button>
 
             {/* The notebooks themselves, nested under the section entry. */}
             {item.key === "notebooks" && (
@@ -220,7 +210,7 @@ export function DashboardNav({
           </div>
         );
       })}
-    </motion.nav>
+    </nav>
   );
 }
 
