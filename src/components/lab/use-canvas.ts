@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { settingsRuntime } from "@/lib/app-settings";
 
-/** Spring tuning used across the lab: stiffness 250, damping 22. */
+/** Shared unit-mass spring: stiffness 120, damping 18. */
 export { SPRING } from "@/lib/motion";
 
 /**

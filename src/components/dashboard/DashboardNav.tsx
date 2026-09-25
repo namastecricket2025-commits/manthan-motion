@@ -12,9 +12,11 @@ import {
   Tag,
   X,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { SPRING } from "@/lib/motion";
 
 /**
  * Every destination reachable from the app sidebar.
@@ -95,28 +97,35 @@ export function DashboardNav({
   }
 
   return (
-    <nav className="flex flex-col gap-1">
+    <motion.nav
+      className="flex flex-col gap-1"
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={SPRING}
+    >
       {ITEMS.map((item) => {
         const isActive =
           item.key === "notebooks" ? notebooksActive : item.key === active;
         return (
           <div key={item.key} className="flex flex-col gap-1">
-            <button
+            <motion.button
               type="button"
               aria-current={isActive ? "page" : undefined}
               onClick={() => onSelect(item.key)}
+              whileHover={{ x: 2, scale: 1.008 }}
+              whileTap={{ scale: 0.975 }}
+              transition={SPRING}
               className={
-                "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-sm font-medium " +
-                "transition-[color,border-color,background-color,transform] duration-200 ease-out " +
-                "active:scale-[0.98] " +
+                "flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm font-medium " +
+                "transition-[color,border-color,background-color] duration-200 " +
                 (isActive
-                  ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                  ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                   : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)] hover:text-[var(--signal)]")
               }
             >
               <item.icon className="h-4 w-4" />
               {item.label}
-            </button>
+            </motion.button>
 
             {/* The notebooks themselves, nested under the section entry. */}
             {item.key === "notebooks" && (
@@ -211,7 +220,7 @@ export function DashboardNav({
           </div>
         );
       })}
-    </nav>
+    </motion.nav>
   );
 }
 

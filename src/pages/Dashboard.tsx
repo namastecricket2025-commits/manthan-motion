@@ -1,18 +1,11 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import BlobBackground from "@/components/BlobBackground";
-import Bar from "@/components/charts/bar";
-import BarChart from "@/components/charts/bar-chart";
-import BarXAxis from "@/components/charts/bar-x-axis";
-import Grid from "@/components/charts/grid";
-import PieCenter from "@/components/charts/pie-center";
-import PieChart from "@/components/charts/pie-chart";
-import PieSlice from "@/components/charts/pie-slice";
-import { ChartTooltip } from "@/components/charts/tooltip";
 import {
   DashboardNav,
   type DashboardSection,
 } from "@/components/dashboard/DashboardNav";
+import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { NotebookWorkspace } from "@/components/dashboard/NotebookWorkspace";
 import { Logo } from "@/components/landing/Logo";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -38,7 +31,6 @@ import {
 } from "@/components/ui/sheet";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { useAuth } from "@/hooks/use-auth";
-import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import {
   ArrowLeft,
   ArrowRight,
@@ -49,7 +41,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -110,32 +102,11 @@ export default function Dashboard() {
 
   const openNotebook = notebooks?.find((n) => n.id === notebookParam);
 
-  const [hovered, setHovered] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const els = root.querySelectorAll<HTMLElement>("[data-reveal]");
-    if (prefersReducedMotion()) {
-      gsap.set(els, { opacity: 1, y: 0 });
-      return;
-    }
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        els,
-        { opacity: 0, y: 26 },
-        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.07 },
-      );
-    }, root);
-    return () => ctx.revert();
-  }, [view, notebookParam, notebooks?.length]);
 
   /* ---------------- actions ---------------- */
 
@@ -214,51 +185,9 @@ export default function Dashboard() {
   );
 
   const hasNotebooks = (notebooks?.length ?? 0) > 0;
-  const mixData = summary
-    ? [
-        { label: "Files", value: summary.fileCount, color: "var(--src-files)" },
-        { label: "Links", value: summary.linkCount, color: "var(--src-links)" },
-        { label: "Pasted notes", value: summary.notesCount, color: "var(--src-notes)" },
-      ].filter((d) => d.value > 0)
-    : [];
-  const generatedData = summary
-    ? [
-        { label: "Summaries", value: summary.materialsByKind.summary ?? 0 },
-        { label: "Flashcards", value: summary.materialsByKind.flashcards ?? 0 },
-        { label: "Quizzes", value: summary.materialsByKind.quiz ?? 0 },
-        { label: "Mind maps", value: summary.materialsByKind.mindmap ?? 0 },
-        { label: "Slide decks", value: summary.materialsByKind.slides ?? 0 },
-      ].filter((d) => d.value > 0)
-    : [];
-  const generatedTotal = generatedData.reduce((sum, d) => sum + d.value, 0);
-  const generatedByDay = summary?.materialsByDay ?? [];
-  const generatedByDayTotal = generatedByDay.reduce(
-    (sum, d) => sum + d.summary + d.flashcards + d.quiz + d.mindmap + d.slides,
-    0,
-  );
-  const weekData = summary?.byDay ?? [];
-  const weekTotal = weekData.reduce((sum, d) => sum + d.count, 0);
-
-  /**
-   * Distinct accent shades, one per artefact kind (stacked bars).
-   *
-   * These are theme tokens rather than literals: the bright neon set that
-   * looks right on near-black washes out on the cream canvas, so each theme
-   * owns its own ramp in index.css.
-   */
-  const KIND_COLORS: Record<string, string> = {
-    summary: "var(--kind-summary)",
-    flashcards: "var(--kind-flashcards)",
-    quiz: "var(--kind-quiz)",
-    mindmap: "var(--kind-mindmap)",
-    slides: "var(--kind-slides)",
-  };
 
   return (
-    <div
-      ref={rootRef}
-      className="relative min-h-screen bg-background text-foreground"
-    >
+    <div className="relative min-h-screen bg-background text-foreground">
       <BlobBackground />
       <div className="relative z-10">
         {/* ---- Sidebar (desktop) ---- */}
@@ -323,10 +252,9 @@ export default function Dashboard() {
 
         {/* ---- Main ---- */}
         <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
-          <div className="mx-auto flex max-w-5xl flex-col gap-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6">
             <div
-              data-reveal
-              className="flex flex-wrap items-end justify-between gap-3"
+              className="flex flex-wrap items-end justify-between gap-4"
             >
               <div className="min-w-0">
                 {openNotebook ? (
@@ -353,7 +281,7 @@ export default function Dashboard() {
                     : view === "notebooks"
                       ? "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."
                       : hasNotebooks
-                        ? "Open a notebook to add sources and generate study material."
+                        ? "Your sources, study material and weekly momentum in one calm view."
                         : "Create your first notebook, drop in your notes, and Manthan turns them into study material."}
                 </p>
               </div>
@@ -539,17 +467,13 @@ export default function Dashboard() {
               /* ================= OVERVIEW ================= */
               <>
                 {notebooks === undefined && (
-                  <div
-                    data-reveal
-                    className="glass-panel p-6 text-sm text-text-dim"
-                  >
+                  <div className="glass-panel p-6 text-sm text-text-dim">
                     Loading your workspace…
                   </div>
                 )}
 
                 {!hasNotebooks && notebooks !== undefined && (
                   <div
-                    data-reveal
                     className="glass-panel flex flex-col gap-5 p-6 sm:p-8"
                   >
                     <div>
@@ -601,247 +525,12 @@ export default function Dashboard() {
                 )}
 
                 {hasNotebooks && (
-                  <>
-                    <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                      {[
-                        {
-                          label: "Notebooks",
-                          value: summary?.notebookCount ?? 0,
-                        },
-                        { label: "Sources", value: summary?.sourceCount ?? 0 },
-                        {
-                          label: "Added this week",
-                          value: summary?.addedThisWeek ?? 0,
-                        },
-                      ].map((s) => (
-                        <div
-                          key={s.label}
-                          data-reveal
-                          className="glass-panel p-4 sm:p-5"
-                        >
-                          <p className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                            {s.value}
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium text-text-dim sm:text-xs">
-                            {s.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Charts only exist once there is something to chart — a
-                        brand-new workspace stays focused on its first step. */}
-                    {(summary?.sourceCount ?? 0) > 0 && (
-                      <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
-                        <div data-reveal className="glass-panel p-5 sm:p-6">
-                          <div className="flex items-center justify-between">
-                            <h2 className="font-display text-base font-bold tracking-tight">
-                              Source mix
-                            </h2>
-                            <span className="text-[11px] font-medium text-text-dim">
-                              all time
-                            </span>
-                          </div>
-                          <div className="mt-4 flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
-                            <div className="w-full max-w-[220px] shrink-0">
-                              <PieChart
-                                data={mixData}
-                                innerRadius={62}
-                                cornerRadius={4}
-                                padAngle={0.04}
-                                hoveredIndex={hovered}
-                                onHoverChange={setHovered}
-                                hoverOffset={6}
-                              >
-                                {mixData.map((_, i) => (
-                                  <PieSlice key={i} index={i} />
-                                ))}
-                                <PieCenter defaultLabel="Sources" />
-                              </PieChart>
-                            </div>
-                            <div className="w-full">
-                              <ul className="space-y-1.5">
-                                {mixData.map((m, i) => (
-                                  <li key={m.label}>
-                                    <button
-                                      type="button"
-                                      onMouseEnter={() => setHovered(i)}
-                                      onMouseLeave={() => setHovered(null)}
-                                      onFocus={() => setHovered(i)}
-                                      onBlur={() => setHovered(null)}
-                                      /* Touch devices never hover: a tap toggles the
-                                         slice instead, so the legend stays useful
-                                         on a phone. */
-                                      onClick={() =>
-                                        setHovered((h) => (h === i ? null : i))
-                                      }
-                                      className={
-                                        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors " +
-                                        (hovered === i
-                                          ? "bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                          : "")
-                                      }
-                                    >
-                                      <span
-                                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                        style={{ background: m.color }}
-                                      />
-                                      <span className="text-text-dim">
-                                        {m.label}
-                                      </span>
-                                      <span className="ml-auto font-medium tabular-nums">
-                                        {m.value}
-                                      </span>
-                                    </button>
-                                  </li>
-                                ))}
-                              </ul>
-                              {summary && summary.failedCount > 0 && (
-                                <p className="mt-2 px-2.5 text-[11px] leading-relaxed text-text-dim">
-                                  {summary.failedCount} need text — {summary.readableCount} readable by the AI.
-                                </p>
-                              )}
-
-                              {generatedTotal > 0 && (
-                                <div className="mt-4 border-t border-[var(--card-border)] pt-3">
-                                  <p className="px-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-dim">
-                                    Generated · {generatedTotal} total
-                                  </p>
-                                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 px-2.5">
-                                    {generatedData.map((g) => (
-                                      <li
-                                        key={g.label}
-                                        className="flex items-center gap-1.5 text-xs"
-                                      >
-                                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal)]" />
-                                        <span className="text-text-dim">
-                                          {g.label}
-                                        </span>
-                                        <span className="font-medium tabular-nums">
-                                          {g.value}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div data-reveal className="glass-panel p-5 sm:p-6">
-                          <div className="flex items-center justify-between">
-                            <h2 className="font-display text-base font-bold tracking-tight">
-                              Generated per day
-                            </h2>
-                            <span className="text-[11px] font-medium text-text-dim">
-                              last 7 days · {generatedByDayTotal} total
-                            </span>
-                          </div>
-                          <div className="mt-4">
-                            {generatedByDay.length > 0 ? (
-                              <BarChart
-                                data={generatedByDay}
-                                xDataKey="day"
-                                aspectRatio="16 / 9"
-                                stacked
-                                margin={{
-                                  top: 16,
-                                  right: 8,
-                                  bottom: 4,
-                                  left: 0,
-                                }}
-                              >
-                                <Grid horizontal />
-                                {/* Rounded caps on every segment, separated by a
-                                    hairline gap, so the column reads as a
-                                    polished stack rather than a hard block. */}
-                                <Bar dataKey="summary" fill={KIND_COLORS.summary} lineCap={6} stackGap={2} />
-                                <Bar dataKey="flashcards" fill={KIND_COLORS.flashcards} lineCap={6} stackGap={2} />
-                                <Bar dataKey="quiz" fill={KIND_COLORS.quiz} lineCap={6} stackGap={2} />
-                                <Bar dataKey="mindmap" fill={KIND_COLORS.mindmap} lineCap={6} stackGap={2} />
-                                <Bar dataKey="slides" fill={KIND_COLORS.slides} lineCap={6} stackGap={2} />
-                                <BarXAxis />
-                                <ChartTooltip showCrosshair={false} />
-                              </BarChart>
-                            ) : (
-                              <p className="py-10 text-center text-xs text-text-dim">
-                                Loading…
-                              </p>
-                            )}
-                          </div>
-                          {generatedByDay.length > 0 && generatedByDayTotal === 0 && (
-                            <p className="mt-2 text-xs text-text-dim">
-                              Nothing generated in the last seven days yet — churn
-                              a notebook and it will chart here, per kind.
-                            </p>
-                          )}
-                          {generatedByDayTotal > 0 && (
-                            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                              {[
-                                ["summary", "Summaries"],
-                                ["flashcards", "Flashcards"],
-                                ["quiz", "Quizzes"],
-                                ["mindmap", "Mind maps"],
-                                ["slides", "Slides"],
-                              ].map(([key, label]) => (
-                                <li
-                                  key={key}
-                                  className="flex items-center gap-1.5 text-[11px]"
-                                >
-                                  <span
-                                    className="h-2 w-2 rounded-sm"
-                                    style={{ background: KIND_COLORS[key] }}
-                                  />
-                                  <span className="text-text-dim">{label}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div data-reveal className="glass-panel p-5 sm:p-6">
-                      <div className="flex items-center justify-between">
-                        <h2 className="font-display text-base font-bold tracking-tight">
-                          Your notebooks
-                        </h2>
-                        <span className="text-[11px] font-medium text-text-dim">
-                          {notebooks?.length ?? 0} total
-                        </span>
-                      </div>
-                      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {notebooks?.map((notebook) => (
-                          <li key={notebook.id}>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(`/dashboard?notebook=${notebook.id}`)
-                              }
-                              className="flex w-full items-center gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-2.5 text-left transition-colors hover:border-[var(--signal)]"
-                            >
-                              <NotebookPen className="h-4 w-4 shrink-0 text-[var(--signal)]" />
-                              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                {notebook.name}
-                              </span>
-                              <span className="shrink-0 text-xs tabular-nums text-text-dim">
-                                {notebook.sourceCount}
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                      <MovingBorderButton
-                        onClick={() => navigate("/dashboard?view=notebooks")}
-                        className="mt-4"
-                        innerClassName="px-4 py-2.5 text-[13px]"
-                      >
-                        <NotebookPen className="h-4 w-4" />
-                        New notebook
-                      </MovingBorderButton>
-                    </div>
-                  </>
+                  <DashboardOverview
+                    summary={summary}
+                    notebookCount={notebooks?.length ?? 0}
+                    onOpenNotebooks={() => navigate("/dashboard?view=notebooks")}
+                    onCreateNotebook={() => navigate("/dashboard?view=notebooks")}
+                  />
                 )}
               </>
             )}
