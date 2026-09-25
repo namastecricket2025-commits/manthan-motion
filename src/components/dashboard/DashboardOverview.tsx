@@ -1,17 +1,13 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { BookOpen, FileText, NotebookPen, Sparkles } from "lucide-react";
+import { Bar } from "@/components/charts/bar";
+import { BarChart } from "@/components/charts/bar-chart";
+import { BarXAxis } from "@/components/charts/bar-x-axis";
+import { BarYAxis } from "@/components/charts/bar-y-axis";
+import { Grid } from "@/components/charts/grid";
+import { PieChart } from "@/components/charts/pie-chart";
+import { PieSlice } from "@/components/charts/pie-slice";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
+import { SPRING } from "@/lib/motion";
+import { BookOpen, FileText, NotebookPen, Sparkles } from "lucide-react";
 
 export type DashboardSummary = {
   notebookCount: number;
@@ -42,7 +38,6 @@ const MATERIAL_LABELS: Record<(typeof MATERIAL_KINDS)[number], string> = {
   mindmap: "Mind maps",
   slides: "Slides",
 };
-
 const SOURCE_COLORS = ["#c81f27", "#b0773c", "#6d7f63"];
 
 function StatCard({
@@ -64,6 +59,47 @@ function StatCard({
       </div>
       <p className="mt-4 font-display text-3xl font-bold tracking-tight tabular-nums">{value}</p>
       <p className="mt-1 text-xs text-text-dim">{detail}</p>
+    </div>
+  );
+}
+
+function SourceBreakdown({
+  data,
+}: {
+  data: { name: string; value: number }[];
+}) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  return (
+    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+      <PieChart
+        data={data.map((item) => ({ label: item.name, value: item.value }))}
+        size={196}
+        innerRadius={0}
+        padAngle={0.035}
+        cornerRadius={5}
+        hoverOffset={8}
+        enterTransition={SPRING}
+        className="shrink-0"
+      >
+        {data.map((item, index) => (
+          <PieSlice key={item.name} index={index} color={SOURCE_COLORS[index % SOURCE_COLORS.length]} hoverEffect="translate" />
+        ))}
+      </PieChart>
+      <div className="w-full min-w-0">
+        <p className="text-xs font-medium text-text-dim">Source breakdown</p>
+        <p className="mt-1 font-display text-3xl font-bold tracking-tight tabular-nums">{total}</p>
+        <p className="mt-1 text-xs text-text-dim">total sources in your library</p>
+        <div className="mt-5 space-y-3">
+          {data.map((item, index) => (
+            <div key={item.name} className="flex items-center gap-2 text-sm">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: SOURCE_COLORS[index % SOURCE_COLORS.length] }} />
+              <span className="min-w-0 flex-1 truncate text-text-dim">{item.name}</span>
+              <span className="font-semibold tabular-nums">{item.value}</span>
+              <span className="w-10 text-right text-xs text-text-dim tabular-nums">{total ? Math.round((item.value / total) * 100) : 0}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -97,9 +133,7 @@ export function DashboardOverview({
     value: day.summary + day.flashcards + day.quiz + day.mindmap + day.slides,
   }));
   const generatedCount = materialData.reduce((total, item) => total + item.value, 0);
-  const readablePercent = summary.sourceCount
-    ? Math.round((summary.readableCount / summary.sourceCount) * 100)
-    : 0;
+  const readablePercent = summary.sourceCount ? Math.round((summary.readableCount / summary.sourceCount) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -120,23 +154,7 @@ export function DashboardOverview({
               </div>
               <span className="text-xs text-text-dim">{summary.sourceCount} total</span>
             </div>
-            {sourceData.length > 0 ? (
-              <div className="mt-4 h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={sourceData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={3}>
-                      {sourceData.map((entry, index) => <Cell key={entry.name} fill={SOURCE_COLORS[index % SOURCE_COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: "var(--panel-bg)", border: "1px solid var(--card-border)", borderRadius: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="mt-8 text-sm text-text-dim">No readable sources yet.</p>
-            )}
-            <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs text-text-dim">
-              {sourceData.map((item, index) => <span key={item.name} className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: SOURCE_COLORS[index % SOURCE_COLORS.length] }} />{item.name} · {item.value}</span>)}
-            </div>
+            <div className="mt-5"><SourceBreakdown data={sourceData} /></div>
           </div>
 
           <div className="rounded-2xl border border-[var(--card-border)] bg-[var(--panel-bg)]/70 p-5">
@@ -148,16 +166,21 @@ export function DashboardOverview({
               <span className="text-xs text-text-dim">{generatedCount} total</span>
             </div>
             {activityData.length > 0 ? (
-              <div className="mt-6 h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activityData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                    <CartesianGrid stroke="var(--card-border)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fill: "var(--text-dim)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fill: "var(--text-dim)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: "var(--card-border)", opacity: 0.25 }} contentStyle={{ background: "var(--panel-bg)", border: "1px solid var(--card-border)", borderRadius: 12 }} />
-                    <Bar dataKey="value" fill="var(--signal)" radius={[5, 5, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="mt-5 h-[250px]">
+                <BarChart
+                  data={activityData}
+                  xDataKey="label"
+                  aspectRatio="1.7 / 1"
+                  margin={{ top: 12, right: 12, bottom: 28, left: 12 }}
+                  barGap={0.28}
+                  enterTransition={SPRING}
+                  revealSignature={`${generatedCount}-${activityData.at(-1)?.value ?? 0}`}
+                >
+                  <Grid horizontal numTicksRows={4} stroke="var(--card-border)" />
+                  <Bar dataKey="value" fill="var(--signal)" lineCap="round" />
+                  <BarXAxis maxLabels={7} />
+                  <BarYAxis />
+                </BarChart>
               </div>
             ) : (
               <p className="mt-8 text-sm text-text-dim">No activity to chart yet.</p>
