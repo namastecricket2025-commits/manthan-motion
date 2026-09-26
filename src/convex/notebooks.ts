@@ -154,6 +154,10 @@ export const summary = query({
       failedCount: 0,
       materialsByKind: {} as Record<string, number>,
       addedThisWeek: 0,
+      sourcesPrevWeek: 0,
+      materialsThisWeek: 0,
+      materialsPrevWeek: 0,
+      activeNotebook: null as null | { id: string; name: string; materialCount: number },
       perNotebook: [] as { id: string; name: string; count: number }[],
       byDay: [] as { day: string; label: string; count: number }[],
       materialsByDay: [] as {
@@ -251,6 +255,13 @@ export const summary = query({
       materialsByKind,
       materialsByDay,
       addedThisWeek: sources.filter((s) => s.createdAt >= weekStart).length,
+      sourcesPrevWeek: sources.filter(
+        (s) => s.createdAt >= weekStart - 7 * 24 * 60 * 60 * 1000 && s.createdAt < weekStart,
+      ).length,
+      materialsThisWeek: materials.filter((m) => m.createdAt >= weekStart).length,
+      materialsPrevWeek: materials.filter(
+        (m) => m.createdAt >= weekStart - 7 * 24 * 60 * 60 * 1000 && m.createdAt < weekStart,
+      ).length,
       perNotebook: notebooks
         .slice()
         .sort((a, b) => a.createdAt - b.createdAt)
@@ -259,6 +270,30 @@ export const summary = query({
           name: notebook.name,
           count: sources.filter((s) => s.notebookId === notebook._id).length,
         })),
+      // The notebook with the newest work in it — same derivation the resume
+      // block makes client-side, so the tiles can name it without pulling the
+      // whole notebook list.
+      activeNotebook: notebooks
+        .map((notebook) => {
+          const inNotebook = sources.filter(
+            (s) => s.notebookId === notebook._id,
+          );
+          const madeInNotebook = materials.filter(
+            (m) => m.notebookId === notebook._id,
+          );
+          return {
+            id: notebook._id as string,
+            name: notebook.name,
+            materialCount: madeInNotebook.length,
+            latest: Math.max(
+              notebook.createdAt,
+              ...inNotebook.map((s) => s.createdAt),
+              ...madeInNotebook.map((m) => m.createdAt),
+            ),
+          };
+        })
+        .sort((a, b) => b.latest - a.latest)
+        .map(({ id, name, materialCount }) => ({ id, name, materialCount }))[0] ?? null,
       byDay,
     };
   },

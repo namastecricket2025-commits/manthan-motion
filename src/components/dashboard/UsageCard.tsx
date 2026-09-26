@@ -29,7 +29,9 @@ export function UsageCard() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Gauge className="h-4 w-4 text-[var(--signal)]" />
-          <h3 className="text-sm font-semibold">Today's allowance</h3>
+          <h3 className="text-sm font-semibold">
+            {usage.window === "month" ? "This month's allowance" : "Today's allowance"}
+          </h3>
         </div>
         <span className="text-[11px] font-medium text-text-dim">
           resets {resetsAt}
@@ -67,7 +69,7 @@ export function UsageCard() {
         </div>
         <div>
           <dt className="text-[10px] font-medium uppercase tracking-wide text-text-dim">
-            Daily cap
+            {usage.window === "month" ? "Monthly cap" : "Daily cap"}
           </dt>
           <dd className="mt-0.5 text-sm font-semibold tabular-nums">
             {usage.limit.toLocaleString()}
@@ -80,15 +82,17 @@ export function UsageCard() {
           showing allowance remaining, so the card and the ledger agree. */}
       {out ? (
         <p className="mt-3 text-xs leading-relaxed text-text-dim">
-          You have used today's full allowance. It resets at {resetsAt} — or
-          look at the plans for a higher cap.
+          {usage.window === "month"
+            ? `You have used this month's full allowance. It resets on ${new Date(usage.resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })} — or look at the plans for a higher cap.`
+            : `You have used today's full allowance. It resets at ${resetsAt} — or look at the plans for a higher cap.`}
         </p>
       ) : (
         <p className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-text-dim">
           <span>
             {remaining.toLocaleString()} tokens left · {usage.requests}
             {" "}
-            generation{usage.requests === 1 ? "" : "s"} today. Tokens are what
+            generation{usage.requests === 1 ? "" : "s"} this
+            {usage.window === "month" ? " month" : " day"}. Tokens are what
             the AI reads and writes.
           </span>
           <Link

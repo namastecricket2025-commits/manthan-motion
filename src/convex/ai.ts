@@ -4,7 +4,6 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action } from "./_generated/server";
 import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
-import { msUntilReset } from "./usage";
 import { v } from "convex/values";
 import { inflateRawSync } from "node:zlib";
 import { extractText, getDocumentProxy } from "unpdf";
@@ -794,7 +793,9 @@ export const generate = action({
     const usage = await ctx.runQuery(internal.usage.ensureWithinQuota, {
       userId,
     });
-    const resetsAt = Date.now() + msUntilReset();
+    // The reset instant travels with the meter — a monthly plan rolls over on
+    // the 1st, the free plan at UTC midnight, and the ledger is authoritative.
+    const resetsAt = usage.resetsAt;
     if (usage.used >= usage.limit) {
       throw new QuotaError(resetsAt);
     }
@@ -846,7 +847,10 @@ export const generate = action({
           kind,
           ok: false,
           quotaExceeded: true,
-          error: `Daily allowance reached — resets at ${new Date(resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`,
+          error:
+            usage.window === "month"
+              ? `Monthly allowance reached — resets on ${new Date(resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })}.`
+              : `Daily allowance reached — resets at ${new Date(resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`,
         });
         continue;
       }

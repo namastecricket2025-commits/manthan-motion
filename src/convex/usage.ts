@@ -1,4 +1,5 @@
 import { currentIdentity, getAuthUserId, requireAuthUserId } from "./identity";
+import { PLAN_ALLOWANCES, type PlanId } from "../lib/plans";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -16,6 +17,21 @@ import { internalMutation, internalQuery, mutation, query } from "./_generated/s
 
 /** Daily token allowance per account on the free (current) plan. */
 export const DAILY_TOKEN_LIMIT = 60_000;
+
+/** Which bucket the current plan's allowance refills in. */
+export type AllowanceWindow = "day" | "month";
+
+/** Milliseconds until the current UTC month rolls over. */
+export function msUntilMonthReset(now = Date.now()) {
+  const d = new Date(now);
+  const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  return next - now;
+}
+
+/** Milliseconds until the plan's allowance window rolls over. */
+export function msUntilWindowReset(window: AllowanceWindow, now = Date.now()) {
+  return window === "month" ? msUntilMonthReset(now) : msUntilReset(now);
+}
 
 /** UTC date bucket "YYYY-MM-DD" — one row per user per day. */
 export function utcDay(now = Date.now()) {
@@ -36,7 +52,11 @@ export const record = internalMutation({
     requests: v.number(),
   },
   handler: async (ctx, { userId, tokens, requests }) => {
-    const day = utcDay();
+    // Spend lands in the same bucket the plan meters — a monthly allowance
+    // accumulates across the month's rows, a daily one resets at midnight.
+    const user = await ctx.db.get(userId);
+    const plan = (user?.plan ?? "free") as AllowancePlan;
+    const day = windowKey(allowanceFor(plan).window);
     const row = await ctx.db
       .query("usage")
       .withIndex("by_user_day", (q) => q.eq("userId", userId).eq("day", day))
@@ -72,47 +92,89 @@ export const getToday = internalQuery({
   },
 });
 
-/** What the dashboard's usage card renders. */
+type AllowancePlan = PlanId;
+
+/** A plan's allowance size and the bucket it refills in. */
+function allowanceFor(plan: AllowancePlan) {
+  return {
+    limit: PLAN_ALLOWANCES[plan],
+    window: (plan === "free" ? "day" : "month") as AllowanceWindow,
+  };
+}
+
+/** The UTC day (free plan) or UTC month (subscribed) a window key names. */
+function windowKey(window: AllowanceWindow, now = Date.now()) {
+  if (window === "month") {
+    return new Date(now).toISOString().slice(0, 7); // "YYYY-MM"
+  }
+  return utcDay(now);
+}
+
+/**
+ * What the dashboard's usage card renders.
+ *
+ * The allowance is plan-aware: the free plan meters a day, every paid plan
+ * meters the month its subscription is sold in. The window being metered
+ * travels with the numbers so the UI never has to guess which cap applies.
+ */
 export const myUsage = query({
   args: {},
   handler: async (ctx) => {
     const identity = await currentIdentity(ctx);
     if (!identity) return null;
 
-    // An account that has not generated anything yet has no ledger row — and
-    // that is a started meter, not a missing one: zero of the daily allowance
-    // has been spent.
     const userId = await getAuthUserId(ctx);
-    const row = userId
-      ? await ctx.db
-          .query("usage")
-          .withIndex("by_user_day", (q) =>
-            q.eq("userId", userId).eq("day", utcDay()),
-          )
-          .unique()
-      : null;
+    if (!userId) return null;
+
+    const user = await ctx.db.get(userId);
+    const plan = (user?.plan ?? "free") as AllowancePlan;
+    const { limit, window } = allowanceFor(plan);
+
+    // An account that has not generated anything yet has no ledger row — and
+    // that is a started meter, not a missing one: zero of the allowance has
+    // been spent.
+    const row = await ctx.db
+      .query("usage")
+      .withIndex("by_user_day", (q) =>
+        q.eq("userId", userId).eq("day", windowKey(window)),
+      )
+      .unique();
 
     return {
       used: row?.used ?? 0,
       requests: row?.requests ?? 0,
-      limit: DAILY_TOKEN_LIMIT,
-      resetsAt: Date.now() + msUntilReset(),
+      limit,
+      window,
+      plan,
+      resetsAt: Date.now() + msUntilWindowReset(window),
     };
   },
 });
 
-/** Endpoint used by ai.generate before it spends anything. */
+/**
+ * Endpoint used by ai.generate before it spends anything.
+ *
+ * The plan is read from the user row here — never taken from the caller — so
+ * the window and cap being enforced are always the account's own.
+ */
 export const ensureWithinQuota = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get(userId);
+    const plan = (user?.plan ?? "free") as AllowancePlan;
+    const { limit, window } = allowanceFor(plan);
     const row = await ctx.db
       .query("usage")
-      .withIndex("by_user_day", (q) => q.eq("userId", userId).eq("day", utcDay()))
+      .withIndex("by_user_day", (q) =>
+        q.eq("userId", userId).eq("day", windowKey(window)),
+      )
       .unique();
     return {
       used: row?.used ?? 0,
       requests: row?.requests ?? 0,
-      limit: DAILY_TOKEN_LIMIT,
+      limit,
+      window,
+      resetsAt: Date.now() + msUntilWindowReset(window),
     };
   },
 });

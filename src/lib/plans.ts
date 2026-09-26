@@ -110,6 +110,36 @@ export function getTier(id: PlanId): PlanTier | null {
   return PLAN_TIERS.find((tier) => tier.id === id) ?? null;
 }
 
+/**
+ * The generation allowance each plan buys, in tokens.
+ *
+ * One map owns the number for the pricing page, the dashboard meter and the
+ * server that enforces it, so the card a student reads is the limit the
+ * engine actually applies. The paid tiers meter monthly — a month is the unit
+ * they are sold in (the Sprint Pass's 60k budget simply outlives its 7 days
+ * in a monthly bucket) — while the free plan meters daily, which keeps a
+ * fresh account's spend visible and bounded from day one.
+ */
+export const PLAN_ALLOWANCES: Record<PlanId, number> = {
+  free: 60_000,
+  sprint: 60_000,
+  eduvantage: 250_000,
+  prime: 500_000,
+};
+
+/** Whether a plan's allowance resets each day (free) or each UTC month. */
+export function allowanceWindow(plan: PlanId): "day" | "month" {
+  return plan === "free" ? "day" : "month";
+}
+
+/** The allowance and its window together — what the meter and engine read. */
+export function planAllowance(plan: PlanId) {
+  return {
+    limit: PLAN_ALLOWANCES[plan],
+    window: allowanceWindow(plan),
+  };
+}
+
 export function planName(id: PlanId): string {
   if (id === "free") return "Free";
   return getTier(id)?.name ?? "Free";

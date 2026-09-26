@@ -35,6 +35,11 @@ const schema = defineSchema(
       // Auth is handled by Supabase, so this is what ties an identity to the
       // notebooks, sources, materials and usage it owns.
       authSubject: v.optional(v.string()),
+
+      // The subscription plan the account is on ("free" when never set). The
+      // usage engine reads this to size the generation allowance, so a plan
+      // change moves the meter and the enforcement together.
+      plan: v.optional(v.string()),
     })
       .index("email", ["email"]) // index for the email. do not remove or modify
       .index("by_auth_subject", ["authSubject"]),

@@ -1,10 +1,13 @@
 import { canUse, loadPlan, savePlan, type FeatureKey, type PlanId } from "@/lib/plans";
+import { api } from "@/convex/_generated/api";
+import { useConvexAuth, useMutation } from "convex/react";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { PremiumLockModal } from "./PremiumLockModal";
@@ -51,6 +54,24 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     savePlan(plan);
   }, [plan]);
+
+  /** Mirror the plan onto the account row so the *engine* meters the plan's
+   * allowance, not just the UI. Sandbox checkout is the only writer. */
+  const syncPlan = useMutation(api.plans.setPlan);
+  const hasAccount = useConvexAuth().isAuthenticated;
+  const syncedPlanRef = useRef<PlanId | null>(null);
+
+  useEffect(() => {
+    if (!hasAccount) {
+      syncedPlanRef.current = null;
+      return;
+    }
+    if (syncedPlanRef.current === plan) return;
+    syncedPlanRef.current = plan;
+    void syncPlan({ plan }).catch(() => {
+      syncedPlanRef.current = null;
+    });
+  }, [hasAccount, plan, syncPlan]);
 
   const setPlan = useCallback((next: PlanId) => setPlanState(next), []);
 

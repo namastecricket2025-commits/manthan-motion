@@ -3,13 +3,18 @@ import { api } from "@/convex/_generated/api";
 import { useResolvedTheme } from "@/lib/app-settings";
 import {
   revealVariants,
+  STILL,
   useSpringTransition,
   useStagger,
   useStillMotion,
 } from "@/lib/motion";
+import { usePlan } from "@/components/plans/PlanProvider";
+import { getTier } from "@/lib/plans";
 import { useQuery } from "convex/react";
 import {
+  ArrowDownRight,
   ArrowRight,
+  ArrowUpRight,
   BookOpen,
   Clock,
   FileText,
@@ -18,18 +23,9 @@ import {
   Play,
   Sparkles,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  type TooltipProps,
-} from "recharts";
+import { AnimatePresence, motion, type Transition } from "motion/react";
+import { Link } from "react-router";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 /**
  * The workspace overview.
@@ -44,11 +40,11 @@ import {
  *   2. four metric tiles            real counts, no invented denominators.
  *   3. the allowance line           used-of-total, in absolute numbers, taken
  *      from the same ledger the generation engine writes.
- *   4. the frosted spline chart     a smooth mathematical wave per day over
- *      the last seven days, on a blurred glass panel.
+ *   4. the seven-day wave           a hand-drawn SVG spline that morphs
+ *      between real states on the chart spring (120/18, the vendored bklit
+ *      chart motion), on a blurred glass panel.
  *
- * Charts are Recharts; the frost is the site's own glass spec. Every block
- * arrives on the shared spring.
+ * Every block arrives on the shared spring.
  */
 
 export type DashboardSummary = {
@@ -60,6 +56,10 @@ export type DashboardSummary = {
   readableCount: number;
   failedCount: number;
   addedThisWeek: number;
+  sourcesPrevWeek: number;
+  materialsThisWeek: number;
+  materialsPrevWeek: number;
+  activeNotebook: { id: string; name: string; materialCount: number } | null;
   materialsByKind: Record<string, number>;
   materialsByDay: {
     day: string;
@@ -305,17 +305,21 @@ function MetricTile({
   label,
   value,
   detail,
+  delta,
   icon: Icon,
   index,
 }: {
   label: string;
   value: number;
   detail: string;
+  /** Context chip under the number. */
+  delta?: { text: string; tone?: "up" | "down" | "flat" };
   icon: typeof BookOpen;
   index: number;
 }) {
   const transition = useSpringTransition();
   const stagger = useStagger(0.07);
+  const tone = delta?.tone ?? "flat";
   return (
     <motion.div
       variants={revealVariants}
@@ -337,7 +341,28 @@ function MetricTile({
         <p className="font-display text-3xl font-bold tracking-tight tabular-nums">
           {value.toLocaleString()}
         </p>
-        <p className="mt-1 text-xs leading-relaxed text-text-dim">{detail}</p>
+        {delta ? (
+          <span
+            className={
+              "mt-2 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold " +
+              (tone === "up"
+                ? "border-[color-mix(in_srgb,var(--signal)_38%,transparent)] text-[var(--signal)]"
+                : tone === "down"
+                  ? "border-[color-mix(in_srgb,#f59e0b_42%,transparent)] text-[#fbbf24]"
+                  : "border-[var(--card-border)] text-text-dim")
+            }
+          >
+            {tone === "up" ? (
+              <ArrowUpRight className="h-3 w-3 shrink-0" />
+            ) : tone === "down" ? (
+              <ArrowDownRight className="h-3 w-3 shrink-0" />
+            ) : (
+              <ArrowRight className="h-3 w-3 shrink-0" />
+            )}
+            <span className="truncate">{delta.text}</span>
+          </span>
+        ) : null}
+        <p className="mt-1.5 text-xs leading-relaxed text-text-dim">{detail}</p>
       </div>
     </motion.div>
   );
@@ -349,13 +374,14 @@ function MetricTile({
 
 function AllowanceLine() {
   const usage = useQuery(api.usage.myUsage);
+  const { plan } = usePlan();
   const transition = useSpringTransition();
   const stagger = useStagger(0.05);
 
   if (usage === undefined) {
     return (
       <div className="dashboard-bento p-6 text-sm text-text-dim">
-        Reading today's meter…
+        Reading your allowance…
       </div>
     );
   }
@@ -365,10 +391,21 @@ function AllowanceLine() {
   const total = usage.limit;
   const remaining = Math.max(0, total - used);
   const ratio = total > 0 ? Math.min(1, used / total) : 0;
-  const resetsAt = new Date(usage.resetsAt).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const monthly = usage.window === "month";
+  const resetsAt = monthly
+    ? new Date(usage.resetsAt).toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+      })
+    : new Date(usage.resetsAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+  const out = used >= total;
+  // The subscription the student actually bought names the meter; the ledger
+  // decides whether it is a day or a month.
+  const tierName = getTier(plan)?.name ?? "Free";
+  const windowWord = monthly ? "month" : "day";
 
   return (
     <motion.section
@@ -389,9 +426,14 @@ function AllowanceLine() {
             Used out of total
           </h2>
         </div>
-        <span className="text-xs font-medium text-text-dim">
-          Resets {resetsAt}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-[color-mix(in_srgb,var(--signal)_36%,transparent)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--signal)]">
+            {tierName}
+          </span>
+          <span className="text-xs font-medium text-text-dim">
+            Resets {resetsAt}
+          </span>
+        </div>
       </div>
 
       {/* Absolute numbers, not a percentage shape. */}
@@ -400,7 +442,7 @@ function AllowanceLine() {
           {used.toLocaleString()}
         </span>
         <span className="text-sm text-text-dim">
-          of {total.toLocaleString()} tokens used today
+          of {total.toLocaleString()} tokens used this {windowWord}
         </span>
       </p>
 
@@ -433,18 +475,32 @@ function AllowanceLine() {
             <span className="font-semibold text-foreground">
               {total.toLocaleString()}
             </span>{" "}
-            daily cap
+            {monthly ? "monthly cap" : "daily cap"}
           </span>
           <span className="tabular-nums">
-            {plural(usage.requests, "generation")} today
+            {plural(usage.requests, "generation")} this {windowWord}
           </span>
         </div>
       </div>
 
-      <p className="mt-4 text-xs leading-relaxed text-text-dim">
-        Metered by the same ledger the generation engine writes, so the line
-        above is what your notebook will actually spend.
-      </p>
+      {out ? (
+        <p className="mt-4 text-xs leading-relaxed text-text-dim">
+          This {windowWord}'s allowance is spent — the engine pauses until it
+          resets {monthly ? "on" : "at"} {resetsAt}. The{" "}
+          <Link
+            to="/pricing"
+            className="font-medium text-[var(--signal)] hover:underline"
+          >
+            plans page
+          </Link>{" "}
+          has higher caps.
+        </p>
+      ) : (
+        <p className="mt-4 text-xs leading-relaxed text-text-dim">
+          Metered by the same ledger the generation engine writes, so the line
+          above is what your notebook will actually spend.
+        </p>
+      )}
     </motion.section>
   );
 }
@@ -453,28 +509,109 @@ function AllowanceLine() {
 /* 4. Frosted spline area chart                                        */
 /* ------------------------------------------------------------------ */
 
-function ChartTip({ active, payload, label }: TooltipProps<number, string>) {
-  if (!active || !payload?.length) return null;
-  const point = payload[0]?.payload as ActivityPoint | undefined;
+/**
+ * The vendored bklit chart motion: a high-damping unit-mass spring. The wave
+ * below is hand-drawn (the vendored chart set ships bar and pie only), but it
+ * rides this exact spring, so its reveal and its day-to-day morphs feel like
+ * the same physics as every other chart in the product.
+ */
+const CHART_SPRING: Transition = {
+  type: "spring",
+  mass: 1,
+  stiffness: 120,
+  damping: 18,
+  restDelta: 0.001,
+};
+
+const WAVE_HEIGHT = 240;
+const WAVE_PAD_X = 10;
+const WAVE_TOP = 18;
+const WAVE_BOTTOM = 30;
+
+/** Container width in pixels, so the wave is drawn at true scale. */
+function useMeasuredWidth() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, width };
+}
+
+/**
+ * A cardinal spline through the seven daily points — C1-continuous, so the
+ * wave carries no kinks and no overshoot. The command structure never changes
+ * (six cubics for seven days), which is exactly what lets Motion morph
+ * between real states instead of redrawing.
+ */
+function waveGeometry(values: number[], max: number, width: number) {
+  const innerW = Math.max(0, width - WAVE_PAD_X * 2);
+  const innerH = WAVE_HEIGHT - WAVE_TOP - WAVE_BOTTOM;
+  const step = values.length > 1 ? innerW / (values.length - 1) : innerW;
+  const points = values.map((value, index) => ({
+    x: WAVE_PAD_X + index * step,
+    y: WAVE_TOP + innerH * (1 - (max > 0 ? Math.min(1, value / max) : 0)),
+  }));
+  if (points.length < 2) {
+    const y = WAVE_TOP + innerH;
+    return { step, points, d: `M 0 ${y} L ${width} ${y}` };
+  }
+  let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return { step, points, d };
+}
+
+function WaveTip({ point }: { point: ActivityPoint }) {
   return (
-    <div className="rounded-xl border border-[var(--card-border)] bg-white/95 px-3.5 py-2.5 text-[12px] shadow-lg backdrop-blur-md dark:bg-[#1a1a24]/95">
-      <p className="font-semibold text-foreground dark:text-white/95">{String(label)}</p>
-      <p className="mt-1.5 flex items-center gap-2 text-text-dim">
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--signal)]" />
-        {plural(point?.materials ?? 0, "study item")}
+    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#1a1a24]/95">
+      <p className="font-semibold text-foreground dark:text-white/95">
+        {point.label}
       </p>
       <p className="mt-1 flex items-center gap-2 text-text-dim">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--dash-series-primary)]" />
+        {plural(point.materials, "study item")}
+      </p>
+      <p className="mt-0.5 flex items-center gap-2 text-text-dim">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--dash-series-secondary)]" />
-        {plural(point?.sources ?? 0, "source")}
+        {plural(point.sources, "source")}
       </p>
     </div>
   );
 }
 
-function StudyWave({ data }: { data: ActivityPoint[] }) {
+/**
+ * The seven-day wave.
+ *
+ * Two series — study material (the filled wave) and sources added (the ghost
+ * line) — drawn as cardinal splines on one shared height scale. New data does
+ * not redraw: the paths MORPH to their new geometry on the chart spring, the
+ * way the rest of this workspace moves. Hover snaps a springed crosshair to
+ * the nearest day and floats a glass tip with that day's real counts.
+ */
+function ActivityWave({ data }: { data: ActivityPoint[] }) {
   const still = useStillMotion();
   const transition = useSpringTransition();
   const ink = useChartInk();
+  const { ref, width } = useMeasuredWidth();
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const fillId = useId();
+
   const totals = data.reduce(
     (sum, point) => ({
       materials: sum.materials + point.materials,
@@ -482,6 +619,39 @@ function StudyWave({ data }: { data: ActivityPoint[] }) {
     }),
     { materials: 0, sources: 0 },
   );
+
+  const waveWidth = width || 720;
+  // One shared height scale: the two series read honestly against each other.
+  const max = Math.max(4, ...data.map((p) => Math.max(p.materials, p.sources)));
+  const material = waveGeometry(
+    data.map((p) => p.materials),
+    max,
+    waveWidth,
+  );
+  const source = waveGeometry(
+    data.map((p) => p.sources),
+    max,
+    waveWidth,
+  );
+  const baseline = WAVE_TOP + (WAVE_HEIGHT - WAVE_TOP - WAVE_BOTTOM);
+  const areaOf = (line: string) =>
+    `${line} L ${waveWidth - WAVE_PAD_X} ${baseline} L ${WAVE_PAD_X} ${baseline} Z`;
+
+  const active = hoverIndex != null ? data[hoverIndex] ?? null : null;
+  const activeMaterial =
+    hoverIndex != null ? material.points[hoverIndex] ?? null : null;
+  const activeSource =
+    hoverIndex != null ? source.points[hoverIndex] ?? null : null;
+  // Peaks leave no headroom above the panel — near the top the tip flips
+  // under the point instead of clipping out of the card.
+  const tipBelow = (activeMaterial?.y ?? WAVE_HEIGHT) < 104;
+
+  const indexFromClientX = (clientX: number, rect: DOMRect) => {
+    if (data.length < 2) return null;
+    const x = ((clientX - rect.left) / rect.width) * waveWidth;
+    const index = Math.round((x - WAVE_PAD_X) / material.step);
+    return Math.max(0, Math.min(data.length - 1, index));
+  };
 
   return (
     <motion.section
@@ -504,7 +674,7 @@ function StudyWave({ data }: { data: ActivityPoint[] }) {
         </div>
         <div className="flex flex-wrap items-center gap-4 text-[11px] text-text-dim">
           <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[var(--signal)]" />
+            <span className="h-2 w-2 rounded-full bg-[var(--dash-series-primary)]" />
             Study material
           </span>
           <span className="flex items-center gap-2">
@@ -514,95 +684,182 @@ function StudyWave({ data }: { data: ActivityPoint[] }) {
         </div>
       </div>
 
-      {/* The grid lives on its own sheet of frosted glass (blur 12px). */}
+      {/* The wave lives on its own sheet of frosted glass (blur 12px). */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={transition}
         className="dashboard-chart-panel dashboard-chart mt-5 p-3 sm:p-4"
       >
-        <div className="h-[240px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={data}
-              margin={{ top: 10, right: 10, bottom: 0, left: -14 }}
+        <div
+          ref={ref}
+          className="relative h-[240px] w-full touch-none select-none"
+          onPointerMove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setHoverIndex(indexFromClientX(event.clientX, rect));
+          }}
+          onPointerLeave={() => setHoverIndex(null)}
+        >
+          {data.length >= 2 && (
+            <svg
+              width={waveWidth}
+              height={WAVE_HEIGHT}
+              className="block"
+              role="img"
+              aria-hidden
             >
               <defs>
-                <linearGradient
-                  id="dashboard-frost-fill"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop
-                    offset="0%"
-                    stopOpacity={1}
-                    stopColor={ink.frostTop}
-                    className="dashboard-frost-stop-top"
-                  />
+                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={ink.frostTop} stopOpacity={1} />
                   <stop
                     offset="100%"
-                    stopOpacity={1}
                     stopColor={ink.frostBottom}
-                    className="dashboard-frost-stop-bottom"
+                    stopOpacity={1}
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid
-                vertical={false}
-                stroke={ink.grid}
-                strokeDasharray="3 6"
-              />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={10}
-                interval="preserveStartEnd"
-                tick={{ fill: ink.label, fontSize: 11 }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={34}
-                allowDecimals={false}
-                /* A week with no generation still gets a readable scale
-                   rather than a collapsed axis. */
-                domain={[0, (dataMax: number) => Math.max(4, Math.ceil(dataMax))]}
-                tick={{ fill: ink.label, fontSize: 11 }}
-              />
-              <Tooltip content={<ChartTip />} cursor={{ stroke: ink.grid }} />
-              <Area
-                type="monotone"
-                dataKey="materials"
-                name="Study material"
-                className="dashboard-series-primary"
-                stroke={ink.primary}
-                strokeWidth={2.5}
-                fill="url(#dashboard-frost-fill)"
-                dot={false}
-                activeDot={{ r: 5, strokeWidth: 0 }}
-                isAnimationActive={!still}
-                animationDuration={900}
-                animationEasing="ease-out"
-              />
-              <Area
-                type="monotone"
-                dataKey="sources"
-                name="Sources added"
-                className="dashboard-series-secondary"
+
+              {/* Quiet horizontal rails. */}
+              {[0.25, 0.5, 0.75, 1].map((fraction) => {
+                const y = WAVE_TOP + (baseline - WAVE_TOP) * fraction;
+                return (
+                  <line
+                    key={fraction}
+                    x1={WAVE_PAD_X}
+                    x2={waveWidth - WAVE_PAD_X}
+                    y1={y}
+                    y2={y}
+                    stroke={ink.grid}
+                    strokeDasharray="3 7"
+                    strokeWidth={1}
+                  />
+                );
+              })}
+
+              {/* Sources: the quiet ghost line. */}
+              <motion.path
+                fill="none"
                 stroke={ink.secondary}
                 strokeWidth={1.6}
-                fill="transparent"
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0 }}
-                isAnimationActive={!still}
-                animationDuration={900}
-                animationEasing="ease-out"
+                strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 0, d: source.d }}
+                animate={{ pathLength: 1, opacity: 1, d: source.d }}
+                transition={still ? STILL : CHART_SPRING}
               />
-            </AreaChart>
-          </ResponsiveContainer>
+              {/* Study material: the frosted fill under the main wave. */}
+              <motion.path
+                fill={`url(#${fillId})`}
+                stroke="none"
+                initial={{ opacity: 0, d: areaOf(material.d) }}
+                animate={{ opacity: 1, d: areaOf(material.d) }}
+                transition={
+                  still ? STILL : { ...CHART_SPRING, delay: 0.12 }
+                }
+              />
+              {/* Study material: the main wave. */}
+              <motion.path
+                fill="none"
+                stroke={ink.primary}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 0, d: material.d }}
+                animate={{ pathLength: 1, opacity: 1, d: material.d }}
+                transition={still ? STILL : CHART_SPRING}
+              />
+            </svg>
+          )}
+
+          {data.length < 2 && (
+            <div className="flex h-full items-center justify-center text-sm text-text-dim">
+              The wave starts when you churn your first notebook.
+            </div>
+          )}
+
+          {/* Day labels sit exactly under their points. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[30px]"
+          >
+            {material.points.map((pt, index) => (
+              <span
+                key={data[index]?.label ?? index}
+                className={
+                  "absolute bottom-1 whitespace-nowrap text-[10.5px] text-text-dim " +
+                  (index === 0
+                    ? ""
+                    : index === material.points.length - 1
+                      ? "-translate-x-full"
+                      : "-translate-x-1/2")
+                }
+                style={{ left: pt.x }}
+              >
+                {data[index]?.label}
+              </span>
+            ))}
+          </div>
+
+          {/* Crosshair, rings and the floating tip for the hovered day. */}
+          <AnimatePresence>
+            {active && activeMaterial && (
+              <motion.div
+                key={active.label}
+                initial={{ opacity: 0, scale: 0.94, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 4 }}
+                transition={{ type: "spring", stiffness: 380, damping: 26 }}
+                className="pointer-events-none absolute z-10"
+                style={{
+                  left: Math.max(
+                    64,
+                    Math.min(waveWidth - 64, activeMaterial.x),
+                  ),
+                  top: activeMaterial.y,
+                }}
+              >
+                <div
+                  className={
+                    tipBelow
+                      ? "-translate-x-1/2 translate-y-[18px]"
+                      : "-translate-x-1/2 -translate-y-[calc(100%+16px)]"
+                  }
+                >
+                  <WaveTip point={active} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {active && activeMaterial && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-[30px] top-[18px] w-px"
+              style={{ left: activeMaterial.x, background: ink.grid }}
+            />
+          )}
+          {active && activeMaterial && (
+            <>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
+                style={{
+                  left: activeMaterial.x,
+                  top: activeMaterial.y,
+                  background: ink.primary,
+                }}
+              />
+              {activeSource && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
+                  style={{
+                    left: activeSource.x,
+                    top: activeSource.y,
+                    background: ink.secondary,
+                  }
+                  }
+                />
+              )}
+            </>
+          )}
         </div>
       </motion.div>
 
@@ -689,6 +946,23 @@ export function DashboardOverview({
     (largest, row) => Math.max(largest, row.value),
     1,
   );
+  /** A compact "+2 vs last week" chip with the matching tone. */
+  const deltaChip = (
+    current: number,
+    previous: number,
+  ): { text: string; tone: "up" | "down" | "flat" } => {
+    const difference = current - previous;
+    if (difference === 0) {
+      return {
+        text: current === 0 ? "quiet week" : "steady vs last week",
+        tone: "flat",
+      };
+    }
+    return {
+      text: `${difference > 0 ? "+" : "−"}${Math.abs(difference)} vs last week`,
+      tone: difference > 0 ? "up" : "down",
+    };
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -706,7 +980,11 @@ export function DashboardOverview({
           index={0}
           label="Notebooks"
           value={notebooks.length}
-          detail={`${plural(summary.sourceCount, "source")} across them`}
+          detail={
+            summary.activeNotebook
+              ? `“${summary.activeNotebook.name}” is the one you're working in`
+              : `${plural(summary.sourceCount, "source")} across them`
+          }
           icon={BookOpen}
         />
         <MetricTile
@@ -714,6 +992,16 @@ export function DashboardOverview({
           label="Sources"
           value={summary.sourceCount}
           detail={`${readablePercent}% read successfully`}
+          delta={
+            summary.sourceCount === 0
+              ? undefined
+              : summary.failedCount > 0
+                ? {
+                    text: plural(summary.failedCount, "source") + " need text",
+                    tone: "down",
+                  }
+                : { text: "all readable", tone: "up" }
+          }
           icon={FileText}
         />
         <MetricTile
@@ -721,13 +1009,18 @@ export function DashboardOverview({
           label="This week"
           value={summary.addedThisWeek}
           detail="Sources added in 7 days"
+          delta={deltaChip(summary.addedThisWeek, summary.sourcesPrevWeek)}
           icon={NotebookPen}
         />
         <MetricTile
           index={3}
           label="Study material"
           value={generatedCount}
-          detail="Items generated all time"
+          detail={`${plural(summary.materialsThisWeek, "item")} churned in 7 days`}
+          delta={deltaChip(
+            summary.materialsThisWeek,
+            summary.materialsPrevWeek,
+          )}
           icon={Sparkles}
         />
       </section>
@@ -735,8 +1028,8 @@ export function DashboardOverview({
       {/* 3. Used out of total, in absolute numbers. */}
       <AllowanceLine />
 
-      {/* 4. The frosted wave. */}
-      <StudyWave data={activity} />
+      {/* 4. The seven-day wave. */}
+      <ActivityWave data={activity} />
 
       {/* What the material is made of, plus the way in. */}
       <motion.section
