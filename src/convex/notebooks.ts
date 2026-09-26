@@ -18,7 +18,16 @@ function cleanName(raw: string) {
   return name.slice(0, 60);
 }
 
-/** Every notebook the user owns, each with its real source counts. */
+/**
+ * Every notebook the user owns, each with its real source and material
+ * counts.
+ *
+ * `lastActivityAt` is the newest of the notebook's own creation, its newest
+ * source and its newest generated material — the honest answer to "which one
+ * was I working in last", which is what the dashboard's resume block needs.
+ * It is derived from rows the user actually created, never from a stored
+ * "last visited" flag this app does not keep.
+ */
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -36,6 +45,18 @@ export const list = query({
           .query("sources")
           .withIndex("by_notebook", (q) => q.eq("notebookId", notebook._id))
           .collect();
+        const materials = await ctx.db
+          .query("materials")
+          .withIndex("by_notebook", (q) => q.eq("notebookId", notebook._id))
+          .collect();
+        const newestSource = sources.reduce(
+          (newest, source) => Math.max(newest, source.createdAt),
+          0,
+        );
+        const newestMaterial = materials.reduce(
+          (newest, material) => Math.max(newest, material.createdAt),
+          0,
+        );
         return {
           id: notebook._id,
           name: notebook.name,
@@ -43,6 +64,12 @@ export const list = query({
           sourceCount: sources.length,
           fileCount: sources.filter((s) => s.kind === "file").length,
           linkCount: sources.filter((s) => s.kind === "link").length,
+          materialCount: materials.length,
+          lastActivityAt: Math.max(
+            notebook.createdAt,
+            newestSource,
+            newestMaterial,
+          ),
         };
       }),
     );

@@ -8,6 +8,10 @@ function applyTheme(dark: boolean) {
   const root = document.documentElement;
   root.classList.toggle("dark", dark);
   root.setAttribute("data-theme", dark ? "dark" : "light");
+  /* A direct toggle writes the class itself, so announce it: useResolvedTheme
+     (and every theme-aware chart or widget that reads the tokens) listens for
+     this event rather than polling the DOM. */
+  window.dispatchEvent(new CustomEvent("manthan:theme", { detail: { dark } }));
 }
 
 function readStored(): boolean {

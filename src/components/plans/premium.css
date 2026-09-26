@@ -121,8 +121,8 @@ html:not(.dark) .premium-card {
 }
 
 .premium-select select option {
-  background: var(--card);
-  color: var(--text-main);
+  background: var(--menu-bg);
+  color: var(--menu-ink);
 }
 
 .premium-select svg {
@@ -1146,14 +1146,16 @@ html:not(.dark) .checkout-field {
   outline: none;
 }
 .mathlab-select-wrap select:focus-visible { border-color: var(--signal); }
+/* Concrete dark slate behind every option row: the list must be readable the
+   instant it opens, not only while a row is hovered. */
 .mathlab-select-wrap option {
-  background-color: #101322;
-  color: #fff;
+  background-color: var(--menu-bg);
+  color: var(--menu-ink);
 }
 .mathlab-select-wrap option:hover,
 .mathlab-select-wrap option:focus {
-  background-color: #20283d;
-  color: #fff;
+  background-color: color-mix(in srgb, var(--signal) 22%, var(--menu-bg));
+  color: var(--menu-ink);
 }
 .mathlab-select-wrap svg { position: absolute; right: 9px; pointer-events: none; width: 14px; color: var(--text-dim); }
 .mathlab-focus {

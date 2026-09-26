@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import { useSpringTransition } from "@/lib/motion";
 import { useMutation, useQuery } from "convex/react";
 import {
   Check,
@@ -12,6 +13,7 @@ import {
   Tag,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -44,6 +46,42 @@ const ITEMS: {
   { key: "about", label: "About Us", icon: Info },
 ];
 
+/** One notebook under its section entry. Split out so each row can own the
+ *  shared spring without calling a hook inside a loop. */
+function NotebookRow({
+  name,
+  sourceCount,
+  selected,
+  onOpen,
+}: {
+  name: string;
+  sourceCount: number;
+  selected: boolean;
+  onOpen: () => void;
+}) {
+  const transition = useSpringTransition();
+  return (
+    <motion.button
+      type="button"
+      onClick={onOpen}
+      whileHover={{ x: 3 }}
+      whileTap={{ scale: 0.98 }}
+      transition={transition}
+      className={
+        "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors " +
+        (selected
+          ? "bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+          : "text-text-dim hover:text-foreground")
+      }
+    >
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      <span className="shrink-0 text-[11px] tabular-nums text-text-dim">
+        {sourceCount}
+      </span>
+    </motion.button>
+  );
+}
+
 /**
  * Shared sidebar navigation.
  *
@@ -55,6 +93,10 @@ const ITEMS: {
  * from their own sources, and never seeded with anything. Clicking one scopes
  * `/dashboard` to it via `?notebook=`, and the inline "+ New notebook" row
  * creates and opens one without leaving the sidebar.
+ *
+ * Every entry is a state shift, so every entry moves on the shared spring: the
+ * row leans toward the pointer and gives slightly under the press, and the
+ * active rail lights up where you are.
  */
 export function DashboardNav({
   active,
@@ -67,6 +109,7 @@ export function DashboardNav({
   const createNotebook = useMutation(api.notebooks.create);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const transition = useSpringTransition();
 
   const activeNotebookId = searchParams.get("notebook");
   const [adding, setAdding] = useState(false);
@@ -101,21 +144,38 @@ export function DashboardNav({
           item.key === "notebooks" ? notebooksActive : item.key === active;
         return (
           <div key={item.key} className="flex flex-col gap-1">
-            <button
+            <motion.button
               type="button"
               aria-current={isActive ? "page" : undefined}
               onClick={() => onSelect(item.key)}
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.98 }}
+              transition={transition}
               className={
-                "flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm font-medium " +
-                "transition-[color,border-color,background-color] duration-200 " +
+                "relative flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm font-medium transition-colors " +
                 (isActive
-                  ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                  : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)] hover:text-[var(--signal)]")
+                  ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_12%,transparent)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                  : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)] hover:text-foreground")
               }
             >
-              <item.icon className="h-4 w-4" />
+              <motion.span
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[var(--signal)]"
+                initial={false}
+                animate={{
+                  opacity: isActive ? 1 : 0,
+                  scaleY: isActive ? 1 : 0.3,
+                }}
+                transition={transition}
+              />
+              <item.icon
+                className={
+                  "h-4 w-4 shrink-0 " +
+                  (isActive ? "text-[var(--signal)]" : "")
+                }
+              />
               {item.label}
-            </button>
+            </motion.button>
 
             {/* The notebooks themselves, nested under the section entry. */}
             {item.key === "notebooks" && (
@@ -132,79 +192,81 @@ export function DashboardNav({
                   </span>
                 )}
 
-                {notebooks?.map((notebook) => {
-                  const selected = notebook.id === activeNotebookId;
-                  return (
-                    <button
-                      key={notebook.id}
-                      type="button"
-                      onClick={() =>
-                        navigate(`/dashboard?notebook=${notebook.id}`)
-                      }
-                      className={
-                        "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors " +
-                        (selected
-                          ? "text-foreground"
-                          : "text-text-dim hover:text-foreground")
-                      }
-                    >
-                      <span className="min-w-0 flex-1 truncate">
-                        {notebook.name}
-                      </span>
-                      <span className="shrink-0 text-[11px] tabular-nums text-text-dim">
-                        {notebook.sourceCount}
-                      </span>
-                    </button>
-                  );
-                })}
+                {notebooks?.map((notebook) => (
+                  <NotebookRow
+                    key={notebook.id}
+                    name={notebook.name}
+                    sourceCount={notebook.sourceCount}
+                    selected={notebook.id === activeNotebookId}
+                    onOpen={() =>
+                      navigate(`/dashboard?notebook=${notebook.id}`)
+                    }
+                  />
+                ))}
 
-                {adding ? (
-                  <div className="flex items-center gap-1 px-1 py-1">
-                    <input
-                      autoFocus
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void submitNotebook();
-                        if (e.key === "Escape") {
+                <AnimatePresence initial={false} mode="wait">
+                  {adding ? (
+                    <motion.div
+                      key="draft"
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={transition}
+                      className="flex items-center gap-1 px-1 py-1"
+                    >
+                      <input
+                        autoFocus
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void submitNotebook();
+                          if (e.key === "Escape") {
+                            setAdding(false);
+                            setDraft("");
+                          }
+                        }}
+                        placeholder="Notebook name"
+                        className="min-w-0 flex-1 rounded-lg border border-[var(--card-border)] bg-transparent px-2 py-1 text-[13px] outline-none placeholder:text-text-dim/85 focus:border-[var(--signal)]"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Create notebook"
+                        onClick={() => void submitNotebook()}
+                        disabled={busy || !draft.trim()}
+                        className="rounded-lg p-1 text-[var(--signal)] disabled:opacity-40"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Cancel"
+                        onClick={() => {
                           setAdding(false);
                           setDraft("");
-                        }
-                      }}
-                      placeholder="Notebook name"
-                      className="min-w-0 flex-1 rounded-lg border border-[var(--card-border)] bg-transparent px-2 py-1 text-[13px] outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
-                    />
-                    <button
+                        }}
+                        className="rounded-lg p-1 text-text-dim"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="new"
                       type="button"
-                      aria-label="Create notebook"
-                      onClick={() => void submitNotebook()}
-                      disabled={busy || !draft.trim()}
-                      className="rounded-lg p-1 text-[var(--signal)] disabled:opacity-40"
+                      onClick={() => setAdding(true)}
+                      whileHover={{ x: 3 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={transition}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-text-dim transition-colors hover:text-foreground"
                     >
-                      <Check className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Cancel"
-                      onClick={() => {
-                        setAdding(false);
-                        setDraft("");
-                      }}
-                      className="rounded-lg p-1 text-text-dim"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAdding(true)}
-                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-text-dim transition-colors hover:text-foreground"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    New notebook
-                  </button>
-                )}
+                      <Plus className="h-3.5 w-3.5" />
+                      New notebook
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>

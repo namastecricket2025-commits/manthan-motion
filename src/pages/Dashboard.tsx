@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { useAuth } from "@/hooks/use-auth";
+import { useSpringTransition, viewVariants } from "@/lib/motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -41,6 +42,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
@@ -56,6 +58,10 @@ import { toast } from "sonner";
  *
  * Every number shown comes from rows the signed-in user created. There is no
  * sample data anywhere: a new account sees an empty state and a first step.
+ *
+ * Changing face is a state shift, not a page load: the outgoing face lifts
+ * away and the incoming one slides up and settles on the shared spring (see
+ * `@/lib/motion`), the way a window changes state on macOS.
  */
 
 function greeting() {
@@ -89,6 +95,7 @@ export default function Dashboard() {
   const { requireAccess } = usePlan();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const transition = useSpringTransition();
 
   const view =
     searchParams.get("view") === "notebooks" ? "notebooks" : "overview";
@@ -107,6 +114,13 @@ export default function Dashboard() {
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+
+  /* Which face is on screen — the key the transition is built around. */
+  const face = openNotebook
+    ? `notebook-${openNotebook.id}`
+    : view === "notebooks"
+      ? "notebooks"
+      : "overview";
 
   /* ---------------- actions ---------------- */
 
@@ -253,9 +267,7 @@ export default function Dashboard() {
         {/* ---- Main ---- */}
         <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
           <div className="mx-auto flex max-w-5xl flex-col gap-6">
-            <div
-              className="flex flex-wrap items-end justify-between gap-4"
-            >
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-0">
                 {openNotebook ? (
                   <button
@@ -271,10 +283,16 @@ export default function Dashboard() {
                     {greeting()}
                   </p>
                 )}
-                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                <motion.h1
+                  key={face}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={transition}
+                  className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl"
+                >
                   {openNotebook ? openNotebook.name : (user?.name ?? "Welcome")}
                   <span className="text-[var(--signal)]">.</span>
-                </h1>
+                </motion.h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
                   {openNotebook
                     ? "Add your sources, then churn them into study material."
@@ -296,244 +314,272 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* ================= WORKSPACE ================= */}
-            {openNotebook ? (
-              <NotebookWorkspace
-                notebookId={openNotebook.id as Id<"notebooks">}
-                notebookName={openNotebook.name}
-              />
-            ) : view === "notebooks" ? (
-              /* ================= NOTEBOOKS MANAGER ================= */
-              <>
-                <div data-reveal className="glass-panel p-5 sm:p-6">
-                  <h2 className="font-display text-base font-bold tracking-tight">
-                    New notebook
-                  </h2>
-                  <form
-                    onSubmit={handleCreateNotebook}
-                    className="mt-4 flex flex-col gap-2 sm:flex-row"
-                  >
-                    <input
-                      value={draftName}
-                      onChange={(e) => setDraftName(e.target.value)}
-                      placeholder="e.g. Physics — Electrostatics"
-                      className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:text-sm"
-                    />
-                    <MovingBorderButton
-                      type="submit"
-                      disabled={busy || !draftName.trim()}
-                      loading={busy}
-                      className="w-full sm:w-fit"
-                      innerClassName="px-6 py-3 text-sm"
-                    >
-                      Create notebook
-                      <ArrowRight className="h-4 w-4" />
-                    </MovingBorderButton>
-                  </form>
-                </div>
+            {/* ================= WORKSPACE =================
+                One face at a time, swapped on the shared spring: the outgoing
+                face lifts away, the incoming one slides up and settles. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={face}
+                variants={viewVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={transition}
+                className="flex flex-col gap-6"
+              >
+                {openNotebook ? (
+                  <NotebookWorkspace
+                    notebookId={openNotebook.id as Id<"notebooks">}
+                    notebookName={openNotebook.name}
+                  />
+                ) : view === "notebooks" ? (
+                  /* ================= NOTEBOOKS MANAGER ================= */
+                  <>
+                    <div className="glass-panel p-5 sm:p-6">
+                      <h2 className="font-display text-base font-bold tracking-tight">
+                        New notebook
+                      </h2>
+                      <form
+                        onSubmit={handleCreateNotebook}
+                        className="mt-4 flex flex-col gap-2 sm:flex-row"
+                      >
+                        <input
+                          value={draftName}
+                          onChange={(e) => setDraftName(e.target.value)}
+                          placeholder="e.g. Physics — Electrostatics"
+                          className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/80 focus:border-[var(--signal)] sm:text-sm"
+                        />
+                        <MovingBorderButton
+                          type="submit"
+                          disabled={busy || !draftName.trim()}
+                          loading={busy}
+                          className="w-full sm:w-fit"
+                          innerClassName="px-6 py-3 text-sm"
+                        >
+                          Create notebook
+                          <ArrowRight className="h-4 w-4" />
+                        </MovingBorderButton>
+                      </form>
+                    </div>
 
-                <div
-                  data-reveal
-                  className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2"
-                >
-                  {notebooks?.map((notebook) => (
-                    <div
-                      key={notebook.id}
-                      className="glass-panel flex flex-col gap-3 p-5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          {renamingId === notebook.id ? (
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                autoFocus
-                                value={renameValue}
-                                onChange={(e) => setRenameValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter")
-                                    void handleRename(
-                                      notebook.id as Id<"notebooks">,
-                                    );
-                                  if (e.key === "Escape") setRenamingId(null);
-                                }}
-                                className="w-44 rounded-lg border border-[var(--card-border)] bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-[var(--signal)]"
-                              />
+                    <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2">
+                      {notebooks?.map((notebook) => (
+                        <div
+                          key={notebook.id}
+                          className="glass-panel flex flex-col gap-3 p-5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              {renamingId === notebook.id ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    autoFocus
+                                    value={renameValue}
+                                    onChange={(e) =>
+                                      setRenameValue(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter")
+                                        void handleRename(
+                                          notebook.id as Id<"notebooks">,
+                                        );
+                                      if (e.key === "Escape")
+                                        setRenamingId(null);
+                                    }}
+                                    className="w-44 rounded-lg border border-[var(--card-border)] bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-[var(--signal)]"
+                                  />
+                                  <button
+                                    type="button"
+                                    aria-label="Save name"
+                                    onClick={() =>
+                                      void handleRename(
+                                        notebook.id as Id<"notebooks">,
+                                      )
+                                    }
+                                    className="rounded-lg p-1 text-[var(--signal)]"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <h3 className="truncate font-display text-base font-bold tracking-tight">
+                                  {notebook.name}
+                                </h3>
+                              )}
+                              <p className="mt-1 text-xs text-text-dim">
+                                {notebook.sourceCount}{" "}
+                                {notebook.sourceCount === 1
+                                  ? "source"
+                                  : "sources"}
+                                {" · "}
+                                {notebook.fileCount} files ·{" "}
+                                {notebook.linkCount} links
+                                {" · "}
+                                {notebook.materialCount}{" "}
+                                {notebook.materialCount === 1
+                                  ? "study item"
+                                  : "study items"}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
                               <button
                                 type="button"
-                                aria-label="Save name"
-                                onClick={() =>
-                                  void handleRename(
-                                    notebook.id as Id<"notebooks">,
-                                  )
-                                }
-                                className="rounded-lg p-1 text-[var(--signal)]"
+                                aria-label={`Rename ${notebook.name}`}
+                                onClick={() => {
+                                  setRenamingId(notebook.id);
+                                  setRenameValue(notebook.name);
+                                }}
+                                className="rounded-lg p-1.5 text-text-dim transition-colors hover:text-foreground"
                               >
-                                <Check className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
                               </button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label={`Delete ${notebook.name}`}
+                                    className="rounded-lg p-1.5 text-text-dim transition-colors hover:text-[var(--signal)]"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete “{notebook.name}”?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This removes the notebook, the{" "}
+                                      {notebook.sourceCount}{" "}
+                                      {notebook.sourceCount === 1
+                                        ? "source"
+                                        : "sources"}{" "}
+                                      inside it, and everything generated from
+                                      them. It cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        void handleDelete(
+                                          notebook.id as Id<"notebooks">,
+                                          notebook.name,
+                                        )
+                                      }
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
-                          ) : (
-                            <h3 className="truncate font-display text-base font-bold tracking-tight">
-                              {notebook.name}
-                            </h3>
-                          )}
-                          <p className="mt-1 text-xs text-text-dim">
-                            {notebook.sourceCount}{" "}
-                            {notebook.sourceCount === 1 ? "source" : "sources"}
-                            {" · "}
-                            {notebook.fileCount} files · {notebook.linkCount}{" "}
-                            links
+                          </div>
+
+                          <MovingBorderButton
+                            onClick={() =>
+                              navigate(`/dashboard?notebook=${notebook.id}`)
+                            }
+                            className="w-fit"
+                            innerClassName="px-4 py-2 text-[13px]"
+                          >
+                            Open notebook
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </MovingBorderButton>
+                        </div>
+                      ))}
+                    </div>
+
+                    {notebooks?.length === 0 && (
+                      <div className="glass-panel p-5 sm:p-6">
+                        <EmptyHint
+                          icon={NotebookPen}
+                          title="No notebooks yet"
+                          body="Name a notebook after the subject or chapter you are revising, then add your sources to it."
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* ================= OVERVIEW ================= */
+                  <>
+                    {notebooks === undefined && (
+                      <div className="glass-panel p-6 text-sm text-text-dim">
+                        Loading your workspace…
+                      </div>
+                    )}
+
+                    {!hasNotebooks && notebooks !== undefined && (
+                      <div className="glass-panel flex flex-col gap-5 p-6 sm:p-8">
+                        <div>
+                          <h2 className="font-display text-xl font-bold tracking-tight">
+                            Start with a notebook
+                          </h2>
+                          <p className="mt-2 max-w-lg text-sm leading-relaxed text-text-dim">
+                            Nothing here yet — that is expected. Manthan only
+                            ever shows what you have actually added.
                           </p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            aria-label={`Rename ${notebook.name}`}
-                            onClick={() => {
-                              setRenamingId(notebook.id);
-                              setRenameValue(notebook.name);
-                            }}
-                            className="rounded-lg p-1.5 text-text-dim transition-colors hover:text-foreground"
+                        <form
+                          onSubmit={handleCreateNotebook}
+                          className="flex flex-col gap-2 sm:flex-row"
+                        >
+                          <input
+                            value={draftName}
+                            onChange={(e) => setDraftName(e.target.value)}
+                            placeholder="Name it — e.g. Biology — Respiration"
+                            className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/80 focus:border-[var(--signal)] sm:text-sm"
+                          />
+                          <MovingBorderButton
+                            type="submit"
+                            disabled={busy || !draftName.trim()}
+                            loading={busy}
+                            className="w-full sm:w-fit"
+                            innerClassName="px-6 py-3 text-sm"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={`Delete ${notebook.name}`}
-                                className="rounded-lg p-1.5 text-text-dim transition-colors hover:text-[var(--signal)]"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete “{notebook.name}”?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This removes the notebook, the{" "}
-                                  {notebook.sourceCount}{" "}
-                                  {notebook.sourceCount === 1
-                                    ? "source"
-                                    : "sources"}{" "}
-                                  inside it, and everything generated from them.
-                                  It cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    void handleDelete(
-                                      notebook.id as Id<"notebooks">,
-                                      notebook.name,
-                                    )
-                                  }
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
+                            Create notebook
+                            <ArrowRight className="h-4 w-4" />
+                          </MovingBorderButton>
+                        </form>
+                        <ol className="grid gap-3 text-sm text-text-dim sm:grid-cols-4">
+                          {[
+                            "Name a notebook for the chapter you are revising.",
+                            "Drop in PDFs, slides, links or pasted notes.",
+                            "Churn them into a summary, flashcards, a quiz, a mind map and slides.",
+                            "Revise straight from the notebook.",
+                          ].map((step, i) => (
+                            <li key={step} className="flex gap-2.5">
+                              <span className="font-display font-bold text-[var(--signal)]">
+                                0{i + 1}
+                              </span>
+                              <span className="leading-relaxed">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
                       </div>
+                    )}
 
-                      <MovingBorderButton
-                        onClick={() =>
-                          navigate(`/dashboard?notebook=${notebook.id}`)
+                    {hasNotebooks && (
+                      <DashboardOverview
+                        summary={summary}
+                        notebooks={notebooks ?? []}
+                        onResumeNotebook={(notebookId) =>
+                          navigate(`/dashboard?notebook=${notebookId}`)
                         }
-                        className="w-fit"
-                        innerClassName="px-4 py-2 text-[13px]"
-                      >
-                        Open notebook
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </MovingBorderButton>
-                    </div>
-                  ))}
-                </div>
-
-                {notebooks?.length === 0 && (
-                  <div data-reveal className="glass-panel p-5 sm:p-6">
-                    <EmptyHint
-                      icon={NotebookPen}
-                      title="No notebooks yet"
-                      body="Name a notebook after the subject or chapter you are revising, then add your sources to it."
-                    />
-                  </div>
-                )}
-              </>
-            ) : (
-              /* ================= OVERVIEW ================= */
-              <>
-                {notebooks === undefined && (
-                  <div className="glass-panel p-6 text-sm text-text-dim">
-                    Loading your workspace…
-                  </div>
-                )}
-
-                {!hasNotebooks && notebooks !== undefined && (
-                  <div
-                    className="glass-panel flex flex-col gap-5 p-6 sm:p-8"
-                  >
-                    <div>
-                      <h2 className="font-display text-xl font-bold tracking-tight">
-                        Start with a notebook
-                      </h2>
-                      <p className="mt-2 max-w-lg text-sm leading-relaxed text-text-dim">
-                        Nothing here yet — that is expected. Manthan only ever
-                        shows what you have actually added.
-                      </p>
-                    </div>
-                    <form
-                      onSubmit={handleCreateNotebook}
-                      className="flex flex-col gap-2 sm:flex-row"
-                    >
-                      <input
-                        value={draftName}
-                        onChange={(e) => setDraftName(e.target.value)}
-                        placeholder="Name it — e.g. Biology — Respiration"
-                        className="min-w-0 flex-1 rounded-full border border-[var(--card-border)] bg-transparent px-4 py-3 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:text-sm"
+                        onOpenNotebooks={() =>
+                          navigate("/dashboard?view=notebooks")
+                        }
+                        onCreateNotebook={() =>
+                          navigate("/dashboard?view=notebooks")
+                        }
                       />
-                      <MovingBorderButton
-                        type="submit"
-                        disabled={busy || !draftName.trim()}
-                        loading={busy}
-                        className="w-full sm:w-fit"
-                        innerClassName="px-6 py-3 text-sm"
-                      >
-                        Create notebook
-                        <ArrowRight className="h-4 w-4" />
-                      </MovingBorderButton>
-                    </form>
-                    <ol className="grid gap-3 text-sm text-text-dim sm:grid-cols-4">
-                      {[
-                        "Name a notebook for the chapter you are revising.",
-                        "Drop in PDFs, slides, links or pasted notes.",
-                        "Churn them into a summary, flashcards, a quiz, a mind map and slides.",
-                        "Revise straight from the notebook.",
-                      ].map((step, i) => (
-                        <li key={step} className="flex gap-2.5">
-                          <span className="font-display font-bold text-[var(--signal)]">
-                            0{i + 1}
-                          </span>
-                          <span className="leading-relaxed">{step}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
+                    )}
+                  </>
                 )}
-
-                {hasNotebooks && (
-                  <DashboardOverview
-                    summary={summary}
-                    notebookCount={notebooks?.length ?? 0}
-                    onOpenNotebooks={() => navigate("/dashboard?view=notebooks")}
-                    onCreateNotebook={() => navigate("/dashboard?view=notebooks")}
-                  />
-                )}
-              </>
-            )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

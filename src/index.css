@@ -217,30 +217,45 @@
   --sidebar-accent-foreground: #3a2320;
   --sidebar-border: rgba(36, 20, 18, 0.12);
   --sidebar-ring: var(--signal);
-  /* These were leftover default shadcn values in the blue/violet hue range
-     (oklch hues 260–285). Warm palette only — no chart accent may read blue
-     against the crimson theme. */
-  --chart-background: oklch(100% 0 0);
-  --chart-foreground: oklch(14.5% 0.004 285);
-  --chart-foreground-muted: oklch(55% 0.014 260);
+  /* Flat chart tokens (light) — every one mapped to the Manthan palette.
+     These used to be template leftovers in the blue/violet oklch range, and
+     a chart accent or label that resolves to a cold template default against
+     this warm canvas is precisely how "the labels are invisible" happens.
+     Nothing chart-related may point outside these tokens again. */
+  --chart-background: var(--card);
+  --chart-foreground: var(--text-main);
+  --chart-foreground-muted: var(--text-dim);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: oklch(40% 0.1828 274.34);
-  --chart-grid: oklch(90% 0 0);
+  --chart-crosshair: rgba(36, 20, 18, 0.28);
+  --chart-grid: rgba(36, 20, 18, 0.12);
   --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: oklch(21% 0.006 285 / 0.8);
-  --chart-tooltip-foreground: oklch(98.5% 0 0);
-  --chart-tooltip-muted: oklch(65% 0.01 260);
-  --chart-marker-background: oklch(97% 0.005 260);
-  --chart-marker-border: oklch(85% 0.01 260);
-  --chart-marker-foreground: oklch(30% 0.01 260);
-  --chart-label: oklch(45% 0.01 260);
-  --chart-scale-01: oklch(0.98 0.003 106);
-  --chart-scale-02: oklch(0.92 0.008 106);
-  --chart-scale-03: oklch(0.82 0.015 106);
-  --chart-scale-04: oklch(0.68 0.02 106);
-  --chart-scale-05: oklch(0.55 0.025 106);
-  --chart-scale-pattern-color: oklch(0.96 0.005 106);
+  --chart-tooltip-background: var(--card);
+  --chart-tooltip-foreground: var(--text-main);
+  --chart-tooltip-muted: var(--text-dim);
+  --chart-marker-background: var(--card);
+  --chart-marker-border: var(--card-border);
+  --chart-marker-foreground: var(--text-main);
+  --chart-label: var(--text-dim);
+  --chart-scale-01: rgba(200, 31, 39, 0.06);
+  --chart-scale-02: rgba(200, 31, 39, 0.12);
+  --chart-scale-03: rgba(200, 31, 39, 0.2);
+  --chart-scale-04: rgba(200, 31, 39, 0.34);
+  --chart-scale-05: rgba(200, 31, 39, 0.52);
+  --chart-scale-pattern-color: rgba(200, 31, 39, 0.08);
+
+  /* ---- Dashboard ink + selection surfaces (light) ---------------------
+     Chart ink for the dashboard's glass charts, and the concrete backing
+     every dropdown / select / popover panel uses so its items are legible the
+     instant the panel opens — never only on hover. */
+  --dash-chart-label: #333f4b;
+  --dash-chart-grid: rgba(36, 20, 18, 0.14);
+  --dash-series-primary: #c81f27;
+  --dash-series-secondary: #2f6f6b;
+  --dash-frost-top: rgba(36, 20, 18, 0.16);
+  --dash-frost-bottom: rgba(36, 20, 18, 0);
+  --menu-bg: #ffffff;
+  --menu-ink: #1b1110;
 }
 
 /* ============================================================
@@ -268,7 +283,11 @@
   --signal-strong: #4f46e5;
   --signal-2: #4338ca;
   --text-main: #f7f7f8;
-  --text-dim: #cbd5e1;
+  /* Standard text on dark glass is high-contrast light slate by rule, not by
+     component: 90% white clears 7:1 on the ink while `--text-main` stays the
+     brightest step for headings. Nothing on a dark component may render a
+     label dimmer than this. */
+  --text-dim: rgba(255, 255, 255, 0.9);
   --card-border: rgba(139, 147, 255, 0.22);
   --panel-bg: rgba(10, 10, 12, 0.62);
 
@@ -335,14 +354,17 @@
      grey template or a mismatched warm fill. Indigo stays the only accent. */
   --card: #141416;
   --card-foreground: var(--text-main);
-  --popover: #141416;
-  --popover-foreground: var(--text-main);
+  /* Menus, selects, command palettes and popovers open ON a concrete slate
+     backing — #1a1a24, never a translucent or inherited fill, so their items
+     are fully visible the moment the panel appears. */
+  --popover: #1a1a24;
+  --popover-foreground: rgba(255, 255, 255, 0.95);
   --primary: var(--signal-strong);
   --primary-foreground: #f6f7ff;
   --secondary: #1c1c1f;
   --secondary-foreground: #f4f4f5;
   --muted: #19191c;
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: rgba(255, 255, 255, 0.9);
   --accent: #232326;
   --accent-foreground: #f4f4f5;
   /* Red survives only where it carries meaning — a wrong answer, a failed
@@ -373,6 +395,42 @@
   --sidebar-accent-foreground: #f4f4f5;
   --sidebar-border: rgba(244, 236, 233, 0.1);
   --sidebar-ring: var(--signal);
+
+  /* Flat chart tokens (dark) — labels sit at the same luminous value as body
+     copy: an unreadable chart label is a bug, not a mood. Tooltips, markers
+     and menus get the concrete slate backing rather than a glass tint. */
+  --chart-background: #141416;
+  --chart-foreground: rgba(255, 255, 255, 0.95);
+  --chart-foreground-muted: rgba(255, 255, 255, 0.9);
+  --chart-line-primary: var(--signal);
+  --chart-line-secondary: #5eead4;
+  --chart-crosshair: rgba(255, 255, 255, 0.26);
+  --chart-grid: rgba(255, 255, 255, 0.12);
+  --chart-brush-border: var(--chart-grid);
+  --chart-tooltip-background: #1a1a24;
+  --chart-tooltip-foreground: rgba(255, 255, 255, 0.95);
+  --chart-tooltip-muted: rgba(255, 255, 255, 0.9);
+  --chart-marker-background: #1a1a24;
+  --chart-marker-border: var(--card-border);
+  --chart-marker-foreground: rgba(255, 255, 255, 0.95);
+  --chart-label: rgba(255, 255, 255, 0.9);
+  --chart-scale-01: rgba(139, 147, 255, 0.12);
+  --chart-scale-02: rgba(139, 147, 255, 0.2);
+  --chart-scale-03: rgba(139, 147, 255, 0.3);
+  --chart-scale-04: rgba(139, 147, 255, 0.44);
+  --chart-scale-05: rgba(139, 147, 255, 0.62);
+  --chart-scale-pattern-color: rgba(139, 147, 255, 0.1);
+
+  /* ---- Dashboard ink + selection surfaces (dark) ---------------------- */
+  --dash-chart-label: rgba(255, 255, 255, 0.9);
+  --dash-chart-grid: rgba(255, 255, 255, 0.12);
+  --dash-series-primary: var(--signal);
+  --dash-series-secondary: #5eead4;
+  /* The frosted spline's fill: glass translucency, top to bottom. */
+  --dash-frost-top: rgba(255, 255, 255, 0.15);
+  --dash-frost-bottom: rgba(255, 255, 255, 0);
+  --menu-bg: #1a1a24;
+  --menu-ink: rgba(255, 255, 255, 0.92);
 }
 
 /* ============================================================
@@ -418,6 +476,13 @@
   ::selection {
     background: color-mix(in srgb, var(--signal-strong) 82%, transparent);
     color: #fff;
+  }
+  /* Native select lists are painted by the OS, but wherever the browser
+     honours option styling the row must be readable the moment the list
+     opens, on the concrete menu backing rather than the page behind it. */
+  option {
+    background-color: var(--menu-bg);
+    color: var(--menu-ink);
   }
   button:not([disabled]),
   [role="button"]:not([disabled]) {
@@ -546,7 +611,7 @@
      `--text-dim` is scoped here so the muted copy stays legible.
      ------------------------------------------------ */
   .site-footer {
-    --text-dim: #cbd5e1;
+    --text-dim: rgba(255, 255, 255, 0.9);
     background: rgba(255, 255, 255, 0.02);
     -webkit-backdrop-filter: blur(25px) saturate(160%);
     backdrop-filter: blur(25px) saturate(160%);
@@ -1024,8 +1089,190 @@
     transform-origin: 200px 200px;
   }
 
+  /* ------------------------------------------------
+     DASHBOARD — Apple glass bento surfaces.
+
+     The overview is a bento of isolated frosted blocks: one wide resume
+     block, four metric tiles, the allowance line and the frosted spline
+     chart panel. They share the site's glass spec (gradient fill, hairline,
+     inset highlight, one soft ambient shadow) so the workspace reads as one
+     material, and the chart panel is the sheet that must additionally carry
+     `backdrop-filter: blur(12px)` beneath its grid.
+     ------------------------------------------------ */
+  .dashboard-bento {
+    position: relative;
+    border-radius: 24px;
+    background:
+      linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.085),
+        rgba(255, 255, 255, 0.02) 46%,
+        rgba(255, 255, 255, 0.05)
+      );
+    -webkit-backdrop-filter: blur(25px) saturate(165%);
+    backdrop-filter: blur(25px) saturate(165%);
+    border: 1px solid var(--glass-hairline);
+    box-shadow:
+      var(--glass-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  html:not(.dark) .dashboard-bento,
+  html[data-theme="light"] .dashboard-bento {
+    background:
+      linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.78),
+        rgba(255, 255, 255, 0.42) 52%,
+        rgba(255, 255, 255, 0.6)
+      );
+    border-color: rgba(255, 255, 255, 0.74);
+  }
+
+  .dashboard-chart-panel {
+    border-radius: 18px;
+    border: 1px solid var(--glass-hairline);
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.014) 62%
+    );
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  html:not(.dark) .dashboard-chart-panel,
+  html[data-theme="light"] .dashboard-chart-panel {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.62),
+      rgba(255, 255, 255, 0.34)
+    );
+    border-color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Recharts ink. These rules only ever set colour, so the library keeps full
+     control of geometry, and the labels take their contrast from the theme
+     tokens instead of a library default. */
+  .dashboard-chart .recharts-cartesian-axis-tick-value {
+    fill: var(--dash-chart-label);
+  }
+  .dashboard-chart .recharts-cartesian-grid line {
+    stroke: var(--dash-chart-grid);
+  }
+  .dashboard-chart .dashboard-series-primary {
+    stroke: var(--dash-series-primary);
+  }
+  .dashboard-chart .dashboard-series-secondary {
+    stroke: var(--dash-series-secondary);
+  }
+  .dashboard-chart .recharts-active-dot circle {
+    fill: var(--dash-series-primary);
+    stroke: none;
+  }
+  .dashboard-chart .dashboard-frost-stop-top {
+    stop-color: var(--dash-frost-top);
+  }
+  .dashboard-chart .dashboard-frost-stop-bottom {
+    stop-color: var(--dash-frost-bottom);
+  }
+
+  /* Dashboard kicker — small caps label above a block's heading. */
+  .dashboard-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+  }
+  html:not(.dark) .dashboard-kicker,
+  html[data-theme="light"] .dashboard-kicker {
+    color: color-mix(in srgb, var(--signal) 92%, #000);
+  }
+
+  /* The iCloud-style linear "used of total" line: one tracking line, read as
+     absolute numbers, with no percentage shape anywhere. */
+  .dashboard-meter {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--text-main) 12%, transparent);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.25);
+  }
+  .dashboard-meter__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--signal) 72%, transparent),
+      var(--signal)
+    );
+  }
+
+  /* Resume-block completion timeline. */
+  .dashboard-timeline__rail {
+    background: color-mix(in srgb, var(--text-main) 16%, transparent);
+  }
+  .dashboard-timeline__fill {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--signal) 60%, transparent),
+      var(--signal)
+    );
+  }
+
+  /* Resume button — a polished pill whose press feedback comes from the
+     shared spring (scale up on touch), so no CSS transform fights it. */
+  .dashboard-resume {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 999px;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-foreground);
+    background: linear-gradient(180deg, var(--signal-strong), var(--signal-2));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      0 18px 40px -20px color-mix(in srgb, var(--signal) 70%, transparent);
+    transition: filter 220ms ease;
+    touch-action: manipulation;
+  }
+  .dashboard-resume:hover {
+    filter: brightness(1.06);
+  }
+
 }
 
+/* ============================================================
+   Selection surfaces — dropdowns, selects, popovers, menus.
+
+   Deliberately unlayered: Radix portals render outside the panel tree and
+   most of these primitives ship a translucent or inherited fill, which is
+   exactly how a menu ends up legible only while the pointer is over a row.
+   An unlayered rule outranks every Tailwind layer, so the concrete backing
+   cannot be lost to a utility in another component.
+   ============================================================ */
+[data-slot="select-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="popover-content"],
+[data-slot="command"],
+[data-slot="menubar-content"],
+[role="listbox"],
+[role="menu"] {
+  background-color: var(--menu-bg);
+  color: var(--menu-ink);
+}
+/* Items intentionally inherit the panel's ink rather than being forced to a
+   colour here: a menu row that carries its own utility (a destructive red, a
+   muted footer label) must keep it, and an inherited colour is beaten by any
+   declaration on the element itself. */
 @keyframes orbit {
   from {
     transform: rotate(0deg);
