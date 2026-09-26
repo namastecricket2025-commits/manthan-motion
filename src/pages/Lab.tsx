@@ -1,33 +1,17 @@
-import { useEffect, useState } from "react";
+import BiologyVectorLab from "@/components/lab/BiologyVectorLab";
+import ChemistryGlassLab from "@/components/lab/ChemistryGlassLab";
+import PhysicsVectorLab from "@/components/lab/PhysicsVectorLab";
+import { useSpringTransition, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  ArrowLeft,
-  Atom,
-  Beaker,
-  Dna,
-  FlaskConical,
-  ScanSearch,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { ArrowLeft, Atom, Beaker, Dna, FlaskConical } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
-import BiologyExplorer from "@/components/lab/BiologyExplorer";
-import CanvasSolver from "@/components/lab/CanvasSolver";
-import ChemistryWorkspace from "@/components/lab/ChemistryWorkspace";
-import LiveTelemetry, {
-  TelemetryProvider,
-  useTelemetry,
-  useTelemetrySetter,
-} from "@/components/lab/LiveTelemetry";
-import PhysicsSim from "@/components/lab/PhysicsSim";
-import { SPRING } from "@/components/lab/use-canvas";
-import { isSoundEnabled, setSoundEnabled } from "@/components/lab/lab-sound";
-import "@/components/lab/lab.css";
+import "@/components/lab/apple-lab.css";
 
-type LabTab = "physics" | "chemistry" | "biology" | "canvas";
+type Subject = "physics" | "chemistry" | "biology";
 
 const SUBJECTS: Array<{
-  id: LabTab;
+  id: Subject;
   label: string;
   icon: typeof Atom;
   blurb: string;
@@ -36,145 +20,148 @@ const SUBJECTS: Array<{
     id: "physics",
     label: "Physics",
     icon: Atom,
-    blurb: "Motion, ray optics, wave interference and AC circuits.",
+    blurb: "Vector circuits, projectile kinematics and looping wave streams.",
   },
   {
     id: "chemistry",
     label: "Chemistry",
     icon: FlaskConical,
-    blurb: "3D atoms, a reaction bench and a live titration rig.",
+    blurb: "A frosted periodic table, element morphs and a live Bohr model.",
   },
   {
     id: "biology",
     label: "Biology",
     icon: Dna,
-    blurb: "Deep-zoom cell explorer, DNA transcription and heart anatomy.",
-  },
-  {
-    id: "canvas",
-    label: "AI Canvas Solver",
-    icon: ScanSearch,
-    blurb: "Photograph a question sheet and let the beam decompose it.",
+    blurb: "Crisp schematics with cross-section callouts, and a processing helix.",
   },
 ];
 
-function LabChrome() {
-  const [tab, setTab] = useState<LabTab>("physics");
-  const [soundOn, setSoundOn] = useState(isSoundEnabled());
-  const feed = useTelemetry();
-  const clearTelemetry = useTelemetrySetter();
-  const subject = SUBJECTS.find((entry) => entry.id === tab) ?? SUBJECTS[0];
-
-  useEffect(() => {
-    clearTelemetry(null);
-  }, [clearTelemetry, tab]);
-
-  const toggleSound = () => {
-    const next = !soundOn;
-    setSoundOn(next);
-    setSoundEnabled(next);
-  };
+/**
+ * The STEM Lab.
+ *
+ * A dark room, two blurred colour meshes at 4% and glass — nothing else on the
+ * canvas. Three environments live inside it, each one vector-first:
+ * Physics (circuits / motion / waves), Chemistry (periodic table + Bohr model)
+ * and Biology (structural schematics + the DNA indicator).
+ *
+ * Switching subject is a state shift, so it moves on the shared spring: the
+ * outgoing bench lifts away and the incoming one settles in. No blur cut, no
+ * white flash, no spinner.
+ */
+export default function Lab() {
+  const [subject, setSubject] = useState<Subject>("physics");
+  const transition = useSpringTransition();
+  const active = SUBJECTS.find((entry) => entry.id === subject) ?? SUBJECTS[0];
 
   return (
-    <div className="lab-root" data-tab={tab}>
-      <div className="lab-backdrop lab-backdrop--grid" aria-hidden="true" />
-      <div className="lab-backdrop lab-backdrop--glow" aria-hidden="true">
-        <span className="corner-glow corner-glow--tr" />
-        <span className="corner-glow corner-glow--bl" />
-      </div>
+    <div className="apple-lab">
+      {/* The only background art: two organic meshes, floating deep. */}
+      <div className="apple-lab__mesh apple-lab__mesh--violet" aria-hidden />
+      <div className="apple-lab__mesh apple-lab__mesh--cyan" aria-hidden />
 
-      <div className="lab-shell relative z-10">
-        <header className="lab-header z-40 shrink-0 lg:sticky lg:top-0">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-[#8b93ff] hover:text-[#aab3ff]"
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 md:py-8">
+        <header className="apple-lab-glass flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              to="/dashboard"
+              className="apple-lab-btn !px-3 !py-1.5 !text-[12px]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+            <span className="hidden h-5 w-px bg-[var(--lab-line)] sm:block" />
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-xl border"
+                style={{
+                  borderColor: "rgba(167,139,250,0.32)",
+                  background: "rgba(167,139,250,0.12)",
+                  color: "#c4b5fd",
+                }}
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </Link>
-              <span className="hidden h-5 w-px bg-white/15 sm:block" />
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#8b93ff]/30 bg-[#8b93ff]/10 text-[#aab3ff]">
-                  <Beaker className="h-4 w-4" />
-                </span>
-                <span className="truncate font-display text-sm font-bold tracking-tight text-slate-100 sm:text-base">STEM Lab</span>
+                <Beaker className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="apple-lab-title truncate text-[15px] leading-tight">
+                  STEM Lab
+                </p>
+                <p className="text-[11px] leading-tight text-[var(--lab-ink-micro)]">
+                  Vector models, live equations
+                </p>
               </div>
-              <span className="lab-chip hidden md:inline-flex">sandboxed · no real chemicals</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleSound}
-                className="lab-btn !rounded-full !p-2"
-                aria-label={soundOn ? "Mute lab sounds" : "Unmute lab sounds"}
-                title={soundOn ? "Mute lab sounds" : "Unmute lab sounds"}
-              >
-                {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              </button>
             </div>
           </div>
+          <span className="apple-lab-chip">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ background: "#6ee7b7" }}
+            />
+            sandboxed — nothing here touches real apparatus
+          </span>
         </header>
 
-        <div className="mx-auto flex max-w-7xl items-end justify-between gap-4 px-3 pb-2.5 pt-4 sm:px-6 sm:pb-3 sm:pt-6">
-          <div className="lab-tabs" role="tablist" aria-label="STEM Lab subjects">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <div
+            className="apple-lab-tabrail"
+            role="tablist"
+            aria-label="STEM Lab subjects"
+          >
             {SUBJECTS.map((entry) => {
               const Icon = entry.icon;
-              const active = tab === entry.id;
+              const isActive = subject === entry.id;
               return (
                 <button
                   key={entry.id}
                   type="button"
                   role="tab"
-                  aria-selected={active}
-                  className={`lab-tab ${active ? "lab-tab--on" : ""}`}
-                  onClick={() => setTab(entry.id)}
+                  aria-selected={isActive}
+                  className="apple-lab-tab"
+                  onClick={() => setSubject(entry.id)}
                 >
-                  {active && <motion.span layoutId="lab-subject-pill" className="lab-pill" transition={SPRING} />}
-                  <Icon className={`relative z-10 h-4 w-4 ${active ? "text-[#aab3ff]" : "text-slate-500"}`} />
+                  {isActive && (
+                    <motion.span
+                      layoutId="lab-subject-pill"
+                      className="apple-lab-pill"
+                      transition={transition}
+                    />
+                  )}
+                  <Icon
+                    className={`relative z-10 h-4 w-4 ${isActive ? "text-[#c4b5fd]" : ""}`}
+                  />
                   <span className="relative z-10">{entry.label}</span>
                 </button>
               );
             })}
           </div>
-          <p className="hidden max-w-sm text-right text-[11px] leading-snug text-slate-500 md:block">{subject.blurb}</p>
+          <p className="apple-lab-note hidden max-w-sm text-right lg:block">
+            {active.blurb}
+          </p>
         </div>
 
-        <main className="lab-shell__main mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 md:py-10">
-          <AnimatePresence mode="wait">
+        <main className="mt-5 flex-1">
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={tab}
-              className="lab-fill"
-              initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
-              transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
+              key={subject}
+              variants={viewVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={transition}
             >
-              {tab === "physics" && <PhysicsSim />}
-              {tab === "chemistry" && <ChemistryWorkspace />}
-              {tab === "biology" && <BiologyExplorer />}
-              {tab === "canvas" && <CanvasSolver />}
+              {subject === "physics" && <PhysicsVectorLab />}
+              {subject === "chemistry" && <ChemistryGlassLab />}
+              {subject === "biology" && <BiologyVectorLab />}
             </motion.div>
           </AnimatePresence>
-
-          {feed && <LiveTelemetry feed={feed} />}
         </main>
 
-        <footer className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 pb-8 text-[11px] text-slate-500 sm:px-6">
+        <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 pb-2 text-[11px] text-[var(--lab-ink-micro)]">
           <span>Manthan STEM Lab</span>
-          <span>Interactive models for revision, not substitutes for a teacher.</span>
+          <span>
+            Interactive models for revision, not substitutes for a teacher.
+          </span>
         </footer>
       </div>
     </div>
-  );
-}
-
-export default function Lab() {
-  return (
-    <TelemetryProvider>
-      <LabChrome />
-    </TelemetryProvider>
   );
 }

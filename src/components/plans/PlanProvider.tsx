@@ -37,8 +37,8 @@ const PlanContext = createContext<PlanContextValue>({
  * Owns `userPlan` for the whole app.
  *
  * Every premium surface reads the plan from here — the sidebar gates the Math
- * Lab link, notebook workspaces gate Cram Mode and the Voice Tutor, the STEM
- * Lab gates the Canvas Solver, and the checkout simulation is the only writer.
+ * Lab link, notebook workspaces gate Cram Mode and the Voice Tutor, the Math
+ * Lab gates photo solving, and the checkout simulation is the only writer.
  * The lock prompt is rendered once, at this level, so any caller can gate a
  * click with a single `requireAccess` call.
  *

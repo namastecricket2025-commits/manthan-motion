@@ -1,0 +1,372 @@
+/* ============================================================
+   STEM Lab — Apple glass surface language.
+
+   The lab is its own dark room: a #0F0F16 canvas lit by two deeply blurred
+   colour meshes at 4% opacity, and nothing else. Structural modules (the
+   header, the tab rail, every workspace panel) carry the strict glass spec —
+   `backdrop-filter: blur(24px)`, a 1px `rgba(255,255,255,0.08)` hairline and
+   text at `rgba(255,255,255,0.9)`.
+
+   The palette is scoped here on purpose rather than taken from the app theme:
+   a physics bench should not change colour when the student flips the site to
+   light mode, and these values are the ones the layout was tuned against.
+
+   Performance note: the blur covers every structural surface and every card.
+   The one exception is the 118 cells of the periodic grid itself: those are
+   translucent fills with tinted borders, because 118 simultaneous
+   backdrop-filters would cost far more than they communicate. The grid panel
+   around them is still full glass.
+   ============================================================ */
+
+.apple-lab {
+  --lab-canvas: #0f0f16;
+  --lab-ink: rgba(255, 255, 255, 0.9);
+  --lab-ink-dim: rgba(255, 255, 255, 0.68);
+  --lab-ink-micro: rgba(255, 255, 255, 0.58);
+  --lab-line: rgba(255, 255, 255, 0.08);
+  --lab-line-soft: rgba(255, 255, 255, 0.05);
+  --lab-fill: rgba(255, 255, 255, 0.028);
+  --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.85);
+  --lab-violet: #a78bfa;
+  --lab-cyan: #7dd3fc;
+  position: relative;
+  min-height: 100vh;
+  background: var(--lab-canvas);
+  color: var(--lab-ink);
+}
+
+/* ---- The only background art: two organic meshes, 4% opacity ---------- */
+.apple-lab__mesh {
+  position: fixed;
+  z-index: 0;
+  border-radius: 999px;
+  filter: blur(120px);
+  opacity: 0.04;
+  pointer-events: none;
+  will-change: transform;
+}
+.apple-lab__mesh--violet {
+  top: -18vh;
+  left: -10vw;
+  width: 68vw;
+  height: 68vw;
+  background: radial-gradient(circle at 40% 40%, #a78bfa, transparent 68%);
+  animation: apple-lab-drift-a 72s ease-in-out infinite alternate;
+}
+.apple-lab__mesh--cyan {
+  right: -14vw;
+  bottom: -24vh;
+  width: 62vw;
+  height: 62vw;
+  background: radial-gradient(circle at 60% 60%, #67e8f9, transparent 68%);
+  animation: apple-lab-drift-b 88s ease-in-out infinite alternate;
+}
+@keyframes apple-lab-drift-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(6vw, 5vh, 0) scale(1.12);
+  }
+}
+@keyframes apple-lab-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-5vw, -6vh, 0) scale(1);
+  }
+}
+
+/* ---- Glass --------------------------------------------------------- */
+.apple-lab-glass {
+  position: relative;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.055),
+    rgba(255, 255, 255, 0.018) 55%,
+    rgba(255, 255, 255, 0.035)
+  );
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--lab-line);
+  border-radius: 24px;
+  box-shadow:
+    var(--lab-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* The panel the current environment renders inside. */
+.apple-lab-panel {
+  border-radius: 24px;
+  padding: 1.25rem;
+}
+@media (min-width: 760px) {
+  .apple-lab-panel {
+    padding: 1.5rem;
+  }
+}
+
+/* Nested cards — control wells, readouts, structure lists — carry the same
+   glass spec as the panels they sit in: blur(24px), the same 1px hairline,
+   the same text colour. Only the periodic tiles below opt out of the blur (see
+   the note at the top of the file). */
+.apple-lab-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.022);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--lab-line);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.apple-lab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--lab-line);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.35rem 0.75rem;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--lab-ink-dim);
+}
+
+.apple-lab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--lab-line);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.55rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--lab-ink);
+  transition: border-color 240ms ease, background 240ms ease, color 240ms ease;
+  touch-action: manipulation;
+}
+.apple-lab-btn:hover {
+  border-color: rgba(167, 139, 250, 0.42);
+  background: rgba(167, 139, 250, 0.1);
+}
+.apple-lab-btn[data-active="true"] {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.16);
+}
+
+/* ---- Typography ---------------------------------------------------- */
+.apple-lab-micro {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-ink-micro);
+  white-space: nowrap;
+}
+.apple-lab-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--lab-ink);
+}
+.apple-lab-note {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--lab-ink-dim);
+}
+.apple-lab-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--lab-ink);
+}
+
+/* ---- Tab rail (shared-layout pill) --------------------------------- */
+.apple-lab-tabrail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--lab-line);
+  background: rgba(255, 255, 255, 0.03);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  padding: 0.3rem;
+}
+.apple-lab-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--lab-ink-dim);
+  transition: color 220ms ease;
+  touch-action: manipulation;
+}
+.apple-lab-tab[aria-selected="true"] {
+  color: var(--lab-ink);
+}
+.apple-lab-pill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.04)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Controls ------------------------------------------------------ */
+.apple-lab-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.apple-lab-range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.apple-lab-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 4px rgba(167, 139, 250, 0.18),
+    0 2px 10px rgba(0, 0, 0, 0.55);
+}
+.apple-lab-range::-moz-range-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.apple-lab-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 4px rgba(167, 139, 250, 0.18),
+    0 2px 10px rgba(0, 0, 0, 0.55);
+}
+
+/* ---- Continuous orbits (Bohr shells, DNA core) --------------------- */
+.apple-lab-orbit {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: apple-lab-orbit var(--orbit-duration, 18s) linear infinite;
+  animation-delay: var(--orbit-delay, 0s);
+  will-change: transform;
+}
+@keyframes apple-lab-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.apple-lab-spin {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: apple-lab-orbit var(--orbit-duration, 40s) linear infinite;
+}
+
+/* Motionless Mode (in-app switch) and the OS preference both park the loops:
+   the diagrams stay complete and readable, they simply stop moving.
+
+   The attribute covers the in-app switch. The media query below is not
+   redundant: `data-motion` is written from the stored setting, which defaults
+   to "full", so a student whose operating system asks for reduced motion —
+   and who has never opened Settings — would otherwise still get the orbiting
+   shells and drifting meshes. */
+html[data-motion="reduced"] .apple-lab-orbit,
+html[data-motion="reduced"] .apple-lab-spin,
+html[data-motion="reduced"] .apple-lab__mesh {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .apple-lab-orbit,
+  .apple-lab-spin,
+  .apple-lab__mesh {
+    animation: none;
+  }
+}
+
+/* ---- Periodic tiles ------------------------------------------------ */
+.apple-lab-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: 12px;
+  border: 1px solid var(--lab-line);
+  background: rgba(255, 255, 255, 0.022);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+.apple-lab-tile[data-selected="true"] {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ---- Scroll wells -------------------------------------------------- */
+.apple-lab-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  overscroll-behavior: contain;
+}
+.apple-lab-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.apple-lab-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ---- Biology callout flag ----------------------------------------- */
+.apple-lab-flag {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(15, 15, 22, 0.92);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.9);
+  padding: 0.5rem 0.7rem;
+}
+
+/* ---- Segmented sub-tabs inside an environment ---------------------- */
+.apple-lab-subtab {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--lab-ink-dim);
+  transition: color 220ms ease, border-color 220ms ease, background 220ms ease;
+  touch-action: manipulation;
+}
+.apple-lab-subtab:hover {
+  color: var(--lab-ink);
+}
+.apple-lab-subtab[aria-selected="true"] {
+  color: var(--lab-ink);
+  border-color: var(--lab-line);
+  background: rgba(255, 255, 255, 0.05);
+}

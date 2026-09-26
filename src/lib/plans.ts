@@ -79,7 +79,7 @@ export const PLAN_TIERS: PlanTier[] = [
     unit: "month",
     allowance: "250,000 monthly tokens",
     features: [
-      "AI Canvas Solver diagram decoder",
+      "Photo question solver in Math Lab",
       "Math Lab basic graphs",
       "Automated lab reports",
       "250,000 monthly tokens",
@@ -143,10 +143,10 @@ export const FEATURE_META: Record<FeatureKey, FeatureMeta> = {
       "A spoken tutor that walks a problem through with you and answers out loud.",
   },
   canvasSolver: {
-    label: "AI Canvas Solver",
+    label: "Photo question solver",
     required: "eduvantage",
     blurb:
-      "Reads a photographed diagram or equation sheet and returns its inputs, formulas and solution.",
+      "Photograph a question sheet or hand-written working and get its inputs, formulas and step-by-step solution.",
   },
   mathLabBasic: {
     label: "Math Lab graphs",
