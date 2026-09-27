@@ -10,9 +10,9 @@ import {
   type Category,
   type ElementData,
 } from "@/components/lab/periodic-data";
+import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
-import { Moon, Sun } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 /**
@@ -25,9 +25,9 @@ import { useEffect, useMemo, useState } from "react";
  * grouping (Aufbau per principal shell) with each shell orbiting continuously
  * on its own CSS timeline — slower the further out it sits.
  *
- * The bench carries its own light/dark toggle (`data-lab-theme` on this root)
- * so the four tabs can be read in daylight without touching the site theme or
- * the Physics and Biology rooms.
+ * The bench carries its own light/dark toggle (`data-lab-theme` on this root,
+ * the same switch Physics and Biology use) so the four tabs can be read in
+ * daylight without touching the site theme or the other two rooms.
  */
 
 /* ---- Sub-tab model -------------------------------------------------- */
@@ -263,18 +263,19 @@ function ElementTile({
     <motion.button
       type="button"
       /* The tile's identity is the shared layout element the detail panel
-         morphs out of, so this is where the layout id lives. */
+         morphs out of, so this is where the layout id lives. Selection is
+         that morph alone: the tile keeps one steady category border, because
+         a selected border snapped on here would flash a second outline ahead
+         of the panel arriving. */
       layoutId={`element-${element.n}`}
       onClick={() => onSelect(element.n)}
       aria-label={`${element.name}, atomic number ${element.n}`}
       aria-pressed={isSelected}
-      data-selected={isSelected}
       whileHover={{ scale: 1.06 }}
       transition={transition}
       className="apple-lab-tile h-[52px] w-full min-w-0 !gap-0.5 !justify-between !items-stretch px-[3px] py-[3px] text-left"
       style={{
-        borderColor: isSelected ? tint(color, "cc") : tint(color, faint ? "30" : "59"),
-        boxShadow: isSelected ? `0 0 22px -6px ${tint(color, "aa")}` : "none",
+        borderColor: tint(color, faint ? "30" : "59"),
         opacity: faint ? 0.24 : 1,
       }}
     >
@@ -733,19 +734,25 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
                   type="button"
                   onClick={() => setZ(el.n)}
                   aria-pressed={active}
-                  className="apple-lab-btn !px-2.5 !py-1.5 !text-[11.5px]"
-                  style={{
-                    borderColor: active
-                      ? tint(quickColor(el.cat), "99")
-                      : tint(quickColor(el.cat), "3d"),
-                    background: active ? tint(quickColor(el.cat), "22") : undefined,
-                  }}
+                  className="apple-lab-btn relative !px-2.5 !py-1.5 !text-[11.5px]"
+                  style={{ borderColor: tint(quickColor(el.cat), "3d") }}
                 >
+                  {/* Same rule as the rail above: the chips keep their category
+                      hairline, and the pill that travels between them is the
+                      whole selection — nothing snaps on ahead of it. */}
+                  {active && (
+                    <motion.span
+                      layoutId="chem-quick-pill"
+                      aria-hidden
+                      className="apple-lab-pill"
+                      transition={transition}
+                    />
+                  )}
                   <span
-                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    className="relative z-10 inline-block h-1.5 w-1.5 rounded-full"
                     style={{ background: quickColor(el.cat) }}
                   />
-                  {el.sym}
+                  <span className="relative z-10">{el.sym}</span>
                 </button>
               );
             })}
@@ -1254,27 +1261,33 @@ function ReactionsTab() {
                   setFlashVisible(false);
                 }}
                 aria-pressed={active}
-                className="apple-lab-card flex min-w-0 items-center justify-between gap-3 px-3.5 py-3 text-left transition-colors"
-                style={{
-                  borderColor: active ? "rgba(167,139,250,0.5)" : undefined,
-                  background: active ? "rgba(167,139,250,0.09)" : undefined,
-                }}
+                className="apple-lab-card flex min-w-0 items-center justify-between gap-3 px-3.5 py-3 text-left"
               >
-                <span className="min-w-0">
+                {/* The picked row is one shared-layout box that travels between
+                    the rows. The row itself carries no static fill or border,
+                    so nothing flashes in before the box arrives. */}
+                {active && (
+                  <motion.span
+                    layoutId="reaction-picked"
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 rounded-[18px] border"
+                    transition={transition}
+                    style={{
+                      borderColor: "rgba(167,139,250,0.5)",
+                      background: "rgba(167,139,250,0.09)",
+                    }}
+                  />
+                )}
+                <span className="relative z-10 min-w-0">
                   <span className="block truncate text-[13px] font-semibold text-[var(--lab-ink)]">
                     {entry.type}
                   </span>
                   <span className="apple-lab-note mt-0.5 block truncate">{entry.label}</span>
                 </span>
-                {active ? (
-                  <motion.span
-                    layoutId="reaction-picked"
-                    className="h-2 w-2 shrink-0 rounded-full bg-[#a78bfa]"
-                    transition={transition}
-                  />
-                ) : (
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--lab-line)]" />
-                )}
+                <span
+                  className="relative z-10 h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: active ? "#a78bfa" : "var(--lab-line)" }}
+                />
               </button>
             );
           })}
@@ -1291,13 +1304,9 @@ function ReactionsTab() {
 export function ChemistryGlassLab() {
   const [tab, setTab] = useState<SubTab>("table");
   const [selected, setSelected] = useState<number | null>(6);
-  const [labTheme, setLabTheme] = useState<"dark" | "light" | null>(null);
+  const { theme, toggle } = useLabTheme();
   const transition = useSpringTransition();
   const stagger = useStagger(0.05);
-
-  /* The bench carries its own theme: the toggle decides, dark by default so
-     the chemistry room matches the lab's dark canvas until switched. */
-  const theme = labTheme ?? "dark";
 
   return (
     <div data-lab-theme={theme} className="rounded-[28px] pb-6">
@@ -1328,21 +1337,7 @@ export function ChemistryGlassLab() {
           })}
         </div>
 
-        <button
-          type="button"
-          className="apple-lab-btn !px-3 !py-2 !text-[12px]"
-          onClick={() => setLabTheme(theme === "dark" ? "light" : "dark")}
-          aria-label={`Switch chemistry bench to ${theme === "dark" ? "light" : "dark"} mode`}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-3.5 w-3.5" />
-          ) : (
-            <Moon className="h-3.5 w-3.5" />
-          )}
-          <span className="hidden sm:inline">
-            {theme === "dark" ? "Light bench" : "Dark bench"}
-          </span>
-        </button>
+        <LabThemeToggle theme={theme} subject="chemistry" onToggle={toggle} />
       </div>
 
       {/* Sub-tab cross-fade — the same AnimatePresence "wait" pattern the

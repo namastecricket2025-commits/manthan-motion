@@ -1,3 +1,4 @@
+import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion, useAnimationFrame } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
@@ -13,13 +14,21 @@ import { useRef, useState, type ReactNode } from "react";
  * The animated double helix is the lab's processing indicator: two strands
  * turning continuously, with a brighter band of base pairs travelling down
  * them while a workspace composes data.
+ *
+ * The bench carries the same light/dark switch as Chemistry: `data-lab-theme`
+ * on the root, with the plates' structural ink and the accents re-tinted so a
+ * plate still reads in daylight.
  */
 
-const VIOLET = "#a78bfa";
-const CYAN = "#7dd3fc";
-const AMBER = "#fcd34d";
-const MINT = "#6ee7b7";
-const ROSE = "#fda4af";
+/* Accents and diagram ink are tokens rather than literals, so a bench switched
+   to light can re-tint the whole plate. Ink is an RGB triple because every
+   line picks its own alpha. */
+const VIOLET = "var(--lab-diagram-violet)";
+const CYAN = "var(--lab-diagram-cyan)";
+const AMBER = "var(--lab-diagram-amber)";
+const MINT = "var(--lab-diagram-mint)";
+const ROSE = "var(--lab-diagram-rose)";
+const ink = (alpha: number) => `rgba(var(--lab-diagram-ink), ${alpha})`;
 
 type Part = {
   id: string;
@@ -61,7 +70,7 @@ function cellParts(plant: boolean): Part[] {
       shape: (
         <>
           <path d={MEMBRANE} fill="rgba(125,211,252,0.07)" stroke="rgba(125,211,252,0.55)" strokeWidth={2} />
-          <path d={MEMBRANE} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={7} strokeDasharray="2 10" />
+          <path d={MEMBRANE} fill="none" strokeWidth={7} strokeDasharray="2 10" style={{ stroke: ink(0.16) }} />
         </>
       ),
     },
@@ -75,8 +84,8 @@ function cellParts(plant: boolean): Part[] {
       shape: (
         <>
           <ellipse cx={250} cy={200} rx={68} ry={58} fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.6)" strokeWidth={2} />
-          <ellipse cx={250} cy={200} rx={68} ry={58} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={6} strokeDasharray="3 9" />
-          <circle cx={238} cy={196} r={19} fill="rgba(255,255,255,0.14)" stroke="rgba(167,139,250,0.7)" strokeWidth={1.4} />
+          <ellipse cx={250} cy={200} rx={68} ry={58} fill="none" strokeWidth={6} strokeDasharray="3 9" style={{ stroke: ink(0.16) }} />
+          <circle cx={238} cy={196} r={19} stroke="rgba(167,139,250,0.7)" strokeWidth={1.4} style={{ fill: ink(0.14) }} />
         </>
       ),
     },
@@ -148,7 +157,7 @@ function cellParts(plant: boolean): Part[] {
       id: "ribosomes",
       label: "Ribosomes",
       note: "The protein factories — free in the cytosol or docked on the rough ER.",
-      accent: "rgba(255,255,255,0.75)",
+      accent: ink(0.75),
       anchor: [356, 176],
       flag: [420, 56],
       shape: (
@@ -165,7 +174,7 @@ function cellParts(plant: boolean): Part[] {
             [286, 302],
             [410, 348],
           ].map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r={4} fill="rgba(255,255,255,0.5)" />
+            <circle key={`${x}-${y}`} cx={x} cy={y} r={4} style={{ fill: ink(0.5) }} />
           ))}
         </>
       ),
@@ -328,9 +337,9 @@ function heartParts(): Part[] {
           <path
             d="M 412 100 C 414 44 486 34 522 66"
             fill="none"
-            stroke="rgba(255,255,255,0.25)"
             strokeWidth={1.4}
             strokeLinecap="round"
+            style={{ stroke: ink(0.25) }}
           />
         </>
       ),
@@ -623,8 +632,8 @@ function VectorDiagram({ diagram }: { diagram: Diagram }) {
                     width={PLATE_W}
                     height={PLATE_H}
                     fill="none"
-                    stroke={selected.accent}
                     strokeWidth={26}
+                    style={{ stroke: selected.accent }}
                     opacity={0.55}
                     filter={`url(#lab-blur-${diagram.id})`}
                   />
@@ -637,8 +646,8 @@ function VectorDiagram({ diagram }: { diagram: Diagram }) {
                     width={PLATE_W}
                     height={PLATE_H}
                     fill="none"
-                    stroke={selected.accent}
                     strokeWidth={46}
+                    style={{ stroke: selected.accent }}
                     opacity={0.3}
                     filter={`url(#lab-blur-${diagram.id})`}
                   />
@@ -646,15 +655,15 @@ function VectorDiagram({ diagram }: { diagram: Diagram }) {
                 <motion.path
                   d={`M ${selected.anchor[0]} ${selected.anchor[1]} L ${selected.flag[0]} ${selected.flag[1]}`}
                   fill="none"
-                  stroke={selected.accent}
                   strokeWidth={1.3}
+                  style={{ stroke: selected.accent }}
                   strokeDasharray="1 6"
                   strokeLinecap="round"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
                   transition={transition}
                 />
-                <circle cx={selected.anchor[0]} cy={selected.anchor[1]} r={4} fill={selected.accent} />
+                <circle cx={selected.anchor[0]} cy={selected.anchor[1]} r={4} style={{ fill: selected.accent }} />
               </g>
             )}
           </svg>
@@ -773,9 +782,9 @@ function DnaHelix() {
         >
           <defs>
             <linearGradient id="lab-strand" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CYAN} />
-              <stop offset="50%" stopColor={VIOLET} />
-              <stop offset="100%" stopColor={MINT} />
+              <stop offset="0%" style={{ stopColor: CYAN }} />
+              <stop offset="50%" style={{ stopColor: VIOLET }} />
+              <stop offset="100%" style={{ stopColor: MINT }} />
             </linearGradient>
             <filter id="lab-strand-glow" x="-30%" y="-20%" width="160%" height="140%">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -796,8 +805,8 @@ function DnaHelix() {
               x2={HELIX_W / 2}
               y1={12 + (index / RUNGS) * (HELIX_H - 24)}
               y2={12 + (index / RUNGS) * (HELIX_H - 24)}
-              stroke="rgba(255,255,255,0.6)"
               strokeLinecap="round"
+              style={{ stroke: ink(0.6) }}
             />
           ))}
 
@@ -839,6 +848,7 @@ function DnaHelix() {
 
 export function BiologyVectorLab() {
   const transition = useSpringTransition();
+  const { theme, toggle } = useLabTheme();
   const [plate, setPlate] = useState("cell");
   const [plant, setPlant] = useState(false);
 
@@ -860,9 +870,8 @@ export function BiologyVectorLab() {
       base: (
         <path
           d={HEART_OUTLINE}
-          fill="rgba(255,255,255,0.022)"
-          stroke="rgba(255,255,255,0.16)"
           strokeWidth={2}
+          style={{ fill: ink(0.022), stroke: ink(0.16) }}
         />
       ),
       parts: heartParts(),
@@ -879,12 +888,12 @@ export function BiologyVectorLab() {
               key={i}
               d={`M ${64 + i * 16} ${140 - i * 30} C ${200 - i * 10} ${100 - i * 26}, ${440 + i * 10} ${100 - i * 26}, ${576 - i * 16} ${140 - i * 30}`}
               fill="none"
-              stroke="rgba(255,255,255,0.07)"
               strokeWidth={6}
               strokeLinecap="round"
+              style={{ stroke: ink(0.07) }}
             />
           ))}
-          <path d="M 60 300 C 200 356 440 356 580 300" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={3} />
+          <path d="M 60 300 C 200 356 440 356 580 300" fill="none" strokeWidth={3} style={{ stroke: ink(0.05) }} />
         </>
       ),
       parts: respiratoryParts(),
@@ -898,9 +907,9 @@ export function BiologyVectorLab() {
         <path
           d="M 320 84 C 330 140 330 220 322 300"
           fill="none"
-          stroke="rgba(255,255,255,0.05)"
           strokeWidth={2}
           strokeDasharray="4 8"
+          style={{ stroke: ink(0.05) }}
         />
       ),
       parts: excretoryParts(),
@@ -910,7 +919,7 @@ export function BiologyVectorLab() {
   const active = diagrams.find((diagram) => diagram.id === plate) ?? diagrams[0];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div data-lab-theme={theme} className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="apple-lab-tabrail" role="tablist" aria-label="Biology plates">
           {diagrams.map((diagram) => {
@@ -932,16 +941,19 @@ export function BiologyVectorLab() {
             );
           })}
         </div>
-        {plate === "cell" && (
-          <button
-            type="button"
-            className="apple-lab-btn"
-            data-active={plant}
-            onClick={() => setPlant((value) => !value)}
-          >
-            {plant ? "Animal cell" : "Plant cell"}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {plate === "cell" && (
+            <button
+              type="button"
+              className="apple-lab-btn"
+              data-active={plant}
+              onClick={() => setPlant((value) => !value)}
+            >
+              {plant ? "Animal cell" : "Plant cell"}
+            </button>
+          )}
+          <LabThemeToggle theme={theme} subject="biology" onToggle={toggle} />
+        </div>
       </div>
 
       <AnimatePresence mode="wait" initial={false}>

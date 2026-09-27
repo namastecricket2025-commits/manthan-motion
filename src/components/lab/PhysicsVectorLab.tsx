@@ -1,3 +1,4 @@
+import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -19,12 +20,20 @@ import { useEffect, useRef, useState } from "react";
  *             controls tween the amplitude and the frequency on a spring while
  *             the phase advances every frame, so a change *scales and
  *             accelerates* the wave instead of re-drawing it in steps.
+ *
+ * The bench carries the same light/dark switch as Chemistry: `data-lab-theme`
+ * on the root, with the diagram ink, the masking plates and the accents swapped
+ * for ink-on-paper values so the geometry reads in daylight instead of
+ * disappearing into the page.
  */
 
-const VIOLET = "#a78bfa";
-const CYAN = "#7dd3fc";
-const INK = "rgba(255,255,255,0.9)";
-const GRID = "rgba(255,255,255,0.05)";
+/* Accents and diagram ink are tokens rather than literals, so a bench switched
+   to light can deepen the whole drawing. Ink and plate are RGB triples because
+   every line picks its own alpha. */
+const VIOLET = "var(--lab-diagram-violet)";
+const CYAN = "var(--lab-diagram-cyan)";
+const ink = (alpha: number) => `rgba(var(--lab-diagram-ink), ${alpha})`;
+const plate = (alpha: number) => `rgba(var(--lab-diagram-plate), ${alpha})`;
 
 type Bench = "circuits" | "motion" | "waves";
 
@@ -156,7 +165,7 @@ function CircuitsBench() {
           <span className="apple-lab-chip">
             <span
               className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ background: closed ? CYAN : "rgba(255,255,255,0.35)" }}
+              style={{ background: closed ? CYAN : ink(0.35) }}
             />
             {current.toFixed(2)} A
           </span>
@@ -170,9 +179,9 @@ function CircuitsBench() {
         >
           <defs>
             <linearGradient id="lab-flow" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={CYAN} />
-              <stop offset="55%" stopColor={VIOLET} />
-              <stop offset="100%" stopColor={CYAN} />
+              <stop offset="0%" style={{ stopColor: CYAN }} />
+              <stop offset="55%" style={{ stopColor: VIOLET }} />
+              <stop offset="100%" style={{ stopColor: CYAN }} />
             </linearGradient>
             <filter id="lab-flow-glow" x="-40%" y="-40%" width="180%" height="180%">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -190,15 +199,15 @@ function CircuitsBench() {
 
           {/* structural grid */}
           {Array.from({ length: 15 }, (_, i) => (
-            <line key={`v${i}`} x1={40 + i * 40} y1={30} x2={40 + i * 40} y2={350} stroke={GRID} />
+            <line key={`v${i}`} x1={40 + i * 40} y1={30} x2={40 + i * 40} y2={350} style={{ stroke: ink(0.05) }} />
           ))}
           {Array.from({ length: 9 }, (_, i) => (
-            <line key={`h${i}`} x1={30} y1={40 + i * 40} x2={610} y2={40 + i * 40} stroke={GRID} />
+            <line key={`h${i}`} x1={30} y1={40 + i * 40} x2={610} y2={40 + i * 40} style={{ stroke: ink(0.05) }} />
           ))}
 
           {/* the wire itself */}
-          <path d={WIRE_D} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={5} strokeLinecap="round" />
-          <path d={WIRE_D} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={1.25} strokeLinecap="round" />
+          <path d={WIRE_D} fill="none" strokeLinecap="round" strokeWidth={5} style={{ stroke: ink(0.16) }} />
+          <path d={WIRE_D} fill="none" strokeLinecap="round" strokeWidth={1.25} style={{ stroke: ink(0.28) }} />
 
           {/* dotted current flow */}
           <motion.path
@@ -224,49 +233,52 @@ function CircuitsBench() {
             animate={{ r: 26 + glow * 22, opacity: 0.25 + glow * 0.75 }}
             transition={transition}
           />
-          <circle cx={64} cy={190} r={22} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} />
-          <path d={`M 50 176 L 78 204 M 78 176 L 50 204`} stroke={INK} strokeWidth={1.5} strokeLinecap="round" />
+          <circle cx={64} cy={190} r={22} fill="none" strokeWidth={1.5} style={{ stroke: ink(0.5) }} />
+          <path d={`M 50 176 L 78 204 M 78 176 L 50 204`} strokeWidth={1.5} strokeLinecap="round" style={{ stroke: ink(0.9) }} />
 
           {/* battery on the bottom edge */}
-          <line x1={272} y1={270} x2={272} y2={306} stroke={INK} strokeWidth={2.5} strokeLinecap="round" />
-          <line x1={296} y1={280} x2={296} y2={296} stroke="rgba(255,255,255,0.6)" strokeWidth={2.5} strokeLinecap="round" />
-          <text x={258} y={264} fontSize={11} fill={INK} fontWeight={600}>
+          <line x1={272} y1={270} x2={272} y2={306} strokeWidth={2.5} strokeLinecap="round" style={{ stroke: ink(0.9) }} />
+          <line x1={296} y1={280} x2={296} y2={296} strokeWidth={2.5} strokeLinecap="round" style={{ stroke: ink(0.6) }} />
+          <text x={258} y={264} fontSize={11} fontWeight={600} style={{ fill: ink(0.9) }}>
             +
           </text>
-          <text x={292} y={268} fontSize={13} fill="rgba(255,255,255,0.6)" fontWeight={600}>
+          <text x={292} y={268} fontSize={13} fontWeight={600} style={{ fill: ink(0.6) }}>
             -
           </text>
-          <text x={284} y={330} fontSize={11} fill="rgba(255,255,255,0.7)" textAnchor="middle">
+          <text x={284} y={330} fontSize={11} textAnchor="middle" style={{ fill: ink(0.7) }}>
             {voltage.toFixed(1)} V source
           </text>
 
           {/* switch on the top edge — the lever swings on the shared spring */}
-          <line x1={268} y1={92} x2={330} y2={92} stroke="rgba(15,15,22,0.9)" strokeWidth={7} strokeLinecap="round" />
-          <circle cx={268} cy={92} r={4} fill={INK} />
-          <circle cx={330} cy={92} r={4} fill="rgba(255,255,255,0.55)" />
+          <line x1={268} y1={92} x2={330} y2={92} strokeWidth={7} strokeLinecap="round" style={{ stroke: plate(0.9) }} />
+          <circle cx={268} cy={92} r={4} style={{ fill: ink(0.9) }} />
+          <circle cx={330} cy={92} r={4} style={{ fill: ink(0.55) }} />
           <motion.line
             x1={268}
             y1={92}
             x2={330}
             y2={92}
-            stroke={closed ? VIOLET : "rgba(255,255,255,0.75)"}
             strokeWidth={2.5}
             strokeLinecap="round"
             initial={false}
             animate={{ rotate: closed ? 0 : -32 }}
             transition={transition}
-            style={{ transformBox: "view-box", transformOrigin: "268px 92px" }}
+            style={{
+              transformBox: "view-box",
+              transformOrigin: "268px 92px",
+              stroke: closed ? VIOLET : ink(0.75),
+            }}
           />
-          <text x={299} y={72} fontSize={11} fill="rgba(255,255,255,0.7)" textAnchor="middle">
+          <text x={299} y={72} fontSize={11} textAnchor="middle" style={{ fill: ink(0.7) }}>
             {closed ? "closed" : "open"}
           </text>
 
           {/* resistor on the right edge */}
-          <rect x={558} y={158} width={36} height={64} rx={10} fill="rgba(15,15,22,0.85)" stroke="rgba(255,255,255,0.45)" strokeWidth={1.5} />
+          <rect x={558} y={158} width={36} height={64} rx={10} strokeWidth={1.5} style={{ fill: plate(0.85), stroke: ink(0.45) }} />
           {[0, 1, 2].map((i) => (
-            <line key={i} x1={566} y1={172 + i * 16} x2={586} y2={172 + i * 16} stroke={VIOLET} strokeWidth={1.5} strokeLinecap="round" />
+            <line key={i} x1={566} y1={172 + i * 16} x2={586} y2={172 + i * 16} strokeWidth={1.5} strokeLinecap="round" style={{ stroke: VIOLET }} />
           ))}
-          <text x={576} y={244} fontSize={11} fill="rgba(255,255,255,0.7)" textAnchor="middle">
+          <text x={576} y={244} fontSize={11} textAnchor="middle" style={{ fill: ink(0.7) }}>
             {resistance} Ω
           </text>
         </svg>
@@ -477,8 +489,8 @@ function MotionBench() {
         <svg viewBox="0 0 900 360" className="mt-4 h-[300px] w-full" role="img" aria-label="A projectile trajectory with velocity and gravity vectors">
           <defs>
             <linearGradient id="lab-arc" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              <stop offset="0%" style={{ stopColor: ink(0.15) }} />
+              <stop offset="100%" style={{ stopColor: ink(0) }} />
             </linearGradient>
           </defs>
 
@@ -487,8 +499,8 @@ function MotionBench() {
             const point = toScreen(x, 0);
             return (
               <g key={x}>
-                <line x1={point.x} y1={PLOT.top} x2={point.x} y2={PLOT.bottom} stroke={GRID} />
-                <text x={point.x} y={PLOT.bottom + 16} fontSize={10} fill="rgba(255,255,255,0.62)" textAnchor="middle">
+                <line x1={point.x} y1={PLOT.top} x2={point.x} y2={PLOT.bottom} style={{ stroke: ink(0.05) }} />
+                <text x={point.x} y={PLOT.bottom + 16} fontSize={10} textAnchor="middle" style={{ fill: ink(0.62) }}>
                   {x} m
                 </text>
               </g>
@@ -498,14 +510,14 @@ function MotionBench() {
             const point = toScreen(0, y);
             return (
               <g key={y}>
-                <line x1={PLOT.left} y1={point.y} x2={PLOT.right} y2={point.y} stroke={GRID} />
-                <text x={PLOT.left - 12} y={point.y + 3.5} fontSize={10} fill="rgba(255,255,255,0.62)" textAnchor="end">
+                <line x1={PLOT.left} y1={point.y} x2={PLOT.right} y2={point.y} style={{ stroke: ink(0.05) }} />
+                <text x={PLOT.left - 12} y={point.y + 3.5} fontSize={10} textAnchor="end" style={{ fill: ink(0.62) }}>
                   {y} m
                 </text>
               </g>
             );
           })}
-          <line x1={PLOT.left} y1={PLOT.bottom} x2={PLOT.right} y2={PLOT.bottom} stroke="rgba(255,255,255,0.22)" strokeWidth={1.5} />
+          <line x1={PLOT.left} y1={PLOT.bottom} x2={PLOT.right} y2={PLOT.bottom} strokeWidth={1.5} style={{ stroke: ink(0.22) }} />
 
           {/* the arc morphs on the spring when speed or angle changes */}
           <motion.path
@@ -513,21 +525,21 @@ function MotionBench() {
             animate={{ d: trajectoryPath(speed, angle) }}
             transition={transition}
             fill="url(#lab-arc)"
-            stroke={VIOLET}
             strokeWidth={2.25}
             strokeLinecap="round"
+            style={{ stroke: VIOLET }}
           />
 
           {/* the ball, riding the real kinematics */}
           <g ref={ballRef} transform="translate(52 330)">
-            <line ref={velRef} x1={0} y1={0} x2={0} y2={0} stroke={VIOLET} strokeWidth={2} strokeLinecap="round" />
-            <line ref={gravRef} x1={0} y1={0} x2={0} y2={0} stroke={CYAN} strokeWidth={2} strokeLinecap="round" />
-            <circle r={6.5} fill="#ffffff" />
-            <circle r={11} fill="none" stroke="rgba(255,255,255,0.25)" />
-            <text x={10} y={-12} fontSize={10.5} fill={VIOLET} fontWeight={600}>
+            <line ref={velRef} x1={0} y1={0} x2={0} y2={0} strokeWidth={2} strokeLinecap="round" style={{ stroke: VIOLET }} />
+            <line ref={gravRef} x1={0} y1={0} x2={0} y2={0} strokeWidth={2} strokeLinecap="round" style={{ stroke: CYAN }} />
+            <circle r={6.5} style={{ fill: ink(1) }} />
+            <circle r={11} fill="none" style={{ stroke: ink(0.25) }} />
+            <text x={10} y={-12} fontSize={10.5} fontWeight={600} style={{ fill: VIOLET }}>
               v
             </text>
-            <text x={4} y={30} fontSize={10.5} fill={CYAN} fontWeight={600}>
+            <text x={4} y={30} fontSize={10.5} fontWeight={600} style={{ fill: CYAN }}>
               g
             </text>
           </g>
@@ -673,9 +685,9 @@ function WaveBench() {
         >
           <defs>
             <linearGradient id="lab-wave" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={CYAN} />
-              <stop offset="50%" stopColor={VIOLET} />
-              <stop offset="100%" stopColor={CYAN} />
+              <stop offset="0%" style={{ stopColor: CYAN }} />
+              <stop offset="50%" style={{ stopColor: VIOLET }} />
+              <stop offset="100%" style={{ stopColor: CYAN }} />
             </linearGradient>
             <filter id="lab-wave-glow" x="-20%" y="-60%" width="140%" height="220%">
               <feGaussianBlur stdDeviation="5" result="blur" />
@@ -687,12 +699,12 @@ function WaveBench() {
           </defs>
 
           {Array.from({ length: 13 }, (_, i) => (
-            <line key={i} x1={i * 75} y1={0} x2={i * 75} y2={224} stroke={GRID} />
+            <line key={i} x1={i * 75} y1={0} x2={i * 75} y2={224} style={{ stroke: ink(0.05) }} />
           ))}
-          <line x1={0} y1={WAVE_MID} x2={WAVE_WIDTH} y2={WAVE_MID} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 8" />
+          <line x1={0} y1={WAVE_MID} x2={WAVE_WIDTH} y2={WAVE_MID} strokeDasharray="4 8" style={{ stroke: ink(0.12) }} />
 
-          <path ref={thinRef} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={1} />
-          <path ref={ghostRef} fill="none" stroke={CYAN} strokeOpacity={0.4} strokeWidth={1.4} />
+          <path ref={thinRef} fill="none" strokeWidth={1} style={{ stroke: ink(0.28) }} />
+          <path ref={ghostRef} fill="none" strokeOpacity={0.4} strokeWidth={1.4} style={{ stroke: CYAN }} />
           <path
             ref={mainRef}
             fill="none"
@@ -750,9 +762,10 @@ function WaveBench() {
 export function PhysicsVectorLab() {
   const [bench, setBench] = useState<Bench>("circuits");
   const transition = useSpringTransition();
+  const { theme, toggle } = useLabTheme();
 
   return (
-    <div className="flex flex-col gap-5">
+    <div data-lab-theme={theme} className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="apple-lab-tabrail" role="tablist" aria-label="Physics benches">
           {BENCHES.map((entry) => {
@@ -774,9 +787,12 @@ export function PhysicsVectorLab() {
             );
           })}
         </div>
-        <p className="apple-lab-note hidden max-w-sm text-right md:block">
-          Ultra-clean vector engines: real equations, drawn as lines.
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="apple-lab-note hidden max-w-sm text-right md:block">
+            Ultra-clean vector engines: real equations, drawn as lines.
+          </p>
+          <LabThemeToggle theme={theme} subject="physics" onToggle={toggle} />
+        </div>
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
