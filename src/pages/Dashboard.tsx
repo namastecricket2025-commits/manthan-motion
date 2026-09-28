@@ -64,6 +64,15 @@ import { toast } from "sonner";
  * `@/lib/motion`), the way a window changes state on macOS.
  */
 
+/** Material tabs a deep link from the overview is allowed to select. */
+const WORKSPACE_TABS = [
+  "summary",
+  "flashcards",
+  "quiz",
+  "mindmap",
+  "slides",
+] as const;
+
 function greeting() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -100,6 +109,9 @@ export default function Dashboard() {
   const view =
     searchParams.get("view") === "notebooks" ? "notebooks" : "overview";
   const notebookParam = searchParams.get("notebook");
+  /* A metric card or library row can ask for one material tab by name. */
+  const tabParam = searchParams.get("tab");
+  const initialTab = WORKSPACE_TABS.find((kind) => kind === tabParam);
 
   const notebooks = useQuery(api.notebooks.list);
   const summary = useQuery(api.notebooks.summary);
@@ -331,6 +343,7 @@ export default function Dashboard() {
                   <NotebookWorkspace
                     notebookId={openNotebook.id as Id<"notebooks">}
                     notebookName={openNotebook.name}
+                    initialTab={initialTab}
                   />
                 ) : view === "notebooks" ? (
                   /* ================= NOTEBOOKS MANAGER ================= */
@@ -565,9 +578,17 @@ export default function Dashboard() {
                       <DashboardOverview
                         summary={summary}
                         notebooks={notebooks ?? []}
-                        onResumeNotebook={(notebookId) =>
-                          navigate(`/dashboard?notebook=${notebookId}`)
-                        }
+                        onOpenNotebook={(notebookId, target) => {
+                          const params = new URLSearchParams({
+                            notebook: notebookId,
+                          });
+                          if (target?.tab) params.set("tab", target.tab);
+                          navigate(
+                            `/dashboard?${params.toString()}${
+                              target?.focus ? `#${target.focus}` : ""
+                            }`,
+                          );
+                        }}
                         onOpenNotebooks={() =>
                           navigate("/dashboard?view=notebooks")
                         }

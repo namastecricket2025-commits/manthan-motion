@@ -160,6 +160,28 @@ export const summary = query({
       activeNotebook: null as null | { id: string; name: string; materialCount: number },
       perNotebook: [] as { id: string; name: string; count: number }[],
       byDay: [] as { day: string; label: string; count: number }[],
+      heatmap: [] as {
+        day: string;
+        label: string;
+        weekday: number;
+        materials: number;
+        sources: number;
+        count: number;
+      }[],
+      recent: [] as {
+        id: string;
+        notebookId: string;
+        kind:
+          | "source"
+          | "summary"
+          | "flashcards"
+          | "quiz"
+          | "mindmap"
+          | "slides";
+        label: string;
+        notebook: string;
+        at: number;
+      }[],
       materialsByDay: [] as {
         day: string;
         label: string;
@@ -242,6 +264,75 @@ export const summary = query({
       };
     });
 
+    // Twelve weeks of daily activity — one cell per day, counted from the
+    // same `createdAt` stamps the seven-day chart already reads, so the
+    // heatmap and the bars can never disagree. Rows outside the window are
+    // ignored rather than clamped, so a cell never borrows another day's
+    // count. Keys are built from local calendar parts, which keeps the cells
+    // aligned to the user's own days across a DST shift.
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const dayKey = (date: Date) =>
+      `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const dayStarts = Array.from({ length: 84 }, (_, i) => {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (83 - i));
+      return date;
+    });
+    const heatIndex = new Map(
+      dayStarts.map((date, index) => [dayKey(date), index]),
+    );
+    const heatmap = dayStarts.map((date) => ({
+      day: dayKey(date),
+      label: date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
+      weekday: date.getDay(),
+      materials: 0,
+      sources: 0,
+      count: 0,
+    }));
+    for (const material of materials) {
+      const index = heatIndex.get(dayKey(new Date(material.createdAt)));
+      if (index === undefined) continue;
+      heatmap[index].materials += 1;
+      heatmap[index].count += 1;
+    }
+    for (const source of sources) {
+      const index = heatIndex.get(dayKey(new Date(source.createdAt)));
+      if (index === undefined) continue;
+      heatmap[index].sources += 1;
+      heatmap[index].count += 1;
+    }
+
+    // The last five things that actually happened: a source landing or an
+    // artefact being generated, newest first, each carrying the notebook it
+    // belongs to. Derived from the same rows, so there is nothing invented.
+    const notebookNames = new Map(
+      notebooks.map((notebook) => [notebook._id as string, notebook.name]),
+    );
+    const recent = [
+      ...sources.map((source) => ({
+        id: source._id as string,
+        notebookId: source.notebookId as string,
+        kind: "source" as const,
+        label: source.name,
+        notebook: notebookNames.get(source.notebookId) ?? "Notebook",
+        at: source.createdAt,
+      })),
+      ...materials.map((material) => ({
+        id: material._id as string,
+        notebookId: material.notebookId as string,
+        kind: material.kind,
+        label: material.title,
+        notebook: notebookNames.get(material.notebookId) ?? "Notebook",
+        at: material.createdAt,
+      })),
+    ]
+      .sort((a, b) => b.at - a.at)
+      .slice(0, 5);
+
     return {
       notebookCount: notebooks.length,
       sourceCount: sources.length,
@@ -262,6 +353,8 @@ export const summary = query({
       materialsPrevWeek: materials.filter(
         (m) => m.createdAt >= weekStart - 7 * 24 * 60 * 60 * 1000 && m.createdAt < weekStart,
       ).length,
+      heatmap,
+      recent,
       perNotebook: notebooks
         .slice()
         .sort((a, b) => a.createdAt - b.createdAt)

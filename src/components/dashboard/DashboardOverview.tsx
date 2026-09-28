@@ -1,5 +1,5 @@
-import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { api } from "@/convex/_generated/api";
+import { usePlan } from "@/components/plans/PlanProvider";
 import { useResolvedTheme } from "@/lib/app-settings";
 import {
   revealVariants,
@@ -8,7 +8,7 @@ import {
   useStagger,
   useStillMotion,
 } from "@/lib/motion";
-import { usePlan } from "@/components/plans/PlanProvider";
+
 import { getTier } from "@/lib/plans";
 import { useQuery } from "convex/react";
 import {
@@ -16,36 +16,70 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
+  ChevronRight,
   Clock,
   FileText,
   Gauge,
+  Layers,
+  ListChecks,
+  Network,
   NotebookPen,
   Play,
+  Presentation,
   Sparkles,
+  Upload,
 } from "lucide-react";
 import { AnimatePresence, motion, type Transition } from "motion/react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 /**
  * The workspace overview.
  *
  * Everything on this screen is derived from rows the signed-in user actually
- * created — there is no seeded or sample content anywhere. The screen reads
- * as a bento of isolated frosted blocks:
+ * created — there is no seeded, sample or hardcoded content anywhere, and a
+ * metric this app does not track (a streak, a "due for review" count) is
+ * omitted rather than invented. The screen reads as a bento of isolated
+ * frosted blocks:
  *
- *   1. "Pick up where you left off"  the focal block: the notebook last worked
- *      in, its real chapter name, its real completion timeline and the action
- *      that opens it.
- *   2. four metric tiles            real counts, no invented denominators.
- *   3. the allowance line           used-of-total, in absolute numbers, taken
- *      from the same ledger the generation engine writes.
- *   4. the seven-day wave           a hand-drawn SVG spline that morphs
- *      between real states on the chart spring (120/18, the vendored bklit
- *      chart motion), on a blurred glass panel.
+ *   1. quick actions            the three things worth doing next, straight
+ *                               under the greeting.
+ *   2. "Pick up where you left off"  the focal block: the notebook last worked
+ *                               in, its real completion timeline and the
+ *                               action that opens it.
+ *   3. four metric tiles        real counts — hover, press and click them:
+ *                               each one is a control that opens the view its
+ *                               number belongs to.
+ *   4. the allowance line       used-of-total, in absolute numbers, from the
+ *                               same ledger the generation engine writes.
+ *   5. the seven-day bars       one column per day, study material beside
+ *                               sources added, on a clean card. Marks only:
+ *                               no curve, no interpolation, nothing that can
+ *                               read as a negative count.
+ *   6. twelve-week heatmap      one square per day, intensity from the same
+ *                               rows the bars read.
+ *   7. your library             one clickable row per material kind, plus the
+ *                               last five things that actually happened.
  *
- * Every block arrives on the shared spring.
+ * Every block arrives on the shared spring (see `@/lib/motion`); every
+ * transition collapses to an instant settle when the user asked for less
+ * motion.
  */
+
+/** The five generated-artefact kinds, in the order the picker lists them. */
+export type MaterialKind =
+  | "summary"
+  | "flashcards"
+  | "quiz"
+  | "mindmap"
+  | "slides";
 
 export type DashboardSummary = {
   notebookCount: number;
@@ -71,6 +105,24 @@ export type DashboardSummary = {
     slides: number;
   }[];
   byDay: { day: string; label: string; count: number }[];
+  /** Twelve weeks of days, oldest first — one cell per calendar day. */
+  heatmap: {
+    day: string;
+    label: string;
+    weekday: number;
+    materials: number;
+    sources: number;
+    count: number;
+  }[];
+  /** The five newest source/material events, newest first. */
+  recent: {
+    id: string;
+    notebookId: string;
+    kind: "source" | MaterialKind;
+    label: string;
+    notebook: string;
+    at: number;
+  }[];
 };
 
 /** The fields of `api.notebooks.list` this screen needs. */
@@ -85,9 +137,31 @@ export type DashboardNotebook = {
   lastActivityAt: number;
 };
 
-const MATERIAL_KINDS = ["summary", "flashcards", "quiz", "mindmap", "slides"] as const;
+type HeatCell = DashboardSummary["heatmap"][number];
+type RecentEvent = DashboardSummary["recent"][number];
 
-const MATERIAL_LABELS: Record<(typeof MATERIAL_KINDS)[number], string> = {
+/** Where a click on the overview should land inside a notebook workspace. */
+export type WorkspaceTarget = {
+  focus?: "sources" | "materials";
+  tab?: MaterialKind;
+};
+
+type ActivityPoint = {
+  day: string;
+  label: string;
+  materials: number;
+  sources: number;
+};
+
+const MATERIAL_KINDS: MaterialKind[] = [
+  "summary",
+  "flashcards",
+  "quiz",
+  "mindmap",
+  "slides",
+];
+
+const MATERIAL_LABELS: Record<MaterialKind, string> = {
   summary: "Summaries",
   flashcards: "Flashcards",
   quiz: "Quizzes",
@@ -95,7 +169,22 @@ const MATERIAL_LABELS: Record<(typeof MATERIAL_KINDS)[number], string> = {
   slides: "Slides",
 };
 
-type ActivityPoint = { label: string; materials: number; sources: number };
+const MATERIAL_ICONS: Record<MaterialKind, typeof FileText> = {
+  summary: FileText,
+  flashcards: Layers,
+  quiz: ListChecks,
+  mindmap: Network,
+  slides: Presentation,
+};
+
+/**
+ * Chart motion. Tween, never spring: these animate SVG geometry and bar
+ * heights, and a mark that overshoots its own value is a lie about the data.
+ * Each is short and eased out, so the growth reads as a settle, not a bounce.
+ */
+const GROW: Transition = { type: "tween", duration: 0.55, ease: "easeOut" };
+const RISE: Transition = { type: "tween", duration: 0.42, ease: "easeOut" };
+const TIP: Transition = { type: "tween", duration: 0.18, ease: "easeOut" };
 
 /** "today", "yesterday", "4 days ago" — plain words, from a real timestamp. */
 function timeAgo(timestamp: number, now = Date.now()) {
@@ -117,9 +206,9 @@ const plural = (count: number, one: string, many = `${one}s`) =>
 /**
  * Concrete chart colours.
  *
- * Recharts writes colours as SVG presentation attributes, and `var(--token)`
- * is not reliably honoured there — so the theme tokens are read once per theme
- * as real colour strings instead of being trusted inside the SVG.
+ * SVG presentation attributes do not reliably honour `var(--token)`, so the
+ * theme tokens are read once per theme as real colour strings instead of being
+ * trusted inside the SVG.
  */
 function useChartInk() {
   const theme = useResolvedTheme();
@@ -131,16 +220,12 @@ function useChartInk() {
             grid: "rgba(255, 255, 255, 0.12)",
             primary: "#8b93ff",
             secondary: "#5eead4",
-            frostTop: "rgba(255, 255, 255, 0.15)",
-            frostBottom: "rgba(255, 255, 255, 0)",
           }
         : {
             label: "#333f4b",
             grid: "rgba(36, 20, 18, 0.14)",
             primary: "#c81f27",
             secondary: "#2f6f6b",
-            frostTop: "rgba(36, 20, 18, 0.16)",
-            frostBottom: "rgba(36, 20, 18, 0)",
           };
     if (typeof document === "undefined") return fallback;
     const styles = getComputedStyle(document.documentElement);
@@ -151,10 +236,276 @@ function useChartInk() {
       grid: read("--dash-chart-grid", fallback.grid),
       primary: read("--dash-series-primary", fallback.primary),
       secondary: read("--dash-series-secondary", fallback.secondary),
-      frostTop: read("--dash-frost-top", fallback.frostTop),
-      frostBottom: read("--dash-frost-bottom", fallback.frostBottom),
     };
   }, [theme]);
+}
+
+/**
+ * True once the element has been on screen — and it stays true. Count-ups and
+ * bar growths hang off this so a number animates the first time it is seen,
+ * never again on every re-render.
+ */
+function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
+  const ref = useRef<T | null>(null);
+  const [seen, setSeen] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || seen) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setSeen(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setSeen(true);
+          observer.disconnect();
+        }
+      },
+      { threshold },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [seen, threshold]);
+
+  return { ref, seen };
+}
+
+/**
+ * A number that counts up to its value once, on the animation frame clock, and
+ * reports when it has finished so a chip can follow it in. `still` jumps
+ * straight to the answer instead of travelling through 300 intermediate frames
+ * nobody asked for.
+ */
+function useCountUp(target: number, active: boolean, still: boolean) {
+  const [value, setValue] = useState(0);
+  const [done, setDone] = useState(false);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (!active || fired.current) return;
+    fired.current = true;
+    if (still || target === 0) {
+      setValue(target);
+      setDone(true);
+      return;
+    }
+    let frame = 0;
+    const started = performance.now();
+    const duration = 900;
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) frame = requestAnimationFrame(step);
+      else setDone(true);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [active, target, still]);
+
+  return { value, done };
+}
+
+/** Container width in pixels, so SVG marks are drawn at true scale. */
+function useMeasuredWidth() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const update = () => setWidth(element.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, width };
+}
+
+/**
+ * A bar: flat on the baseline, rounded on top. Rounding the top only (rather
+ * than an `rx` rectangle that rounds all four corners) is what keeps a two-unit
+ * bar from looking like a lozenge once it is scaled down to a few pixels.
+ * The command structure never changes with height, which is what lets Motion
+ * grow the mark from the baseline by interpolating the path itself.
+ */
+function barPath(x: number, y: number, w: number, h: number, radius: number) {
+  const r = Math.max(0, Math.min(radius, w / 2, h));
+  const right = x + w;
+  const bottom = y + h;
+  return [
+    `M${x.toFixed(2)},${bottom.toFixed(2)}`,
+    `L${x.toFixed(2)},${(y + r).toFixed(2)}`,
+    `Q${x.toFixed(2)},${y.toFixed(2)} ${(x + r).toFixed(2)},${y.toFixed(2)}`,
+    `L${(right - r).toFixed(2)},${y.toFixed(2)}`,
+    `Q${right.toFixed(2)},${y.toFixed(2)} ${right.toFixed(2)},${(y + r).toFixed(2)}`,
+    `L${right.toFixed(2)},${bottom.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+}
+
+/* ------------------------------------------------------------------ */
+/* Action buttons                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The page's action pill.
+ *
+ * The sheen is clipped to the pill by a `clip-path` on its own wrapper rather
+ * than `overflow: hidden` on the button: the quick-action row glides ONE
+ * shared highlight pill between its items, and a clipped parent would shear
+ * that travel off mid-flight.
+ */
+function ActionButton({
+  children,
+  onClick,
+  tone = "primary",
+  className,
+  icon,
+  highlightId,
+  onPointerEnter,
+  onPointerLeave,
+  onFocus,
+  onBlur,
+  ariaLabel,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  tone?: "primary" | "secondary";
+  className?: string;
+  icon?: ReactNode;
+  /** Shared-layout id: the highlight pill glides instead of appearing. */
+  highlightId?: string;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  ariaLabel?: string;
+}) {
+  const transition = useSpringTransition();
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      aria-label={ariaLabel}
+      whileTap={{ scale: 0.97 }}
+      transition={transition}
+      className={
+        "dash-action " +
+        (tone === "primary"
+          ? "dash-action--primary"
+          : "dash-action--secondary") +
+        (className ? " " + className : "")
+      }
+    >
+      {highlightId ? (
+        <motion.span
+          aria-hidden
+          layoutId={highlightId}
+          className="dash-quick"
+          transition={transition}
+        />
+      ) : null}
+      <span aria-hidden className="dash-action__shine">
+        <span className="dash-action__shine-bar" />
+      </span>
+      <span className="relative z-10 inline-flex items-center gap-2">
+        {icon}
+        {children}
+      </span>
+    </motion.button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 0. Quick actions                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The three next steps worth taking, as one compact row under the greeting.
+ * The highlight behind the row travels between items on the shared spring —
+ * the same single sliding pill the STEM Lab sidebar uses — so the row reads
+ * as one control rather than three unrelated buttons.
+ */
+function QuickActions({
+  onUploadSource,
+  onGenerateQuiz,
+  onOpenLast,
+}: {
+  onUploadSource: () => void;
+  onGenerateQuiz: () => void;
+  onOpenLast: () => void;
+}) {
+  const still = useStillMotion();
+  const transition = useSpringTransition();
+  const stagger = useStagger(0.05);
+  const [active, setActive] = useState<string | null>(null);
+
+  const actions: {
+    key: string;
+    label: string;
+    icon: typeof Upload;
+    run: () => void;
+  }[] = [
+    {
+      key: "upload",
+      label: "Upload source",
+      icon: Upload,
+      run: onUploadSource,
+    },
+    {
+      key: "quiz",
+      label: "Generate quiz",
+      icon: ListChecks,
+      run: onGenerateQuiz,
+    },
+    {
+      key: "last",
+      label: "Open last notebook",
+      icon: NotebookPen,
+      run: onOpenLast,
+    },
+  ];
+
+  return (
+    <motion.section
+      aria-label="Quick actions"
+      variants={revealVariants}
+      initial="hidden"
+      animate="visible"
+      transition={transition}
+      onPointerLeave={() => setActive(null)}
+      className="flex flex-wrap items-center gap-1.5"
+    >
+      {actions.map((action, index) => (
+        <motion.span
+          key={action.key}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={still ? STILL : { ...RISE, delay: stagger(index) }}
+        >
+          <ActionButton
+            tone="secondary"
+            icon={<action.icon className="h-3.5 w-3.5" />}
+            onClick={action.run}
+            highlightId={
+              active === action.key ? "dashboard-quick-pill" : undefined
+            }
+            onPointerEnter={() => setActive(action.key)}
+            onFocus={() => setActive(action.key)}
+          >
+            {action.label}
+          </ActionButton>
+        </motion.span>
+      ))}
+    </motion.section>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -192,7 +543,8 @@ function ResumeBlock({
       done: false,
     },
   ];
-  const completion = (Number(sourcesReady) + Number(materialReady)) / steps.length;
+  const completion =
+    (Number(sourcesReady) + Number(materialReady)) / steps.length;
 
   return (
     <motion.section
@@ -233,17 +585,24 @@ function ResumeBlock({
           </p>
         </div>
 
-        <motion.button
-          type="button"
+        <ActionButton
           onClick={() => onResume(notebook.id)}
-          className="dashboard-resume shrink-0"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 1.07 }}
-          transition={transition}
+          className="shrink-0"
+          ariaLabel={
+            sourcesReady
+              ? `Resume ${notebook.name}`
+              : `Add sources to ${notebook.name}`
+          }
+          icon={
+            sourcesReady ? (
+              <Play className="h-4 w-4" />
+            ) : (
+              <ArrowRight className="h-4 w-4" />
+            )
+          }
         >
-          {sourcesReady ? <Play className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
           {sourcesReady ? "Resume" : "Add sources"}
-        </motion.button>
+        </ActionButton>
       </div>
 
       {/* Completion timeline — a smooth linear track with the real steps. */}
@@ -301,6 +660,15 @@ function ResumeBlock({
 /* 2. Metric tiles                                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * A metric as a control, not a plaque.
+ *
+ * It rises and settles with the other three, leans toward the pointer on the
+ * shared spring, and carries a radial glow that tracks the cursor. The number
+ * counts up from zero the first time the tile is seen, and the context chip
+ * only arrives once the count has finished, so the eye reads value then
+ * comparison. Pressing it opens the view the number belongs to.
+ */
 function MetricTile({
   label,
   value,
@@ -308,6 +676,7 @@ function MetricTile({
   delta,
   icon: Icon,
   index,
+  onOpen,
 }: {
   label: string;
   value: number;
@@ -316,55 +685,105 @@ function MetricTile({
   delta?: { text: string; tone?: "up" | "down" | "flat" };
   icon: typeof BookOpen;
   index: number;
+  onOpen: () => void;
 }) {
+  const still = useStillMotion();
   const transition = useSpringTransition();
-  const stagger = useStagger(0.07);
+  const stagger = useStagger(0.06);
+  const { ref, seen } = useInViewOnce<HTMLButtonElement>(0.2);
+  const { value: shown, done } = useCountUp(value, seen, still);
+  const glow = useRef<HTMLSpanElement | null>(null);
   const tone = delta?.tone ?? "flat";
+
+  /* Written straight to the element: a cursor-tracking glow must not go
+     through React state, or every pixel of travel re-renders the tile. */
+  const track = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const node = glow.current;
+    if (!node) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    node.style.setProperty("--tile-x", `${event.clientX - rect.left}px`);
+    node.style.setProperty("--tile-y", `${event.clientY - rect.top}px`);
+  };
+
   return (
-    <motion.div
-      variants={revealVariants}
+    <motion.button
+      ref={ref}
+      type="button"
+      onClick={onOpen}
+      onPointerMove={track}
+      aria-label={`${label}: ${value.toLocaleString()}. ${detail}`}
+      variants={{
+        hidden: { opacity: 0, y: 20, scale: 0.985 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: still ? STILL : { ...transition, delay: stagger(index) },
+        },
+      }}
       initial="hidden"
       animate="visible"
-      transition={{ ...transition, delay: stagger(index) }}
-      whileHover={{ y: -3 }}
-      className="dashboard-bento flex flex-col gap-4 p-5"
+      whileHover={still ? undefined : { y: -3 }}
+      whileTap={{ scale: 0.98 }}
+      transition={transition}
+      className="dash-tile dashboard-bento group flex flex-col gap-4 p-5"
     >
-      <div className="flex items-start justify-between gap-3">
+      <span ref={glow} aria-hidden className="dash-tile__glow" />
+
+      <span className="relative z-10 flex items-start justify-between gap-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">
           {label}
         </span>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
-          <Icon className="h-4 w-4" />
-        </span>
-      </div>
-      <div className="min-w-0">
-        <p className="font-display text-3xl font-bold tracking-tight tabular-nums">
-          {value.toLocaleString()}
-        </p>
-        {delta ? (
-          <span
-            className={
-              "mt-2 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold " +
-              (tone === "up"
-                ? "border-[color-mix(in_srgb,var(--signal)_38%,transparent)] text-[var(--signal)]"
-                : tone === "down"
-                  ? "border-[color-mix(in_srgb,#f59e0b_42%,transparent)] text-[#fbbf24]"
-                  : "border-[var(--card-border)] text-text-dim")
-            }
-          >
-            {tone === "up" ? (
-              <ArrowUpRight className="h-3 w-3 shrink-0" />
-            ) : tone === "down" ? (
-              <ArrowDownRight className="h-3 w-3 shrink-0" />
-            ) : (
-              <ArrowRight className="h-3 w-3 shrink-0" />
-            )}
-            <span className="truncate">{delta.text}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <ArrowUpRight
+            aria-hidden
+            className="h-3.5 w-3.5 -translate-x-1 text-[var(--signal)] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+          />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
+            <Icon className="h-4 w-4" />
           </span>
+        </span>
+      </span>
+
+      <span className="relative z-10 block min-w-0">
+        <span className="block font-display text-3xl font-bold tracking-tight tabular-nums">
+          {shown.toLocaleString()}
+        </span>
+        {delta ? (
+          <AnimatePresence initial={false}>
+            {done ? (
+              <motion.span
+                key="delta"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={still ? STILL : RISE}
+                className={
+                  "mt-2 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold " +
+                  (tone === "up"
+                    ? "border-[color-mix(in_srgb,var(--signal)_38%,transparent)] text-[var(--signal)]"
+                    : tone === "down"
+                      ? "border-[color-mix(in_srgb,#f59e0b_42%,transparent)] text-[#fbbf24]"
+                      : "border-[var(--card-border)] text-text-dim")
+                }
+              >
+                {tone === "up" ? (
+                  <ArrowUpRight className="h-3 w-3 shrink-0" />
+                ) : tone === "down" ? (
+                  <ArrowDownRight className="h-3 w-3 shrink-0" />
+                ) : (
+                  <ArrowRight className="h-3 w-3 shrink-0" />
+                )}
+                <span className="truncate">{delta.text}</span>
+              </motion.span>
+            ) : null}
+          </AnimatePresence>
         ) : null}
-        <p className="mt-1.5 text-xs leading-relaxed text-text-dim">{detail}</p>
-      </div>
-    </motion.div>
+        <span className="mt-1.5 block text-xs leading-relaxed text-text-dim">
+          {detail}
+        </span>
+      </span>
+    </motion.button>
   );
 }
 
@@ -506,82 +925,21 @@ function AllowanceLine() {
 }
 
 /* ------------------------------------------------------------------ */
-/* 4. Frosted spline area chart                                        */
+/* 4. Seven days, as bars                                              */
 /* ------------------------------------------------------------------ */
 
-/**
- * The vendored bklit chart motion: a high-damping unit-mass spring. The wave
- * below is hand-drawn (the vendored chart set ships bar and pie only), but it
- * rides this exact spring, so its reveal and its day-to-day morphs feel like
- * the same physics as every other chart in the product.
- */
-const CHART_SPRING: Transition = {
-  type: "spring",
-  mass: 1,
-  stiffness: 120,
-  damping: 18,
-  restDelta: 0.001,
-};
+const BAR_HEIGHT = 236;
+const BAR_LEFT = 40;
+const BAR_RIGHT = 14;
+const BAR_TOP = 16;
+const BAR_BOTTOM = 42;
+const BAR_MIN_WIDTH = 460;
 
-const WAVE_HEIGHT = 240;
-const WAVE_PAD_X = 10;
-const WAVE_TOP = 18;
-const WAVE_BOTTOM = 30;
-
-/** Container width in pixels, so the wave is drawn at true scale. */
-function useMeasuredWidth() {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const update = () => setWidth(el.clientWidth);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return { ref, width };
-}
-
-/**
- * A cardinal spline through the seven daily points — C1-continuous, so the
- * wave carries no kinks and no overshoot. The command structure never changes
- * (six cubics for seven days), which is exactly what lets Motion morph
- * between real states instead of redrawing.
- */
-function waveGeometry(values: number[], max: number, width: number) {
-  const innerW = Math.max(0, width - WAVE_PAD_X * 2);
-  const innerH = WAVE_HEIGHT - WAVE_TOP - WAVE_BOTTOM;
-  const step = values.length > 1 ? innerW / (values.length - 1) : innerW;
-  const points = values.map((value, index) => ({
-    x: WAVE_PAD_X + index * step,
-    y: WAVE_TOP + innerH * (1 - (max > 0 ? Math.min(1, value / max) : 0)),
-  }));
-  if (points.length < 2) {
-    const y = WAVE_TOP + innerH;
-    return { step, points, d: `M 0 ${y} L ${width} ${y}` };
-  }
-  let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i - 1] ?? points[i];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2] ?? p2;
-    const c1x = p1.x + (p2.x - p0.x) / 6;
-    const c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6;
-    const c2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-  }
-  return { step, points, d };
-}
-
-function WaveTip({ point }: { point: ActivityPoint }) {
+function BarTip({ point }: { point: ActivityPoint }) {
   return (
     <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#1a1a24]/95">
       <p className="font-semibold text-foreground dark:text-white/95">
-        {point.label}
+        {point.day} · {point.label}
       </p>
       <p className="mt-1 flex items-center gap-2 text-text-dim">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--dash-series-primary)]" />
@@ -596,21 +954,25 @@ function WaveTip({ point }: { point: ActivityPoint }) {
 }
 
 /**
- * The seven-day wave.
+ * The seven-day bars.
  *
- * Two series — study material (the filled wave) and sources added (the ghost
- * line) — drawn as cardinal splines on one shared height scale. New data does
- * not redraw: the paths MORPH to their new geometry on the chart spring, the
- * way the rest of this workspace moves. Hover snaps a springed crosshair to
- * the nearest day and floats a glass tip with that day's real counts.
+ * Two marks per day — study material in the primary ink, sources added in the
+ * second — drawn from the baseline up, so a quiet day is a short bar and an
+ * empty day is a dot ON the baseline rather than a gap that reads as broken.
+ *
+ * Deliberately NOT a curve: the line this replaced smoothed so hard it dipped
+ * below zero between two real points, which is a shape no count can take. Bars
+ * cannot make that mistake, and the y-axis carries a real scale with three
+ * gridlines so a bar's height means something. Hovering a day dims the rest
+ * and floats that day's exact counts.
  */
-function ActivityWave({ data }: { data: ActivityPoint[] }) {
+function ActivityBars({ data }: { data: ActivityPoint[] }) {
   const still = useStillMotion();
   const transition = useSpringTransition();
   const ink = useChartInk();
-  const { ref, width } = useMeasuredWidth();
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const fillId = useId();
+  const { ref: viewRef, seen } = useInViewOnce<HTMLElement>(0.15);
+  const { ref: wrapRef, width } = useMeasuredWidth();
+  const [hover, setHover] = useState<number | null>(null);
 
   const totals = data.reduce(
     (sum, point) => ({
@@ -620,46 +982,40 @@ function ActivityWave({ data }: { data: ActivityPoint[] }) {
     { materials: 0, sources: 0 },
   );
 
-  const waveWidth = width || 720;
-  // One shared height scale: the two series read honestly against each other.
-  const max = Math.max(4, ...data.map((p) => Math.max(p.materials, p.sources)));
-  const material = waveGeometry(
-    data.map((p) => p.materials),
-    max,
-    waveWidth,
-  );
-  const source = waveGeometry(
-    data.map((p) => p.sources),
-    max,
-    waveWidth,
-  );
-  const baseline = WAVE_TOP + (WAVE_HEIGHT - WAVE_TOP - WAVE_BOTTOM);
-  const areaOf = (line: string) =>
-    `${line} L ${waveWidth - WAVE_PAD_X} ${baseline} L ${WAVE_PAD_X} ${baseline} Z`;
+  const chartWidth = Math.max(width || BAR_MIN_WIDTH, BAR_MIN_WIDTH);
+  const innerW = chartWidth - BAR_LEFT - BAR_RIGHT;
+  const innerH = BAR_HEIGHT - BAR_TOP - BAR_BOTTOM;
+  const baseline = BAR_TOP + innerH;
 
-  const active = hoverIndex != null ? data[hoverIndex] ?? null : null;
-  const activeMaterial =
-    hoverIndex != null ? material.points[hoverIndex] ?? null : null;
-  const activeSource =
-    hoverIndex != null ? source.points[hoverIndex] ?? null : null;
-  // Peaks leave no headroom above the panel — near the top the tip flips
-  // under the point instead of clipping out of the card.
-  const tipBelow = (activeMaterial?.y ?? WAVE_HEIGHT) < 104;
+  // A whole-number scale: three steps above zero, so every tick label is a
+  // count the reader could actually have, never a fraction of an item.
+  const peak = Math.max(
+    1,
+    ...data.map((point) => Math.max(point.materials, point.sources)),
+  );
+  const step = Math.max(1, Math.ceil(peak / 3));
+  const ticks = [0, step, step * 2, step * 3];
+  const yMax = ticks[ticks.length - 1];
+  const yOf = (value: number) =>
+    BAR_TOP + innerH * (1 - Math.min(1, value / yMax));
 
-  const indexFromClientX = (clientX: number, rect: DOMRect) => {
-    if (data.length < 2) return null;
-    const x = ((clientX - rect.left) / rect.width) * waveWidth;
-    const index = Math.round((x - WAVE_PAD_X) / material.step);
-    return Math.max(0, Math.min(data.length - 1, index));
-  };
+  const groupWidth = data.length > 0 ? innerW / data.length : innerW;
+  const groupPad = Math.min(16, groupWidth * 0.24);
+  const barGap = 3;
+  const barWidth = Math.max(3, (groupWidth - groupPad * 2 - barGap) / 2);
+
+  const active = hover !== null ? (data[hover] ?? null) : null;
+  const activeCenter =
+    hover !== null ? BAR_LEFT + hover * groupWidth + groupWidth / 2 : 0;
 
   return (
     <motion.section
+      ref={viewRef}
       variants={revealVariants}
       initial="hidden"
       animate="visible"
       transition={transition}
-      aria-label="Study material generated over the last seven days"
+      aria-label="Study material generated and sources added over the last seven days"
       className="dashboard-bento p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -684,190 +1040,610 @@ function ActivityWave({ data }: { data: ActivityPoint[] }) {
         </div>
       </div>
 
-      {/* The wave lives on its own sheet of frosted glass (blur 12px). */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={transition}
-        className="dashboard-chart-panel dashboard-chart mt-5 p-3 sm:p-4"
-      >
-        <div
-          ref={ref}
-          className="relative h-[240px] w-full touch-none select-none"
-          onPointerMove={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect();
-            setHoverIndex(indexFromClientX(event.clientX, rect));
-          }}
-          onPointerLeave={() => setHoverIndex(null)}
-        >
-          {data.length >= 2 && (
-            <svg
-              width={waveWidth}
-              height={WAVE_HEIGHT}
-              className="block"
-              role="img"
-              aria-hidden
-            >
-              <defs>
-                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={ink.frostTop} stopOpacity={1} />
-                  <stop
-                    offset="100%"
-                    stopColor={ink.frostBottom}
-                    stopOpacity={1}
-                  />
-                </linearGradient>
-              </defs>
-
-              {/* Quiet horizontal rails. */}
-              {[0.25, 0.5, 0.75, 1].map((fraction) => {
-                const y = WAVE_TOP + (baseline - WAVE_TOP) * fraction;
-                return (
-                  <line
-                    key={fraction}
-                    x1={WAVE_PAD_X}
-                    x2={waveWidth - WAVE_PAD_X}
-                    y1={y}
-                    y2={y}
-                    stroke={ink.grid}
-                    strokeDasharray="3 7"
-                    strokeWidth={1}
-                  />
-                );
-              })}
-
-              {/* Sources: the quiet ghost line. */}
-              <motion.path
-                fill="none"
-                stroke={ink.secondary}
-                strokeWidth={1.6}
-                strokeLinecap="round"
-                initial={{ pathLength: 0, opacity: 0, d: source.d }}
-                animate={{ pathLength: 1, opacity: 1, d: source.d }}
-                transition={still ? STILL : CHART_SPRING}
-              />
-              {/* Study material: the frosted fill under the main wave. */}
-              <motion.path
-                fill={`url(#${fillId})`}
-                stroke="none"
-                initial={{ opacity: 0, d: areaOf(material.d) }}
-                animate={{ opacity: 1, d: areaOf(material.d) }}
-                transition={
-                  still ? STILL : { ...CHART_SPRING, delay: 0.12 }
-                }
-              />
-              {/* Study material: the main wave. */}
-              <motion.path
-                fill="none"
-                stroke={ink.primary}
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                initial={{ pathLength: 0, opacity: 0, d: material.d }}
-                animate={{ pathLength: 1, opacity: 1, d: material.d }}
-                transition={still ? STILL : CHART_SPRING}
-              />
-            </svg>
-          )}
-
-          {data.length < 2 && (
-            <div className="flex h-full items-center justify-center text-sm text-text-dim">
-              The wave starts when you churn your first notebook.
-            </div>
-          )}
-
-          {/* Day labels sit exactly under their points. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[30px]"
+      {/* The measuring node carries no padding: its client width is exactly the
+          room the bars have, so a chart that fits never shows a scrollbar and
+          a narrow one scrolls instead of crushing the columns. */}
+      <div className="dashboard-chart-panel dashboard-chart mt-5 p-3 sm:p-4">
+        <div ref={wrapRef} className="overflow-x-auto">
+        <div className="relative" style={{ width: chartWidth }}>
+          <svg
+            width={chartWidth}
+            height={BAR_HEIGHT}
+            className="block"
+            role="img"
+            aria-label="Bar chart of study material and sources added per day"
           >
-            {material.points.map((pt, index) => (
-              <span
-                key={data[index]?.label ?? index}
-                className={
-                  "absolute bottom-1 whitespace-nowrap text-[10.5px] text-text-dim " +
-                  (index === 0
-                    ? ""
-                    : index === material.points.length - 1
-                      ? "-translate-x-full"
-                      : "-translate-x-1/2")
-                }
-                style={{ left: pt.x }}
-              >
-                {data[index]?.label}
-              </span>
+            {/* Faint grid at every tick, with the baseline drawn as the axis. */}
+            {ticks.map((tick) => (
+              <line
+                key={tick}
+                x1={BAR_LEFT - 6}
+                x2={chartWidth - BAR_RIGHT}
+                y1={yOf(tick)}
+                y2={yOf(tick)}
+                stroke={ink.grid}
+                strokeWidth={1}
+                strokeDasharray={tick === 0 ? undefined : "3 7"}
+              />
             ))}
-          </div>
+            {ticks.map((tick) => (
+              <text
+                key={`label-${tick}`}
+                x={BAR_LEFT - 12}
+                y={yOf(tick) + 3.5}
+                textAnchor="end"
+                fontSize={10}
+                fill={ink.label}
+                opacity={0.68}
+              >
+                {tick}
+              </text>
+            ))}
 
-          {/* Crosshair, rings and the floating tip for the hovered day. */}
+            {data.map((point, index) => {
+              const groupX = BAR_LEFT + index * groupWidth;
+              const materialX = groupX + groupPad;
+              const sourceX = materialX + barWidth + barGap;
+              const dim = hover !== null && hover !== index;
+              const materialTop = yOf(point.materials);
+              const sourceTop = yOf(point.sources);
+              return (
+                <g
+                  key={point.label}
+                  opacity={dim ? 0.26 : 1}
+                  style={{ transition: "opacity 220ms ease" }}
+                >
+                  {/* A quiet column wash marks the day under the pointer. */}
+                  <rect
+                    x={groupX + 2}
+                    y={BAR_TOP}
+                    width={Math.max(0, groupWidth - 4)}
+                    height={innerH}
+                    rx={10}
+                    fill={ink.primary}
+                    opacity={hover === index ? 0.07 : 0}
+                    style={{ transition: "opacity 200ms ease" }}
+                  />
+
+                  {point.materials > 0 ? (
+                    <motion.path
+                      fill={ink.primary}
+                      animate={
+                        seen
+                          ? {
+                              d: barPath(
+                                materialX,
+                                materialTop,
+                                barWidth,
+                                baseline - materialTop,
+                                5,
+                              ),
+                              opacity: 1,
+                            }
+                          : {
+                              d: barPath(
+                                materialX,
+                                baseline,
+                                barWidth,
+                                0,
+                                5,
+                              ),
+                              opacity: 0,
+                            }
+                      }
+                      transition={
+                        still
+                          ? STILL
+                          : { ...GROW, delay: index * 2 * 0.05 }
+                      }
+                    />
+                  ) : (
+                    <motion.circle
+                      cx={materialX + barWidth / 2}
+                      cy={baseline - 2}
+                      r={2.4}
+                      fill={ink.primary}
+                      animate={{ opacity: seen ? 0.9 : 0 }}
+                      transition={
+                        still ? STILL : { ...RISE, delay: index * 2 * 0.05 }
+                      }
+                    />
+                  )}
+
+                  {point.sources > 0 ? (
+                    <motion.path
+                      fill={ink.secondary}
+                      animate={
+                        seen
+                          ? {
+                              d: barPath(
+                                sourceX,
+                                sourceTop,
+                                barWidth,
+                                baseline - sourceTop,
+                                5,
+                              ),
+                              opacity: 1,
+                            }
+                          : {
+                              d: barPath(
+                                sourceX,
+                                baseline,
+                                barWidth,
+                                0,
+                                5,
+                              ),
+                              opacity: 0,
+                            }
+                      }
+                      transition={
+                        still
+                          ? STILL
+                          : { ...GROW, delay: (index * 2 + 1) * 0.05 }
+                      }
+                    />
+                  ) : (
+                    <motion.circle
+                      cx={sourceX + barWidth / 2}
+                      cy={baseline - 2}
+                      r={2.4}
+                      fill={ink.secondary}
+                      animate={{ opacity: seen ? 0.9 : 0 }}
+                      transition={
+                        still
+                          ? STILL
+                          : { ...RISE, delay: (index * 2 + 1) * 0.05 }
+                      }
+                    />
+                  )}
+
+                  {/* Weekday over date, centred on the day's column. */}
+                  <text
+                    x={groupX + groupWidth / 2}
+                    y={baseline + 16}
+                    textAnchor="middle"
+                    fontSize={10.5}
+                    fontWeight={600}
+                    fill={ink.label}
+                  >
+                    {point.day}
+                  </text>
+                  <text
+                    x={groupX + groupWidth / 2}
+                    y={baseline + 29}
+                    textAnchor="middle"
+                    fontSize={10}
+                    fill={ink.label}
+                    opacity={0.6}
+                  >
+                    {point.label}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Invisible hit areas, drawn last so nothing steals the pointer. */}
+            {data.map((point, index) => (
+              <rect
+                key={`hit-${point.label}`}
+                x={BAR_LEFT + index * groupWidth}
+                y={BAR_TOP}
+                width={groupWidth}
+                height={innerH}
+                fill="transparent"
+                onPointerEnter={() => setHover(index)}
+              />
+            ))}
+          </svg>
+
           <AnimatePresence>
-            {active && activeMaterial && (
+            {active ? (
               <motion.div
                 key={active.label}
-                initial={{ opacity: 0, scale: 0.94, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 4 }}
-                transition={{ type: "spring", stiffness: 380, damping: 26 }}
+                initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                transition={still ? STILL : TIP}
                 className="pointer-events-none absolute z-10"
                 style={{
-                  left: Math.max(
-                    64,
-                    Math.min(waveWidth - 64, activeMaterial.x),
-                  ),
-                  top: activeMaterial.y,
+                  left: Math.max(76, Math.min(chartWidth - 76, activeCenter)),
+                  top: 0,
                 }}
               >
-                <div
-                  className={
-                    tipBelow
-                      ? "-translate-x-1/2 translate-y-[18px]"
-                      : "-translate-x-1/2 -translate-y-[calc(100%+16px)]"
-                  }
-                >
-                  <WaveTip point={active} />
+                <div className="-translate-x-1/2">
+                  <BarTip point={active} />
                 </div>
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
-          {active && activeMaterial && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute bottom-[30px] top-[18px] w-px"
-              style={{ left: activeMaterial.x, background: ink.grid }}
-            />
-          )}
-          {active && activeMaterial && (
-            <>
-              <span
-                aria-hidden
-                className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
-                style={{
-                  left: activeMaterial.x,
-                  top: activeMaterial.y,
-                  background: ink.primary,
-                }}
-              />
-              {activeSource && (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
-                  style={{
-                    left: activeSource.x,
-                    top: activeSource.y,
-                    background: ink.secondary,
-                  }
-                  }
-                />
-              )}
-            </>
-          )}
         </div>
-      </motion.div>
+        </div>
+      </div>
 
       <p className="mt-4 text-xs leading-relaxed text-text-dim">
         {totals.materials + totals.sources > 0
           ? `${plural(totals.materials, "study item")} and ${plural(totals.sources, "source")} in the last seven days.`
-          : "Nothing generated in the last seven days yet — the wave starts when you churn your first notebook."}
+          : "Nothing generated in the last seven days yet — the bars start when you churn your first notebook."}
       </p>
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. Twelve-week study activity heatmap                               */
+/* ------------------------------------------------------------------ */
+
+const HEAT_CELL = 11;
+const HEAT_GAP = 3;
+const HEAT_DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function HeatTip({ cell }: { cell: HeatCell }) {
+  return (
+    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#1a1a24]/95">
+      <p className="font-semibold text-foreground dark:text-white/95">
+        {cell.label}
+      </p>
+      <p className="mt-1 flex items-center gap-2 text-text-dim">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--dash-series-primary)]" />
+        {plural(cell.materials, "study item")}
+      </p>
+      <p className="mt-0.5 flex items-center gap-2 text-text-dim">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--dash-series-secondary)]" />
+        {plural(cell.sources, "source")}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * A GitHub-style calendar of the last twelve weeks: one square per day, shaded
+ * by everything that happened on it — study material generated plus sources
+ * added, the sum of the two series the bars above draw. Same rows, same days,
+ * so the two views can never disagree.
+ *
+ * A day with nothing on it is drawn empty rather than skipped: the gap is the
+ * information.
+ */
+function ActivityHeatmap({ cells }: { cells: HeatCell[] }) {
+  const still = useStillMotion();
+  const transition = useSpringTransition();
+  const { ref, seen } = useInViewOnce<HTMLDivElement>(0.2);
+  const [hover, setHover] = useState<number | null>(null);
+
+  // The first column is padded to the week's start so Sunday sits on row one.
+  const lead = cells[0]?.weekday ?? 0;
+  const slots: (HeatCell | null)[] = [
+    ...Array.from({ length: lead }, () => null),
+    ...cells,
+  ];
+  const peak = Math.max(1, ...cells.map((cell) => cell.count));
+  const levelOf = (count: number) =>
+    count === 0 ? 0 : Math.min(4, Math.ceil((count / peak) * 4));
+  const totals = cells.reduce(
+    (sum, cell) => ({
+      materials: sum.materials + cell.materials,
+      sources: sum.sources + cell.sources,
+    }),
+    { materials: 0, sources: 0 },
+  );
+  const active = hover !== null ? (slots[hover] ?? null) : null;
+  const activeColumn = hover !== null ? Math.floor(hover / 7) : 0;
+  // The grid's own width, so the tip can be held inside it at either edge
+  // instead of hanging out of the card on the first and last columns.
+  const gridWidth =
+    Math.ceil(slots.length / 7) * (HEAT_CELL + HEAT_GAP) - HEAT_GAP;
+  const tipLeft = Math.min(
+    Math.max(activeColumn * (HEAT_CELL + HEAT_GAP) + HEAT_CELL / 2, 76),
+    Math.max(76, gridWidth - 76),
+  );
+
+  return (
+    <motion.section
+      variants={revealVariants}
+      initial="hidden"
+      animate="visible"
+      transition={transition}
+      aria-label="Study activity over the last twelve weeks"
+      className="dashboard-bento p-6"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="dashboard-kicker">
+            <Clock className="h-3.5 w-3.5" />
+            Study activity
+          </p>
+          <h2 className="mt-2 font-display text-lg font-bold tracking-tight">
+            The last twelve weeks
+          </h2>
+        </div>
+        <p className="text-xs font-medium text-text-dim tabular-nums">
+          {plural(totals.materials + totals.sources, "item")} in 12 weeks
+        </p>
+      </div>
+
+      <div className="mt-5 flex items-start gap-2.5">
+        <div
+          aria-hidden
+          className="flex flex-col text-[9px] leading-none text-text-dim"
+          style={{ gap: HEAT_GAP }}
+        >
+          {HEAT_DAYS.map((day, index) => (
+            <span
+              key={index}
+              className="flex items-center"
+              style={{ height: HEAT_CELL }}
+            >
+              {index % 2 === 1 ? day : ""}
+            </span>
+          ))}
+        </div>
+
+        <div
+          ref={ref}
+          className="relative"
+          onPointerLeave={() => setHover(null)}
+        >
+          <AnimatePresence>
+            {active ? (
+              <motion.div
+                key={active.day}
+                initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 3, scale: 0.97 }}
+                transition={still ? STILL : TIP}
+                className="pointer-events-none absolute z-10"
+                style={{ left: tipLeft, bottom: "calc(100% + 8px)" }}
+              >
+                <div className="-translate-x-1/2">
+                  <HeatTip cell={active} />
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <div
+            className="dash-heatmap"
+            data-in={seen ? "true" : "false"}
+            style={{ gridTemplateRows: `repeat(7, ${HEAT_CELL}px)` }}
+          >
+            {slots.map((cell, index) =>
+              cell ? (
+                <button
+                  key={cell.day}
+                  type="button"
+                  onPointerEnter={() => setHover(index)}
+                  onFocus={() => setHover(index)}
+                  onBlur={() => setHover(null)}
+                  className="dash-heatmap__cell"
+                  data-level={levelOf(cell.count)}
+                  style={{
+                    transitionDelay: still
+                      ? undefined
+                      : `${Math.floor(index / 7) * 26}ms`,
+                  }}
+                  aria-label={`${cell.label}: ${plural(cell.count, "item")}`}
+                />
+              ) : (
+                <span
+                  key={`pad-${index}`}
+                  aria-hidden
+                  className="dash-heatmap__cell dash-heatmap__cell--pad"
+                />
+              ),
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-1.5 text-[10.5px] text-text-dim">
+        <span className="mr-1">Less</span>
+        {[0, 1, 2, 3, 4].map((level) => (
+          <span
+            key={level}
+            aria-hidden
+            className="dash-heatmap__cell"
+            data-level={level}
+          />
+        ))}
+        <span className="ml-1">More</span>
+        <span className="ml-auto hidden sm:inline">
+          Items generated + sources added, per day
+        </span>
+      </div>
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. Your library                                                     */
+/* ------------------------------------------------------------------ */
+
+function LibraryPanel({
+  rows,
+  busiest,
+  onOpenRow,
+  onOpenNotebooks,
+  onCreateNotebook,
+}: {
+  rows: { kind: MaterialKind; label: string; value: number; color: string }[];
+  busiest: number;
+  onOpenRow: (kind: MaterialKind) => void;
+  onOpenNotebooks: () => void;
+  onCreateNotebook: () => void;
+}) {
+  const still = useStillMotion();
+  const transition = useSpringTransition();
+  const { ref, seen } = useInViewOnce<HTMLUListElement>(0.15);
+
+  return (
+    <motion.section
+      variants={revealVariants}
+      initial="hidden"
+      animate="visible"
+      transition={transition}
+      aria-label="Study material by kind"
+      className="dashboard-bento flex flex-col p-6"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="dashboard-kicker">
+            <NotebookPen className="h-3.5 w-3.5" />
+            Your library
+          </p>
+          <h2 className="mt-2 font-display text-lg font-bold tracking-tight">
+            Keep the momentum
+          </h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <ActionButton
+            tone="secondary"
+            icon={<NotebookPen className="h-3.5 w-3.5" />}
+            onClick={onOpenNotebooks}
+          >
+            Open notebooks
+          </ActionButton>
+          <ActionButton
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            onClick={onCreateNotebook}
+          >
+            New notebook
+          </ActionButton>
+        </div>
+      </div>
+
+      {rows.length > 0 ? (
+        <ul ref={ref} className="mt-5 flex flex-col gap-1">
+          {rows.map((row, index) => {
+            const Icon = MATERIAL_ICONS[row.kind];
+            return (
+              <li key={row.kind}>
+                <motion.button
+                  type="button"
+                  onClick={() => onOpenRow(row.kind)}
+                  whileHover={still ? undefined : { x: 3 }}
+                  transition={transition}
+                  className="dash-librow group flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left"
+                >
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--card-border)]"
+                    style={{ color: row.color }}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="w-20 shrink-0 truncate text-[13px] text-text-dim sm:w-24">
+                    {row.label}
+                  </span>
+                  {/* Scaled against the biggest kind, so the bars compare. */}
+                  <span className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)]">
+                    <motion.span
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ background: row.color }}
+                      initial={{ width: "0%" }}
+                      animate={{
+                        width: seen
+                          ? `${Math.round((row.value / busiest) * 100)}%`
+                          : "0%",
+                      }}
+                      transition={
+                        still ? STILL : { ...transition, delay: 0.06 * index }
+                      }
+                    />
+                  </span>
+                  <span className="w-9 shrink-0 text-right text-sm font-semibold tabular-nums">
+                    {row.value.toLocaleString()}
+                  </span>
+                  <ArrowUpRight
+                    aria-hidden
+                    className="h-3.5 w-3.5 shrink-0 -translate-x-1 text-[var(--signal)] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                  />
+                </motion.button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-4 text-sm leading-relaxed text-text-dim">
+          Generated study material will appear here — open a notebook, add
+          sources, then churn them into a summary, flashcards, a quiz, a mind
+          map and slides.
+        </p>
+      )}
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. Recent activity                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The last five things that happened, straight from the rows: a source
+ * landing or an artefact being generated, each with the timestamp the database
+ * actually recorded. Nothing is rendered when nothing has happened.
+ */
+function RecentActivity({
+  events,
+  onOpen,
+}: {
+  events: RecentEvent[];
+  onOpen: (event: RecentEvent) => void;
+}) {
+  const still = useStillMotion();
+  const transition = useSpringTransition();
+
+  return (
+    <motion.section
+      variants={revealVariants}
+      initial="hidden"
+      animate="visible"
+      transition={transition}
+      aria-label="Recent activity"
+      className="dashboard-bento flex flex-col p-6"
+    >
+      <p className="dashboard-kicker">
+        <Clock className="h-3.5 w-3.5" />
+        Recent activity
+      </p>
+      <h2 className="mt-2 font-display text-lg font-bold tracking-tight">
+        The last five things that happened
+      </h2>
+
+      <ul className="mt-4 flex flex-col gap-0.5">
+        {events.map((event) => {
+          const Icon =
+            event.kind === "source" ? Upload : MATERIAL_ICONS[event.kind];
+          return (
+            <li key={`${event.kind}-${event.id}`}>
+              <motion.button
+                type="button"
+                onClick={() => onOpen(event)}
+                whileHover={still ? undefined : { x: 3 }}
+                transition={transition}
+                className="dash-librow group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)] text-[var(--signal)]">
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium">
+                    {event.label}
+                  </span>
+                  <span className="block truncate text-[11px] text-text-dim">
+                    {event.kind === "source"
+                      ? "Source added"
+                      : `${MATERIAL_LABELS[event.kind]} generated`}{" "}
+                    · {event.notebook} · {timeAgo(event.at)}
+                  </span>
+                </span>
+                <ChevronRight
+                  aria-hidden
+                  className="h-3.5 w-3.5 shrink-0 text-text-dim transition-transform group-hover:translate-x-0.5"
+                />
+              </motion.button>
+            </li>
+          );
+        })}
+      </ul>
     </motion.section>
   );
 }
@@ -879,13 +1655,14 @@ function ActivityWave({ data }: { data: ActivityPoint[] }) {
 export function DashboardOverview({
   summary,
   notebooks,
-  onResumeNotebook,
+  onOpenNotebook,
   onOpenNotebooks,
   onCreateNotebook,
 }: {
   summary: DashboardSummary | undefined;
   notebooks: DashboardNotebook[];
-  onResumeNotebook: (notebookId: string) => void;
+  /** Open a notebook, optionally landing on one of its panels. */
+  onOpenNotebook: (notebookId: string, target?: WorkspaceTarget) => void;
   onOpenNotebooks: () => void;
   onCreateNotebook: () => void;
 }) {
@@ -901,6 +1678,7 @@ export function DashboardOverview({
   const activity = useMemo<ActivityPoint[]>(() => {
     if (!summary) return [];
     return summary.materialsByDay.map((day, index) => ({
+      day: day.day,
       label: day.label,
       materials:
         day.summary + day.flashcards + day.quiz + day.mindmap + day.slides,
@@ -914,7 +1692,10 @@ export function DashboardOverview({
     return (
       <div className="flex flex-col gap-4">
         {resumeTarget && (
-          <ResumeBlock notebook={resumeTarget} onResume={onResumeNotebook} />
+          <ResumeBlock
+            notebook={resumeTarget}
+            onResume={(notebookId) => onOpenNotebook(notebookId)}
+          />
         )}
         <motion.div
           variants={revealVariants}
@@ -964,14 +1745,34 @@ export function DashboardOverview({
     };
   };
 
+  const resumeId = resumeTarget?.id ?? null;
+  const openWorkspace = (target?: WorkspaceTarget) => {
+    if (resumeId) onOpenNotebook(resumeId, target);
+    else onOpenNotebooks();
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      {/* 1. The focal block: the notebook last worked in. */}
+      {/* 0. The three next steps, under the greeting. */}
       {resumeTarget && (
-        <ResumeBlock notebook={resumeTarget} onResume={onResumeNotebook} />
+        <QuickActions
+          onUploadSource={() => openWorkspace({ focus: "sources" })}
+          onGenerateQuiz={() =>
+            openWorkspace({ tab: "quiz", focus: "materials" })
+          }
+          onOpenLast={() => openWorkspace()}
+        />
       )}
 
-      {/* 2. Real counts. */}
+      {/* 1. The focal block: the notebook last worked in. */}
+      {resumeTarget && (
+        <ResumeBlock
+          notebook={resumeTarget}
+          onResume={(notebookId) => onOpenNotebook(notebookId)}
+        />
+      )}
+
+      {/* 2. Real counts, as controls. */}
       <section
         aria-label="Workspace summary"
         className="grid grid-cols-2 gap-4 lg:grid-cols-4"
@@ -986,6 +1787,7 @@ export function DashboardOverview({
               : `${plural(summary.sourceCount, "source")} across them`
           }
           icon={BookOpen}
+          onOpen={onOpenNotebooks}
         />
         <MetricTile
           index={1}
@@ -1003,6 +1805,7 @@ export function DashboardOverview({
                 : { text: "all readable", tone: "up" }
           }
           icon={FileText}
+          onOpen={() => openWorkspace({ focus: "sources" })}
         />
         <MetricTile
           index={2}
@@ -1011,6 +1814,7 @@ export function DashboardOverview({
           detail="Sources added in 7 days"
           delta={deltaChip(summary.addedThisWeek, summary.sourcesPrevWeek)}
           icon={NotebookPen}
+          onOpen={() => openWorkspace({ focus: "materials" })}
         />
         <MetricTile
           index={3}
@@ -1022,88 +1826,47 @@ export function DashboardOverview({
             summary.materialsPrevWeek,
           )}
           icon={Sparkles}
+          onOpen={() => openWorkspace({ focus: "materials" })}
         />
       </section>
 
       {/* 3. Used out of total, in absolute numbers. */}
       <AllowanceLine />
 
-      {/* 4. The seven-day wave. */}
-      <ActivityWave data={activity} />
+      {/* 4. Seven days, as bars. */}
+      <ActivityBars data={activity} />
 
-      {/* What the material is made of, plus the way in. */}
-      <motion.section
-        variants={revealVariants}
-        initial="hidden"
-        animate="visible"
-        transition={transition}
-        aria-label="Study material by kind"
-        className="dashboard-bento p-6"
+      {/* 5. Twelve weeks, as a calendar. */}
+      <ActivityHeatmap cells={summary.heatmap} />
+
+      {/* 6. What the material is made of, and what just happened. */}
+      <div
+        className={
+          summary.recent.length > 0 ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"
+        }
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="dashboard-kicker">
-              <NotebookPen className="h-3.5 w-3.5" />
-              Your library
-            </p>
-            <h2 className="mt-2 font-display text-lg font-bold tracking-tight">
-              Keep the momentum
-            </h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <MovingBorderButton
-              onClick={onOpenNotebooks}
-              className="w-fit"
-              innerClassName="px-4 py-2 text-xs"
-            >
-              <NotebookPen className="h-3.5 w-3.5" />
-              Open notebooks
-            </MovingBorderButton>
-            <MovingBorderButton
-              onClick={onCreateNotebook}
-              className="w-fit"
-              innerClassName="px-4 py-2 text-xs"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              New notebook
-            </MovingBorderButton>
-          </div>
-        </div>
-
-        {materialRows.length > 0 ? (
-          <ul className="mt-5 flex flex-col gap-3">
-            {materialRows.map((row) => (
-              <li key={row.kind} className="flex items-center gap-3 text-sm">
-                <span
-                  aria-hidden
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: row.color }}
-                />
-                <span className="min-w-0 flex-1 truncate text-text-dim">
-                  {row.label}
-                </span>
-                <span className="w-24 shrink-0">
-                  <span className="dashboard-meter block h-1.5">
-                    <span
-                      className="dashboard-meter__fill"
-                      style={{ width: `${(row.value / busiestKind) * 100}%` }}
-                    />
-                  </span>
-                </span>
-                <span className="w-8 shrink-0 text-right font-semibold tabular-nums">
-                  {row.value.toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-4 text-sm leading-relaxed text-text-dim">
-            Generated study material will appear here — open a notebook, add
-            sources, then churn them into a summary, flashcards, a quiz, a mind
-            map and slides.
-          </p>
+        <LibraryPanel
+          rows={materialRows}
+          busiest={busiestKind}
+          onOpenRow={(kind) =>
+            openWorkspace({ tab: kind, focus: "materials" })
+          }
+          onOpenNotebooks={onOpenNotebooks}
+          onCreateNotebook={onCreateNotebook}
+        />
+        {summary.recent.length > 0 && (
+          <RecentActivity
+            events={summary.recent}
+            onOpen={(event) =>
+              onOpenNotebook(event.notebookId, {
+                focus: event.kind === "source" ? "sources" : "materials",
+                tab: event.kind === "source" ? undefined : event.kind,
+              })
+            }
+          />
         )}
-      </motion.section>
+      </div>
     </div>
   );
 }
+

@@ -34,7 +34,7 @@ import {
   Zap,
 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 
@@ -78,9 +78,12 @@ function SourceIcon({ kind }: { kind: "file" | "link" | "text" }) {
 export function NotebookWorkspace({
   notebookId,
   notebookName,
+  initialTab,
 }: {
   notebookId: Id<"notebooks">;
   notebookName: string;
+  /** Which material tab to open on arrival — the overview deep-links here. */
+  initialTab?: Kind;
 }) {
   const sources = useQuery(api.sources.listForNotebook, { notebookId });
   const materials = useQuery(api.materials.listForNotebook, { notebookId });
@@ -109,11 +112,32 @@ export function NotebookWorkspace({
     KIND_META.map((meta) => meta.kind),
   );
   const [running, setRunning] = useState<Kind[]>([]);
-  const [tab, setTab] = useState<Kind>("summary");
+  const [tab, setTab] = useState<Kind>(initialTab ?? "summary");
   const [retrying, setRetrying] = useState<string | null>(null);
   const [tool, setTool] = useState<"cram" | null>(null);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
   const { can, requireAccess } = usePlan();
+
+  /*
+   * A metric card on the overview lands here with an anchor — `#sources` for
+   * the source list, `#materials` for what the notebook churned out — so the
+   * click arrives at the panel it promised instead of the top of the page.
+   * Once, on mount: scrolling again on every re-render would fight the user.
+   */
+  useEffect(() => {
+    const target = window.location.hash.slice(1);
+    if (target !== "sources" && target !== "materials") return;
+    const reduced =
+      document.documentElement.dataset.motion === "reduced" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(target)?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const readyCount =
     sources?.filter((s) => s.status !== "failed" && s.characters > 0).length ??
@@ -354,7 +378,10 @@ export function NotebookWorkspace({
 
       <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         {/* ------------------------- sources ------------------------- */}
-        <div className="glass-panel flex flex-col gap-4 p-5 sm:p-6">
+        <div
+          id="sources"
+          className="glass-panel flex scroll-mt-6 flex-col gap-4 p-5 sm:p-6"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display text-base font-bold tracking-tight">
               Sources
@@ -667,7 +694,7 @@ export function NotebookWorkspace({
       </div>
 
       {/* ------------------------- materials ------------------------- */}
-      <div className="glass-panel p-5 sm:p-6">
+      <div id="materials" className="glass-panel scroll-mt-6 p-5 sm:p-6">
         {availableTabs.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <NotebookPen className="h-5 w-5 text-[var(--signal)]" />
