@@ -60,3 +60,67 @@ export const mathProblemSchema = z.object({
 
 /** Rough ceiling on the base64 payload — about 4 MB of image. */
 export const MAX_MATH_IMAGE = 5_500_000;
+
+/**
+ * One solved problem, exactly as the notebook renders it.
+ *
+ * Declared here rather than beside the solve action because three callers now
+ * produce one: the solver, the practice generator, and the history replay. All
+ * of them must agree on the shape or the renderer will render half of it.
+ */
+export interface SolvedProblem {
+  problem: string;
+  title: string;
+  given: string[];
+  formulas: string[];
+  steps: {
+    title: string;
+    explanation: string;
+    expression: string;
+    rule: string;
+  }[];
+  finalAnswer: string;
+  verification: string;
+  /** True when an independent engine confirmed or corrected the answer. */
+  verified: boolean;
+  /** True when the checker's value replaced the model's own. */
+  corrected: boolean;
+  /** What the independent engine found, in one sentence. */
+  checkNote: string;
+}
+
+/** Markdown debris out of prose, whitespace tidied. */
+export function cleanProse(value: string) {
+  return value.replace(/[*_`#]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Any maths delimiters the model wrapped around a line, stripped off again.
+ *
+ * Words never belong in an expression. The prompt forbids them; this catches
+ * the ones that slip through anyway, because "2 plus 3" typesets as italic
+ * mush rather than as arithmetic. `\text{...}` runs are left alone — a unit
+ * legitimately lives there.
+ */
+export function cleanLatex(value: string) {
+  let out = value.trim();
+  if (out.length > 4 && out.startsWith("$$") && out.endsWith("$$")) {
+    out = out.slice(2, -2);
+  } else if (out.length > 2 && out.startsWith("$") && out.endsWith("$")) {
+    out = out.slice(1, -1);
+  }
+  if (out.startsWith("\\[") && out.endsWith("\\]")) {
+    out = out.slice(2, -2);
+  }
+  if (!out.includes("\\text")) {
+    out = out
+      .replace(/\bequals?\b/gi, "=")
+      .replace(/\bplus\b/gi, "+")
+      .replace(/\bminus\b/gi, "-")
+      .replace(/\btimes\b/gi, "\\times")
+      .replace(/\bmultiplied by\b/gi, "\\times")
+      .replace(/\bdivided by\b/gi, "\\div")
+      .replace(/\bsquared\b/gi, "^{2}");
+  }
+  return out.replace(/\s+/g, " ").trim();
+}

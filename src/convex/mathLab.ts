@@ -20,7 +20,10 @@ import {
 import {
   MAX_MATH_IMAGE,
   SOLVE_METHODS,
+  cleanLatex,
+  cleanProse,
   mathProblemSchema,
+  type SolvedProblem,
 } from "./mathPrompts";
 
 /**
@@ -57,62 +60,53 @@ const modelSolutionSchema = z.object({
 const UNCHECKED =
   "This one could not be recomputed independently, so it is shown exactly as the tutor wrote it.";
 
-/** Markdown debris out of prose, whitespace tidied. */
-function cleanProse(value: string) {
-  return value.replace(/[*_`#]/g, "").replace(/\s+/g, " ").trim();
-}
-
-/** Any maths delimiters the model wrapped around a line, stripped off again. */
-function cleanLatex(value: string) {
-  let out = value.trim();
-  if (out.length > 4 && out.startsWith("$$") && out.endsWith("$$")) {
-    out = out.slice(2, -2);
-  } else if (out.length > 2 && out.startsWith("$") && out.endsWith("$")) {
-    out = out.slice(1, -1);
-  }
-  if (out.startsWith("\\[") && out.endsWith("\\]")) {
-    out = out.slice(2, -2);
-  }
-  // Words never belong in an expression. The prompt forbids them; this catches
-  // the ones that slip through anyway, because "2 plus 3" typesets as italic
-  // mush rather than as arithmetic. `\text{...}` runs are left alone — a unit
-  // legitimately lives there.
-  if (!out.includes("\\text")) {
-    out = out
-      .replace(/\bequals?\b/gi, "=")
-      .replace(/\bplus\b/gi, "+")
-      .replace(/\bminus\b/gi, "-")
-      .replace(/\btimes\b/gi, "\\times")
-      .replace(/\bmultiplied by\b/gi, "\\times")
-      .replace(/\bdivided by\b/gi, "\\div")
-      .replace(/\bsquared\b/gi, "^{2}");
-  }
-  return out.replace(/\s+/g, " ").trim();
-}
-
-/** One problem, exactly as the notebook renders it. */
-interface SolvedProblem {
-  problem: string;
-  title: string;
-  given: string[];
-  formulas: string[];
-  steps: {
-    title: string;
-    explanation: string;
-    expression: string;
-    rule: string;
-  }[];
-  finalAnswer: string;
-  verification: string;
-  /** True when an independent engine confirmed or corrected the answer. */
-  verified: boolean;
-  /** True when the checker's value replaced the model's own. */
-  corrected: boolean;
-  /** What the independent engine found, in one sentence. */
-  checkNote: string;
-}
-
 type Parsed = z.infer<typeof modelSolutionSchema>;
+
+/**
+ * Turn one parsed problem plus the checker's verdict into what is rendered.
+ *
+ * Shared with the practice generator in `mathTutor.ts`, which produces the
+ * same object from a freshly written problem, so a practice question and a
+ * solved one can never drift apart in shape or in how the checker's verdict is
+ * folded in.
+ */
+export function finalizeProblem(
+  entry: z.infer<typeof mathProblemSchema>,
+  check?: Verification,
+): SolvedProblem {
+  const verdict: Verification = check ?? {
+    status: "unverifiable",
+    note: UNCHECKED,
+  };
+  // `corrected` only when there is a value to put in its place.
+  const corrected =
+    verdict.status === "mismatch" && Boolean(verdict.verifiedLatex);
+  const checkNote = cleanProse(verdict.note);
+
+  return {
+    problem: cleanLatex(entry.problem),
+    title: cleanProse(entry.title),
+    given: entry.given.map(cleanProse),
+    formulas: entry.formulas.map(cleanLatex),
+    steps: entry.steps.map((step) => ({
+      title: cleanProse(step.title),
+      explanation: cleanProse(step.explanation),
+      expression: cleanLatex(step.expression),
+      rule: cleanProse(step.rule),
+    })),
+    // When the checker disagreed, its value is the one the student sees.
+    finalAnswer: corrected
+      ? cleanLatex(verdict.verifiedLatex ?? "")
+      : cleanLatex(entry.finalAnswer),
+    verification:
+      verdict.status === "unverifiable"
+        ? cleanProse(entry.verification) || checkNote
+        : checkNote,
+    verified: verdict.status === "match" || corrected,
+    corrected,
+    checkNote,
+  };
+}
 
 /** The sentence sent back to the model when the checker disagreed. */
 function correctionLines(parsed: Parsed, checks: Verification[]): string {
@@ -299,40 +293,9 @@ export const mathSolve = action({
       }
     }
 
-    const problems: SolvedProblem[] = parsed.problems.map((entry, index) => {
-      const check: Verification = checks[index] ?? {
-        status: "unverifiable",
-        note: UNCHECKED,
-      };
-      // `corrected` only when there is a value to put in its place.
-      const corrected =
-        check.status === "mismatch" && Boolean(check.verifiedLatex);
-      const checkNote = cleanProse(check.note);
-
-      return {
-        problem: cleanLatex(entry.problem),
-        title: cleanProse(entry.title),
-        given: entry.given.map(cleanProse),
-        formulas: entry.formulas.map(cleanLatex),
-        steps: entry.steps.map((step) => ({
-          title: cleanProse(step.title),
-          explanation: cleanProse(step.explanation),
-          expression: cleanLatex(step.expression),
-          rule: cleanProse(step.rule),
-        })),
-        // When the checker disagreed, its value is the one the student sees.
-        finalAnswer: corrected
-          ? cleanLatex(check.verifiedLatex ?? "")
-          : cleanLatex(entry.finalAnswer),
-        verification:
-          check.status === "unverifiable"
-            ? cleanProse(entry.verification) || checkNote
-            : checkNote,
-        verified: check.status === "match" || corrected,
-        corrected,
-        checkNote,
-      };
-    });
+    const problems: SolvedProblem[] = parsed.problems.map((entry, index) =>
+      finalizeProblem(entry, checks[index]),
+    );
 
     return {
       headline: cleanProse(parsed.headline),

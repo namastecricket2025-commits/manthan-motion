@@ -88,7 +88,12 @@ export function GraphCanvas({
   const frameRef = useRef(0);
   const animRef = useRef<{ from: Values; to: Values; start: number } | null>(null);
 
-  modelRef.current = model;
+  // The model is mirrored into a ref so `paint` can read the live value without
+  // being rebuilt. Declared before the paint effect below so the ref is already
+  // current by the time that effect runs.
+  useEffect(() => {
+    modelRef.current = model;
+  }, [model]);
 
   /** One full repaint, reading only refs so it never goes stale. */
   const paint = useCallback(() => {

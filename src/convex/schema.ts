@@ -97,6 +97,50 @@ const schema = defineSchema(
       .index("by_notebook", ["notebookId"])
       .index("by_owner", ["ownerId"]),
 
+    // One Math Lab solution the student actually solved while signed in.
+    //
+    // The Maths Lab engine itself is unauthenticated (like the Canvas Solver),
+    // so the row is written from the client after a solve succeeds. `problems`
+    // holds the structured solution exactly as it was rendered, which is what
+    // lets a past solution be reopened, copied as LaTeX or exported as a PDF
+    // without asking a model to reproduce it again.
+    mathSolutions: defineTable({
+      ownerId: v.id("users"),
+      /** What the student typed, or a label for a photographed question. */
+      question: v.string(),
+      headline: v.string(),
+      track: v.string(),
+      chapterName: v.string(),
+      method: v.string(),
+      /** The rendered solution: SolvedProblem[] as the notebook shows it. */
+      problems: v.any(),
+      model: v.string(),
+      /** Set once the student files it into one of their notebooks. */
+      savedNotebookId: v.optional(v.id("notebooks")),
+      savedAt: v.optional(v.number()),
+      createdAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_created", ["ownerId", "createdAt"]),
+
+    // One row per step Check My Work marked wrong.
+    //
+    // Nothing here is inferred: a row exists only because the checker returned
+    // a verdict for that step on that attempt. A mistake summary is then a
+    // grouping of these real rows and nothing else.
+    mathMistakes: defineTable({
+      ownerId: v.id("users"),
+      solutionId: v.optional(v.id("mathSolutions")),
+      problem: v.string(),
+      stepIndex: v.number(),
+      stepTitle: v.string(),
+      rule: v.string(),
+      note: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_created", ["ownerId", "createdAt"]),
+
     // One row per user per UTC day. `used`/`requests` are written by the
     // generation action; the dashboard reads the same row to draw the quota
     // meter, so what the student sees is what the engine counted.

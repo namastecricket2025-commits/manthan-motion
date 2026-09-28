@@ -14,10 +14,32 @@ import {
 } from "@/components/mathlab/mathlab";
 import { GraphCanvas } from "@/components/mathlab/GraphCanvas";
 import { MathTex } from "@/components/mathlab/latex";
+import { MathInput, type MathInputHandle } from "@/components/mathlab/MathInput";
+import { StepList } from "@/components/mathlab/StepList";
+import { CheckMyWork } from "@/components/mathlab/CheckMyWork";
+import { PracticePanel } from "@/components/mathlab/PracticePanel";
+import { GraphingCalculator } from "@/components/mathlab/GraphingCalculator";
+import { ScientificCalculator } from "@/components/mathlab/ScientificCalculator";
+import { FormulaSheet } from "@/components/mathlab/FormulaSheet";
+import { MathHistory } from "@/components/mathlab/MathHistory";
+import { PrintSheet } from "@/components/mathlab/PrintSheet";
+import { DetailList, Fold, InlineFormula, InlineMath } from "@/components/mathlab/parts";
+import {
+  plainProse,
+  solutionToLatex,
+  solutionToText,
+  spokenMath,
+  stepTransitionFor,
+  type EngineProblem,
+  type EngineSolution,
+  type EngineTurn,
+  type SolveMethod,
+} from "@/components/mathlab/solution";
 import "@/components/mathlab/mathlab.css";
 import { pickAviaVoice, speakText, stopSpeaking } from "@/components/voice/avia";
 import {
   ArrowRight,
+  Calculator,
   Camera,
   Check,
   ChevronDown,
@@ -29,10 +51,15 @@ import {
   Expand,
   Eye,
   EyeOff,
+  FileDown,
+  History,
+  Lightbulb,
+  LineChart,
   Loader2,
   Lock,
   Mic,
   Minimize,
+  PenLine,
   Play,
   ShieldCheck,
   Sparkles,
@@ -41,47 +68,9 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { parse as parseMath } from "mathjs";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
-
-interface EngineTurn {
-  role: "student" | "lab";
-  text: string;
-}
-
-type SolveMethod = "standard" | "visual" | "analogy";
-
-/** One move of a solution, exactly as the engine and the checker return it. */
-interface EngineStep {
-  title: string;
-  explanation: string;
-  expression: string;
-  rule: string;
-}
-
-/** One question, with its own working and its own answer card. */
-interface EngineProblem {
-  problem: string;
-  title: string;
-  given: string[];
-  formulas: string[];
-  steps: EngineStep[];
-  finalAnswer: string;
-  verification: string;
-  /** True when an independent engine confirmed or corrected this answer. */
-  verified: boolean;
-  /** True when the checker's own value replaced the engine's. */
-  corrected: boolean;
-  /** What the independent engine found, in one sentence. */
-  checkNote: string;
-}
-
-interface EngineSolution {
-  headline: string;
-  problems: EngineProblem[];
-  model: string;
-}
 
 const CURRICULUM_TRACKS = ["CBSE", "NCERT", "IB", "IGCSE"] as const;
 type CurriculumTrack = (typeof CURRICULUM_TRACKS)[number];
@@ -91,6 +80,14 @@ const METHOD_OPTIONS: Array<{ id: SolveMethod; label: string; note: string }> = 
   { id: "visual", label: "Visual Fraction Blocks / Number Lines", note: "See the quantities move on a bar or line" },
   { id: "analogy", label: "Step-by-step Real World Analogy", note: "Map the problem to something familiar" },
 ];
+
+const VIEW_TABS = [
+  { id: "solve", label: "Notebook", icon: PenLine },
+  { id: "graph", label: "Graphing", icon: LineChart },
+  { id: "tools", label: "Calculator & formulas", icon: Calculator },
+  { id: "history", label: "History", icon: History },
+] as const;
+type ViewId = (typeof VIEW_TABS)[number]["id"];
 
 function defaultsFor(model: PlotModel): Record<string, number> {
   const values: Record<string, number> = {};
@@ -117,128 +114,6 @@ function inspectStructure(input: string) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Rendering the structured solution                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * Inline maths inside prose.
- *
- * Everything outside a `$...$` run is ordinary text and is rendered as such —
- * the bug this replaces was feeding whole English sentences to KaTeX, which
- * dropped the spaces and turned the words into italic mush. Only the runs the
- * engine explicitly marked as maths ever reach the typesetter.
- */
-function InlineMath({ text }: { text: string }) {
-  const parts = useMemo(() => text.split(/\$([^$]+)\$/g), [text]);
-  return (
-    <>
-      {parts.map((part, index) =>
-        index % 2 === 1 ? (
-          <MathTex key={index} source={part} fallback={part} />
-        ) : (
-          <span key={index}>{part}</span>
-        ),
-      )}
-    </>
-  );
-}
-
-function Explanation({ text }: { text: string }) {
-  if (!text) return null;
-  return (
-    <p className="mathlab-walk__prose">
-      <InlineMath text={text} />
-    </p>
-  );
-}
-
-/**
- * One expression, in display mode.
- *
- * A step that carries several equivalent lines arrives separated by `\\` or a
- * newline; each line is typeset on its own so nothing is squashed into one
- * unreadable row. A line KaTeX cannot parse falls back to its own characters
- * (see `MathTex`) rather than garbling the step.
- */
-function Expression({ source }: { source: string }) {
-  const lines = useMemo(
-    () => source.split(/\\\\|\n/).map((line) => line.trim()).filter(Boolean),
-    [source],
-  );
-  if (!lines.length) return null;
-  return (
-    <div className="mathlab-walk__math">
-      {lines.map((line, index) => (
-        <MathTex key={`${index}-${line}`} source={line} fallback={line} display />
-      ))}
-    </div>
-  );
-}
-
-/** A rule name, or a short prose note, kept as plain text. */
-function InlineFormula({ source }: { source: string }) {
-  return <MathTex source={source} fallback={source} />;
-}
-
-/**
- * A `Given data` / `Governing formulas` list, read off the question itself.
- *
- * Inline maths only, wrapped rather than scrolled: the old panel scrolled
- * sideways because each formula was typeset in display mode inside a narrow
- * column.
- */
-function DetailList({ entries, latex = false }: { entries: string[]; latex?: boolean }) {
-  if (!entries.length) return null;
-  return (
-    <ul className="mathlab-note-list">
-      {entries.map((entry) => (
-        <li key={entry} className="mathlab-note-list__row">
-          {latex ? <InlineFormula source={entry} /> : <InlineMath text={entry} />}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Fold({
-  label,
-  children,
-  defaultOpen = false,
-}: {
-  label: string;
-  children: ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="mathlab-fold" data-open={open}>
-      <button
-        type="button"
-        className="mathlab-fold__head"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <ChevronDown className="mathlab-fold__chev" aria-hidden />
-        <span>{label}</span>
-      </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            className="mathlab-fold__body"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "tween", duration: 0.26, ease: "easeOut" }}
-          >
-            {children}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* A picture of the actual numbers                                     */
 /* ------------------------------------------------------------------ */
 
@@ -250,10 +125,8 @@ interface Fraction {
 /**
  * Fractions mentioned by a problem or its answer.
  *
- * The left-hand graph used to be shown for every question, always plotting the
- * chapter's `y = k/x` whether or not a curve had anything to do with the work.
- * A fraction question gets a picture of its own numbers instead, and a question
- * with no fractions gets no picture at all rather than an empty panel.
+ * A fraction question gets a picture of its own numbers, and a question with no
+ * fractions gets no picture at all rather than an empty panel.
  */
 function fractionsIn(sources: string[]): Fraction[] {
   const found = new Map<string, Fraction>();
@@ -318,47 +191,14 @@ function FractionBars({ fractions }: { fractions: Fraction[] }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Reading the solution aloud, and copying it                          */
-/* ------------------------------------------------------------------ */
-
-/** LaTeX that reads sensibly when a speech synthesiser says it. */
-function spokenMath(source: string) {
-  return source
-    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "$1 over $2")
-    .replace(/\\sqrt\{([^{}]+)\}/g, "the square root of $1")
-    .replace(/\\times/g, " times ")
-    .replace(/\\div/g, " divided by ")
-    .replace(/\\cdot/g, " times ")
-    .replace(/\\pm/g, " plus or minus ")
-    .replace(/\\le/g, " is less than or equal to ")
-    .replace(/\\ge/g, " is greater than or equal to ")
-    .replace(/\^{2}/g, " squared ")
-    .replace(/\^\{?(\d+)\}?/g, " to the power $1 ")
-    .replace(/\\text\{([^{}]*)\}/g, "$1")
-    .replace(/\\[a-zA-Z]+/g, " ")
-    .replace(/[{}]/g, " ")
-    .replace(/\$/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Prose with its inline maths flattened for the clipboard. */
-function plainProse(text: string) {
-  return text.replace(/\$([^$]+)\$/g, (_match, inner: string) => spokenMath(inner));
-}
-
-/** One line of a solution as clean, readable text. */
-function plainLine(source: string) {
-  return spokenMath(source);
-}
-
 export function MathLab() {
   const navigate = useNavigate();
   const { can } = usePlan();
   const solve = useAction(api.mathLab.mathSolve);
+  const recordSolution = useMutation(api.mathHistory.record);
   const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
   const reduceMotion = useReducedMotion();
+  const [view, setView] = useState<ViewId>("solve");
   const [track, setTrack] = useState<CurriculumTrack>("CBSE");
   const [gradeId, setGradeId] = useState<string>(GRADES[0].id);
   const grade: GradeSpec = useMemo(() => getGrade(gradeId as GradeSpec["id"]), [gradeId]);
@@ -383,6 +223,11 @@ export function MathLab() {
   const [walking, setWalking] = useState(false);
   const [copied, setCopied] = useState<"plain" | "latex" | null>(null);
   const [openSteps, setOpenSteps] = useState<Record<number, boolean>>({});
+  const [hintMode, setHintMode] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [historyId, setHistoryId] = useState<Id<"mathSolutions"> | null>(null);
+  const mathInputRef = useRef<MathInputHandle | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -416,6 +261,7 @@ export function MathLab() {
     setTurns([]);
     setEngineError(null);
     setOpenSteps({});
+    setHistoryId(null);
   };
   const selectSkill = (nextGradeId: string, nextIndex: number) => {
     const nextGrade = getGrade(nextGradeId as GradeSpec["id"]);
@@ -428,6 +274,7 @@ export function MathLab() {
     setTurns([]);
     setEngineError(null);
     setOpenSteps({});
+    setHistoryId(null);
     setFormula(next.example);
   };
 
@@ -451,12 +298,33 @@ export function MathLab() {
       const spoken = result.problems.map((problem) => problem.finalAnswer).join(", ");
       if (parts.followUp) setTurns((current) => [...current, { role: "student", text: parts.followUp! }, { role: "lab", text: spoken }]);
       else if (parts.question) setTurns((current) => [...current, { role: "lab", text: spoken }]);
+
+      // A fresh solve is a new entry in the history. A follow-up is the same
+      // question answered again, so it does not create a second row.
+      if (!parts.followUp) {
+        setHistoryId(null);
+        void recordSolution({
+          question: parts.question ?? (parts.file ? parts.file.name : "A photographed question"),
+          headline: result.headline,
+          track,
+          chapterName: chapter.name,
+          method: parts.method ?? method,
+          problems: result.problems,
+          model: result.model,
+        })
+          .then((id) => {
+            if (id) setHistoryId(id);
+          })
+          .catch(() => {
+            // Signed out, or the write failed: the solution is still on screen.
+          });
+      }
     } catch (err) {
       setEngineError(err instanceof Error && err.message ? err.message : "The engine could not reach a model just now. Try again in a minute.");
     } finally {
       setSolving(false);
     }
-  }, [chapter.formulas, chapter.name, method, solve, track, turns]);
+  }, [chapter.formulas, chapter.name, method, recordSolution, solve, track, turns]);
 
   const onSubmit = useCallback(() => {
     const input = formula.trim();
@@ -560,40 +428,16 @@ export function MathLab() {
     copiedTimer.current = window.setTimeout(() => setCopied(null), 1800);
   }, []);
 
-  /** The whole solution as plain, readable text. */
   const copySolution = useCallback(() => {
     if (!solution) return;
-    const lines: string[] = [solution.headline, ""];
-    solution.problems.forEach((problem, problemIndex) => {
-      if (solution.problems.length > 1) lines.push(`Problem ${problemIndex + 1}`);
-      lines.push(problem.title, plainLine(problem.problem), "");
-      problem.steps.forEach((step, stepIndex) => {
-        lines.push(`${stepIndex + 1}. [${step.rule}] ${plainProse(step.explanation)}`);
-        if (step.expression) lines.push(`   ${plainLine(step.expression)}`);
-      });
-      lines.push("", `FINAL ANSWER: ${plainLine(problem.finalAnswer)}`);
-      if (problem.verification) lines.push(`Check: ${plainProse(problem.verification)}`);
-      lines.push("");
-    });
-    void navigator.clipboard?.writeText(lines.join("\n").replace(/\n{3,}/g, "\n\n").trim())
+    void navigator.clipboard?.writeText(solutionToText(solution))
       .then(() => flashCopied("plain"))
       .catch(() => setEngineError("Your browser blocked the copy. Select the text instead."));
   }, [flashCopied, solution]);
 
-  /** The same solution as LaTeX source, for pasting into notes or a paper. */
   const copyLatex = useCallback(() => {
     if (!solution) return;
-    const chunks: string[] = [`% ${solution.headline}`];
-    solution.problems.forEach((problem, problemIndex) => {
-      if (solution.problems.length > 1) chunks.push(`% Problem ${problemIndex + 1}`);
-      chunks.push("\\begin{aligned}", problem.problem, "\\end{aligned}");
-      problem.steps.forEach((step) => {
-        if (step.rule) chunks.push(`% ${step.rule}`);
-        if (step.expression) chunks.push("\\begin{aligned}", step.expression, "\\end{aligned}");
-      });
-      chunks.push("% Final answer", `\\boxed{${problem.finalAnswer}}`, "");
-    });
-    void navigator.clipboard?.writeText(chunks.join("\n"))
+    void navigator.clipboard?.writeText(solutionToLatex(solution))
       .then(() => flashCopied("latex"))
       .catch(() => setEngineError("Your browser blocked the copy. Select the text instead."));
   }, [flashCopied, solution]);
@@ -610,14 +454,18 @@ export function MathLab() {
   const formulas = useMemo(() => coreFormulas(chapter), [chapter]);
   const everyVerified = Boolean(solution && solution.problems.length > 0 && solution.problems.every((problem) => problem.verified));
   const stepTransition = useCallback(
-    (index: number) => ({
-      type: "tween" as const,
-      duration: 0.34,
-      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-      delay: reduceMotion ? 0 : Math.min(index, 8) * 0.05,
-    }),
+    (index: number) => stepTransitionFor(index, reduceMotion),
     [reduceMotion],
   );
+
+  /** Open a stored solution from the history tab in the notebook. */
+  const openStored = useCallback((stored: { headline: string; problems: EngineProblem[] }) => {
+    hush();
+    setSolution({ headline: stored.headline, problems: stored.problems, model: "history" });
+    setOpenSteps({});
+    setView("solve");
+    setTurns([]);
+  }, [hush]);
 
   return (
     <div className="relative">
@@ -659,208 +507,319 @@ export function MathLab() {
           <button type="button" className="mathlab-skillpath-arrow mathlab-skillpath-arrow--right" onClick={() => scrollSkills(1)} aria-label="Scroll chapters right"><ChevronRight aria-hidden /></button>
         </div>
 
-        <div className={"mathlab-split" + (fullScreen ? " is-fullscreen" : "") + (solution ? " is-solution" : "")}>
-          <AnimatePresence initial={false}>
-            {!fullScreen && !solution && !solving ? (
-              <motion.section key="mathlab-graph" className="mathlab-card mathlab-graph-card" initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}>
-                <header className="mathlab-card__head"><div className="min-w-0"><p className="mathlab-card__kicker">{track} · {chapter.focus}</p><h2 className="mathlab-card__title">{model.label}</h2></div><span className="mathlab-card__formula">{model.formula}</span></header>
-                <div className="mathlab-canvas-wrap"><GraphCanvas model={model} params={params} /></div>
-                <p className="mathlab-caption">{model.note}</p>
-              </motion.section>
+        <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
+          {VIEW_TABS.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={view === tab.id}
+                className={"mathlab-view" + (view === tab.id ? " is-active" : "")}
+                onClick={() => setView(tab.id)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {view === "solve" ? (
+          <div className={"mathlab-split" + (fullScreen ? " is-fullscreen" : "") + (solution ? " is-solution" : "")}>
+            <AnimatePresence initial={false}>
+              {!fullScreen && !solution && !solving ? (
+                <motion.section key="mathlab-graph" className="mathlab-card mathlab-graph-card" initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}>
+                  <header className="mathlab-card__head"><div className="min-w-0"><p className="mathlab-card__kicker">{track} · {chapter.focus}</p><h2 className="mathlab-card__title">{model.label}</h2></div><span className="mathlab-card__formula">{model.formula}</span></header>
+                  <div className="mathlab-canvas-wrap"><GraphCanvas model={model} params={params} /></div>
+                  <p className="mathlab-caption">{model.note}</p>
+                </motion.section>
+              ) : null}
+            </AnimatePresence>
+
+            <motion.section className="mathlab-card mathlab-notebook">
+              <header className="mathlab-notebook__head">
+                <div>
+                  <p className="mathlab-card__kicker">Solution notebook</p>
+                  <h2 className="mathlab-card__title">{solution?.headline ?? "A calm place to work"}</h2>
+                  <p className="mathlab-structure">{structure}</p>
+                </div>
+                <span className="mathlab-exact-badge" data-state={everyVerified ? "verified" : "pending"}>
+                  <ShieldCheck className="h-3 w-3" />
+                  {solution ? (everyVerified ? "Recomputed and verified" : "Checked where possible") : "Exact arithmetic"}
+                </span>
+              </header>
+
+              <div className="mathlab-methods" role="tablist" aria-label="Solve method selector">
+                {METHOD_OPTIONS.map((option) => (
+                  <motion.button key={option.id} type="button" role="tab" aria-selected={method === option.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.2 }} className={"mathlab-method" + (method === option.id ? " is-active" : "")} onClick={() => chooseMethod(option.id)}>
+                    <span>{option.label}</span><small>{option.note}</small>
+                  </motion.button>
+                ))}
+              </div>
+
+              <form className="mathlab-input" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void readPhoto(event.dataTransfer.files?.[0]); }}>
+                <MathInput
+                  ref={mathInputRef}
+                  value={formula}
+                  onChange={setFormula}
+                  placeholder={`e.g. ${chapter.example}`}
+                  ariaLabel="Your maths problem"
+                />
+                <div className="mathlab-input__row">
+                  <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
+                  <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
+                  <button type="submit" className="mathlab-solve" disabled={solving || !formula.trim()}>{solving ? <Loader2 className="spin-micro h-4 w-4" /> : null}Solve</button>
+                </div>
+              </form>
+              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => void readPhoto(event.target.files?.[0] ?? undefined)} />
+              {engineError && <p className="mathlab-error">{engineError}</p>}
+
+              {solution ? (
+                <>
+                  {/* A compact toolbar, never sticky: it used to float over the
+                      method cards and cover them. */}
+                  <div className="mathlab-toolbar">
+                    <div className="mathlab-toolbar__status">
+                      <span className="mathlab-live-dot" />
+                      {walking ? "Reading it aloud" : `${solution.problems.length > 1 ? `${solution.problems.length} problems` : "One problem"} · ${totalSteps} steps`}
+                    </div>
+                    <div className="mathlab-toolbar__controls">
+                      <button type="button" className={"mathlab-tab-action" + (walking ? " is-active" : "")} onClick={readAll}>
+                        {walking ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        {walking ? "Stop walkthrough" : "Listen"}
+                      </button>
+                      <button type="button" className="mathlab-tab-action" onClick={() => speakText(speechScript.map((entry) => entry.text).join(". "), aviaVoice(), undefined, true)}>
+                        <Volume2 className="h-3.5 w-3.5" />Audio reader
+                      </button>
+                      <button type="button" className={"mathlab-tab-action" + (hintMode ? " is-active" : "")} onClick={() => setHintMode((value) => !value)} aria-pressed={hintMode}>
+                        <Lightbulb className="h-3.5 w-3.5" />
+                        {hintMode ? "Try first: on" : "Try first"}
+                      </button>
+                      <button type="button" className={"mathlab-tab-action" + (copied === "plain" ? " is-active" : "")} onClick={copySolution}>
+                        {copied === "plain" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copied === "plain" ? "Copied" : "Copy"}
+                      </button>
+                      <button type="button" className={"mathlab-tab-action" + (copied === "latex" ? " is-active" : "")} onClick={copyLatex}>
+                        {copied === "latex" ? <Check className="h-3.5 w-3.5" /> : <Code className="h-3.5 w-3.5" />}
+                        {copied === "latex" ? "Copied" : "Copy LaTeX"}
+                      </button>
+                      <button type="button" className="mathlab-tab-action" onClick={() => setPrinting(true)}>
+                        <FileDown className="h-3.5 w-3.5" />
+                        Export as PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mathlab-solution">
+                    {solution.problems.map((problem, problemIndex) => {
+                      const expanded = openSteps[problemIndex] !== false;
+                      const fractions = fractionsIn([problem.problem, problem.finalAnswer, ...problem.steps.map((step) => step.expression)]);
+                      return (
+                        <section key={`${problemIndex}-${problem.problem}`} className="mathlab-problem">
+                          <header className="mathlab-problem__head">
+                            <span className="mathlab-problem__index">{solution.problems.length > 1 ? `Problem ${problemIndex + 1}` : "Problem"}</span>
+                            <h3 className="mathlab-problem__title">{problem.title}</h3>
+                          </header>
+
+                          <div className="mathlab-problem__statement">
+                            <MathTex source={problem.problem} fallback={problem.problem} display />
+                          </div>
+
+                          {/* In hint mode the answer stays covered until the
+                              student has revealed the whole method — a hint
+                              that hands over the answer is not a hint. */}
+                          {!hintMode || problem.steps.length === 0 ? (
+                            <div className="mathlab-verdict" data-corrected={problem.corrected}>
+                              <span className="mathlab-verdict__label">Final answer</span>
+                              <div className="mathlab-verdict__value">
+                                <MathTex source={problem.finalAnswer} fallback={problem.finalAnswer} display />
+                              </div>
+                              {problem.verification || problem.checkNote ? (
+                                <p className="mathlab-verdict__note">
+                                  <ShieldCheck className="h-3 w-3 shrink-0" />
+                                  <span><InlineMath text={problem.verification || problem.checkNote} /></span>
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <p className="mathlab-verdict mathlab-verdict--hidden">
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Final answer hidden while you try it first.
+                            </p>
+                          )}
+
+                          <FractionBars fractions={fractions} />
+
+                          {hintMode ? (
+                            <StepList
+                              key={`hint-${problemIndex}-${problem.steps.length}`}
+                              problemIndex={problemIndex}
+                              problem={problem.problem}
+                              steps={problem.steps}
+                              reduceMotion={Boolean(reduceMotion)}
+                              speakingKey={speakingKey}
+                              hintMode
+                              track={track}
+                              chapterName={chapter.name}
+                              stepTransition={stepTransition}
+                            />
+                          ) : (
+                            <div className="mathlab-work">
+                              <button type="button" className="mathlab-work__toggle" aria-expanded={expanded} onClick={() => setOpenSteps((current) => ({ ...current, [problemIndex]: !expanded }))}>
+                                {expanded ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                {expanded ? "Hide steps" : `Show steps (${problem.steps.length})`}
+                              </button>
+                              <AnimatePresence initial={false}>
+                                {expanded ? (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
+                                  >
+                                    <StepList
+                                      key={`plain-${problemIndex}-${problem.steps.length}`}
+                                      problemIndex={problemIndex}
+                                      problem={problem.problem}
+                                      steps={problem.steps}
+                                      reduceMotion={Boolean(reduceMotion)}
+                                      speakingKey={speakingKey}
+                                      hintMode={false}
+                                      track={track}
+                                      chapterName={chapter.name}
+                                      stepTransition={stepTransition}
+                                    />
+                                  </motion.div>
+                                ) : null}
+                              </AnimatePresence>
+                            </div>
+                          )}
+
+                          <CheckMyWork
+                            problem={problem.problem}
+                            steps={problem.steps}
+                            finalAnswer={problem.finalAnswer}
+                            solutionId={historyId}
+                          />
+
+                          <PracticePanel
+                            problem={problem.problem}
+                            steps={problem.steps}
+                            finalAnswer={problem.finalAnswer}
+                            track={track}
+                            chapterName={chapter.name}
+                            chapterFormulas={chapter.formulas}
+                          />
+
+                          {problem.given.length || problem.formulas.length ? (
+                            <Fold label="Given data and governing formulas" defaultOpen={false}>
+                              <div className="mathlab-fold__grid">
+                                <div>
+                                  <p className="mathlab-fold__label">Given data</p>
+                                  <DetailList entries={problem.given} />
+                                </div>
+                                <div>
+                                  <p className="mathlab-fold__label">Governing formulas</p>
+                                  <DetailList entries={problem.formulas} latex />
+                                </div>
+                              </div>
+                            </Fold>
+                          ) : null}
+                        </section>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="mathlab-hint">
+                  {solving ? "Reading the problem…" : `A ${chapter.name} question is already in the box. Press Solve, or speak and photograph your own.`}
+                </p>
+              )}
+
+              <Fold label={`${chapter.name} reference`}>
+                <div className="mathlab-fold__grid">
+                  <div>
+                    <p className="mathlab-fold__label">Given data</p>
+                    <ul className="mathlab-note-list">
+                      {givens.map((entry: CheatEntry) => (
+                        <li key={entry.title} className="mathlab-note-list__row">
+                          <span className="mathlab-note-list__name">{entry.title}</span>
+                          <InlineFormula source={entry.latex} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="mathlab-fold__label">Governing formulas</p>
+                    <ul className="mathlab-note-list">
+                      {formulas.map((entry: CheatEntry) => (
+                        <li key={entry.title} className="mathlab-note-list__row">
+                          <span className="mathlab-note-list__name">{entry.title}</span>
+                          <InlineFormula source={entry.latex} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </Fold>
+
+              <div className="mathlab-ask">
+                <input value={followUp} onChange={(event) => setFollowUp(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); sendFollowUp(); } }} placeholder={solution ? "Is this correct? Ask about any step…" : "Solve something first, then ask here"} disabled={!solution || solving} aria-label="Ask about this solution" className="mathlab-ask__field" />
+                <button type="button" className="mathlab-ask__send" disabled={!solution || solving || !followUp.trim()} onClick={sendFollowUp} aria-label="Send"><CornerDownLeft className="h-3.5 w-3.5" /></button>
+              </div>
+            </motion.section>
+          </div>
+        ) : view === "graph" ? (
+          <section className="mathlab-card mathlab-viewcard">
+            <GraphingCalculator />
+          </section>
+        ) : view === "tools" ? (
+          <section className="mathlab-card mathlab-viewcard">
+            <FormulaSheet />
+          </section>
+        ) : (
+          <section className="mathlab-card mathlab-viewcard">
+            <MathHistory onOpen={openStored} />
+          </section>
+        )}
+      </div>
+
+      {/* The calculator drawer, available from every view. */}
+      {!locked ? (
+        <>
+          <button
+            type="button"
+            className={"mathlab-calc-fab" + (calcOpen ? " is-open" : "")}
+            onClick={() => setCalcOpen((value) => !value)}
+            aria-expanded={calcOpen}
+          >
+            <Calculator className="h-4 w-4" />
+            {calcOpen ? "Hide calculator" : "Calculator"}
+          </button>
+          <AnimatePresence>
+            {calcOpen ? (
+              <motion.aside
+                className="mathlab-calc-drawer"
+                initial={{ y: 28, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 28, opacity: 0 }}
+                transition={{ type: "tween", duration: 0.26, ease: "easeOut" }}
+                aria-label="Scientific calculator"
+              >
+                <ScientificCalculator onClose={() => setCalcOpen(false)} />
+              </motion.aside>
             ) : null}
           </AnimatePresence>
+        </>
+      ) : null}
 
-          <motion.section className="mathlab-card mathlab-notebook">
-            <header className="mathlab-notebook__head">
-              <div>
-                <p className="mathlab-card__kicker">Solution notebook</p>
-                <h2 className="mathlab-card__title">{solution?.headline ?? "A calm place to work"}</h2>
-                <p className="mathlab-structure">{structure}</p>
-              </div>
-              <span className="mathlab-exact-badge" data-state={everyVerified ? "verified" : "pending"}>
-                <ShieldCheck className="h-3 w-3" />
-                {solution ? (everyVerified ? "Recomputed and verified" : "Checked where possible") : "Exact arithmetic"}
-              </span>
-            </header>
-
-            <div className="mathlab-methods" role="tablist" aria-label="Solve method selector">
-              {METHOD_OPTIONS.map((option) => (
-                <motion.button key={option.id} type="button" role="tab" aria-selected={method === option.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.2 }} className={"mathlab-method" + (method === option.id ? " is-active" : "")} onClick={() => chooseMethod(option.id)}>
-                  <span>{option.label}</span><small>{option.note}</small>
-                </motion.button>
-              ))}
-            </div>
-
-            <form className="mathlab-input" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void readPhoto(event.dataTransfer.files?.[0]); }}>
-              <input value={formula} onChange={(event) => setFormula(event.target.value)} placeholder={`e.g. ${chapter.example}`} aria-label="Your maths problem" className="mathlab-input__field" />
-              <div className="mathlab-input__tools">
-                <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
-                <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
-              </div>
-              <button type="submit" className="mathlab-solve" disabled={solving || !formula.trim()}>{solving ? <Loader2 className="spin-micro h-4 w-4" /> : null}Solve</button>
-            </form>
-            <input ref={fileInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => void readPhoto(event.target.files?.[0] ?? undefined)} />
-            {engineError && <p className="mathlab-error">{engineError}</p>}
-
-            {solution ? (
-              <>
-                {/* A compact toolbar, never sticky: it used to float over the
-                    method cards and cover them. */}
-                <div className="mathlab-toolbar">
-                  <div className="mathlab-toolbar__status">
-                    <span className="mathlab-live-dot" />
-                    {walking ? "Reading it aloud" : `${solution.problems.length > 1 ? `${solution.problems.length} problems` : "One problem"} · ${totalSteps} steps`}
-                  </div>
-                  <div className="mathlab-toolbar__controls">
-                    <button type="button" className={"mathlab-tab-action" + (walking ? " is-active" : "")} onClick={readAll}>
-                      {walking ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                      {walking ? "Stop walkthrough" : "Listen"}
-                    </button>
-                    <button type="button" className="mathlab-tab-action" onClick={() => speakText(speechScript.map((entry) => entry.text).join(". "), aviaVoice(), undefined, true)}>
-                      <Volume2 className="h-3.5 w-3.5" />Audio reader
-                    </button>
-                    <button type="button" className={"mathlab-tab-action" + (copied === "plain" ? " is-active" : "")} onClick={copySolution}>
-                      {copied === "plain" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copied === "plain" ? "Copied" : "Copy"}
-                    </button>
-                    <button type="button" className={"mathlab-tab-action" + (copied === "latex" ? " is-active" : "")} onClick={copyLatex}>
-                      {copied === "latex" ? <Check className="h-3.5 w-3.5" /> : <Code className="h-3.5 w-3.5" />}
-                      {copied === "latex" ? "Copied" : "Copy LaTeX"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mathlab-solution">
-                  {solution.problems.map((problem, problemIndex) => {
-                    const expanded = openSteps[problemIndex] !== false;
-                    const fractions = fractionsIn([problem.problem, problem.finalAnswer, ...problem.steps.map((step) => step.expression)]);
-                    return (
-                      <section key={`${problemIndex}-${problem.problem}`} className="mathlab-problem">
-                        <header className="mathlab-problem__head">
-                          <span className="mathlab-problem__index">{solution.problems.length > 1 ? `Problem ${problemIndex + 1}` : "Problem"}</span>
-                          <h3 className="mathlab-problem__title">{problem.title}</h3>
-                        </header>
-
-                        <div className="mathlab-problem__statement">
-                          <MathTex source={problem.problem} fallback={problem.problem} display />
-                        </div>
-
-                        {/* The answer sits directly under the heading, before the
-                            working — the one thing a student checks first. */}
-                        <div className="mathlab-verdict" data-corrected={problem.corrected}>
-                          <span className="mathlab-verdict__label">Final answer</span>
-                          <div className="mathlab-verdict__value">
-                            <MathTex source={problem.finalAnswer} fallback={problem.finalAnswer} display />
-                          </div>
-                          {problem.verification || problem.checkNote ? (
-                            <p className="mathlab-verdict__note">
-                              <ShieldCheck className="h-3 w-3 shrink-0" />
-                              <span><InlineMath text={problem.verification || problem.checkNote} /></span>
-                            </p>
-                          ) : null}
-                        </div>
-
-                        <FractionBars fractions={fractions} />
-
-                        <div className="mathlab-work">
-                          <button type="button" className="mathlab-work__toggle" aria-expanded={expanded} onClick={() => setOpenSteps((current) => ({ ...current, [problemIndex]: !expanded }))}>
-                            {expanded ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                            {expanded ? "Hide steps" : `Show steps (${problem.steps.length})`}
-                          </button>
-                          <AnimatePresence initial={false}>
-                            {expanded ? (
-                              <motion.ol
-                                className="mathlab-walk"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
-                              >
-                                {problem.steps.map((step, stepIndex) => {
-                                  const key = `p${problemIndex}s${stepIndex}`;
-                                  return (
-                                    <motion.li
-                                      key={`${key}-${step.expression || step.explanation}`}
-                                      className="mathlab-walk__step"
-                                      data-speaking={speakingKey === key}
-                                      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      transition={stepTransition(stepIndex)}
-                                    >
-                                      <span className="mathlab-walk__index" aria-hidden>{String(stepIndex + 1).padStart(2, "0")}</span>
-                                      <div className="mathlab-walk__body">
-                                        <p className="mathlab-walk__title">{step.title}</p>
-                                        <Explanation text={step.explanation} />
-                                        <Expression source={step.expression} />
-                                      </div>
-                                      <span className="mathlab-walk__rule">{step.rule}</span>
-                                    </motion.li>
-                                  );
-                                })}
-                              </motion.ol>
-                            ) : null}
-                          </AnimatePresence>
-                        </div>
-
-                        {problem.given.length || problem.formulas.length ? (
-                          <Fold label="Given data and governing formulas" defaultOpen={false}>
-                            <div className="mathlab-fold__grid">
-                              <div>
-                                <p className="mathlab-fold__label">Given data</p>
-                                <DetailList entries={problem.given} />
-                              </div>
-                              <div>
-                                <p className="mathlab-fold__label">Governing formulas</p>
-                                <DetailList entries={problem.formulas} latex />
-                              </div>
-                            </div>
-                          </Fold>
-                        ) : null}
-                      </section>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <p className="mathlab-hint">
-                {solving ? "Reading the problem…" : `A ${chapter.name} question is already in the box. Press Solve, or speak and photograph your own.`}
-              </p>
-            )}
-
-            <Fold label={`${chapter.name} reference`}>
-              <div className="mathlab-fold__grid">
-                <div>
-                  <p className="mathlab-fold__label">Given data</p>
-                  <ul className="mathlab-note-list">
-                    {givens.map((entry: CheatEntry) => (
-                      <li key={entry.title} className="mathlab-note-list__row">
-                        <span className="mathlab-note-list__name">{entry.title}</span>
-                        <InlineFormula source={entry.latex} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="mathlab-fold__label">Governing formulas</p>
-                  <ul className="mathlab-note-list">
-                    {formulas.map((entry: CheatEntry) => (
-                      <li key={entry.title} className="mathlab-note-list__row">
-                        <span className="mathlab-note-list__name">{entry.title}</span>
-                        <InlineFormula source={entry.latex} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </Fold>
-
-            <div className="mathlab-ask">
-              <input value={followUp} onChange={(event) => setFollowUp(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); sendFollowUp(); } }} placeholder={solution ? "Is this correct? Ask about any step…" : "Solve something first, then ask here"} disabled={!solution || solving} aria-label="Ask about this solution" className="mathlab-ask__field" />
-              <button type="button" className="mathlab-ask__send" disabled={!solution || solving || !followUp.trim()} onClick={sendFollowUp} aria-label="Send"><CornerDownLeft className="h-3.5 w-3.5" /></button>
-            </div>
-          </motion.section>
-        </div>
-      </div>
+      <PrintSheet
+        solution={printing ? solution : null}
+        meta={`${track} · ${chapter.name}`}
+        onDone={() => setPrinting(false)}
+      />
 
       {locked && <div className="absolute inset-0 z-20 flex items-start justify-center pt-16"><div className="premium-glass max-w-md p-7 text-center"><span className="lock-orb mx-auto"><Lock className="h-5 w-5" /></span><p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">Premium workspace</p><h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Math Lab</h2><p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-text-dim">A connected mathematics notebook with exact arithmetic, focused reading and three ways to understand every method.</p><div className="mt-6 flex justify-center"><MovingBorderButton onClick={() => navigate("/pricing")} innerClassName="px-6 py-3 text-sm">View plans<ArrowRight className="h-4 w-4" /></MovingBorderButton></div></div></div>}
     </div>

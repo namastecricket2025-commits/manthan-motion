@@ -497,3 +497,1705 @@
     transition: none;
   }
 }
+
+/* ================================================================== */
+/* Views — notebook, graphing, tools and history                       */
+/* ================================================================== */
+
+.mathlab-views {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.mathlab-views::-webkit-scrollbar {
+  display: none;
+}
+
+.mathlab-view {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-dim);
+  transition: color 200ms var(--ease-momentum), border-color 200ms var(--ease-momentum), background 200ms var(--ease-momentum);
+}
+
+.mathlab-view:hover {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--signal) 36%, transparent);
+}
+
+.mathlab-view.is-active {
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+  border-color: color-mix(in srgb, var(--signal) 44%, transparent);
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+}
+
+.mathlab-viewcard {
+  width: 100%;
+}
+
+/* ================================================================== */
+/* The question box — a maths editor, its modes and a symbol pad       */
+/* ================================================================== */
+
+/* It is no longer one pill: the box now stacks a mode switch, the editor
+   and its tools, so it is laid out as a column. */
+.mathlab-input {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 9px;
+  border-radius: 20px;
+  padding: 10px;
+}
+
+.mathlab-inputwrap {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.mathlab-inputmode {
+  display: inline-flex;
+  gap: 4px;
+  align-self: flex-start;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  padding: 3px;
+}
+
+.mathlab-modetab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  transition: color 200ms var(--ease-momentum), background 200ms var(--ease-momentum);
+}
+
+.mathlab-modetab:hover {
+  color: var(--text-main);
+}
+
+.mathlab-modetab.is-active {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  color: var(--text-main);
+}
+
+.mathlab-inputfield {
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.mathlab-inputfield .mathlab-input__field {
+  width: 100%;
+}
+
+/* MathLive's editor, sized to sit where the plain field used to. */
+.mathlab-mathfield {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 7px 8px;
+  font-size: 17px;
+  color: var(--text-main);
+  background: transparent;
+  border: 0;
+  outline: none;
+  --caret-color: var(--signal);
+  --selection-background-color: color-mix(in srgb, var(--signal) 26%, transparent);
+  --contains-highlight-background-color: color-mix(in srgb, var(--signal) 14%, transparent);
+}
+
+.mathlab-mathfield:focus-within {
+  outline: none;
+}
+
+.mathlab-inputtools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mathlab-tool--wide {
+  width: auto;
+  height: 30px;
+  gap: 6px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 0 11px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.mathlab-tool--wide.is-live {
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 34%, transparent);
+  animation: none;
+}
+
+.mathlab-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 12px;
+}
+
+.mathlab-pad__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mathlab-pad__label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-pad__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mathlab-pad__key {
+  border: 1px solid var(--glass-line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--card) 62%, transparent);
+  padding: 6px 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: border-color 180ms var(--ease-momentum), background 180ms var(--ease-momentum), transform 180ms var(--ease-momentum);
+}
+
+.mathlab-pad__key:hover {
+  border-color: color-mix(in srgb, var(--signal) 44%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+}
+
+.mathlab-pad__key:active {
+  transform: scale(0.94);
+}
+
+.mathlab-input__row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ================================================================== */
+/* Why? — one step at a time                                           */
+/* ================================================================== */
+
+.mathlab-why {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.mathlab-why__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, var(--signal) 24%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 7%, transparent);
+  padding: 5px 11px;
+  font-size: 10px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--signal) 66%, var(--text-main));
+  transition: background 200ms var(--ease-momentum), border-color 200ms var(--ease-momentum);
+}
+
+.mathlab-why__toggle:hover,
+.mathlab-why__toggle.is-open {
+  background: color-mix(in srgb, var(--signal) 14%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 42%, transparent);
+}
+
+.mathlab-why__panel {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--signal) 34%, transparent);
+  padding-left: 12px;
+}
+
+.mathlab-why__loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.mathlab-why__text {
+  padding: 2px 0;
+}
+
+.mathlab-why__ask {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 4px 4px 4px 12px;
+}
+
+.mathlab-why__ask input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 11.5px;
+  color: var(--text-main);
+}
+
+.mathlab-why__ask button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--text-dim);
+}
+
+.mathlab-why__ask button:hover:not(:disabled) {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+
+.mathlab-why__ask button:disabled {
+  opacity: 0.4;
+}
+
+/* ================================================================== */
+/* Try first                                                           */
+/* ================================================================== */
+
+.mathlab-hintbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px dashed color-mix(in srgb, var(--signal) 40%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--signal) 6%, transparent);
+  padding: 9px 12px;
+}
+
+.mathlab-hintbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--signal) 62%, var(--text-main));
+}
+
+.mathlab-hintbar__done {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.mathlab-verdict--hidden {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-main) 20%, transparent);
+}
+
+/* ================================================================== */
+/* Check my work                                                       */
+/* ================================================================== */
+
+.mathlab-check {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dashed color-mix(in srgb, var(--text-main) 12%, transparent);
+  padding-top: 14px;
+}
+
+.mathlab-check__panel {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border: 1px solid var(--glass-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  padding: 14px;
+}
+
+.mathlab-check__intro {
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+.mathlab-check__input {
+  width: 100%;
+  border: 1px solid var(--glass-line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 11px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-main);
+  resize: vertical;
+  outline: none;
+}
+
+.mathlab-check__input:focus {
+  border-color: color-mix(in srgb, var(--signal) 48%, transparent);
+}
+
+.mathlab-check__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mathlab-check__file {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.mathlab-solve--small {
+  padding: 8px 15px;
+  font-size: 11.5px;
+}
+
+.mathlab-check__result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--glass-line);
+  padding-top: 13px;
+}
+
+.mathlab-check__summary {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-main);
+}
+
+.mathlab-check__summary svg {
+  margin-top: 3px;
+  flex: 0 0 auto;
+  color: #72dfb0;
+}
+
+.mathlab-check__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mathlab-check__step {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: 13px;
+  padding: 10px 12px;
+}
+
+.mathlab-check__step.is-correct {
+  border-color: color-mix(in srgb, #57c99a 34%, transparent);
+  background: color-mix(in srgb, #57c99a 6%, transparent);
+}
+
+.mathlab-check__step.is-wrong {
+  border-color: color-mix(in srgb, #ff6b6b 38%, transparent);
+  background: color-mix(in srgb, #ff6b6b 7%, transparent);
+}
+
+.mathlab-check__step.is-unclear {
+  border-color: color-mix(in srgb, #f59e0b 32%, transparent);
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+}
+
+.mathlab-check__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: start;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  padding: 4px 9px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-check__step.is-correct .mathlab-check__badge {
+  color: #7fe3b6;
+}
+
+.mathlab-check__step.is-wrong .mathlab-check__badge {
+  color: #ff9c9c;
+}
+
+.mathlab-check__step.is-unclear .mathlab-check__badge {
+  color: #f4c77a;
+}
+
+.mathlab-check__stepbody {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mathlab-check__steptitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mathlab-check__stepexpr {
+  overflow-x: auto;
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.mathlab-check__comment {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-check__firstwrong {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff9c9c;
+}
+
+.mathlab-check__mistake {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid color-mix(in srgb, #ff6b6b 28%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, #ff6b6b 6%, transparent);
+  padding: 12px 13px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-main);
+}
+
+.mathlab-check__mistakelabel {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ff9c9c;
+}
+
+.mathlab-check__clean {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #7fe3b6;
+}
+
+/* ================================================================== */
+/* Practice                                                            */
+/* ================================================================== */
+
+.mathlab-practice {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-top: 1px dashed color-mix(in srgb, var(--text-main) 12%, transparent);
+  padding-top: 14px;
+}
+
+.mathlab-practice__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mathlab-practice__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--signal) 8%, transparent), transparent 70%),
+    color-mix(in srgb, var(--card) 62%, transparent);
+  padding: 15px 16px;
+}
+
+.mathlab-practice__label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+
+.mathlab-practice__question {
+  overflow-x: auto;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.mathlab-practice__answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mathlab-practice__field {
+  flex: 1 1 180px;
+  min-width: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 9px 15px;
+  font-size: 14px;
+  color: var(--text-main);
+  outline: none;
+}
+
+.mathlab-practice__field:focus {
+  border-color: color-mix(in srgb, var(--signal) 48%, transparent);
+}
+
+.mathlab-practice__feedback {
+  display: flex;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 11px 13px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.mathlab-practice__feedback svg {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.mathlab-practice__feedback.is-right {
+  border: 1px solid color-mix(in srgb, #57c99a 32%, transparent);
+  background: color-mix(in srgb, #57c99a 8%, transparent);
+  color: #9df0c8;
+}
+
+.mathlab-practice__feedback.is-wrong {
+  border: 1px solid color-mix(in srgb, #ff6b6b 30%, transparent);
+  background: color-mix(in srgb, #ff6b6b 7%, transparent);
+  color: #ffb3b3;
+}
+
+.mathlab-practice__working {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mathlab-practice__final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+  border-radius: 15px;
+  padding: 13px;
+  text-align: center;
+}
+
+.mathlab-practice__final > span {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-practice__check {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.mathlab-practice__check svg {
+  margin-top: 3px;
+  flex: 0 0 auto;
+  color: #72dfb0;
+}
+
+/* ================================================================== */
+/* Graphing calculator                                                 */
+/* ================================================================== */
+
+.mathlab-graphcalc {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.mathlab-graphcalc__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mathlab-graphcalc__hint {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.95em;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+
+.mathlab-graphcalc__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mathlab-graphcalc__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mathlab-graphcalc__dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.mathlab-graphcalc__prefix {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.mathlab-graphcalc__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 9px 12px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  color: var(--text-main);
+  outline: none;
+}
+
+.mathlab-graphcalc__input:focus {
+  border-color: color-mix(in srgb, var(--signal) 48%, transparent);
+}
+
+.mathlab-graphcalc__canvas {
+  overflow: hidden;
+  border: 1px solid var(--glass-line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+}
+
+.mathlab-fp {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* function-plot draws black axes and grid at low opacity, which disappears on
+   a dark surface — these put the graph back on the app's own tokens. */
+.mathlab-fp .function-plot {
+  display: block;
+  color: var(--text-dim);
+}
+
+.mathlab-fp .function-plot .axis path,
+.mathlab-fp .function-plot .axis line {
+  stroke: var(--text-dim) !important;
+  opacity: 0.5 !important;
+}
+
+.mathlab-fp .function-plot .axis text,
+.mathlab-fp .function-plot g.axis text {
+  fill: var(--text-dim) !important;
+}
+
+.mathlab-fp .function-plot .content .x.origin,
+.mathlab-fp .function-plot .content .y.origin {
+  stroke: var(--text-dim) !important;
+  opacity: 0.42 !important;
+}
+
+.mathlab-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 9px 16px;
+  border: 1px dashed color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 15px;
+  padding: 12px 14px;
+}
+
+.mathlab-slider {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mathlab-slider__name {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+}
+
+.mathlab-slider input[type="range"] {
+  width: 100%;
+  accent-color: var(--signal);
+}
+
+.mathlab-slider__value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-main);
+}
+
+.mathlab-domains {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.mathlab-domains__label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-domain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.mathlab-domain input {
+  width: 62px;
+  border: 1px solid var(--glass-line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 5px 7px;
+  font-size: 11px;
+  color: var(--text-main);
+  outline: none;
+}
+
+/* ================================================================== */
+/* Scientific calculator                                               */
+/* ================================================================== */
+
+.mathlab-calc-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--signal) 38%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  padding: 10px 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 22px 50px -28px rgba(0, 0, 0, 0.9);
+  transition: border-color 200ms var(--ease-momentum), transform 200ms var(--ease-momentum);
+}
+
+.mathlab-calc-fab:hover {
+  border-color: color-mix(in srgb, var(--signal) 62%, transparent);
+}
+
+.mathlab-calc-fab.is-open {
+  border-color: color-mix(in srgb, var(--signal) 70%, transparent);
+  color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+}
+
+.mathlab-calc-drawer {
+  position: fixed;
+  right: 18px;
+  bottom: 74px;
+  z-index: 46;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(78vh, 640px);
+  overflow-y: auto;
+  border: 1px solid var(--glass-line);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--ink) 94%, transparent);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 34px 80px -34px rgba(0, 0, 0, 0.92);
+  padding: 14px;
+}
+
+.mathlab-calc {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.mathlab-calc__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mathlab-calc__angle {
+  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+  padding: 3px 9px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+}
+
+.mathlab-calc__screen {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  padding: 10px 12px;
+  text-align: right;
+}
+
+.mathlab-calc__expr {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 13.5px;
+  color: var(--text-main);
+}
+
+.mathlab-calc__result {
+  min-height: 22px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 17px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+  overflow-x: auto;
+}
+
+.mathlab-calc__keys {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.mathlab-calc__key {
+  border: 1px solid var(--glass-line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--card) 62%, transparent);
+  padding: 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: border-color 160ms var(--ease-momentum), background 160ms var(--ease-momentum), transform 160ms var(--ease-momentum);
+}
+
+.mathlab-calc__key.is-fn {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mathlab-calc__key.is-op {
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+
+.mathlab-calc__key.is-equals {
+  background: var(--signal-strong);
+  border-color: transparent;
+  color: #fff;
+}
+
+.mathlab-calc__key.is-angle {
+  display: none;
+}
+
+.mathlab-calc__key:hover {
+  border-color: color-mix(in srgb, var(--signal) 44%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+}
+
+.mathlab-calc__key:active {
+  transform: scale(0.93);
+}
+
+.mathlab-calc__tape {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid var(--glass-line);
+  padding-top: 9px;
+}
+
+.mathlab-calc__tapehead {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-calc__tape ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mathlab-calc__tape button {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 9px;
+  padding: 5px 8px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.mathlab-calc__tape button:hover {
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  color: var(--text-main);
+}
+
+.mathlab-calc__tapeexpr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mathlab-calc__taperesult {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+
+/* ================================================================== */
+/* Formula sheet                                                       */
+/* ================================================================== */
+
+.mathlab-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.mathlab-sheet__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mathlab-sheet__count {
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.mathlab-sheet__tracks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.mathlab-sheet__track {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  padding: 11px 13px;
+  text-align: left;
+  transition: border-color 200ms var(--ease-momentum), background 200ms var(--ease-momentum);
+}
+
+.mathlab-sheet__track strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mathlab-sheet__track small {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__track:hover {
+  border-color: color-mix(in srgb, var(--signal) 34%, transparent);
+}
+
+.mathlab-sheet__track.is-active {
+  border-color: color-mix(in srgb, var(--signal) 48%, transparent);
+  background: color-mix(in srgb, var(--signal) 9%, transparent);
+}
+
+.mathlab-sheet__note {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mathlab-sheet__classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mathlab-chip {
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  transition: color 180ms var(--ease-momentum), border-color 180ms var(--ease-momentum), background 180ms var(--ease-momentum);
+}
+
+.mathlab-chip:hover {
+  color: var(--text-main);
+}
+
+.mathlab-chip.is-active {
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+  border-color: color-mix(in srgb, var(--signal) 42%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+}
+
+.mathlab-sheet__search {
+  display: inline-flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.mathlab-sheet__chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mathlab-sheet__chapter {
+  border: 1px solid var(--glass-line);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  overflow: hidden;
+}
+
+.mathlab-sheet__chapterhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  transition: background 200ms var(--ease-momentum);
+}
+
+.mathlab-sheet__chapterhead:hover {
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+}
+
+.mathlab-sheet__chaptername {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mathlab-sheet__chaptermeta {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__chapter[data-open="true"] .mathlab-fold__chev {
+  transform: rotate(180deg);
+}
+
+.mathlab-sheet__chapterbody {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  border-top: 1px solid var(--glass-line);
+  padding: 13px 15px 16px;
+}
+
+.mathlab-sheet__focus {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mathlab-sheet__grouplabel {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mathlab-sheet__row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 6px 14px;
+  border: 1px solid var(--glass-line);
+  border-radius: 13px;
+  padding: 10px 12px;
+}
+
+.mathlab-sheet__title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mathlab-sheet__formula {
+  overflow-x: auto;
+  font-size: 12.5px;
+  color: var(--text-main);
+}
+
+.mathlab-sheet__entrynote {
+  grid-column: 1 / 3;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: var(--text-dim);
+}
+
+.mathlab-sheet__copy:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+
+.mathlab-sheet__copy.is-done {
+  color: #72dfb0;
+}
+
+/* ================================================================== */
+/* History and the mistake log                                         */
+/* ================================================================== */
+
+.mathlab-history {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mathlab-history__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mathlab-history__blurb {
+  margin-top: 6px;
+  max-width: 52ch;
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+.mathlab-history__loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.mathlab-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mathlab-history__row {
+  border: 1px solid var(--glass-line);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  overflow: hidden;
+}
+
+.mathlab-history__row[data-open="true"] {
+  border-color: color-mix(in srgb, var(--signal) 30%, transparent);
+}
+
+.mathlab-history__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  padding: 12px 14px;
+}
+
+.mathlab-history__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 240px;
+  text-align: left;
+}
+
+.mathlab-history__question {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mathlab-history__headline {
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--signal) 62%, var(--text-main));
+}
+
+.mathlab-history__meta {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.mathlab-history__answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mathlab-history__answer {
+  border: 1px solid var(--glass-line);
+  border-radius: 9px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  color: var(--text-main);
+}
+
+.mathlab-history__body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-top: 1px solid var(--glass-line);
+  padding: 13px 14px 15px;
+}
+
+.mathlab-history__problem {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--glass-line);
+  border-radius: 13px;
+  padding: 11px 13px;
+  font-size: 12.5px;
+}
+
+.mathlab-history__problemtitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.mathlab-history__steps {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mathlab-history__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mathlab-tab-action.is-danger {
+  color: #ff9c9c;
+}
+
+.mathlab-tab-action.is-danger:hover {
+  color: #ffd0d0;
+  border-color: color-mix(in srgb, #ff6b6b 40%, transparent);
+  background: color-mix(in srgb, #ff6b6b 10%, transparent);
+}
+
+.mathlab-history__save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mathlab-history__save select {
+  border: 1px solid var(--glass-line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 8px 11px;
+  font-size: 11.5px;
+  color: var(--text-main);
+  outline: none;
+}
+
+.mathlab-history__save option {
+  background: var(--ink);
+  color: var(--text-main);
+}
+
+.mathlab-history__note {
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+.mathlab-mistakes {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-top: 1px dashed color-mix(in srgb, var(--text-main) 12%, transparent);
+  padding-top: 16px;
+}
+
+.mathlab-mistakes__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mathlab-mistakes__list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mathlab-mistakes__row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--glass-line);
+  border-left: 3px solid color-mix(in srgb, #ff6b6b 55%, transparent);
+  border-radius: 13px;
+  padding: 10px 13px;
+}
+
+.mathlab-mistakes__count {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ff9c9c;
+}
+
+.mathlab-mistakes__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mathlab-mistakes__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mathlab-mistakes__rule {
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.mathlab-mistakes__note {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-mistakes__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ================================================================== */
+/* Printing — Export as PDF                                            */
+/* ================================================================== */
+
+/* The sheet lives on the document body and is invisible until printed; the
+   print block below hides the app around it. */
+.mathlab-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  /* Only while an exported sheet is open: `Export as PDF` marks the document,
+     prints, and unmarks it. A plain Ctrl+P therefore prints the page as it
+     looks instead of an empty sheet. */
+  html.mathlab-printing body > *:not(.mathlab-print-root) {
+    display: none !important;
+  }
+
+  html.mathlab-printing .mathlab-print-root {
+    display: block !important;
+    background: #fff;
+    color: #000;
+    font-size: 11.5pt;
+    line-height: 1.5;
+  }
+
+  .mathlab-print__head {
+    border-bottom: 1px solid #000;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+  }
+
+  .mathlab-print__head h1 {
+    font-size: 17pt;
+    font-weight: 700;
+  }
+
+  .mathlab-print__head p {
+    margin-top: 4px;
+    font-size: 9.5pt;
+    color: #444;
+  }
+
+  .mathlab-print__problem {
+    break-inside: avoid;
+    margin-bottom: 18px;
+  }
+
+  .mathlab-print__problem h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .mathlab-print__question {
+    margin-bottom: 8px;
+  }
+
+  .mathlab-print__steps {
+    list-style: decimal;
+    padding-left: 20px;
+  }
+
+  .mathlab-print__steps li {
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+
+  .mathlab-print__steptitle {
+    font-weight: 700;
+  }
+
+  .mathlab-print__prose {
+    font-size: 10.5pt;
+  }
+
+  .mathlab-print__math {
+    margin: 4px 0;
+  }
+
+  .mathlab-print__answer {
+    border: 1px solid #000;
+    border-radius: 4px;
+    margin-top: 8px;
+    padding: 6px 9px;
+  }
+
+  .mathlab-print__check {
+    margin-top: 5px;
+    font-size: 9.5pt;
+    color: #333;
+  }
+
+  .mathlab-print-root .mathlab-tex {
+    color: #000;
+  }
+}
+
+/* ================================================================== */
+/* Smaller screens                                                     */
+/* ================================================================== */
+
+@media (max-width: 720px) {
+  .mathlab-check__step,
+  .mathlab-sheet__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mathlab-sheet__entrynote {
+    grid-column: 1;
+  }
+
+  .mathlab-calc-fab {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .mathlab-calc-drawer {
+    right: 12px;
+    bottom: 64px;
+  }
+
+  .mathlab-fp .function-plot {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mathlab-view,
+  .mathlab-modetab,
+  .mathlab-pad__key,
+  .mathlab-chip,
+  .mathlab-sheet__track,
+  .mathlab-calc__key,
+  .mathlab-calc-fab {
+    transition: none;
+  }
+}
