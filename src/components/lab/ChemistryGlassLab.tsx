@@ -12,6 +12,7 @@ import {
 } from "@/components/lab/periodic-data";
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
+import type { Transition } from "motion/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -1004,118 +1005,10 @@ function TitrationTab() {
    Sub-tab 4 — Reactions stage
    ============================================================ */
 
-interface ReactionPreset {
-  id: string;
-  type: string;
-  label: string;
-  note: string;
-  reactants: Array<{ formula: string; coefficient: string; color: string }>;
-  products: Array<{ formula: string; coefficient: string; color: string }>;
-}
-
-const rxnColor = {
-  acid: "#2aa8c4",
-  base: "#8a6df0",
-  metal: "#d9b13b",
-  salt: "#2fb380",
-  gas: "#e06278",
-  oxide: "#9aa3b2",
-} as const;
-
-const REACTION_PRESETS: ReactionPreset[] = [
-  {
-    id: "synthesis",
-    type: "Synthesis",
-    label: "2 H₂ + O₂ → 2 H₂O",
-    note: "Two elements combine into one compound — the oxy-hydrogen pop test.",
-    reactants: [
-      { formula: "H₂", coefficient: "2", color: rxnColor.gas },
-      { formula: "O₂", coefficient: "1", color: rxnColor.acid },
-    ],
-    products: [{ formula: "H₂O", coefficient: "2", color: rxnColor.salt }],
-  },
-  {
-    id: "decomposition",
-    type: "Decomposition",
-    label: "2 H₂O₂ → 2 H₂O + O₂",
-    note: "One compound breaks apart into simpler ones — peroxide slowly self-decomposes.",
-    reactants: [{ formula: "H₂O₂", coefficient: "2", color: rxnColor.acid }],
-    products: [
-      { formula: "H₂O", coefficient: "2", color: rxnColor.salt },
-      { formula: "O₂", coefficient: "1", color: rxnColor.gas },
-    ],
-  },
-  {
-    id: "single",
-    type: "Single displacement",
-    label: "Zn + CuSO₄ → ZnSO₄ + Cu",
-    note: "Zinc out-competes copper — the blue solution fades as copper plates out.",
-    reactants: [
-      { formula: "Zn", coefficient: "1", color: rxnColor.metal },
-      { formula: "CuSO₄", coefficient: "1", color: rxnColor.acid },
-    ],
-    products: [
-      { formula: "ZnSO₄", coefficient: "1", color: rxnColor.salt },
-      { formula: "Cu", coefficient: "1", color: rxnColor.metal },
-    ],
-  },
-  {
-    id: "double",
-    type: "Double displacement",
-    label: "AgNO₃ + NaCl → AgCl + NaNO₃",
-    note: "Ions swap partners — curdy white silver chloride precipitates.",
-    reactants: [
-      { formula: "AgNO₃", coefficient: "1", color: rxnColor.acid },
-      { formula: "NaCl", coefficient: "1", color: rxnColor.base },
-    ],
-    products: [
-      { formula: "AgCl", coefficient: "1", color: rxnColor.oxide },
-      { formula: "NaNO₃", coefficient: "1", color: rxnColor.salt },
-    ],
-  },
-  {
-    id: "combustion",
-    type: "Combustion",
-    label: "CH₄ + 2 O₂ → CO₂ + 2 H₂O",
-    note: "Complete combustion of methane — the clean blue Bunsen flame.",
-    reactants: [
-      { formula: "CH₄", coefficient: "1", color: rxnColor.gas },
-      { formula: "O₂", coefficient: "2", color: rxnColor.acid },
-    ],
-    products: [
-      { formula: "CO₂", coefficient: "1", color: rxnColor.oxide },
-      { formula: "H₂O", coefficient: "2", color: rxnColor.salt },
-    ],
-  },
-  {
-    id: "acid-base",
-    type: "Acid–base (neutralisation)",
-    label: "HCl + NaOH → NaCl + H₂O",
-    note: "Acid and base cancel to salt and water — the reaction behind every titration.",
-    reactants: [
-      { formula: "HCl", coefficient: "1", color: rxnColor.acid },
-      { formula: "NaOH", coefficient: "1", color: rxnColor.base },
-    ],
-    products: [
-      { formula: "NaCl", coefficient: "1", color: rxnColor.salt },
-      { formula: "H₂O", coefficient: "1", color: rxnColor.salt },
-    ],
-  },
-  {
-    id: "precipitation",
-    type: "Precipitation",
-    label: "Pb(NO₃)₂ + 2 KI → PbI₂ + 2 KNO₃",
-    note: "The 'golden rain': brilliant yellow lead iodide falls out of solution.",
-    reactants: [
-      { formula: "Pb(NO₃)₂", coefficient: "1", color: rxnColor.acid },
-      { formula: "KI", coefficient: "2", color: rxnColor.base },
-    ],
-    products: [
-      { formula: "PbI₂", coefficient: "1", color: rxnColor.metal },
-      { formula: "KNO₃", coefficient: "2", color: rxnColor.salt },
-    ],
-  },
-];
+import {
+  REACTIONS,
+  type ReactionPreset,
+} from "@/components/lab/reactions-data";
 
 function MoleculeChip({
   item,
@@ -1127,10 +1020,20 @@ function MoleculeChip({
   dimmed?: boolean;
 }) {
   const transition = useSpringTransition();
+  const still = useStillMotion();
+  // The arrival pop is a keyframe array, and keyframe arrays must ride a
+  // duration-based tween — motion's spring generator only supports two
+  // numeric keyframes, so handing it this array would throw at run time.
+  const popTransition: Transition =
+    state === "arrived" && !still
+      ? { duration: 0.45, type: "tween", ease: "easeOut" }
+      : still
+        ? { duration: 0, type: "tween" }
+        : transition;
   return (
     <motion.div
       layout
-      transition={transition}
+      transition={popTransition}
       initial={false}
       animate={
         state === "flying"
@@ -1157,19 +1060,22 @@ function MoleculeChip({
   );
 }
 
-function ReactionsTab() {
+export function ReactionsTab() {
   const transition = useSpringTransition();
   const still = useStillMotion();
-  const [presetId, setPresetId] = useState(REACTION_PRESETS[0].id);
+  const [presetId, setPresetId] = useState(REACTIONS[0].id);
   const [runKey, setRunKey] = useState(0); // bump per React click to replay the product entrance
+  const [resultOpen, setResultOpen] = useState(false); // the classification block, opened per run
   const [flashKey, setFlashKey] = useState(0);
   const [flashVisible, setFlashVisible] = useState(false);
-  const preset = REACTION_PRESETS.find((entry) => entry.id === presetId) ?? REACTION_PRESETS[0];
+  const preset = REACTIONS.find((entry) => entry.id === presetId) ?? REACTIONS[0];
 
   /* One run per click: products remount (their entrance replays), the energy
-     chip flashes once, and reactants dim — never a loop. */
+     flash plays once inside the opened result card, and reactants dim —
+     never a loop. Switching rows closes the previous run's readout. */
   const react = () => {
     setRunKey((k) => k + 1);
+    setResultOpen(true);
     setFlashKey((k) => k + 1);
     setFlashVisible(true);
   };
@@ -1204,29 +1110,67 @@ function ReactionsTab() {
             ))}
           </div>
 
-          {/* One energy flash per React click — a beat, not a loop. */}
-          <div className="flex h-10 w-full items-center justify-center overflow-hidden">
-            <AnimatePresence>
-              {flashVisible ? (
-                <motion.span
-                  key={`flash-${flashKey}`}
-                  initial={{ opacity: 0, scaleX: 0.4 }}
-                  animate={{ opacity: [0, 1, 1, 0], scaleX: [0.6, 1, 1, 1] }}
-                  exit={{ opacity: 0 }}
-                  transition={
-                    still
-                      ? { duration: 0.4, times: [0, 0.5, 0.9, 1] }
-                      : { duration: 1.6, times: [0, 0.2, 0.6, 1] }
-                  }
-                  onAnimationComplete={() => setFlashVisible(false)}
-                  className="apple-lab-chip"
-                  style={{ borderColor: "rgba(224,98,120,0.55)" }}
-                >
-                  ⚡ bonds break, bonds form — atoms are conserved
-                </motion.span>
-              ) : null}
-            </AnimatePresence>
-          </div>
+          {/* The run's readout: classification, plain-language explanation,
+              real-world use, and the heat sign. The energy flash plays inside
+              it, so the line under the equation is plain preset data — it can
+              never error out, whatever the animation does. */}
+          <AnimatePresence initial={false}>
+            {resultOpen && (
+              <motion.div
+                key={preset.id}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={transition}
+                className="apple-lab-card w-full max-w-xl px-4 py-3.5 text-left"
+              >
+                <div className="flex min-h-10 items-center justify-center overflow-hidden">
+                  <AnimatePresence>
+                    {flashVisible ? (
+                      <motion.span
+                        key={`flash-${flashKey}`}
+                        initial={{ opacity: 0, scaleX: 0.4 }}
+                        animate={{ opacity: [0, 1, 1, 0], scaleX: [0.6, 1, 1, 1] }}
+                        exit={{ opacity: 0 }}
+                        transition={
+                          still
+                            ? { duration: 0.4, times: [0, 0.5, 0.9, 1], type: "tween" }
+                            : { duration: 1.6, times: [0, 0.2, 0.6, 1], type: "tween" }
+                        }
+                        onAnimationComplete={() => setFlashVisible(false)}
+                        className="apple-lab-chip"
+                        style={{ borderColor: "rgba(224,98,120,0.55)" }}
+                      >
+                        ⚡ bonds break, bonds form — atoms are conserved
+                      </motion.span>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
+                <p className="apple-lab-micro">Classification</p>
+                <p className="apple-lab-value mt-1 text-[13px] font-semibold">
+                  {preset.classification}
+                </p>
+                <p className="apple-lab-note mt-3 leading-relaxed">{preset.explanation}</p>
+                <p className="apple-lab-note mt-2 leading-relaxed">{preset.realWorld}</p>
+                {preset.heat ? (
+                  <span
+                    className="apple-lab-chip mt-3 inline-flex items-center gap-1.5"
+                    style={{
+                      borderColor:
+                        preset.heat === "exothermic"
+                          ? "rgba(224,98,120,0.5)"
+                          : "rgba(42,168,196,0.5)",
+                      color: preset.heat === "exothermic" ? "#e06278" : "#2aa8c4",
+                    }}
+                  >
+                    {preset.heat === "exothermic"
+                      ? "↑ exothermic — heat released"
+                      : "↓ endothermic — heat absorbed"}
+                  </span>
+                ) : null}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="apple-lab-card w-full max-w-xl px-4 py-3 text-center">
             <p className="apple-lab-micro">Balanced equation</p>
@@ -1247,50 +1191,73 @@ function ReactionsTab() {
 
       {/* Reaction picker */}
       <div className="apple-lab-panel apple-lab-glass min-w-0">
-        <p className="apple-lab-micro">Pick a reaction type</p>
-        <div className="mt-3 flex flex-col gap-2">
-          {REACTION_PRESETS.map((entry) => {
-            const active = entry.id === presetId;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => {
-                  setPresetId(entry.id);
-                  setRunKey(0);
-                  setFlashVisible(false);
-                }}
-                aria-pressed={active}
-                className="apple-lab-card flex min-w-0 items-center justify-between gap-3 px-3.5 py-3 text-left"
-              >
-                {/* The picked row is one shared-layout box that travels between
-                    the rows. The row itself carries no static fill or border,
-                    so nothing flashes in before the box arrives. */}
-                {active && (
-                  <motion.span
-                    layoutId="reaction-picked"
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-[18px] border"
-                    transition={transition}
-                    style={{
-                      borderColor: "rgba(167,139,250,0.5)",
-                      background: "rgba(167,139,250,0.09)",
-                    }}
-                  />
-                )}
-                <span className="relative z-10 min-w-0">
-                  <span className="block truncate text-[13px] font-semibold text-[var(--lab-ink)]">
-                    {entry.type}
-                  </span>
-                  <span className="apple-lab-note mt-0.5 block truncate">{entry.label}</span>
+        <p className="apple-lab-micro">Pick a reaction</p>
+        <div className="mt-3 flex flex-col gap-4">
+          {([
+            {
+              key: "types" as const,
+              heading: "Reaction Types",
+              blurb: "The seven general categories",
+            },
+            {
+              key: "named" as const,
+              heading: "Real-World Reactions",
+              blurb: "Named reactions from daily life and industry",
+            },
+          ]).map((group) => (
+            <div key={group.key} className="flex flex-col gap-2">
+              <div className="flex items-baseline justify-between gap-2 px-1">
+                <span className="apple-lab-value text-[12px] font-bold tracking-wide">
+                  {group.heading}
                 </span>
-                <span
-                  className="relative z-10 h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: active ? "#a78bfa" : "var(--lab-line)" }}
-                />
-              </button>
-            );
-          })}
+                <span className="apple-lab-note text-[10.5px]">{group.blurb}</span>
+              </div>
+              {REACTIONS.filter((entry) => entry.group === group.key).map((entry) => {
+                const active = entry.id === presetId;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => {
+                      setPresetId(entry.id);
+                      setRunKey(0);
+                      setResultOpen(false);
+                      setFlashVisible(false);
+                    }}
+                    aria-pressed={active}
+                    className="apple-lab-card flex min-w-0 items-center justify-between gap-3 px-3.5 py-3 text-left"
+                  >
+                    {/* The picked row is one shared-layout box that travels
+                        between the rows. The row itself carries no static fill
+                        or border, so nothing flashes in before the box
+                        arrives. */}
+                    {active && (
+                      <motion.span
+                        layoutId="reaction-picked"
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 rounded-[18px] border"
+                        transition={transition}
+                        style={{
+                          borderColor: "rgba(167,139,250,0.5)",
+                          background: "rgba(167,139,250,0.09)",
+                        }}
+                      />
+                    )}
+                    <span className="relative z-10 min-w-0">
+                      <span className="block truncate text-[13px] font-semibold text-[var(--lab-ink)]">
+                        {entry.type}
+                      </span>
+                      <span className="apple-lab-note mt-0.5 block truncate">{entry.label}</span>
+                    </span>
+                    <span
+                      className="relative z-10 h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: active ? "#a78bfa" : "var(--lab-line)" }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
     </div>
