@@ -8,6 +8,7 @@ import { callModel, resolveCandidates } from "./providers";
 import { verifyAnswer, type Verification } from "./mathVerify";
 import {
   MAX_CORPUS,
+  MATH_SYSTEM,
   UploadUnreadable,
   detectLanguage,
   languageDirective,
@@ -17,11 +18,10 @@ import {
   tidy,
 } from "./ai";
 import {
-  MATH_SYSTEM,
   MAX_MATH_IMAGE,
   SOLVE_METHODS,
   mathProblemSchema,
-} from "./prompts";
+} from "./mathPrompts";
 
 /**
  * The Math Lab's equation engine.
@@ -72,6 +72,20 @@ function cleanLatex(value: string) {
   }
   if (out.startsWith("\\[") && out.endsWith("\\]")) {
     out = out.slice(2, -2);
+  }
+  // Words never belong in an expression. The prompt forbids them; this catches
+  // the ones that slip through anyway, because "2 plus 3" typesets as italic
+  // mush rather than as arithmetic. `\text{...}` runs are left alone — a unit
+  // legitimately lives there.
+  if (!out.includes("\\text")) {
+    out = out
+      .replace(/\bequals?\b/gi, "=")
+      .replace(/\bplus\b/gi, "+")
+      .replace(/\bminus\b/gi, "-")
+      .replace(/\btimes\b/gi, "\\times")
+      .replace(/\bmultiplied by\b/gi, "\\times")
+      .replace(/\bdivided by\b/gi, "\\div")
+      .replace(/\bsquared\b/gi, "^{2}");
   }
   return out.replace(/\s+/g, " ").trim();
 }

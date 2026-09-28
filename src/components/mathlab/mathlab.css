@@ -1,0 +1,499 @@
+/**
+ * Math Lab — the solution page.
+ *
+ * The presentation rules that the notebook needed rebuilt: a compact toolbar
+ * that never floats over anything, one full-width column once a solution
+ * exists, an answer card that sits directly under each problem heading, and a
+ * fraction picture drawn from the question's own numbers. Everything else
+ * (chrome, palette, controls) still comes from `premium.css`.
+ */
+
+/* A solved paper reads as one column; the graph belongs to browsing. */
+.mathlab-split.is-solution {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ------------------------------------------------------------------ */
+/* Toolbar                                                             */
+/* ------------------------------------------------------------------ */
+
+.mathlab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  padding: 7px 9px 7px 12px;
+}
+
+.mathlab-toolbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.mathlab-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.mathlab-tab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 6px 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition: color 200ms var(--ease-momentum), background 200ms var(--ease-momentum), border-color 200ms var(--ease-momentum);
+}
+
+.mathlab-tab-action:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-color: var(--glass-line);
+}
+
+.mathlab-tab-action:active {
+  transform: scale(0.97);
+}
+
+.mathlab-tab-action.is-active {
+  color: #72dfb0;
+  background: color-mix(in srgb, #57c99a 12%, transparent);
+  border-color: color-mix(in srgb, #57c99a 28%, transparent);
+}
+
+/* ------------------------------------------------------------------ */
+/* One problem                                                         */
+/* ------------------------------------------------------------------ */
+
+.mathlab-solution {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.mathlab-problem {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid var(--glass-line);
+  padding-top: 20px;
+}
+
+.mathlab-problem__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mathlab-problem__index {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 16%, transparent);
+  padding: 4px 9px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+
+.mathlab-problem__title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+.mathlab-problem__statement {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 16px 14px;
+  text-align: center;
+  font-size: 1.15rem;
+}
+
+/* The answer card: large, accent-bordered, and above the working. */
+.mathlab-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--signal) 58%, transparent);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--signal) 12%, transparent), transparent 78%),
+    color-mix(in srgb, var(--card) 70%, transparent);
+  box-shadow: 0 24px 60px -44px color-mix(in srgb, var(--signal) 70%, transparent);
+  padding: 15px 17px 16px;
+}
+
+.mathlab-verdict__label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+}
+
+.mathlab-verdict__value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  overflow-x: auto;
+  padding: 2px 0;
+  font-size: 1.35rem;
+}
+
+.mathlab-verdict__note {
+  display: flex;
+  gap: 7px;
+  border-top: 1px dashed color-mix(in srgb, var(--text-main) 12%, transparent);
+  padding-top: 9px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.mathlab-verdict__note svg {
+  margin-top: 3px;
+  flex: 0 0 auto;
+  color: #72dfb0;
+}
+
+.mathlab-verdict[data-corrected="true"] .mathlab-verdict__label::after {
+  content: " · corrected by the checker";
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------------------ */
+/* Steps                                                               */
+/* ------------------------------------------------------------------ */
+
+.mathlab-work {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mathlab-work__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  transition: color 200ms var(--ease-momentum), border-color 200ms var(--ease-momentum), background 200ms var(--ease-momentum);
+}
+
+.mathlab-work__toggle:hover {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--signal) 40%, transparent);
+  background: color-mix(in srgb, var(--signal) 8%, transparent);
+}
+
+.mathlab-walk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.mathlab-walk__step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  border: 1px solid var(--glass-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 62%, transparent);
+  padding: 14px 15px;
+  transition: border-color 240ms var(--ease-momentum), background 240ms var(--ease-momentum);
+}
+
+.mathlab-walk__step[data-speaking="true"] {
+  border-color: color-mix(in srgb, #57c99a 46%, transparent);
+  background: color-mix(in srgb, #57c99a 7%, transparent);
+}
+
+.mathlab-walk__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  font-size: 10.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.mathlab-walk__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.mathlab-walk__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-main);
+}
+
+.mathlab-walk__prose {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-main);
+  opacity: 0.92;
+}
+
+.mathlab-walk__math {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 0 2px;
+  text-align: center;
+}
+
+.mathlab-walk__rule {
+  margin-top: 2px;
+  border: 1px solid color-mix(in srgb, var(--signal) 26%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  padding: 5px 10px;
+  max-width: 160px;
+  text-align: right;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--signal) 66%, var(--text-main));
+}
+
+/* ------------------------------------------------------------------ */
+/* Fraction picture                                                    */
+/* ------------------------------------------------------------------ */
+
+.mathlab-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px dashed color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 16px;
+  padding: 13px 15px 15px;
+}
+
+.mathlab-bars__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-bar {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.mathlab-bar__label {
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.mathlab-bar__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mathlab-bar__track {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+}
+
+.mathlab-bar__cell {
+  flex: 1 1 0;
+  height: 22px;
+  border-right: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+}
+
+.mathlab-bar__cell:last-child {
+  border-right: 0;
+}
+
+.mathlab-bar__cell.is-filled {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--signal) 62%, transparent), color-mix(in srgb, var(--signal) 38%, transparent));
+}
+
+.mathlab-bar__caption {
+  grid-column: 2;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------------------ */
+/* Folds and lists                                                     */
+/* ------------------------------------------------------------------ */
+
+.mathlab-fold {
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  overflow: hidden;
+}
+
+.mathlab-fold__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  transition: color 200ms var(--ease-momentum), background 200ms var(--ease-momentum);
+}
+
+.mathlab-fold__head:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+}
+
+.mathlab-fold__chev {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  transition: transform 240ms var(--ease-momentum);
+}
+
+.mathlab-fold[data-open="true"] .mathlab-fold__chev {
+  transform: rotate(180deg);
+}
+
+.mathlab-fold__body {
+  overflow: hidden;
+  border-top: 1px solid var(--glass-line);
+}
+
+.mathlab-fold__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 14px 15px 16px;
+}
+
+.mathlab-fold__label {
+  margin-bottom: 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mathlab-note-list__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-main);
+  /* Inline maths only: the old formula card scrolled sideways because every
+     relation was typeset in display mode inside a narrow column. */
+  overflow-wrap: anywhere;
+}
+
+.mathlab-note-list__name {
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------------------ */
+/* Smaller screens                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+  .mathlab-toolbar {
+    border-radius: 15px;
+  }
+
+  .mathlab-toolbar__status {
+    width: 100%;
+  }
+
+  .mathlab-toolbar__controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .mathlab-tab-action {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .mathlab-walk__step {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .mathlab-walk__rule {
+    grid-column: 2;
+    justify-self: start;
+    max-width: none;
+    text-align: left;
+  }
+
+  .mathlab-bar {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mathlab-walk__step,
+  .mathlab-fold__chev,
+  .mathlab-tab-action {
+    transition: none;
+  }
+}
