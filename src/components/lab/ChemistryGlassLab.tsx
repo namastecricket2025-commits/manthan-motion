@@ -1005,10 +1005,7 @@ function TitrationTab() {
    Sub-tab 4 — Reactions stage
    ============================================================ */
 
-import {
-  REACTIONS,
-  type ReactionPreset,
-} from "@/components/lab/reactions-data";
+import { REACTIONS } from "@/components/lab/reactions-data";
 
 function MoleculeChip({
   item,
@@ -1060,7 +1057,7 @@ function MoleculeChip({
   );
 }
 
-export function ReactionsTab() {
+function ReactionsTab() {
   const transition = useSpringTransition();
   const still = useStillMotion();
   const [presetId, setPresetId] = useState(REACTIONS[0].id);
