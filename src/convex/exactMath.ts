@@ -413,6 +413,349 @@ export function solveExactly(input: string): ExactSolution {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* arithmetic expressions                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Evaluate a pure arithmetic expression in exact rationals.
+ *
+ * The lab's own questions are fractions, divisions and powers, so
+ * `2/3 + 1/6` has to answer `5/6` — not `0.8333`, and certainly not a
+ * floating-point form of it. Brackets, unary signs and whole-number powers are
+ * the entire grammar. A variable, a function or a word makes the parse fail
+ * (`null`) rather than guess, so "verified" always means verified.
+ */
+export function evaluateExpression(input: string): Rational | null {
+  const source = normaliseExpression(input);
+  if (!source) return null;
+  // Anything that is not arithmetic — a variable, a function name, a unit —
+  // is outside this evaluator and must not be approximated.
+  if (/[a-zπ√∞]/i.test(source)) return null;
+
+  let pos = 0;
+
+  const readExponent = (): number | null => {
+    let negative = false;
+    if (source[pos] === "(") {
+      pos += 1;
+      if (source[pos] === "-") {
+        negative = true;
+        pos += 1;
+      } else if (source[pos] === "+") pos += 1;
+      const digits = /^\d+/.exec(source.slice(pos));
+      if (!digits || source[pos + digits[0].length] !== ")") return null;
+      pos += digits[0].length + 1;
+      const value = Number(digits[0]);
+      return negative ? -value : value;
+    }
+    if (source[pos] === "-") {
+      negative = true;
+      pos += 1;
+    } else if (source[pos] === "+") pos += 1;
+    const digits = /^\d+/.exec(source.slice(pos));
+    if (!digits) return null;
+    pos += digits[0].length;
+    const value = Number(digits[0]);
+    return negative ? -value : value;
+  };
+
+  const atom = (): Rational | null => {
+    if (source[pos] === "(") {
+      pos += 1;
+      const inner = expression();
+      if (!inner || source[pos] !== ")") return null;
+      pos += 1;
+      return inner;
+    }
+    const literal = /^(?:\d+(?:\.\d+)?|\.\d+)/.exec(source.slice(pos));
+    if (!literal) return null;
+    pos += literal[0].length;
+    try {
+      return Rational.parse(literal[0]);
+    } catch {
+      return null;
+    }
+  };
+
+  const power = (): Rational | null => {
+    const base = atom();
+    if (!base) return null;
+    if (source[pos] !== "^") return base;
+    pos += 1;
+    const exponent = readExponent();
+    if (exponent === null || Math.abs(exponent) > 64) return null;
+    if (exponent < 0) {
+      if (base.isZero) return null;
+      return ONE.div(base.pow(-exponent));
+    }
+    return base.pow(exponent);
+  };
+
+  const unary = (): Rational | null => {
+    const char = source[pos];
+    if (char === "+") {
+      pos += 1;
+      return unary();
+    }
+    if (char === "-") {
+      pos += 1;
+      const value = unary();
+      return value ? value.neg() : null;
+    }
+    return power();
+  };
+
+  function term(): Rational | null {
+    let left = unary();
+    if (!left) return null;
+    for (;;) {
+      const char = source[pos];
+      if (char === "*" || char === "/") {
+        pos += 1;
+        const right = unary();
+        if (!right) return null;
+        if (char === "/") {
+          if (right.isZero) return null;
+          left = left.div(right);
+        } else {
+          left = left.mul(right);
+        }
+        continue;
+      }
+      // Implicit multiplication: 2(3), which students write constantly.
+      if (char === "(") {
+        const right = unary();
+        if (!right) return null;
+        left = left.mul(right);
+        continue;
+      }
+      return left;
+    }
+  }
+
+  function expression(): Rational | null {
+    let left = term();
+    if (!left) return null;
+    for (;;) {
+      const char = source[pos];
+      if (char !== "+" && char !== "-") return left;
+      pos += 1;
+      const right = term();
+      if (!right) return null;
+      left = char === "+" ? left.add(right) : left.sub(right);
+    }
+  }
+
+  const value = expression();
+  if (!value || pos !== source.length) return null;
+  return value;
+}
+
+/** `5/6`, `-3`, `12` — the form a student writes. */
+export function describeExact(value: Rational): string {
+  return value.toString();
+}
+
+/** `\frac{5}{6}` or `12` — the form the notebook typesets. */
+export function describeExactLatex(value: Rational): string {
+  return value.toLatex();
+}
+
+/* ------------------------------------------------------------------ */
+/* reading LaTeX back                                                  */
+/* ------------------------------------------------------------------ */
+
+const LATEX_STRIPPERS: [RegExp, string][] = [
+  [/\\left|\\right|\\displaystyle|\\limits|\\!|\\,|\\;|\\:|\\ /g, ""],
+  [/\\quad|\\qquad|\\space|\\ensuremath/g, " "],
+  [/\\text\s*\{[^{}]*\}/g, " "],
+  [/\\mathrm\s*\{([^{}]*)\}/g, "$1"],
+  [/\\operatorname\s*\{([^{}]*)\}/g, "$1"],
+  [/\\cdot|\\times|\\ast/g, "*"],
+  [/[×·]/g, "*"],
+  [/\\div/g, "/"],
+  [/÷/g, "/"],
+  [/\u2212|\u2013|\u2014/g, "-"],
+  [/²/g, "^2"],
+  [/³/g, "^3"],
+  [/\$+/g, ""],
+];
+
+/**
+ * Rewrite `\frac{A}{B}` as `(A)/(B)`, innermost-first, so nested fractions
+ * survive. Returns null when a brace never closes.
+ */
+function expandFractions(input: string): string | null {
+  const fraction = /\\(?:d|t)?frac\s*\{/;
+  let text = input;
+  for (let guard = 0; guard < 200; guard += 1) {
+    const match = fraction.exec(text);
+    if (!match) return text;
+    const start = match.index;
+    let cursor = start + match[0].length - 1;
+    const groups: string[] = [];
+    for (let group = 0; group < 2; group += 1) {
+      if (text[cursor] !== "{") return null;
+      let depth = 0;
+      let end = -1;
+      for (let i = cursor; i < text.length; i += 1) {
+        if (text[i] === "{") depth += 1;
+        else if (text[i] === "}") {
+          depth -= 1;
+          if (depth === 0) {
+            end = i;
+            break;
+          }
+        }
+      }
+      if (end < 0) return null;
+      groups.push(text.slice(cursor + 1, end));
+      cursor = end + 1;
+      while (text[cursor] === " ") cursor += 1;
+    }
+    const [top, bottom] = groups;
+    // A single term over a whole number (`\frac{x}{2}`, `\frac{2x}{3}`) is the
+    // one fraction shape the polynomial reader already understands as written,
+    // so it keeps that bare form. Everything else is bracketed, which is what
+    // makes a division of two fractions — `\frac{3}{4} \div \frac{9}{10}` —
+    // mean what it says instead of collapsing into one long division chain.
+    const simpleTerm =
+      /^[+-]?\s*(?:\d+(?:\.\d+)?|\.\d+)?\s*[a-z]\s*(?:\^\s*\{?\s*\d+\s*\}?)?$/i.test(
+        top.trim(),
+      );
+    const wholeBottom = /^\s*\d+\s*$/.test(bottom.trim());
+    const rendered =
+      simpleTerm && wholeBottom
+        ? `${top.trim()}/${bottom.trim()}`
+        : `((${top})/(${bottom}))`;
+    text = `${text.slice(0, start)}${rendered}${text.slice(cursor)}`;
+  }
+  return null;
+}
+
+/**
+ * Turn a small LaTeX fragment into the plain arithmetic and algebra the exact
+ * engine reads: `\frac{5}{6}` becomes `(5)/(6)`, `x^{2}` becomes `x^2`, and a
+ * `\text{...}` block is dropped.
+ *
+ * If any command is left that this module does not know — a radical, an
+ * integral, a matrix — the conversion fails rather than guess, because a
+ * half-understood expression must never be reported as verified.
+ */
+export function latexToPlain(input: string): string | null {
+  let text = input;
+  for (const [pattern, replacement] of LATEX_STRIPPERS) {
+    text = text.replace(pattern, replacement);
+  }
+  text = text.replace(/\^\s*\{([^{}]*)\}/g, "^$1");
+  text = text.replace(/_\s*\{([^{}]*)\}/g, "_$1");
+  const expanded = expandFractions(text);
+  if (expanded === null) return null;
+  text = expanded;
+  // A lingering command means the fragment carries something this reader does
+  // not understand. Refuse it.
+  if (/\\[a-zA-Z]+/.test(text)) return null;
+  if (/[{}]/.test(text)) return null;
+  if (/[√∫∑±]/.test(text)) return null;
+  return text.replace(/\s+/g, "").toLowerCase();
+}
+
+/**
+ * Every rational a LaTeX answer explicitly states, in the order written.
+ *
+ * `x = \frac{2}{3}` yields `2/3`; `x_1 = 2,\; x_2 = -3` yields `2` and `-3`.
+ * Root subscripts are dropped first so `x_1` cannot masquerade as the value 1,
+ * and radicals are removed entirely — they are not comparable as rationals, so
+ * an answer built on one takes the honest "could not verify" path.
+ */
+export function numbersFromLatex(input: string): Rational[] {
+  let text = input
+    .replace(/\\sqrt\s*\{[^{}]*\}/g, " ")
+    .replace(/√\s*[\d.]+/g, " ");
+  // x_1, x_{2}, a_n — labels, not values.
+  text = text.replace(/_\s*\{[^{}]*\}/g, "").replace(/_\s*[0-9a-zA-Z]/g, "");
+  const found: Rational[] = [];
+  const fraction = /\\(?:d|t)?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g;
+  text = text.replace(fraction, (_full, top: string, bottom: string) => {
+    const value = ratio(top, bottom);
+    if (value) found.push(value);
+    return " ";
+  });
+  // A plain `5/6` written without \frac is still one value, not two.
+  text = text.replace(
+    /(?<![\d.])([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\/\s*((?:\d+(?:\.\d+)?|\.\d+))(?!\d)/g,
+    (_full, top: string, bottom: string) => {
+      const value = ratio(top, bottom);
+      if (value) found.push(value);
+      return " ";
+    },
+  );
+  for (const match of text.matchAll(/[+-]?(?:\d+(?:\.\d+)?|\.\d+)/g)) {
+    try {
+      found.push(Rational.parse(match[0]));
+    } catch {
+      /* ignore */
+    }
+  }
+  return found;
+}
+
+/** `a` over `b`, exactly, or null when either is not a number. */
+function ratio(top: string, bottom: string): Rational | null {
+  try {
+    return Rational.parse(top.trim()).div(Rational.parse(bottom.trim()));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Every exact number a plain-text answer states — `2/3`, `-3`, `12` — with a
+ * radical making the whole reading unusable (a surd is not a rational, so it
+ * cannot be compared as one).
+ */
+export function numbersFromPlain(input: string): Rational[] {
+  if (/[√]/.test(input)) return [];
+  const found: Rational[] = [];
+  const text = input.replace(/_\s*[0-9a-zA-Z]/g, "");
+  for (const chunk of text.split(/[^0-9.+/\-]+/)) {
+    if (!/\d/.test(chunk)) continue;
+    const pieces = chunk.split("+").filter(Boolean);
+    for (const piece of pieces) {
+      const value = ratioOrNumber(piece);
+      if (value) found.push(value);
+    }
+  }
+  return found;
+}
+
+function ratioOrNumber(piece: string): Rational | null {
+  const trimmed = piece.trim();
+  if (!trimmed || trimmed === "-" || trimmed === "+") return null;
+  if (trimmed.includes("/")) {
+    const [top, bottom] = trimmed.split("/");
+    return ratio(top, bottom);
+  }
+  try {
+    return Rational.parse(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Two exact values agree when they differ by less than a millionth. The
+ * comparison is done on the rationals themselves, so a model that wrote
+ * `0.6667` for `2/3` is caught exactly where a float comparison would wobble.
+ */
+export function exactClose(a: Rational, b: Rational): boolean {
+  const difference = a.sub(b).abs();
+  if (difference.isZero) return true;
+  const tolerance = Rational.of(1n, 1_000_000n);
+  return difference.n * tolerance.d < tolerance.n * difference.d;
+}
+
 /** Substitute a root back in and report the exact remainder. */
 function checkSubstitution(poly: Poly, x: Rational): string {
   const [c, b, a] = poly;

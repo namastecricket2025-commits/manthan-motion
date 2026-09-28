@@ -9,6 +9,7 @@ import { inflateRawSync } from "node:zlib";
 import { extractText, getDocumentProxy } from "unpdf";
 import { z } from "zod";
 import { solveExactly } from "./exactMath";
+import { verifyAnswer, type Verification } from "./mathVerify";
 
 /**
  * The generation pipeline.
@@ -29,7 +30,7 @@ import { solveExactly } from "./exactMath";
  */
 
 const MAX_SOURCE_TEXT = 200_000; // per source
-const MAX_CORPUS = 120_000; // total characters handed to the model
+export const MAX_CORPUS = 120_000; // total characters handed to the model
 
 /** Rough token estimate — models chunk English prose near 4 chars/token. */
 const CHARS_PER_TOKEN = 4;
@@ -148,7 +149,7 @@ const decodeXmlEntities = (value: string) =>
  * verbatim, which is why every throw site below is phrased as advice rather
  * than as a diagnosis.
  */
-class UploadUnreadable extends Error {
+export class UploadUnreadable extends Error {
   constructor(message: string) {
     super(message);
     this.name = "UploadUnreadable";
@@ -265,7 +266,7 @@ interface ReadUpload {
  * can never drift apart in what they accept. Throws with a student-readable
  * message for anything it cannot read.
  */
-async function readUpload(
+export async function readUpload(
   buffer: Buffer,
   name: string,
   mime: string | undefined,
@@ -300,7 +301,7 @@ async function readUpload(
   );
 }
 
-function tidy(text: string) {
+export function tidy(text: string) {
   return text.replace(/\u0000/g, "").replace(/[ \t]+\n/g, "\n").trim();
 }
 
@@ -322,7 +323,7 @@ export class QuotaError extends Error {
   }
 }
 
-function parseJsonLoose(raw: string): unknown {
+export function parseJsonLoose(raw: string): unknown {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?/i, "")
@@ -475,7 +476,7 @@ const HINDI_RE = /[\u0900-\u097F]/g;
  * even a small fraction of Hindi script is decisive. A mixed notebook takes
  * whichever dominates, defaulting to English.
  */
-function detectLanguage(corpusParts: string[]): "hi" | "en" {
+export function detectLanguage(corpusParts: string[]): "hi" | "en" {
   let devanagari = 0;
   let total = 0;
 
@@ -509,7 +510,7 @@ function detectLanguage(corpusParts: string[]): "hi" | "en" {
  * actually happens — is what keeps a Hindi chapter from coming back with an
  * English title and English section headings.
  */
-function languageLock(lang: "hi" | "en"): string {
+export function languageLock(lang: "hi" | "en"): string {
   return lang === "hi"
     ? "FINAL CHECK before answering: every student-facing string must be Hindi written in Devanagari script — the title, the overview, every section heading, every point, every question and option, every card face, every mind-map label, every slide bullet. No English words, no Hindi typed in Latin letters. Rewrite anything that breaks this rule."
     : "FINAL CHECK before answering: every student-facing string must be in English, with no other language mixed in.";
@@ -521,7 +522,7 @@ function languageLock(lang: "hi" | "en"): string {
  * a Hindi source would come back with an English title and English section
  * headings, or worse, Hindi transliterated into Latin script.
  */
-function languageDirective(lang: "hi" | "en"): string[] {
+export function languageDirective(lang: "hi" | "en"): string[] {
   if (lang === "hi") {
     return [
       "LANGUAGE (critical): The sources are in Hindi, so EVERY word a student reads must be written in Hindi in the Devanagari script — title, overview, section headings, points, keyTerms, card fronts and backs, questions, options, explanations, mind-map labels, slide titles, bullets and speaker notes.",
@@ -568,7 +569,7 @@ function fallbackTitle(kind: Kind, payload: unknown, notebook: string, lang: "hi
   // Only reached when the model omitted a title; keep the same language as
   // the material itself so a Hindi deck never gets an English label.
   if (kind === "flashcards") {
-    const cards = (payload as { cards?: unknown[] }).cards ?? [];
+    const cards = (payload as { cards?: unknown[] }).cards || []; // ?      ? [];
     return lang === "hi"
       ? `${cards.length} फ़्लैशकार्ड · ${notebook}`
       : `${cards.length} flashcards · ${notebook}`;
@@ -1079,8 +1080,7 @@ export const cramAnalyze = action({
 
     const candidates = await resolveCandidates();
     const { text: raw, model } = await callModel(candidates, CRAM_SYSTEM, prompt);
-    const parsed = cramSchema.parse(parseJsonLoose(raw));
-    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
+    const parsed = cramSchema.parse(parseJsonLoose(raw));    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
 
     return {
       subject: clean(parsed.subject),
@@ -1166,10 +1166,16 @@ export const aviaReply = action({
     _ctx,
     { message, history, studying },
   ): Promise<{ reply: string; mode: "banter" | "tutoring" }> => {
-    const transcript = (history ?? [])
+    const transcript = (history || [])
+      .slice(-8)
+      .map(function (turn) { return (turn.role === "student" ? "Student" : "Avia") + ": " + turn.text; })
+      .join("\n");
+    /* superseded transcript chain:      ? [])
       .slice(-8)
       .map((turn) => `${turn.role === "student" ? "Student" : "Avia"}: ${turn.text}`)
       .join("\n");
+
+    */
 
     const prompt = [
       "MODE NOTE: decide your own mode. If the student's latest message is a study question, set mode to 'tutoring'; if it is casual chat, 'banter'.",
@@ -1214,74 +1220,50 @@ export const aviaReply = action({
  * mirrors the Canvas Solver's contract. Nothing here touches the student's
  * daily generation allowance.
  */
-const MATH_SYSTEM = [
+export const MATH_SYSTEM = [
   "You are the equation engine inside Manthan's Math Lab, a connected school mathematics workspace.",
-  "Solve the mathematics problem you are given the way a careful teacher would: state what is given, name the governing formulas, then work the solution step by step. Adapt the notation to the selected curriculum track (CBSE, NCERT, IB or IGCSE).",
-  "Every step entry is ONE idea: the move being made and the line of working that carries it out, e.g. 'Subtract 5 from both sides to isolate the x term: 2x + 5 - 5 = 17 - 5, so 2x = 12.' Show the arithmetic inside the step, never bury it in prose.",
-  "Begin EVERY entry in steps with the property, theorem or rule that step applies, in square brackets, then a dash. Examples: [Transpose Rule] - move the constant across the equals sign, changing its sign: 5x = 25. [Quadratic Formula] - x = (-b ± √(b² - 4ac)) / 2a. [Power Rule] - d/dx (xⁿ) = n xⁿ⁻¹. The label is short, two to four words, and it is the actual rule name a teacher would write in the margin. Never leave an entry unlabelled.",
-  "The verification block must genuinely check the result: substitute the answer back into the original relation, restate sum/product or dimensional checks, and say plainly whether both sides match.",
-  "If the question is a follow-up about a previous solution, answer THAT question — verify the working if asked whether it is true, correct any error you actually find (saying exactly which step is wrong and why), or explain the named step more slowly. Do not re-solve the whole problem from scratch unless the student restates it.",
-  "If the photograph or extract is unreadable, blurry or clearly not mathematics, say so plainly in the answer field and keep the other blocks short and honest. Never invent values or equations that are not visible.",
-  "No emoji, no markdown, no asterisks, no bullet symbols. Plain sentences and plain math in every string.",
-  'Reply with a single JSON object and nothing else: {"headline":string,"given":string[],"formulas":string[],"steps":string[],"verification":string[],"answer":string}.',
-  "headline is one short line naming the result. given lists the quantities and constraints read off the problem. formulas lists the governing relations symbolically. steps is the ordered working, one idea per entry, each opening with the rule it applies in square brackets. verification is the check. answer is the final result with its unit, or the honest statement that the input could not be read.",
+  "Solve the mathematics problem you are given the way a careful teacher would: state the question, name the rule that carries each move, then work the solution step by step. Adapt the notation to the selected curriculum track (CBSE, NCERT, IB or IGCSE).",
+  "If the input holds more than one question — '2/3 + 1/6, and 3/4 ÷ 9/10' is TWO — return one entry in problems for EACH question, in the order asked. Never merge two questions into one entry, and never interleave their steps.",
+  "Each step is ONE move and carries four fields.",
+  "expression is LaTeX ONLY: numbers, symbols and commands, never an English word. Write 2 + 3 = 5, \\frac{2}{3}, \\sqrt{5}, x^{2}, \\times, \\div, \\pm, \\le. Never write 'plus', 'times', 'divided by', 'equals', 'therefore' or 'the answer is' inside an expression. The only way a word may appear in an expression is inside \\text{...}, and only for a unit.",
+  "explanation is plain English, one or two short sentences saying what is done and why. Any maths inside it must be wrapped in dollars, like 'rewrite $\\frac{1}{3}$ as an equivalent fraction with a denominator of 6'. Everything outside the dollars is rendered as ordinary text, so it has to read as ordinary text.",
+  "rule is the short rule name a teacher writes in the margin, two to four words: 'LCM of denominators', 'Transpose rule', 'Quadratic formula'.",
+  "title is a two-to-five word label for the move: 'Match the denominators'.",
+  "Every expression must be exactly equivalent to the line above it, and the arithmetic is shown inside the expression — never only in prose.",
+  "verification must genuinely check the result: substitute the answer back into the original relation, restate by sum/product or dimensional check, and say plainly whether both sides match.",
+  "If the question is a follow-up about a previous solution, answer THAT question in a single problem entry — verify the working if asked whether it is true, correct any error you actually find (naming the step and why it is wrong), or explain the named step more slowly. Do not re-solve the whole problem from scratch unless the student restates it.",
+  "If the photograph or extract is unreadable, blurry or clearly not mathematics, say so plainly in headline and keep the problem entry short and honest. Never invent values or equations that are not visible.",
+  "No emoji, no markdown, no asterisks, no bullet symbols.",
+  'Reply with a single JSON object and nothing else: {"headline":string,"problems":[{"problem":string,"title":string,"given":string[],"formulas":string[],"steps":[{"title":string,"explanation":string,"expression":string,"rule":string}],"finalAnswer":string,"verification":string}]}.',
+  "headline is one short line naming the result. problem is the question typeset in LaTeX only. given lists the quantities and constraints read off the problem, in plain English with any maths in dollars. formulas lists the governing relations as LaTeX. finalAnswer is LaTeX ONLY — '\\frac{5}{6}' or 'x = \\frac{2}{3}' — with no sentence wrapped around it.",
 ].join(" ");
 
-/**
- * The three ways a student can be walked through the same problem.
- *
- * Same algebra, same answer — only the explanation changes, because a student
- * who has seen a proof three times still gets something from a number line.
- */
-const SOLVE_METHODS = {
-  standard: [
-    "Explain the working as a standard algebraic proof: state the identity or formula being used, substitute into it, and simplify symbolically until the answer is reached.",
-    "Prefer algebra over diagrams. Every line must be a manipulation of the line above it.",
-  ].join(" "),
-  visual: [
-    "Explain the working visually. Use fraction blocks, a bar model, a number line, a coordinate plane or a labelled diagram in words, and say exactly what each block, tick or segment represents.",
-    "Where a picture would help, describe it concretely enough that the student can draw it: how many equal parts, which part is shaded, where the marker sits.",
-    "Keep every number exact. Never replace a fraction with a rounded decimal.",
-  ].join(" "),
-  analogy: [
-    "Explain the working as a real-world analogy first, then tighten it into the formal steps.",
-    "Open with a situation a student has actually stood in — sharing, queues, budgets, distances, containers — and map each part of the problem onto it before doing any algebra.",
-    "After the analogy has done its work, show the formal calculation in full so the method transfers to the exam.",
-  ].join(" "),
-} as const;
 
-const mathSolutionSchema = z.object({
-  headline: z.string().min(1),
-  given: z.array(z.string().min(1)).min(1),
-  formulas: z.array(z.string().min(1)).min(1),
-  steps: z.array(z.string().min(1)).min(1),
-  verification: z.array(z.string().min(1)).min(1),
-  answer: z.string().min(1),
-});
+/* The Math Lab's step contract and its system prompt live with the engine that
+   uses them, in ./mathLab.ts and ./prompts.ts. */
 
-/** Rough ceiling on the base64 payload — about 4 MB of image. */
-const MAX_MATH_IMAGE = 5_500_000;
-
+/* The Math Lab action moved to ./mathLab.ts with the verified, structured contract.
+   This superseded copy is kept out of the build until it can be deleted:
 export const mathSolve = action({
   args: {
-    /** The typed question, when the student pasted or typed one. */
+    /** The typed question, when the student pasted or typed one. */ /*
     question: v.optional(v.string()),
-    /** A photographed question sheet, base64, no data-url prefix. */
+    /** A photographed question sheet, base64, no data-url prefix. */ /*
     imageBase64: v.optional(v.string()),
     mimeType: v.optional(v.string()),
-    /** Or an uploaded file, read through the same pipeline as notebooks. */
+    /** Or an uploaded file, read through the same pipeline as notebooks. */ /*
     storageId: v.optional(v.id("_storage")),
     name: v.optional(v.string()),
     mime: v.optional(v.string()),
-    /** Syllabus context for the currently selected curriculum track and skill. */
+    /** Syllabus context for the currently selected curriculum track and skill. */ /*
     gradeLabel: v.optional(v.string()),
     chapterName: v.optional(v.string()),
     chapterFormulas: v.optional(v.array(v.string())),
-    /** Which voice explains the working. The algebra does not change. */
+    /** Which voice explains the working. The algebra does not change. */ /*
     method: v.optional(
       v.union(v.literal("standard"), v.literal("visual"), v.literal("analogy")),
     ),
-    /** Follow-up conversation, oldest first. */
+    /** Follow-up conversation, oldest first. */ /*
     history: v.optional(
       v.array(
         v.object({
@@ -1308,16 +1290,35 @@ export const mathSolve = action({
     },
   ): Promise<{
     headline: string;
+    problems?: {
+      problem: string;
+      title: string;
+      given: string[];
+      formulas: string[];
+      steps: {
+        title: string;
+        explanation: string;
+        expression: string;
+        rule: string;
+      }[];
+      finalAnswer: string;
+      verification: string;
+      /** True when an independent engine recomputed this answer. */ /*
+      verified: boolean;
+      /** True when the checker's value replaced the model's own. */ /*
+      corrected: boolean;
+      /** What the independent engine found, in one sentence. */ /*
+      checkNote: string;
+    }[];
+    // Legacy fields, kept until the old working below is replaced.
     given: string[];
     formulas: string[];
     steps: string[];
     verification: string[];
     answer: string;
-    model: string;
-    /** The result recomputed in exact rationals, when the checker could. */
     exactAnswer?: string;
-    /** True when `exactAnswer` supersedes the model's own arithmetic. */
-    exactVerified?: boolean;
+    exactVerified: boolean;
+    model: string;
   }> => {
     const trimmedQuestion = question?.trim() ?? "";
     if (!trimmedQuestion && !imageBase64 && !storageId) {
@@ -1351,7 +1352,7 @@ export const mathSolve = action({
 
     // The question's own language decides the reply's language.
     const language = detectLanguage([fileText, trimmedQuestion].filter(Boolean));
-    const transcript = (history ?? [])
+    const transcript = (history ?      ? [])
       .slice(-6)
       .map((turn) => `${turn.role === "student" ? "Student" : "Engine"}: ${turn.text}`)
       .join("\n");
@@ -1396,7 +1397,6 @@ export const mathSolve = action({
      * one thing it exists to do. So wherever the exact engine can parse the
      * question, its answer, its derivation and its substitution check are the
      * ones the student sees. The model keeps the explanation.
-     */
     const exact = trimmedQuestion ? solveExactly(trimmedQuestion) : null;
     const exactWorked = exact !== null && exact.kind !== "unsupported";
     const steps = exactWorked
