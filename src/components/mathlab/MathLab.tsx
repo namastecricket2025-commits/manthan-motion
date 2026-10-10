@@ -68,9 +68,15 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { parse as parseMath } from "mathjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
+
+/* The three.js backdrop is decoration: it loads after the lab is already usable
+   rather than making the notebook wait on a renderer. */
+const MathField3D = lazy(() =>
+  import("@/components/mathlab/MathField3D").then((module) => ({ default: module.MathField3D })),
+);
 
 const CURRICULUM_TRACKS = ["CBSE", "NCERT", "IB", "IGCSE"] as const;
 type CurriculumTrack = (typeof CURRICULUM_TRACKS)[number];
@@ -226,6 +232,8 @@ export function MathLab() {
   const [hintMode, setHintMode] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
+  /** Stamped on every Solve: the 3D plane behind the notebook ripples. */
+  const [fieldPulse, setFieldPulse] = useState(0);
   const [historyId, setHistoryId] = useState<Id<"mathSolutions"> | null>(null);
   const mathInputRef = useRef<MathInputHandle | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
@@ -253,6 +261,17 @@ export function MathLab() {
     stopSpeaking();
     if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
   }, []);
+
+  /* Escape closes the calculator from anywhere in the lab — the drawer is the
+     only floating surface here, and it should never trap the keyboard. */
+  useEffect(() => {
+    if (!calcOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCalcOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [calcOpen]);
 
   const selectTrack = (next: CurriculumTrack) => {
     setTrack(next);
@@ -332,6 +351,7 @@ export function MathLab() {
     hush();
     setSolution(null);
     setOpenSteps({});
+    setFieldPulse((value) => value + 1);
     setTurns((current) => [...current, { role: "student", text: input }]);
     void askEngine({ question: input });
   }, [askEngine, formula, hush, solving]);
@@ -349,6 +369,7 @@ export function MathLab() {
     setSolving(true);
     setEngineError(null);
     setSolution(null);
+    setFieldPulse((value) => value + 1);
     try {
       const url = await generateUploadUrl();
       const response = await fetch(url, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
@@ -469,6 +490,10 @@ export function MathLab() {
 
   return (
     <div className="relative">
+      {/* The plane of the current chapter, behind everything the lab draws. */}
+      <Suspense fallback={null}>
+        <MathField3D plotId={model.id} pulse={fieldPulse} />
+      </Suspense>
       <div className={"mathlab-root" + (locked ? " pointer-events-none select-none blur-[7px]" : "")} aria-hidden={locked}>
         <div className="mathlab-commandbar">
           <div className="mathlab-track">
@@ -510,21 +535,59 @@ export function MathLab() {
         <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
           {VIEW_TABS.map((tab) => {
             const Icon = tab.icon;
+            const active = view === tab.id;
             return (
-              <button
+              <motion.button
                 key={tab.id}
                 type="button"
                 role="tab"
-                aria-selected={view === tab.id}
-                className={"mathlab-view" + (view === tab.id ? " is-active" : "")}
+                aria-selected={active}
+                className={"mathlab-view" + (active ? " is-active" : "")}
                 onClick={() => setView(tab.id)}
+                whileHover={reduceMotion ? undefined : { y: -1.5 }}
+                whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 420, damping: 30 }}
               >
-                <Icon className="h-3.5 w-3.5" />
+                {/* One pill travels between the tabs, so switching views reads
+                    as moving the same object rather than lighting a new one. */}
+                {active ? (
+                  <motion.span
+                    layoutId="mathlab-view-pill"
+                    className="mathlab-view__pill"
+                    aria-hidden
+                    transition={{ type: "spring", stiffness: 400, damping: 34 }}
+                  />
+                ) : null}
+                <motion.span
+                  className="mathlab-view__icon"
+                  aria-hidden
+                  animate={reduceMotion ? undefined : { rotate: active ? -8 : 0, scale: active ? 1.08 : 1 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 18 }}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </motion.span>
                 {tab.label}
-              </button>
+              </motion.button>
             );
           })}
         </nav>
+
+        <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={view}
+          className="mathlab-viewbody"
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={
+            reduceMotion
+              ? { opacity: 1 }
+              : { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 32 } }
+          }
+          exit={
+            reduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, y: -12, transition: { duration: 0.16, ease: "easeOut" } }
+          }
+        >
 
         {view === "solve" ? (
           <div className={"mathlab-split" + (fullScreen ? " is-fullscreen" : "") + (solution ? " is-solution" : "")}>
@@ -570,7 +633,16 @@ export function MathLab() {
                 <div className="mathlab-input__row">
                   <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
                   <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
-                  <button type="submit" className="mathlab-solve" disabled={solving || !formula.trim()}>{solving ? <Loader2 className="spin-micro h-4 w-4" /> : null}Solve</button>
+                  <motion.button
+                    type="submit"
+                    className="mathlab-solve"
+                    disabled={solving || !formula.trim()}
+                    whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+                    whileHover={reduceMotion ? undefined : { scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 26 }}
+                  >
+                    {solving ? <Loader2 className="spin-micro h-4 w-4" /> : null}Solve
+                  </motion.button>
                 </div>
               </form>
               <input ref={fileInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => void readPhoto(event.target.files?.[0] ?? undefined)} />
@@ -616,8 +688,16 @@ export function MathLab() {
                     {solution.problems.map((problem, problemIndex) => {
                       const expanded = openSteps[problemIndex] !== false;
                       const fractions = fractionsIn([problem.problem, problem.finalAnswer, ...problem.steps.map((step) => step.expression)]);
+                      /* Problems arrive one after the other, not as one slab —
+                         the reading order is the solve order. */
                       return (
-                        <section key={`${problemIndex}-${problem.problem}`} className="mathlab-problem">
+                        <motion.section
+                          key={`${problemIndex}-${problem.problem}`}
+                          className="mathlab-problem"
+                          initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ type: "spring", stiffness: 260, damping: 30, delay: reduceMotion ? 0 : problemIndex * 0.09 }}
+                        >
                           <header className="mathlab-problem__head">
                             <span className="mathlab-problem__index">{solution.problems.length > 1 ? `Problem ${problemIndex + 1}` : "Problem"}</span>
                             <h3 className="mathlab-problem__title">{problem.title}</h3>
@@ -727,7 +807,7 @@ export function MathLab() {
                               </div>
                             </Fold>
                           ) : null}
-                        </section>
+                        </motion.section>
                       );
                     })}
                   </div>
@@ -784,28 +864,46 @@ export function MathLab() {
             <MathHistory onOpen={openStored} />
           </section>
         )}
+        </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* The calculator drawer, available from every view. */}
+      {/* The calculator, parked bottom-left. Avia's tutor orb owns the
+          bottom-right corner of every page and sat directly on top of this
+          button; the tool now lives in the empty corner, above the drawer it
+          opens. */}
       {!locked ? (
         <>
-          <button
+          <motion.button
             type="button"
             className={"mathlab-calc-fab" + (calcOpen ? " is-open" : "")}
             onClick={() => setCalcOpen((value) => !value)}
             aria-expanded={calcOpen}
+            aria-label={calcOpen ? "Hide the calculator" : "Open the calculator"}
+            initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={reduceMotion ? undefined : { scale: 1.05 }}
+            whileTap={reduceMotion ? undefined : { scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 340, damping: 24 }}
           >
-            <Calculator className="h-4 w-4" />
-            {calcOpen ? "Hide calculator" : "Calculator"}
-          </button>
+            <span className="mathlab-calc-fab__halo" aria-hidden />
+            <span className="mathlab-calc-fab__ring" aria-hidden />
+            <span className="mathlab-calc-fab__core">
+              <Calculator className="h-5 w-5" />
+            </span>
+            <span className="mathlab-calc-fab__label" aria-hidden>
+              {calcOpen ? "Hide calculator" : "Calculator"}
+            </span>
+          </motion.button>
           <AnimatePresence>
             {calcOpen ? (
               <motion.aside
                 className="mathlab-calc-drawer"
-                initial={{ y: 28, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 28, opacity: 0 }}
-                transition={{ type: "tween", duration: 0.26, ease: "easeOut" }}
+                initial={reduceMotion ? { opacity: 0 } : { y: 26, opacity: 0, scale: 0.94 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={reduceMotion ? { opacity: 0 } : { y: 20, opacity: 0, scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 330, damping: 30, mass: 0.9 }}
+                style={{ transformOrigin: "0% 100%" }}
                 aria-label="Scientific calculator"
               >
                 <ScientificCalculator onClose={() => setCalcOpen(false)} />

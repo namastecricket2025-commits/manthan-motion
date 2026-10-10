@@ -1359,39 +1359,158 @@
 /* Scientific calculator                                               */
 /* ================================================================== */
 
+/* ---- the calculator orb ---------------------------------------------
+
+   Parked in the bottom-left corner of the workspace. Avia's tutor orb holds
+   the bottom-right of every page, and it sat directly on top of the old
+   bottom-right pill — a tool hidden behind the tutor is a tool nobody finds.
+   The orb borrows the tutor's own language (halo, turning spark ring, glass
+   core) so the two read as siblings, and the label slides out on hover or
+   keyboard focus instead of taking permanent width. */
+
 .mathlab-calc-fab {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 45;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 44;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Clear the 240px app sidebar once it is on screen. */
+@media (min-width: 760px) {
+  .mathlab-calc-fab {
+    left: calc(240px + 20px);
+  }
+}
+
+.mathlab-calc-fab__halo {
+  position: absolute;
+  inset: -16px;
+  border-radius: 999px;
+  z-index: 0;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--signal) 38%, transparent),
+    transparent 68%
+  );
+  filter: blur(9px);
+  opacity: calc(0.34 + 0.36 * var(--ambient, 1));
+  animation: mathlab-calc-halo 5.4s var(--ease-momentum) infinite;
+  pointer-events: none;
+}
+
+@keyframes mathlab-calc-halo {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: calc(0.26 + 0.28 * var(--ambient, 1));
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: calc(0.46 + 0.36 * var(--ambient, 1));
+  }
+}
+
+.mathlab-calc-fab__ring {
+  position: absolute;
+  inset: -3px;
+  z-index: 0;
+  border-radius: 999px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--signal) 18%, transparent) 80deg,
+    var(--signal) 150deg,
+    transparent 290deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: mathlab-calc-spin 7.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes mathlab-calc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mathlab-calc-fab__core {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
   border: 1px solid color-mix(in srgb, var(--signal) 38%, transparent);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--ink) 88%, transparent);
-  padding: 10px 16px;
-  font-size: 11.5px;
+  background:
+    radial-gradient(120% 120% at 30% 22%, rgba(255, 255, 255, 0.14), transparent 60%),
+    color-mix(in srgb, var(--ink) 86%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    0 24px 54px -26px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  color: var(--text-main);
+  transition: border-color 260ms var(--ease-momentum), color 260ms var(--ease-momentum);
+}
+
+.mathlab-calc-fab:hover .mathlab-calc-fab__core,
+.mathlab-calc-fab:focus-visible .mathlab-calc-fab__core {
+  border-color: color-mix(in srgb, var(--signal) 68%, transparent);
+}
+
+.mathlab-calc-fab.is-open .mathlab-calc-fab__core {
+  border-color: color-mix(in srgb, var(--signal) 76%, transparent);
+  color: color-mix(in srgb, var(--signal) 78%, var(--text-main));
+}
+
+.mathlab-calc-fab__label {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  z-index: 2;
+  transform: translate(-7px, -50%) scale(0.94);
+  transform-origin: 0% 50%;
+  opacity: 0;
+  white-space: nowrap;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  padding: 6px 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-main);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 22px 50px -28px rgba(0, 0, 0, 0.9);
-  transition: border-color 200ms var(--ease-momentum), transform 200ms var(--ease-momentum);
+  pointer-events: none;
+  transition: opacity 220ms var(--ease-momentum), transform 260ms var(--ease-momentum);
 }
 
-.mathlab-calc-fab:hover {
-  border-color: color-mix(in srgb, var(--signal) 62%, transparent);
-}
-
-.mathlab-calc-fab.is-open {
-  border-color: color-mix(in srgb, var(--signal) 70%, transparent);
-  color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+.mathlab-calc-fab:hover .mathlab-calc-fab__label,
+.mathlab-calc-fab:focus-visible .mathlab-calc-fab__label {
+  opacity: 1;
+  transform: translate(0, -50%) scale(1);
 }
 
 .mathlab-calc-drawer {
   position: fixed;
-  right: 18px;
-  bottom: 74px;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 62px);
   z-index: 46;
   width: min(340px, calc(100vw - 32px));
   max-height: min(78vh, 640px);
@@ -1402,6 +1521,12 @@
   backdrop-filter: blur(20px);
   box-shadow: 0 34px 80px -34px rgba(0, 0, 0, 0.92);
   padding: 14px;
+}
+
+@media (min-width: 760px) {
+  .mathlab-calc-drawer {
+    left: calc(240px + 20px);
+  }
 }
 
 .mathlab-calc {
@@ -2159,6 +2284,88 @@
   }
 }
 
+/* The Solve button carries a soft sheen instead of a spinner-only loading
+   state — one light sweep on hover, nothing moving at rest. */
+.mathlab-solve {
+  position: relative;
+  overflow: hidden;
+}
+
+.mathlab-solve::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 32%, rgba(255, 255, 255, 0.3) 50%, transparent 68%);
+  transform: translateX(-130%);
+  transition: transform 720ms var(--ease-momentum);
+  pointer-events: none;
+}
+
+.mathlab-solve:not(:disabled):hover::after,
+.mathlab-solve:not(:disabled):focus-visible::after {
+  transform: translateX(130%);
+}
+
+/* Each step of the working arrives with a flash along its own edge, staggered
+   top to bottom: the rail fills in the order the method has to be read. */
+.mathlab-walk__step {
+  position: relative;
+}
+
+.mathlab-walk__step::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  top: -1px;
+  height: 1px;
+  border-radius: 999px;
+  transform-origin: 0% 50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--signal) 80%, transparent),
+    transparent
+  );
+  opacity: 0;
+  animation: mathlab-step-flash 1.2s var(--ease-momentum) both;
+  animation-delay: min(calc(var(--step-i, 0) * 90ms), 360ms);
+  pointer-events: none;
+}
+
+/* A hairline drawn across the top of the step it belongs to — the rail fills
+   in the order the method has to be read, over the text, never on it. */
+@keyframes mathlab-step-flash {
+  0% {
+    opacity: 1;
+    transform: scaleX(0.24);
+  }
+  55% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+.mathlab-walk__index {
+  animation: mathlab-step-node 640ms var(--ease-momentum) both;
+  animation-delay: min(calc(var(--step-i, 0) * 90ms), 360ms);
+}
+
+@keyframes mathlab-step-node {
+  0% {
+    transform: scale(0.82);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--signal) 13%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 /* ================================================================== */
 /* Smaller screens                                                     */
 /* ================================================================== */
@@ -2174,13 +2381,13 @@
   }
 
   .mathlab-calc-fab {
-    right: 12px;
-    bottom: 12px;
+    left: max(12px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
   }
 
   .mathlab-calc-drawer {
-    right: 12px;
-    bottom: 64px;
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 60px);
   }
 
   .mathlab-fp .function-plot {
@@ -2195,7 +2402,87 @@
   .mathlab-chip,
   .mathlab-sheet__track,
   .mathlab-calc__key,
-  .mathlab-calc-fab {
+  .mathlab-calc-fab__core,
+  .mathlab-calc-fab__label {
     transition: none;
   }
+
+  /* A halo and a spark ring that never stop turning are exactly what this
+     preference exists to silence. */
+  .mathlab-calc-fab__halo,
+  .mathlab-calc-fab__ring,
+  .mathlab-walk__step::after,
+  .mathlab-walk__index {
+    animation: none;
+  }
+}
+
+/* The app's own Motionless Mode, which is a preference and not a media query. */
+html[data-motion="reduced"] .mathlab-calc-fab__halo,
+html[data-motion="reduced"] .mathlab-calc-fab__ring,
+html[data-motion="reduced"] .mathlab-walk__step::after,
+html[data-motion="reduced"] .mathlab-walk__index {
+  animation: none;
+}
+
+/* ================================================================== */
+/* The chapter's living plane + view motion                            */
+/* ================================================================== */
+
+/* The three.js sheet sits behind the whole workspace and fades out before the
+   working does, so it reads as depth and never as a background to read on.
+   Its brightness tracks Ambient Intensity through the app-wide --ambient. */
+.mathlab-field {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: clamp(320px, 58vh, 560px);
+  z-index: 0;
+  opacity: calc(0.5 + 0.5 * var(--ambient, 1));
+  -webkit-mask-image: radial-gradient(135% 118% at 50% 0%, #000 34%, rgba(0, 0, 0, 0.6) 68%, transparent 100%);
+  mask-image: radial-gradient(135% 118% at 50% 0%, #000 34%, rgba(0, 0, 0, 0.6) 68%, transparent 100%);
+  pointer-events: none;
+}
+
+.mathlab-field__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Everything the lab itself draws sits above the field. */
+.mathlab-root {
+  position: relative;
+  z-index: 1;
+}
+
+.mathlab-viewbody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* The one pill that travels between view tabs. The button keeps its own ink
+   and the pill draws the active surface, so the tint never doubles up. */
+.mathlab-view {
+  position: relative;
+  isolation: isolate;
+}
+
+.mathlab-view.is-active {
+  border-color: transparent;
+  background: transparent;
+}
+
+.mathlab-view__pill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--signal) 44%, transparent);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+}
+
+.mathlab-view__icon {
+  display: inline-flex;
 }

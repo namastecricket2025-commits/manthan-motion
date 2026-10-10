@@ -1,7 +1,7 @@
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type CSSProperties } from "react";
 import { CornerDownLeft, HelpCircle, Loader2, Sparkles } from "lucide-react";
 import { Explanation, Expression } from "@/components/mathlab/parts";
 import type { EngineStep } from "@/components/mathlab/solution";
@@ -110,13 +110,16 @@ export function StepList({
             {visible} of {steps.length} steps showing — try each move yourself first
           </span>
           {more ? (
-            <button
+            <motion.button
               type="button"
               className="mathlab-tab-action"
               onClick={() => setRevealed((current) => current + 1)}
+              whileHover={reduceMotion ? undefined : { y: -1 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 420, damping: 26 }}
             >
               Show next step
-            </button>
+            </motion.button>
           ) : (
             <span className="mathlab-hintbar__done">That is the whole method.</span>
           )}
@@ -133,6 +136,9 @@ export function StepList({
               key={`${key}-${step.expression || step.explanation}`}
               className="mathlab-walk__step"
               data-speaking={speakingKey === key}
+              /* Drives the staggered rail flash in the stylesheet: each step
+                 lights up in the order the method has to be read. */
+              style={{ "--step-i": stepIndex } as CSSProperties}
               initial={reduceMotion ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={stepTransition(stepIndex)}
