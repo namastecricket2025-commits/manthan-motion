@@ -173,7 +173,7 @@ export default function Pipeline() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center" data-reveal>
           <span className="kicker">How it works</span>
-          <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
+          <h2 className="text-fade mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
             One pipeline:{" "}
             <span className="gradient-text">five guided steps</span>
           </h2>

@@ -50,7 +50,7 @@ export default function CtaSection() {
           <span className="kicker">Start churning</span>
           <h2
             data-reveal
-            className="mx-auto mt-5 max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
+            className="text-fade mx-auto mt-5 max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
           >
             Your notes are waiting to become{" "}
             <span className="gradient-text">study material</span>

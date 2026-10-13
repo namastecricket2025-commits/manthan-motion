@@ -98,7 +98,7 @@ export default function Features() {
     >
       <div className="mx-auto max-w-2xl text-center" data-reveal>
         <span className="kicker">Why Manthan</span>
-        <h2 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
+        <h2 className="text-fade mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
           Everything you need to go from{" "}
           <span className="gradient-text">notes</span> to study material
         </h2>

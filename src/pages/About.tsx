@@ -102,7 +102,12 @@ function AxisText({
         <span key={w.key} className="axis-word">
           <span
             data-axis-word
-            className={`axis-word__inner${w.className ? ` ${w.className}` : ""}`}
+            // `text-fade` rides the SAME element GSAP animates (this one), not
+            // the surrounding heading: `background-clip: text` on an ancestor
+            // stops following these separately composited, transformed words
+            // and paints them invisible — the bug already fixed in
+            // TextGenerate. An accent word keeps its own gradient instead.
+            className={`axis-word__inner${w.className ? ` ${w.className}` : " text-fade"}`}
           >
             {w.word}
             {w.spaceAfter ? "\u00A0" : ""}

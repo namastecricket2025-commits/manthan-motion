@@ -55,7 +55,7 @@ export default function Pricing() {
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-text-dim">
               Plans
             </p>
-            <h1 className="mt-2 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="text-fade mt-2 font-display text-4xl font-bold tracking-tight sm:text-5xl">
               Study material, distilled
               <span className="text-[var(--signal)]">.</span>
             </h1>

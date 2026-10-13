@@ -282,7 +282,7 @@
                         so labels stay legible (8.9:1 at this value).
        --signal-strong  the filled one: button and badge bodies that carry
                         white text, deep enough to clear 6:1 with it (6.5:1). */
-  --ink: #0a0a0b;
+  --ink: #000000;
   --signal: #ff8f78;
   --signal-strong: #b3261e;
   --signal-2: #7f1d1d;
@@ -302,10 +302,10 @@
      brighter than; every glow washed straight into it. Holding the field back
      to a warm haze makes the page read as near-black and gives the white
      light in the glow block below something to actually lift. */
-  --bg-canvas-a: #ff8f78;
-  --bg-canvas-b: #7f1d1d;
-  --bg-canvas-c: #0a0a0b;
-  --bg-canvas-opacity: 0.34;
+  --bg-canvas-a: #ffffff;
+  --bg-canvas-b: #2a2a2e;
+  --bg-canvas-c: #000000;
+  --bg-canvas-opacity: 0.16;
   /* Neutral segment of the primary-button ring (dark). */
   --moving-ring: rgba(255, 255, 255, 0.16);
 
@@ -320,8 +320,8 @@
      letters. Matching the heading colour exactly plus two intermediate stops
      keeps the word reading as heading text while the tail lights up smoothly.
      The two mid stops live in the `.dark .gradient-text` rule below. */
-  --gt-head: #fff8f4;
-  --gt-tail: #ff8f78;
+  --gt-head: #ffffff;
+  --gt-tail: #a1a1aa;
 
   /* Stroke-text display gradient (dark): a warm arc-lamp sweep — warm white
      through peach into ember, bright enough to read as lit metal against the
@@ -456,9 +456,9 @@
      opacity by `--bg-glow-opacity` (the Ambient Intensity slider), so
      turning Ambient down still quiets the whole scene instead of leaving
      these behind at full strength. */
-  --glow-aura: rgba(255, 255, 255, 0.14);
-  --glow-aura-2: color-mix(in srgb, var(--signal) 26%, transparent);
-  --glow-edge: rgba(255, 255, 255, 0.3);
+  --glow-aura: rgba(255, 255, 255, 0.16);
+  --glow-aura-2: color-mix(in srgb, var(--signal) 18%, transparent);
+  --glow-edge: rgba(255, 255, 255, 0.32);
   --glow-cta: color-mix(in srgb, var(--signal) 70%, transparent);
 }
 
@@ -803,14 +803,43 @@
        the transparent glyph fill (the "gradient block" bug). background-image
        leaves background-clip: text from the base rule intact. */
     background-image: linear-gradient(
-      105deg,
+      180deg,
       var(--gt-head) 0%,
-      var(--gt-head) 52%,
-      #ffd7c9 66%,
-      #ffab93 80%,
+      var(--gt-head) 32%,
+      #d4d4d8 68%,
+      #b6b6be 84%,
       var(--gt-tail) 100%
     );
   }
+
+  /* ----------------------------------------------------------------
+     Vercel-style display fade (dark): a big heading runs pure white at the
+     top and settles into a neutral grey on the way down, so display type
+     reads as lit from above rather than flatly filled. Same effect as the
+     accent word above, applied to a whole heading.
+
+     Applied to the element that OWNS its text — never to an ancestor of
+     animated spans. `background-clip: text` stops following separately
+     composited descendants (transform / filter / opacity), which is what made
+     gradient words paint invisible before; see the note in TextGenerate,
+     where the class is deliberately placed on each WORD span for that exact
+     reason.
+     ---------------------------------------------------------------- */
+  .dark .text-fade,
+  [data-theme="dark"] .text-fade {
+    color: var(--text-main);
+    background-image: linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #ffffff 28%,
+      #c4c4cb 72%,
+      #b0b0b9 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
   /* Section kicker chip used above headings.
 
      Legibility: kickers are signal-red text that can sit directly over a
