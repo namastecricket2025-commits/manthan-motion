@@ -5,20 +5,16 @@ import {
   identityReply,
   isIdentityAsk,
   pickAviaVoice,
-  pickBackchannel,
   pickGreeting,
-  pickSwitchLine,
   speakText,
   stopSpeaking,
 } from "@/components/voice/avia";
 import { renderBlocks, toSpokenText } from "@/components/voice/format";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  Brain,
   Mic,
   MicOff,
   RotateCcw,
-  Sparkles,
   Square,
   Volume2,
   VolumeX,
@@ -38,9 +34,9 @@ import "./avia.css";
  * convex/ai.ts); if that chain is out of free capacity she says so in
  * character instead of failing silently.
  *
- * The Study Switch announcement is deliberately one-shot per lock-in. Repeating
- * the same sentence on every question is what made her sound like a script —
- * she now says it once, from a rotating pool, and then just tutors.
+ * She speaks in her own words: the reply comes from the model, and the only
+ * fixed lines here are the short greeting and the honest out-of-capacity
+ * notice. No scripted announcements, no filler noises.
  */
 
 interface Turn {
@@ -51,7 +47,7 @@ interface Turn {
 
 /** Openers shown to a cold-start visitor who has nothing to say yet. */
 const PROMPTS = [
-  "Yo, how's it going",
+  "What can you help me with?",
   "Explain photosynthesis",
   "Solve 2x + 5 = 17",
   "Quiz me on Newton's laws",
@@ -72,14 +68,15 @@ export function AviaWidget() {
   const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [studying, setStudying] = useState(false);
   const [draft, setDraft] = useState("");
   const [handsFree, setHandsFree] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [voiceLabel, setVoiceLabel] = useState("device voice");
   const [greeting, setGreeting] = useState(() => pickGreeting());
-  const [turns, setTurns] = useState<Turn[]>([
-    { id: 0, from: "avia", text: pickGreeting() },
+  // The transcript opens on the same line she speaks when the panel opens, so
+  // the first bubble is never a different greeting from the one she says.
+  const [turns, setTurns] = useState<Turn[]>(() => [
+    { id: 0, from: "avia", text: greeting },
   ]);
 
   const idRef = useRef(1);
@@ -93,19 +90,10 @@ export function AviaWidget() {
   /** Live mirrors for callbacks that must not close over stale state. */
   const handsFreeRef = useRef(false);
   const listenRef = useRef<() => void>(() => {});
-  /** The switch has already been announced for the current lock-in. */
-  const switchSpokenRef = useRef(false);
-  /** Last line used, so the pool never repeats back to back. */
-  const lastSwitchRef = useRef<string | undefined>(undefined);
-  const lastGreetingRef = useRef<string | undefined>(undefined);
-  /** Last listening noise she made, so it never repeats back to back. */
-  const lastBackchannelRef = useRef<string | undefined>(undefined);
-  const backchannelAtRef = useRef(0);
 
   turnsRef.current = turns;
   openRef.current = open;
   handsFreeRef.current = handsFree;
-  lastGreetingRef.current = greeting;
 
   const supported = useMemo(
     () =>
@@ -143,8 +131,7 @@ export function AviaWidget() {
   const say = useCallback((text: string, interrupt = true, onDone?: () => void) => {
     queuedRef.current += 1;
     setSpeaking(true);
-    // Every path into `say` may carry markdown (switch lines are plain, model
-    // replies are structured); the synthesiser only ever gets prose.
+    // A reply may carry markdown; the synthesiser only ever gets prose.
     speakText(
       toSpokenText(text),
       voiceRef.current,
@@ -178,41 +165,12 @@ export function AviaWidget() {
       addTurn("student", message);
       setNote(null);
 
-      // The Study Switch fires here, before the round trip, so the line is
-      // spoken the instant the academic question lands — once per lock-in,
-      // never twice in a row with the same words.
-      const academic = detectStudyTopic(message);
-      const nextStudying = studying || academic;
-      if (academic && !studying) {
-        setStudying(true);
-        if (!switchSpokenRef.current) {
-          switchSpokenRef.current = true;
-          const line = pickSwitchLine(lastSwitchRef.current);
-          lastSwitchRef.current = line;
-          say(line);
-        }
-      }
+      // Silent: a study question is flagged so the server labels the turn as
+      // tutoring rather than casual chat. Nothing is announced on the device —
+      // she just answers.
+      const studying = detectStudyTopic(message);
 
       setThinking(true);
-
-      // The human tell: now and then she makes a small listening noise before
-      // the real answer — "mm-hm", "right, okay", "hmm, let me think". Only
-      // after the first exchange, at most once every twenty seconds, never the
-      // same one twice, and never on top of a Study Switch announcement.
-      const now = Date.now();
-      if (
-        !academic &&
-        turnsRef.current.length > 1 &&
-        now - backchannelAtRef.current > 20_000 &&
-        Math.random() < 0.45
-      ) {
-        backchannelAtRef.current = now;
-        const noise = pickBackchannel(lastBackchannelRef.current);
-        lastBackchannelRef.current = noise;
-        // interrupt = false: if the switch line is still playing, this queues
-        // behind it instead of cutting her off.
-        say(noise, false);
-      }
 
       const history = turnsRef.current.slice(-8).map((turn) => ({
         role: (turn.from === "student" ? "student" : "avia") as "student" | "avia",
@@ -225,9 +183,8 @@ export function AviaWidget() {
       };
 
       try {
-        const result = await askAvia({ message, history, studying: nextStudying });
+        const result = await askAvia({ message, history, studying });
         addTurn("avia", result.reply);
-        if (result.mode === "tutoring" || nextStudying) setStudying(true);
         // `say` strips markdown for speech; the transcript keeps the structure.
         say(result.reply, false, resume);
       } catch {
@@ -235,14 +192,14 @@ export function AviaWidget() {
         // is unreachable — the credit must never depend on a provider being up.
         const reply = isIdentityAsk(message)
           ? identityReply()
-          : fallbackReply(nextStudying);
+          : fallbackReply(studying);
         addTurn("avia", reply);
         say(reply, false, resume);
       } finally {
         setThinking(false);
       }
     },
-    [addTurn, askAvia, say, studying, thinking],
+    [addTurn, askAvia, say, thinking],
   );
 
   const sendRef = useRef(send);
@@ -373,8 +330,6 @@ export function AviaWidget() {
     hush();
     const next = pickGreeting(greeting);
     setGreeting(next);
-    switchSpokenRef.current = false;
-    setStudying(false);
     setNote(null);
     setDraft("");
     idRef.current = 1;
@@ -417,19 +372,6 @@ export function AviaWidget() {
                   {voiceLabel} · pitch 1.0 · rate 1.05
                 </p>
               </div>
-              <span className="avia-mode">
-                {studying ? (
-                  <>
-                    <Brain className="h-3 w-3" />
-                    Locked in
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3" />
-                    Banter
-                  </>
-                )}
-              </span>
               <button
                 type="button"
                 aria-label="Start a new chat with Avia"
@@ -495,19 +437,6 @@ export function AviaWidget() {
                 >
                   <VolumeX className="h-3 w-3" />
                   Quiet
-                </button>
-              )}
-              {studying && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudying(false);
-                    switchSpokenRef.current = false;
-                    setNote("Back to banter. Say the word when you want to lock in again.");
-                  }}
-                  className="avia-status__action"
-                >
-                  Back to banter
                 </button>
               )}
               {supported && (
@@ -578,17 +507,15 @@ export function AviaWidget() {
       {/* The launcher itself: one living orb, no icon. Six soft light strands
           drift behind a hairline edge while a conic sweep turns around it, so
           the state is legible from across the room — slow and calm at rest,
-          wide and fast while she listens, rippling at speech cadence while she
-          talks, and cooler once she has locked in. */}
+          wide and fast while she listens, and rippling at speech cadence while
+          she talks. */}
       <motion.button
         type="button"
         onClick={() => (open ? closeWidget() : openWidget())}
         aria-expanded={open}
         aria-label={listening ? "Avia is listening" : "Open Avia, the AI voice tutor"}
         className={
-          "avia-fab" +
-          (listening || speaking ? " is-live" : "") +
-          (studying ? " is-study" : "")
+          "avia-fab" + (listening || speaking ? " is-live" : "")
         }
         initial={false}
         animate={{ scale: open ? 0.88 : 1, opacity: open ? 0.7 : 1 }}
