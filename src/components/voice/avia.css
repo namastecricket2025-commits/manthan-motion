@@ -682,17 +682,21 @@ html:not(.dark) .avia-bubble--avia {
    ========================================================================== */
 
 .avia-root {
-  /* dark: aurora on near-black glass */
-  --avia-1: #8b93ff;
-  --avia-2: #c084fc;
-  --avia-3: #38bdf8;
-  --avia-4: #f472b6;
-  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #1b2140 0%, #0d1020 58%, #07080f 100%);
+  /* dark: aurora on near-black glass — re-tinted warm to match the night
+     palette. The old strand set (periwinkle / purple / sky / pink) was the
+     last violet element still sitting on the landing page, because the
+     launcher orb renders in every theme. The orb's backing was navy-slate for
+     the same reason and is now a warm near-neutral. */
+  --avia-1: #ff8f78;
+  --avia-2: #e8b04b;
+  --avia-3: #5eead4;
+  --avia-4: #ffa8b8;
+  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #241710 0%, #120d0b 58%, #08080a 100%);
   --avia-orb-edge: rgba(255, 255, 255, 0.16);
   --avia-strand-blur: 3.5px;
   --avia-strand-mix: screen;
   --avia-strand-opacity: 0.92;
-  --avia-orbit-glow: 0 16px 44px -14px rgba(139, 147, 255, 0.6);
+  --avia-orbit-glow: 0 16px 44px -14px rgba(255, 143, 120, 0.55);
   --avia-halo-alpha: 0.5;
   --avia-orb-inner: inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset 0 -8px 18px -10px rgba(0, 0, 0, 0.6);

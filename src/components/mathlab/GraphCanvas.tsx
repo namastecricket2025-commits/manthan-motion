@@ -63,11 +63,11 @@ function readPalette() {
   const read = (name: string, fallback: string) =>
     styles.getPropertyValue(name).trim() || fallback;
   return {
-    grid: read("--card-border", "rgba(139,147,255,0.22)"),
+    grid: read("--card-border", "rgba(255,255,255,0.12)"),
     axis: read("--text-dim", "#cbd5e1"),
     // Fallbacks only used if the theme tokens are somehow unreadable; live
     // values always come from --signal, so the curve follows the theme accent.
-    curve: read("--signal", "#8b93ff"),
+    curve: read("--signal", "#ff8f78"),
     label: read("--text-dim", "#cbd5e1"),
     surface: read("--card", "rgba(15, 23, 42, 0.4)"),
   };

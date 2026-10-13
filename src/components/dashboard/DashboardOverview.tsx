@@ -218,7 +218,7 @@ function useChartInk() {
         ? {
             label: "rgba(255, 255, 255, 0.9)",
             grid: "rgba(255, 255, 255, 0.12)",
-            primary: "#8b93ff",
+            primary: "#ff8f78",
             secondary: "#5eead4",
           }
         : {
@@ -937,7 +937,7 @@ const BAR_MIN_WIDTH = 460;
 
 function BarTip({ point }: { point: ActivityPoint }) {
   return (
-    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#1a1a24]/95">
+    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#17171a]/95">
       <p className="font-semibold text-foreground dark:text-white/95">
         {point.day} · {point.label}
       </p>
@@ -1279,7 +1279,7 @@ const HEAT_DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function HeatTip({ cell }: { cell: HeatCell }) {
   return (
-    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#1a1a24]/95">
+    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#17171a]/95">
       <p className="font-semibold text-foreground dark:text-white/95">
         {cell.label}
       </p>

@@ -69,7 +69,7 @@ const SHEET = { w: 120, d: 62 };
 
 /** Themed hairline / glow colours, matching the site tokens. */
 const PALETTE = {
-  dark: { line: "#8b93ff", crest: "#c7ccff", fade: "#0a0a0b" },
+  dark: { line: "#ff8f78", crest: "#ffd7c9", fade: "#0a0a0b" },
   light: { line: "#c81f27", crest: "#8f1d22", fade: "#f7f3f0" },
 };
 
