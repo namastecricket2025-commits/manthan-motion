@@ -431,6 +431,27 @@
   --dash-frost-bottom: rgba(255, 255, 255, 0);
   --menu-bg: #1a1a24;
   --menu-ink: rgba(255, 255, 255, 0.92);
+
+  /* ---- Ambient glow vocabulary (dark) --------------------------------
+     Vercel-style "light behind the surface": soft radial auras that read as
+     light bleeding out from behind a card or a section, never as a coloured
+     border. Four jobs, four tokens:
+
+       --glow-aura    the wide section aura (accent indigo)
+       --glow-aura-2  the cool second hue riding inside it (chart-2 mint)
+       --glow-edge    the lit lip a spotlight leaves on a top hairline
+       --glow-cta     the halo under the filled primary action
+
+     Every one is a plain gradient stop or a shadow colour — never `filter:
+     blur()`, which is the expensive way to fake this and the exact cost the
+     metaball canvas exists to avoid. Each use site multiplies its own
+     opacity by `--bg-glow-opacity` (the Ambient Intensity slider), so
+     turning Ambient down still quiets the whole scene instead of leaving
+     these behind at full strength. */
+  --glow-aura: color-mix(in srgb, var(--signal) 16%, transparent);
+  --glow-aura-2: color-mix(in srgb, #5eead4 9%, transparent);
+  --glow-edge: rgba(255, 255, 255, 0.1);
+  --glow-cta: color-mix(in srgb, var(--signal-strong) 58%, transparent);
 }
 
 /* ============================================================
@@ -602,6 +623,89 @@
     background: rgba(255, 255, 255, 0.6);
     border-color: rgba(0, 0, 0, 0.08);
     box-shadow: 0 18px 50px -24px rgba(31, 10, 8, 0.25);
+  }
+
+  /* ------------------------------------------------
+     Ambient glows (dark only) — light the surfaces that already exist
+     rather than adding decorative markup:
+
+       .glow-aura       a reusable section aura the caller positions
+       .glass-panel     a soft light pooling at the card's top edge
+       .glass-chip      the same, at chip scale
+       .kicker          a small bloom around the section label
+       .moving-border   a halo under the filled primary action
+
+     Dark-scoped in full: light mode keeps its flat paper look. Every layer
+     is `pointer-events: none` and painted from gradient / shadow colour
+     only (no `filter: blur()`), so it costs one paint and no layout — and
+     each is scaled by `--bg-glow-opacity`, so the Ambient Intensity slider
+     still governs the whole scene.
+     ------------------------------------------------ */
+
+  /* A section aura: two soft radial washes that reach nothing well before
+     the edges, so it reads as light spilling from behind the content rather
+     than as a painted shape.
+
+     Placement and size belong to the caller. Contract: render it as the
+     FIRST child of a `position: relative` section and give the sibling
+     content `relative` (or any stacking value) — this sits at z-index 0 and
+     a static sibling would be painted underneath it. */
+  .dark .glow-aura,
+  [data-theme="dark"] .glow-aura {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: calc(var(--bg-glow-opacity, 1) * 0.95);
+    background:
+      radial-gradient(62% 46% at 50% -4%, var(--glow-aura), transparent 68%),
+      radial-gradient(34% 30% at 82% 4%, var(--glow-aura-2), transparent 70%);
+  }
+
+  /* The card's own light: a FIXED-size pool at the top edge, so a short tile
+     and a tall panel get the same bright lip instead of a glow that stretches
+     with the box. Painted beneath the children, which hold z-index 1. */
+  .dark .glass-panel::after,
+  [data-theme="dark"] .glass-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: var(--bg-glow-opacity, 1);
+    background: radial-gradient(
+      560px 200px at 50% -60px,
+      color-mix(in srgb, var(--signal) 8%, transparent),
+      transparent 70%
+    );
+  }
+  /* The lit lip a spotlight leaves along the top hairline. */
+  .dark .glass-panel,
+  [data-theme="dark"] .glass-panel {
+    box-shadow:
+      var(--glass-shadow),
+      inset 0 1px 0 var(--glow-edge);
+  }
+  .dark .glass-chip,
+  [data-theme="dark"] .glass-chip {
+    box-shadow:
+      0 18px 50px -24px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 var(--glow-edge);
+  }
+
+  /* The section label sits in a small bloom rather than flat on the page. */
+  .dark .kicker,
+  [data-theme="dark"] .kicker {
+    box-shadow: 0 0 20px -8px color-mix(in srgb, var(--signal) 55%, transparent);
+  }
+
+  /* The primary action carries a halo in its own colour — the one place the
+     accent is allowed to bleed onto the page around it. */
+  .dark .moving-border,
+  [data-theme="dark"] .moving-border {
+    box-shadow:
+      0 18px 50px -24px rgba(0, 0, 0, 0.5),
+      0 0 36px -8px var(--glow-cta);
   }
 
   /* ------------------------------------------------

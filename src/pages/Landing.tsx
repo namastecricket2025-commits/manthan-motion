@@ -67,7 +67,13 @@ function Hero() {
         aria-label="Manthan"
         className="relative flex min-h-[calc(100svh-72px)] items-center justify-center px-4 pb-10 pt-24"
       >
-        <div data-hero-fade className="h-full w-full">
+        {/* Ambient aura — light spilling from behind the mark. Static,
+            dark-only, and scaled by the Ambient Intensity slider
+            (`--bg-glow-opacity`). Rendered first, with the content below set
+            `relative`, so the glow sits behind the mark instead of washing
+            over it. */}
+        <div className="glow-aura" aria-hidden="true" />
+        <div data-hero-fade className="relative h-full w-full">
           <OrbitMark />
         </div>
       </section>
