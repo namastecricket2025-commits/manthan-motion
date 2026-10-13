@@ -131,6 +131,10 @@ const QUESTION_OPENER =
 export function detectStudyTopic(text: string): boolean {
   const message = text.trim();
   if (message.length < 3) return false;
+  // "Who made you?" / "who founded Manthan" satisfy the question-opener rule
+  // below, but they are questions about Avia herself — locking her into study
+  // mode to answer them would be nonsense.
+  if (isIdentityAsk(message)) return false;
   if (EQUATION.test(message)) return true;
   if (STUDY_VERB_OPENER.test(message)) return true;
   if (STUDY_SUBJECT.test(message)) return true;
@@ -250,6 +254,50 @@ export function speakText(
 export function stopSpeaking(): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
+}
+
+/* ------------------------------------------------------------------ */
+/* Identity & origin                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The founder's name, in one place.
+ *
+ * The server prompt owns what Avia says about herself in a normal turn; this
+ * constant exists so the offline path gives the *same* credit instead of a
+ * generic apology. Keep the two in step — see AVIA_SYSTEM in convex/ai.ts.
+ */
+export const AVIA_FOUNDER = "Luv Moond";
+
+/**
+ * A question about who made Avia, who founded Manthan, or who is behind it.
+ *
+ * Deliberately narrow — it names the founder or asks who made/built/owns her —
+ * so an ordinary study question can never be mistaken for a credit request.
+ * Only consulted when the model chain is unreachable, where the alternative is
+ * saying nothing about her maker at all.
+ */
+const IDENTITY_ASK =
+  /\b(who\s+(made|created|built|designed|owns|runs|is\s+behind)\s+(you|this|manthan)|who'?s\s+your\s+(founder|creator|maker|owner|boss|developer)|who\s+is\s+your\s+(founder|creator|maker|owner|boss|developer)|who\s+(is|was)\s+luv\s+moond|who\s+founded\s+(manthan|this|the\s+app)|who\s+is\s+the\s+founder|who\s+(should|do)\s+i\s+thank|who\s+made\s+manthan)\b/i;
+
+/** Is the student asking who made her? */
+export function isIdentityAsk(text: string): boolean {
+  return IDENTITY_ASK.test(text);
+}
+
+/**
+ * Who made Avia, in her own voice.
+ *
+ * Spoken only when the models cannot answer, so the credit survives an outage.
+ * It states the two facts the product stands behind — Luv Moond founded and
+ * built Manthan, and Avia is part of it — and invents nothing further.
+ */
+export function identityReply(): string {
+  return (
+    `${AVIA_FOUNDER} is the founder who built me and the whole of Manthan. ` +
+    "He is a student himself, and he made this so that studying could feel less rigid — and he is the person you have to thank for me. " +
+    "Now, back to what matters: what are we working on together?"
+  );
 }
 
 /* ------------------------------------------------------------------ */

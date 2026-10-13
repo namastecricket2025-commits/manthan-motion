@@ -2,6 +2,8 @@ import { api } from "@/convex/_generated/api";
 import {
   detectStudyTopic,
   fallbackReply,
+  identityReply,
+  isIdentityAsk,
   pickAviaVoice,
   pickBackchannel,
   pickGreeting,
@@ -229,7 +231,11 @@ export function AviaWidget() {
         // `say` strips markdown for speech; the transcript keeps the structure.
         say(result.reply, false, resume);
       } catch {
-        const reply = fallbackReply(nextStudying);
+        // A question about who made her is answered even when the model chain
+        // is unreachable — the credit must never depend on a provider being up.
+        const reply = isIdentityAsk(message)
+          ? identityReply()
+          : fallbackReply(nextStudying);
         addTurn("avia", reply);
         say(reply, false, resume);
       } finally {
