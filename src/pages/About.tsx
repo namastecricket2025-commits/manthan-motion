@@ -558,6 +558,8 @@ export default function About() {
     <div className="relative min-h-screen bg-background text-foreground">
       <BlobBackground />
       <div className="relative z-10">
+        {/* Page-top aura — ambient light spilling in from above, dark mode only. */}
+        <div className="glow-aura" aria-hidden="true" />
         <Navbar />
         <main className="about-root">
           <AboutHero />

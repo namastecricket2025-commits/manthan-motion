@@ -45,12 +45,21 @@ html:not(.dark) .about-root .apple-card {
   -webkit-backdrop-filter: blur(25px) saturate(140%);
   backdrop-filter: blur(25px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.32);
+  /* The second layer is the same 1px accent ring `.apple-glass--lift:hover`
+     draws, held at zero alpha. `.apple-glass--lift` transitions `box-shadow`,
+     and a shadow list can only tween when both states have the SAME number of
+     layers — otherwise the ring pops in instantly while the card eases up,
+     and pops again on the way out. */
+  box-shadow:
+    0 40px 100px -20px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(200, 30, 30, 0);
 }
 html:not(.dark) .apple-glass {
   background: rgba(255, 255, 255, 0.5);
   border-color: rgba(0, 0, 0, 0.07);
-  box-shadow: 0 34px 80px -30px rgba(31, 10, 8, 0.22);
+  box-shadow:
+    0 34px 80px -30px rgba(31, 10, 8, 0.22),
+    0 0 0 1px rgba(200, 30, 30, 0);
 }
 /* hover-lift variant: same glass, deepening ambient shadow */
 .apple-glass--lift {

@@ -448,10 +448,10 @@
      opacity by `--bg-glow-opacity` (the Ambient Intensity slider), so
      turning Ambient down still quiets the whole scene instead of leaving
      these behind at full strength. */
-  --glow-aura: color-mix(in srgb, var(--signal) 16%, transparent);
-  --glow-aura-2: color-mix(in srgb, #5eead4 9%, transparent);
-  --glow-edge: rgba(255, 255, 255, 0.1);
-  --glow-cta: color-mix(in srgb, var(--signal-strong) 58%, transparent);
+  --glow-aura: color-mix(in srgb, var(--signal) 34%, transparent);
+  --glow-aura-2: color-mix(in srgb, #5eead4 20%, transparent);
+  --glow-edge: rgba(255, 255, 255, 0.22);
+  --glow-cta: color-mix(in srgb, var(--signal-strong) 75%, transparent);
 }
 
 /* ============================================================
@@ -646,20 +646,26 @@
      the edges, so it reads as light spilling from behind the content rather
      than as a painted shape.
 
-     Placement and size belong to the caller. Contract: render it as the
-     FIRST child of a `position: relative` section and give the sibling
-     content `relative` (or any stacking value) — this sits at z-index 0 and
-     a static sibling would be painted underneath it. */
+     Contract: render it as the FIRST child of a `position: relative` wrapper
+     that also creates a stacking context (the pages use `relative z-10`).
+     `z-index: -1` then paints it above that wrapper's own background but
+     beneath every in-flow sibling, so it never washes over text and callers
+     never have to force their content to `relative`.
+
+     Height is a fixed band pinned to the wrapper's top edge rather than
+     `inset: 0`: the aura belongs to the top of a page, and on a long page a
+     full-height box would stretch a 640px gradient until it vanished. */
   .dark .glow-aura,
   [data-theme="dark"] .glow-aura {
     position: absolute;
-    inset: 0;
-    z-index: 0;
+    inset: 0 0 auto;
+    height: min(760px, 100%);
+    z-index: -1;
     pointer-events: none;
-    opacity: calc(var(--bg-glow-opacity, 1) * 0.95);
+    opacity: var(--bg-glow-opacity, 1);
     background:
-      radial-gradient(62% 46% at 50% -4%, var(--glow-aura), transparent 68%),
-      radial-gradient(34% 30% at 82% 4%, var(--glow-aura-2), transparent 70%);
+      radial-gradient(120% 640px at 50% -8%, var(--glow-aura), transparent 62%),
+      radial-gradient(65% 400px at 84% -6%, var(--glow-aura-2), transparent 66%);
   }
 
   /* The card's own light: a FIXED-size pool at the top edge, so a short tile
@@ -672,12 +678,21 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    opacity: var(--bg-glow-opacity, 1);
+    opacity: calc(var(--bg-glow-opacity, 1) * 0.8);
     background: radial-gradient(
-      560px 200px at 50% -60px,
-      color-mix(in srgb, var(--signal) 8%, transparent),
-      transparent 70%
+      640px 240px at 50% -70px,
+      color-mix(in srgb, var(--signal) 22%, transparent),
+      transparent 72%
     );
+    transition: opacity 320ms ease;
+  }
+  /* The pool brightens while the surface is hovered, so a card reads as lit
+     rather than painted. Pointer devices only, matching the other hovers. */
+  @media (hover: hover) and (pointer: fine) {
+    .dark .glass-panel:hover::after,
+    [data-theme="dark"] .glass-panel:hover::after {
+      opacity: var(--bg-glow-opacity, 1);
+    }
   }
   /* The lit lip a spotlight leaves along the top hairline. */
   .dark .glass-panel,
@@ -1001,9 +1016,12 @@
     .feature-card:active {
       transform: scale(0.985);
     }
+    /* Same reasoning as the hover above: the longhand keeps the glass
+       gradient and only layers the fill underneath it, so a tap never
+       erases the card's material. */
     .feature-card:active {
       border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-      background: var(--glass-fill-strong);
+      background-color: var(--glass-fill-strong);
     }
   }
 
@@ -1027,20 +1045,29 @@
 
   /* Feature / card hover (pointer devices only) */
   @media (hover: hover) and (pointer: fine) {
+    /* Every hovered property has to interpolate, or the surface snaps instead
+       of easing. Two shapes in the inherited `.glass-panel` spec break that:
+       its fill is a `linear-gradient` (an IMAGE, which cannot tween to a flat
+       colour), and the second layer of its shadow is `inset`. So the hover
+       animates `background-color` — the longhand, which fades in UNDER the
+       gradient instead of replacing it — and keeps the shadow's layer count
+       and inset-ness identical, tinting the lip that is already there rather
+       than swapping in an outset ring. The edge accent still lands on the
+       border, which tweens anyway. */
     .feature-card {
       transition:
         transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
         border-color 280ms ease,
-        background 280ms ease,
+        background-color 280ms ease,
         box-shadow 280ms ease;
     }
     .feature-card:hover {
       transform: translateY(-5px);
       border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-      background: var(--glass-fill-strong);
+      background-color: var(--glass-fill-strong);
       box-shadow:
         var(--glass-shadow),
-        0 0 0 1px color-mix(in srgb, var(--signal) 14%, transparent);
+        inset 0 1px 0 color-mix(in srgb, var(--signal) 42%, transparent);
     }
     .btn-ghost {
       transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
