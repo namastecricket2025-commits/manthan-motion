@@ -218,8 +218,8 @@ function useChartInk() {
         ? {
             label: "rgba(255, 255, 255, 0.9)",
             grid: "rgba(255, 255, 255, 0.12)",
-            primary: "#ff8f78",
-            secondary: "#5eead4",
+            primary: "#fafafa",
+            secondary: "#a1a1aa",
           }
         : {
             label: "#333f4b",
@@ -763,7 +763,7 @@ function MetricTile({
                   (tone === "up"
                     ? "border-[color-mix(in_srgb,var(--signal)_38%,transparent)] text-[var(--signal)]"
                     : tone === "down"
-                      ? "border-[color-mix(in_srgb,#f59e0b_42%,transparent)] text-[#fbbf24]"
+                      ? "border-[color-mix(in_srgb,var(--destructive)_42%,transparent)] text-[var(--destructive)]"
                       : "border-[var(--card-border)] text-text-dim")
                 }
               >

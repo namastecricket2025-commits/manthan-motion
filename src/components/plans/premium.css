@@ -645,7 +645,8 @@ html:not(.dark) .checkout-field {
   padding: 10px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  /* Token, never a literal white: the fill is white in dark mode. */
+  color: var(--primary-foreground);
   transition:
     opacity 220ms var(--ease-momentum),
     transform 220ms var(--ease-momentum);
@@ -666,12 +667,15 @@ html:not(.dark) .checkout-field {
 }
 .mathlab-error {
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
-  background: color-mix(in srgb, #f59e0b 8%, transparent);
+  /* Red, from the danger token — the theme's one sanctioned colour, and the
+     same red a wrong answer uses everywhere else. (This was a hardcoded amber
+     that read as an orange box on the monochrome night theme.) */
+  border: 1px solid color-mix(in srgb, var(--destructive) 34%, transparent);
+  background: color-mix(in srgb, var(--destructive) 8%, transparent);
   padding: 10px 12px;
   font-size: 12px;
   line-height: 1.5;
-  color: #f4c77a;
+  color: var(--destructive);
 }
 .mathlab-hint {
   font-size: 12.5px;
@@ -1075,7 +1079,7 @@ html:not(.dark) .checkout-field {
   height: 32px;
   border-radius: 999px;
   background: var(--signal-strong);
-  color: #fff;
+  color: var(--primary-foreground);
   transition:
     opacity 220ms var(--ease-momentum),
     transform 220ms var(--ease-momentum);
@@ -1217,7 +1221,7 @@ html:not(.dark) .checkout-field {
 .mathlab-skill:hover { color: var(--text-main); background: color-mix(in srgb, var(--text-main) 5%, transparent); }
 .mathlab-skill.is-active { color: var(--text-main); border-color: color-mix(in srgb, var(--signal) 32%, transparent); background: color-mix(in srgb, var(--signal) 9%, transparent); }
 .mathlab-skill__node { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: color-mix(in srgb, var(--text-main) 8%, transparent); font-size: 9px; font-weight: 700; }
-.mathlab-skill.is-active .mathlab-skill__node { background: var(--signal-strong); color: white; }
+.mathlab-skill.is-active .mathlab-skill__node { background: var(--signal-strong); color: var(--primary-foreground); }
 .mathlab-split.is-fullscreen { grid-template-columns: minmax(0, 1fr); }
 .mathlab-split.is-fullscreen .mathlab-notebook { min-height: calc(100vh - 160px); }
 .mathlab-notebook { gap: 16px; }

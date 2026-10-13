@@ -263,29 +263,27 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — neutral near-black ink, a warm ember accent, and
-     ambient light that is neutral white rather than a colour wash.
+  /* Brand palette (dark) — pure black canvas, white light, no colour cast.
 
-     Dark mode used to run on an electric indigo, which failed two ways. The
-     night theme read as a different brand from the crimson daylight one, and
-     — the reason the ambient glow was invisible — the background field was
-     indigo too, so indigo light was being painted onto an indigo wall. White
-     light reads as *light* over any backdrop; colour-on-colour cannot.
+     The night theme is deliberately MONOCHROME: a #000 page, white type and
+     white-alpha hairlines, where the only "colour" is light itself — the
+     ambient glows, the gradient display type, the lit top lip on each panel.
+     Saturated colour is reserved for meaning (a wrong answer, a failed read),
+     which is exactly what makes it read as a signal instead of decoration.
 
-     The ember is the crimson daylight accent lifted for near-black: warm
-     rather than saturated, so it glows without the harshness full crimson
-     showed here before.
-
-     Two tones are in play on purpose:
+     Two neutrals are in play on purpose:
        --signal         the luminous one: text accents, hairlines, rings,
-                        chart strokes, glow tints. Clears 7:1 against the ink
-                        so labels stay legible (8.9:1 at this value).
-       --signal-strong  the filled one: button and badge bodies that carry
-                        white text, deep enough to clear 6:1 with it (6.5:1). */
+                        chart strokes, glow tints. 19.6:1 on the ink.
+       --signal-strong  the filled one: the primary action's body. In this
+                        theme it is WHITE and its label is near-black via
+                        `--primary-foreground` — the Vercel button. Anything
+                        that paints text over this token MUST use
+                        `--primary-foreground`; a hardcoded white label on it
+                        is invisible. */
   --ink: #000000;
-  --signal: #ff8f78;
-  --signal-strong: #b3261e;
-  --signal-2: #7f1d1d;
+  --signal: #f5f5f7;
+  --signal-strong: #ffffff;
+  --signal-2: #e4e4e7;
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -296,16 +294,21 @@
   --panel-bg: rgba(10, 10, 12, 0.62);
 
   /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
-     The metaball field's three stops and its opacity ceiling. The ceiling is
-     deliberately LOW here — 0.34, against 0.9 before. A bright, saturated
-     field covering the whole viewport left the ambient light nothing to be
-     brighter than; every glow washed straight into it. Holding the field back
-     to a warm haze makes the page read as near-black and gives the white
-     light in the glow block below something to actually lift. */
-  --bg-canvas-a: #ffffff;
-  --bg-canvas-b: #2a2a2e;
+     The metaball field's three stops and its opacity ceiling.
+
+     In this theme every stop is a DARK neutral, so the field can never lift
+     the page off black: it is faint drifting texture inside the black, not a
+     wash over it. A light stop here is what made the whole viewport read as
+     "grey" instead of "black" — the field covers the entire page, so a light
+     stop turns the page background itself grey and every glow then has
+     nothing darker to sit against.
+
+     The light in this theme comes from the glow block further down, painted
+     on top of the field — never from the field. */
+  --bg-canvas-a: #1c1c20;
+  --bg-canvas-b: #0b0b0d;
   --bg-canvas-c: #000000;
-  --bg-canvas-opacity: 0.16;
+  --bg-canvas-opacity: 0.9;
   /* Neutral segment of the primary-button ring (dark). */
   --moving-ring: rgba(255, 255, 255, 0.16);
 
@@ -323,12 +326,12 @@
   --gt-head: #ffffff;
   --gt-tail: #a1a1aa;
 
-  /* Stroke-text display gradient (dark): a warm arc-lamp sweep — warm white
-     through peach into ember, bright enough to read as lit metal against the
-     near-black canvas. */
-  --stroke-a: #fff3ec;
-  --stroke-b: #ffb59c;
-  --stroke-c: #e05a38;
+  /* Stroke-text display gradient (dark): a white-to-grey arc-lamp sweep,
+     bright enough to read as lit metal against the pure black canvas without
+     introducing a hue. */
+  --stroke-a: #ffffff;
+  --stroke-b: #e4e4e7;
+  --stroke-c: #a1a1aa;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -339,19 +342,19 @@
   ----chart-background: var(--card);
   ----chart-foreground: var(--text-main);
   ----chart-foreground-muted: var(--text-dim);
-  ----chart-grid: rgba(244, 236, 233, 0.1);
-  ----chart-crosshair: rgba(244, 236, 233, 0.18);
+  ----chart-grid: rgba(255, 255, 255, 0.1);
+  ----chart-crosshair: rgba(255, 255, 255, 0.18);
   ----chart-label: var(--text-dim);
   ----chart-line-primary: var(--signal);
-  ----chart-line-secondary: #5eead4;
+  ----chart-line-secondary: #a1a1aa;
   ----chart-tooltip-background: #17171a;
   ----chart-tooltip-foreground: var(--text-main);
   ----chart-tooltip-muted: var(--text-dim);
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(255, 143, 120, 0.12);
-  ----chart-segment-line: rgba(255, 143, 120, 0.3);
+  ----chart-segment-background: rgba(255, 255, 255, 0.12);
+  ----chart-segment-line: rgba(255, 255, 255, 0.3);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -359,84 +362,90 @@
   /* Neutral dark surface ramp (dialogs, popovers, menus, muted wells) built
      on the same base as `--ink`, so no primitive falls back to a default
      grey template or a mismatched warm fill. Ember stays the only accent. */
-  --card: #141416;
+  --card: #0b0b0c;
   --card-foreground: var(--text-main);
   /* Menus, selects, command palettes and popovers open ON a concrete slate
-     backing — #17171a, never a translucent or inherited fill, so their items
+     backing — #0e0e10, never a translucent or inherited fill, so their items
      are fully visible the moment the panel appears. */
-  --popover: #17171a;
+  --popover: #0e0e10;
   --popover-foreground: rgba(255, 255, 255, 0.95);
+  /* The Vercel button: a WHITE body with a near-black label. */
   --primary: var(--signal-strong);
-  --primary-foreground: #fff8f5;
-  --secondary: #1c1c1f;
-  --secondary-foreground: #f4f4f5;
-  --muted: #19191c;
+  --primary-foreground: #09090b;
+  --secondary: #17171a;
+  --secondary-foreground: #ededed;
+  --muted: #151517;
   --muted-foreground: rgba(255, 255, 255, 0.9);
-  --accent: #232323;
-  --accent-foreground: #f4f4f5;
+  --accent: #1f1f22;
+  --accent-foreground: #ededed;
   /* Red survives only where it carries meaning — a wrong answer, a failed
      read — never as decoration. */
   --destructive: #f87171;
-  --border: rgba(244, 236, 233, 0.12);
-  --input: rgba(244, 236, 233, 0.14);
+  /* Neutral white hairlines. They were warm-tinted (244,236,233), which cast
+     a faint brown over every edge in the theme and was half of why black
+     surfaces read as "warm grey" rather than black. */
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.14);
   --ring: var(--signal);
-  --chart-1: #ff8f78;
-  --chart-2: #5eead4;
-  --chart-3: #e8b04b;
-  --chart-4: #7dd3fc;
-  --chart-5: #a1a1aa;
-  /* Artefact + source ramp (dark) — the bright neon set, unchanged. */
-  --kind-summary: #ff8f78;
-  --kind-flashcards: #5eead4;
-  --kind-quiz: #e8b04b;
-  --kind-mindmap: #7d8f78;
-  --kind-slides: #a1a1aa;
-  --src-files: #ff8f78;
-  --src-links: #5eead4;
-  --src-notes: #a1a1aa;
-  --sidebar: #141416;
+  /* A grey ramp, not a rainbow: the series are told apart by LIGHTNESS. */
+  --chart-1: #fafafa;
+  --chart-2: #a1a1aa;
+  --chart-3: #d4d4d8;
+  --chart-4: #71717a;
+  --chart-5: #8f8f98;
+  /* Artefact + source ramp (dark) — the same grey ramp, one lightness step
+     apart per kind so a legend (or a mind-map node) stays separable. */
+  --kind-summary: #fafafa;
+  --kind-flashcards: #8f8f98;
+  --kind-quiz: #d4d4d8;
+  --kind-mindmap: #a1a1aa;
+  --kind-slides: #71717a;
+  --src-files: #fafafa;
+  --src-links: #a1a1aa;
+  --src-notes: #71717a;
+  --sidebar: #0b0b0c;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
-  --sidebar-primary-foreground: #fff7f5;
-  --sidebar-accent: #1c1c1f;
-  --sidebar-accent-foreground: #f4f4f5;
-  --sidebar-border: rgba(244, 236, 233, 0.1);
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: #17171a;
+  --sidebar-accent-foreground: #ededed;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: var(--signal);
 
   /* Flat chart tokens (dark) — labels sit at the same luminous value as body
      copy: an unreadable chart label is a bug, not a mood. Tooltips, markers
      and menus get the concrete slate backing rather than a glass tint. */
-  --chart-background: #141416;
+  --chart-background: #0b0b0c;
   --chart-foreground: rgba(255, 255, 255, 0.95);
   --chart-foreground-muted: rgba(255, 255, 255, 0.9);
   --chart-line-primary: var(--signal);
-  --chart-line-secondary: #5eead4;
+  --chart-line-secondary: #a1a1aa;
   --chart-crosshair: rgba(255, 255, 255, 0.26);
   --chart-grid: rgba(255, 255, 255, 0.12);
   --chart-brush-border: var(--chart-grid);
-  --chart-tooltip-background: #17171a;
+  --chart-tooltip-background: #0e0e10;
   --chart-tooltip-foreground: rgba(255, 255, 255, 0.95);
   --chart-tooltip-muted: rgba(255, 255, 255, 0.9);
-  --chart-marker-background: #17171a;
+  --chart-marker-background: #0e0e10;
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: rgba(255, 255, 255, 0.95);
   --chart-label: rgba(255, 255, 255, 0.9);
-  --chart-scale-01: rgba(255, 143, 120, 0.12);
-  --chart-scale-02: rgba(255, 143, 120, 0.2);
-  --chart-scale-03: rgba(255, 143, 120, 0.3);
-  --chart-scale-04: rgba(255, 143, 120, 0.44);
-  --chart-scale-05: rgba(255, 143, 120, 0.62);
-  --chart-scale-pattern-color: rgba(255, 143, 120, 0.1);
+  --chart-scale-01: rgba(255, 255, 255, 0.12);
+  --chart-scale-02: rgba(255, 255, 255, 0.2);
+  --chart-scale-03: rgba(255, 255, 255, 0.3);
+  --chart-scale-04: rgba(255, 255, 255, 0.44);
+  --chart-scale-05: rgba(255, 255, 255, 0.62);
+  --chart-scale-pattern-color: rgba(255, 255, 255, 0.1);
 
   /* ---- Dashboard ink + selection surfaces (dark) ---------------------- */
   --dash-chart-label: rgba(255, 255, 255, 0.9);
   --dash-chart-grid: rgba(255, 255, 255, 0.12);
   --dash-series-primary: var(--signal);
-  --dash-series-secondary: #5eead4;
+  --dash-series-secondary: #a1a1aa;
   /* The frosted spline's fill: glass translucency, top to bottom. */
   --dash-frost-top: rgba(255, 255, 255, 0.15);
   --dash-frost-bottom: rgba(255, 255, 255, 0);
-  --menu-bg: #17171a;
+  --menu-bg: #0e0e10;
   --menu-ink: rgba(255, 255, 255, 0.92);
 
   /* ---- Ambient glow vocabulary (dark) --------------------------------
@@ -444,9 +453,8 @@
      light bleeding out from behind a card or a section, never as a coloured
      border. Four jobs, four tokens:
 
-       --glow-aura    the wide section aura — NEUTRAL WHITE light, so it reads
-                      over the background field instead of tinting it
-       --glow-aura-2  the warm halo riding inside it (ember)
+       --glow-aura    the wide section aura — the theme's only "colour"
+       --glow-aura-2  the second, offset wash inside it
        --glow-edge    the lit lip a spotlight leaves on a top hairline
        --glow-cta     the halo under the filled primary action
 
@@ -456,10 +464,12 @@
      opacity by `--bg-glow-opacity` (the Ambient Intensity slider), so
      turning Ambient down still quiets the whole scene instead of leaving
      these behind at full strength. */
-  --glow-aura: rgba(255, 255, 255, 0.16);
-  --glow-aura-2: color-mix(in srgb, var(--signal) 18%, transparent);
-  --glow-edge: rgba(255, 255, 255, 0.32);
-  --glow-cta: color-mix(in srgb, var(--signal) 70%, transparent);
+  --glow-aura: rgba(255, 255, 255, 0.28);
+  --glow-aura-2: color-mix(in srgb, var(--signal) 14%, transparent);
+  --glow-edge: rgba(255, 255, 255, 0.34);
+  /* Kept BELOW the aura's own strength: the primary body is white here, so a
+     full-strength halo in the same colour just blows out around the pill. */
+  --glow-cta: color-mix(in srgb, var(--signal) 42%, transparent);
 }
 
 /* ============================================================
@@ -504,7 +514,9 @@
   }
   ::selection {
     background: color-mix(in srgb, var(--signal-strong) 82%, transparent);
-    color: #fff;
+    /* Token, not a literal white: in dark mode the selection bar is white and
+       a fixed white label on it would be invisible. */
+    color: var(--primary-foreground);
   }
   /* Native select lists are painted by the OS, but wherever the browser
      honours option styling the row must be readable the moment the list
@@ -945,7 +957,7 @@
   /* Hover: the disc races (engine) and the words brighten with it. */
   .moving-border:hover .cd-face {
     filter: brightness(1.08) saturate(1.05);
-    color: #ffffff;
+    color: var(--primary-foreground);
   }
   .moving-border:focus-visible .cd-face {
     filter: brightness(1.08) saturate(1.05);
@@ -956,7 +968,7 @@
   }
   /* Hover: the words brighten with the disc. */
   .moving-border:hover .cd-face {
-    color: #ffffff;
+    color: var(--primary-foreground);
   }
   .moving-border:disabled {
     /* Dimmed and still: the engine freezes a disabled disc entirely. */

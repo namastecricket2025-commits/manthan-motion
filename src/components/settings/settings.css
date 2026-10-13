@@ -132,11 +132,10 @@ html:not(.dark) .set-root.set-root--bare {
   --set-title: #f1f5f9;
   --set-dim: #b3c2d4;
   --set-faint: #94a3b8;
-  /* Accent layers resolve from the theme, not from a hardcoded red: the
-     settings canvas follows the app accent in both modes (indigo at night,
-     warm crimson in the light theme) so nothing on this page can drift back
-     to a colour the rest of the app no longer uses. The historical token
-     names are kept so every rule below keeps working. */
+  /* Accent layers resolve from the theme, not from a hardcoded red: the   settings canvas follows the app accent in both modes (white light at
+      night, warm crimson in the light theme) so nothing on this page can
+      drift back to a colour the rest of the app no longer uses. The
+      historical token names are kept so every rule below keeps working. */
   --set-crimson: var(--signal-strong);
   --set-crimson-deep: var(--signal-2);
   --set-neon: var(--signal);
@@ -163,10 +162,10 @@ html:not(.dark) .set-root.set-root--bare {
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      rgba(56, 189, 248, calc(0.045 * var(--bg-glow-opacity, 1))),
+      rgba(255, 255, 255, calc(0.045 * var(--bg-glow-opacity, 1))),
       transparent 60%
     ),
-    linear-gradient(180deg, #0a0f1e, #0f172a 44%, #0b1120);
+    linear-gradient(180deg, #08080a, #0d0d10 44%, #000000);
 }
 
 /* faint blueprint matrix, matched to the lab backdrop, scaled by ambient */
@@ -871,15 +870,17 @@ html:not(.dark) .set-select-content [role="option"] {
 .set-strength__bar--l1 {
   background: color-mix(in srgb, var(--signal) 85%, transparent);
 }
+/* A lightness ramp off `--text-main`, so it reads in BOTH themes — a fixed
+   grey set was invisible on the pale daylight canvas. */
 .set-strength__bar--l2 {
-  background: #f59e0b;
+  background: color-mix(in srgb, var(--text-main) 45%, transparent);
 }
 .set-strength__bar--l3 {
-  background: #22d3ee;
+  background: color-mix(in srgb, var(--text-main) 70%, transparent);
 }
 .set-strength__bar--l4 {
-  background: #34d399;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+  background: var(--text-main);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--text-main) 50%, transparent);
 }
 .set-strength__label {
   font-size: 0.7rem;
@@ -1354,7 +1355,7 @@ html:not(.dark) .set-root {
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      rgba(56, 189, 248, calc(0.07 * var(--bg-glow-opacity, 1))),
+      rgba(255, 255, 255, calc(0.07 * var(--bg-glow-opacity, 1))),
       transparent 60%
     ),
     linear-gradient(180deg, #eef2f7, #f8fafc 44%, #e6ecf4);

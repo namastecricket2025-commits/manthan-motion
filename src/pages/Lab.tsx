@@ -74,9 +74,9 @@ export default function Lab() {
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-xl border"
                 style={{
-                  borderColor: "rgba(167,139,250,0.32)",
-                  background: "rgba(167,139,250,0.12)",
-                  color: "#c4b5fd",
+                  borderColor: "color-mix(in srgb, var(--signal) 32%, transparent)",
+                  background: "color-mix(in srgb, var(--signal) 12%, transparent)",
+                  color: "var(--signal)",
                 }}
               >
                 <Beaker className="h-4 w-4" />
@@ -94,7 +94,7 @@ export default function Lab() {
           <span className="apple-lab-chip">
             <span
               className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ background: "#6ee7b7" }}
+              style={{ background: "var(--signal)" }}
             />
             sandboxed — nothing here touches real apparatus
           </span>
@@ -126,7 +126,7 @@ export default function Lab() {
                     />
                   )}
                   <Icon
-                    className={`relative z-10 h-4 w-4 ${isActive ? "text-[#c4b5fd]" : ""}`}
+                    className={`relative z-10 h-4 w-4 ${isActive ? "text-[var(--signal)]" : ""}`}
                   />
                   <span className="relative z-10">{entry.label}</span>
                 </button>

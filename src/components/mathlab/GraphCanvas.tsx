@@ -67,7 +67,7 @@ function readPalette() {
     axis: read("--text-dim", "#cbd5e1"),
     // Fallbacks only used if the theme tokens are somehow unreadable; live
     // values always come from --signal, so the curve follows the theme accent.
-    curve: read("--signal", "#ff8f78"),
+    curve: read("--signal", "#a1a1aa"),
     label: read("--text-dim", "#cbd5e1"),
     surface: read("--card", "rgba(15, 23, 42, 0.4)"),
   };

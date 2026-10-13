@@ -1613,7 +1613,8 @@
 .mathlab-calc__key.is-equals {
   background: var(--signal-strong);
   border-color: transparent;
-  color: #fff;
+  /* Token, never a literal white: the fill is white in dark mode. */
+  color: var(--primary-foreground);
 }
 
 .mathlab-calc__key.is-angle {
