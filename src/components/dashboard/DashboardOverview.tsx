@@ -555,12 +555,6 @@ function ResumeBlock({
       aria-label="Pick up where you left off"
       className="dashboard-bento overflow-hidden p-6 sm:p-8"
     >
-      {/* The block's own light: the accent glinting through the glass. */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-[color-mix(in_srgb,var(--signal)_28%,transparent)] opacity-70 blur-3xl"
-      />
-
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="min-w-0 flex-1">
           <p className="dashboard-kicker">
@@ -937,8 +931,8 @@ const BAR_MIN_WIDTH = 460;
 
 function BarTip({ point }: { point: ActivityPoint }) {
   return (
-    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#17171a]/95">
-      <p className="font-semibold text-foreground dark:text-white/95">
+    <div className="w-max rounded-lg border border-[var(--panel-line)] bg-[var(--popover)] px-3 py-2 text-[11.5px]">
+      <p className="font-semibold text-[var(--popover-foreground)]">
         {point.day} · {point.label}
       </p>
       <p className="mt-1 flex items-center gap-2 text-text-dim">
@@ -1279,7 +1273,7 @@ const HEAT_DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function HeatTip({ cell }: { cell: HeatCell }) {
   return (
-    <div className="w-max rounded-xl border border-[var(--card-border)] bg-white/95 px-3 py-2 text-[11.5px] shadow-lg backdrop-blur-md dark:bg-[#17171a]/95">
+    <div className="w-max rounded-lg border border-[var(--panel-line)] bg-[var(--popover)] px-3 py-2 text-[11.5px]">
       <p className="font-semibold text-foreground dark:text-white/95">
         {cell.label}
       </p>

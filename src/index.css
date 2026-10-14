@@ -49,8 +49,13 @@
   --font-sans: "Inter", "Noto Sans Devanagari", ui-sans-serif, system-ui,
     -apple-system, "Segoe UI",
     sans-serif;
-  --font-display: "Space Grotesk", "Noto Sans Devanagari", "Inter",
-    ui-sans-serif, system-ui,
+  /* Display type is the SAME neutral grotesque as body copy, only tighter.
+     A quirky display face (Space Grotesk) next to Inter is the classic
+     "template" tell: real product sites typeset headlines in the same family
+     and lean on weight, size and tracking for hierarchy instead of a second
+     personality. */
+  --font-display: "Inter", "Noto Sans Devanagari", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI",
     sans-serif;
   --font-poster: "Outfit", "Space Grotesk", "Inter", ui-sans-serif, system-ui,
     sans-serif;
@@ -113,10 +118,10 @@
   --text-main: #1b1110;
   --text-dim: #333f4b;
   --card-border: rgba(200, 31, 39, 0.26);
-  --panel-bg: rgba(247, 243, 240, 0.55);
-  /* Neutral segment of the primary-button ring — stronger in light mode so
-     the pill reads as a defined button instead of a faint outline. */
-  --moving-ring: rgba(0, 0, 0, 0.14);
+  /* The app chrome (sidebar, sticky header) is the canvas with the page
+     scrolling under it — never a tinted slab. */
+  --panel-bg: color-mix(in srgb, var(--panel) 88%, transparent);
+
 
   /* ---- BACKGROUND BLOB FIELD (light) ---------------------------------
      The three colour stops of the metaball field (see BlobBackground).
@@ -132,6 +137,25 @@
   --glass-fill-strong: rgba(0, 0, 0, 0.035);
   --glass-hairline: rgba(0, 0, 0, 0.04);
   --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
+
+  /* ---- Panel language (light) ----------------------------------------
+     One surface for the whole site: a flat fill plus a 1px hairline. Every
+     card, tile, chart sheet and dropdown is built from these two tokens, in
+     both themes, so nothing ever renders as a one-off frosted shape. */
+  --panel: #ffffff;
+  --panel-line: rgba(0, 0, 0, 0.1);
+  --panel-line-strong: rgba(0, 0, 0, 0.24);
+  /* Light keeps a bloom, but in its OWN accent. The light theme is warm — a
+     cream canvas, espresso ink, a crimson accent — so re-using the dark
+     theme's blue/violet here would drop a cool hue on a warm page and muddy
+     every surface under it. The four stops are therefore re-pointed at the
+     theme's own crimson (plus the ochre already in its chart ramp); the token
+     NAMES describe the stop's ROLE, never its hue, precisely so each theme
+     can fill them with its own colour. */
+  --aurora-core: color-mix(in srgb, var(--signal) 16%, transparent);
+  --aurora-mid: color-mix(in srgb, var(--signal) 10%, transparent);
+  --aurora-edge: color-mix(in srgb, var(--signal) 7%, transparent);
+  --aurora-kick: color-mix(in srgb, #b0773c 10%, transparent);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
@@ -291,7 +315,7 @@
      label dimmer than this. */
   --text-dim: rgba(255, 255, 255, 0.9);
   --card-border: rgba(255, 255, 255, 0.12);
-  --panel-bg: rgba(10, 10, 12, 0.62);
+  --panel-bg: rgba(0, 0, 0, 0.82);
 
   /* ---- BACKGROUND BLOB FIELD (dark) ----------------------------------
      The metaball field's three stops and its opacity ceiling.
@@ -305,12 +329,17 @@
 
      The light in this theme comes from the glow block further down, painted
      on top of the field — never from the field. */
-  --bg-canvas-a: #1c1c20;
-  --bg-canvas-b: #0b0b0d;
+  /* Kept BELOW `--panel` (#0a0a0a) on purpose. The field drifts behind the
+     panels, so its brightest point has to stay darker than the surface
+     sitting on it — otherwise a card reads as a hole punched in a lighter
+     page. At these stops the field peaks around rgb(6,6,8), i.e. the page
+     still measures black, and a panel is cleanly separable from it. */
+  --bg-canvas-a: #08080a;
+  --bg-canvas-b: #020203;
   --bg-canvas-c: #000000;
   --bg-canvas-opacity: 0.9;
-  /* Neutral segment of the primary-button ring (dark). */
-  --moving-ring: rgba(255, 255, 255, 0.16);
+  /* (The primary button's rotating ring is gone — see `.moving-border`. The
+     `--moving-ring` token it needed has been removed with it.) */
 
   /* ---- Frosted glass (dark) ------------------------------------------ */
   --glass-fill-strong: rgba(255, 255, 255, 0.05);
@@ -448,28 +477,48 @@
   --menu-bg: #0e0e10;
   --menu-ink: rgba(255, 255, 255, 0.92);
 
-  /* ---- Ambient glow vocabulary (dark) --------------------------------
-     Vercel-style "light behind the surface": soft radial auras that read as
-     light bleeding out from behind a card or a section, never as a coloured
-     border. Four jobs, four tokens:
+  /* ---- Ambient light vocabulary (dark) -------------------------------
+     Two jobs, two tokens, one light source:
 
-       --glow-aura    the wide section aura — the theme's only "colour"
-       --glow-aura-2  the second, offset wash inside it
-       --glow-edge    the lit lip a spotlight leaves on a top hairline
-       --glow-cta     the halo under the filled primary action
+       --glow-edge   the lit lip on a panel's top hairline (its only depth)
+       --glow-aura   unused by the aurora itself (which composes the four
+                     `--aurora-*` stops directly) and kept for any surface
+                     that wants a plain white wash
 
-     Every one is a plain gradient stop or a shadow colour — never `filter:
-     blur()`, which is the expensive way to fake this and the exact cost the
-     metaball canvas exists to avoid. Each use site multiplies its own
-     opacity by `--bg-glow-opacity` (the Ambient Intensity slider), so
-     turning Ambient down still quiets the whole scene instead of leaving
-     these behind at full strength. */
-  --glow-aura: rgba(255, 255, 255, 0.28);
-  --glow-aura-2: color-mix(in srgb, var(--signal) 14%, transparent);
-  --glow-edge: rgba(255, 255, 255, 0.34);
-  /* Kept BELOW the aura's own strength: the primary body is white here, so a
-     full-strength halo in the same colour just blows out around the pill. */
-  --glow-cta: color-mix(in srgb, var(--signal) 42%, transparent);
+     Nothing else glows. The per-card pool, the chip bloom and the halo under
+     the primary action were all removed: light on every surface is
+     indistinguishable from no light, and it is what made a black page read
+     as grey. Each remaining use site still multiplies its opacity by
+     `--bg-glow-opacity` (the Ambient Intensity slider), so turning Ambient
+     down quiets the whole scene. */
+  --glow-aura: rgba(255, 255, 255, 0.16);
+  --glow-edge: rgba(255, 255, 255, 0.18);
+
+  /* ---- Panel language (dark) -----------------------------------------
+     Vercel's surface, exactly: a near-black fill (#0a0a0a, deliberately not
+     #000 — a panel has to be separable from the page it sits on) plus a 1px
+     white-alpha hairline. No blur, no frost, no ambient drop shadow. Depth
+     comes from the page's light, never from a shadow under every card. */
+  --panel: #0a0a0a;
+  --panel-line: rgba(255, 255, 255, 0.1);
+  --panel-line-strong: rgba(255, 255, 255, 0.22);
+
+  /* ---- Aurora (dark) --------------------------------------------------
+     The only chroma the theme is allowed. The page itself stays pure black;
+     this is a single wide bloom of light behind the hero — a blue core, a
+     violet mid, a pink edge and a cool teal kick — diffused past its own
+     edges so it has no boundary anywhere. Because it is four stops of LOW
+     alpha, the canvas still measures black everywhere the bloom does not
+     reach, which is what separates "black site with a light on it" from "a
+     grey site". Chrome, type and every surface stay neutral on purpose: the
+     hue here reads as light only while nothing else competes with it.
+
+     The names mark ROLE, not hue — core / mid / edge / kick — because the
+     light theme fills the same four stops with its own warm accent. */
+  --aurora-core: rgba(0, 112, 243, 0.5);
+  --aurora-mid: rgba(121, 40, 202, 0.34);
+  --aurora-edge: rgba(255, 0, 128, 0.24);
+  --aurora-kick: rgba(0, 223, 216, 0.2);
 }
 
 /* ============================================================
@@ -577,20 +626,20 @@
      ------------------------------------------------ */
   .glass-panel {
     position: relative;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.075),
-        rgba(255, 255, 255, 0.018) 48%,
-        rgba(255, 255, 255, 0.035)
-      );
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-    border: 1px solid var(--glass-hairline);
-    border-radius: 22px;
-    box-shadow:
-      var(--glass-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    /* THE surface of the site — a flat fill on a 1px hairline, which is how
+       Vercel builds every card, tile and sheet on the site.
+
+       What was here before was frosted glass: a diagonal gradient fill, a
+       `backdrop-filter: blur(25px) saturate(160%)` on every surface, a masked
+       gradient border and a wide ambient drop shadow. Each of those is a
+       template tell on its own; together they are why every screen read as
+       "glassmorphic AI site" instead of "engineered product". A panel is a
+       colour plus a line — depth is the page's light, not a shadow under
+       every card — and dropping the per-surface backdrop-filter removes a
+       full-viewport blur pass from every card in the app. */
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 12px;
   }
   .glass-panel::before {
     content: "";
@@ -599,61 +648,44 @@
     z-index: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: linear-gradient(
-      125deg,
-      rgba(255, 255, 255, 0.1),
-      transparent 18%,
-      transparent 74%,
-      color-mix(in srgb, var(--signal) 6%, transparent)
-    );
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    padding: 1px;
+    /* The one gradient any surface carries: a hair of light falling off the
+       top edge, which is what makes a flat panel read as a lit plane rather
+       than a flat rectangle. Dark only — on white it would be invisible. */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 38%);
+  }
+  html:not(.dark) .glass-panel::before,
+  html[data-theme="light"] .glass-panel::before {
+    content: none;
   }
   .glass-panel > * {
     position: relative;
     z-index: 1;
   }
-  html:not(.dark) .glass-panel,
-  html[data-theme="light"] .glass-panel {
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.68),
-        rgba(255, 255, 255, 0.34) 52%,
-        rgba(255, 255, 255, 0.5)
-      );
-    border-color: rgba(255, 255, 255, 0.72);
-    box-shadow:
-      0 28px 70px -34px rgba(31, 10, 8, 0.24),
-      inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  }
 
   .glass-chip {
-    background: rgba(255, 255, 255, 0.03);
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-    border: 1px solid var(--glass-hairline);
+    background: color-mix(in srgb, var(--text-main) 4%, transparent);
+    border: 1px solid var(--panel-line);
     border-radius: 999px;
-    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.4);
   }
   html:not(.dark) .glass-chip {
-    background: rgba(255, 255, 255, 0.6);
-    border-color: rgba(0, 0, 0, 0.08);
-    box-shadow: 0 18px 50px -24px rgba(31, 10, 8, 0.25);
+    background: rgba(0, 0, 0, 0.03);
+    border-color: var(--panel-line);
   }
 
   /* ------------------------------------------------
-     Ambient glows (dark only) — light the surfaces that already exist
-     rather than adding decorative markup:
+     Ambient light (dark only).
 
-       .glow-aura       a reusable section aura the caller positions
-       .glass-panel     a soft light pooling at the card's top edge
-       .glass-chip      the same, at chip scale
-       .kicker          a small bloom around the section label
-       .moving-border   a halo under the filled primary action
+     The theme has exactly ONE light source: `.glow-aura`, the wide aurora
+     bloom the caller positions behind a page's hero. Everything else that
+     used to glow has been taken out — the per-card radial pool, the chip
+     bloom and the halo under the primary action all went, because light on
+     every surface is indistinguishable from no light at all, and it is the
+     fastest way to make a black page look like a washed-out grey one.
+
+     What remains, and why:
+       .glow-aura    the aurora — the page's only chroma and its only bloom
+       .kicker       a hairline badge, flat
+       inset lip     one pixel of light on a panel's top edge (box-shadow)
 
      Dark-scoped in full: light mode keeps its flat paper look. Every layer
      is `pointer-events: none` and painted from gradient / shadow colour
@@ -662,9 +694,10 @@
      still governs the whole scene.
      ------------------------------------------------ */
 
-  /* A section aura: two soft radial washes that reach nothing well before
-     the edges, so it reads as light spilling from behind the content rather
-     than as a painted shape.
+  /* The aurora: Vercel's signature, and the one place this theme is allowed
+     to be chromatic. Four LOW-alpha ellipses of light — blue core, violet
+     mid, pink edge, teal kick — laid on pure black and falling off to
+     nothing well inside the box, so there is no boundary and no banding.
 
      Contract: render it as the FIRST child of a `position: relative` wrapper
      that also creates a stacking context (the pages use `relative z-10`).
@@ -673,75 +706,100 @@
      never have to force their content to `relative`.
 
      Height is a fixed band pinned to the wrapper's top edge rather than
-     `inset: 0`: the aura belongs to the top of a page, and on a long page a
-     full-height box would stretch a 640px gradient until it vanished. */
+     `inset: 0`: the bloom belongs to the top of a page, and on a long page a
+     full-height box would stretch it until it vanished. Because the four
+     stops are low-alpha, everything outside them still measures pure black. */
   .dark .glow-aura,
   [data-theme="dark"] .glow-aura {
     position: absolute;
     inset: 0 0 auto;
-    height: min(760px, 100%);
+    height: min(720px, 100%);
     z-index: -1;
     pointer-events: none;
     opacity: var(--bg-glow-opacity, 1);
     background:
-      radial-gradient(120% 640px at 50% -8%, var(--glow-aura), transparent 62%),
-      radial-gradient(65% 400px at 84% -6%, var(--glow-aura-2), transparent 66%);
+      radial-gradient(52% 400px at 50% -4%, var(--aurora-core), transparent 70%),
+      radial-gradient(40% 300px at 27% 3%, var(--aurora-mid), transparent 72%),
+      radial-gradient(36% 280px at 75% 1%, var(--aurora-edge), transparent 74%),
+      radial-gradient(28% 220px at 60% 13%, var(--aurora-kick), transparent 76%);
   }
-
-  /* The card's own light: a FIXED-size pool at the top edge, so a short tile
-     and a tall panel get the same bright lip instead of a glow that stretches
-     with the box. Painted beneath the children, which hold z-index 1. */
-  .dark .glass-panel::after,
-  [data-theme="dark"] .glass-panel::after {
-    content: "";
+  /* Light mode keeps only a whisper of the same bloom, so the hero is still
+     lit from behind without the page losing its paper reading. */
+  html:not(.dark) .glow-aura,
+  html[data-theme="light"] .glow-aura {
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
+    inset: 0 0 auto;
+    height: min(640px, 100%);
+    z-index: -1;
     pointer-events: none;
     opacity: calc(var(--bg-glow-opacity, 1) * 0.8);
-    background: radial-gradient(
-      640px 240px at 50% -70px,
-      var(--glow-aura),
-      transparent 72%
-    );
-    transition: opacity 320ms ease;
+    background:
+      radial-gradient(52% 360px at 50% -4%, var(--aurora-core), transparent 70%),
+      radial-gradient(38% 260px at 74% 2%, var(--aurora-kick), transparent 74%);
   }
-  /* The pool brightens while the surface is hovered, so a card reads as lit
-     rather than painted. Pointer devices only, matching the other hovers. */
-  @media (hover: hover) and (pointer: fine) {
-    .dark .glass-panel:hover::after,
-    [data-theme="dark"] .glass-panel:hover::after {
-      opacity: var(--bg-glow-opacity, 1);
-    }
-  }
-  /* The lit lip a spotlight leaves along the top hairline. */
+
+  /* The lit lip: one pixel of light along a panel's top hairline, which is
+     the entire depth model of a flat surface. */
   .dark .glass-panel,
   [data-theme="dark"] .glass-panel {
-    box-shadow:
-      var(--glass-shadow),
-      inset 0 1px 0 var(--glow-edge);
+    box-shadow: inset 0 1px 0 var(--glow-edge);
   }
   .dark .glass-chip,
   [data-theme="dark"] .glass-chip {
-    box-shadow:
-      0 18px 50px -24px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 var(--glow-edge);
+    box-shadow: inset 0 1px 0 var(--glow-edge);
   }
 
-  /* The section label sits in a small bloom rather than flat on the page. */
-  .dark .kicker,
-  [data-theme="dark"] .kicker {
-    box-shadow: 0 0 20px -8px color-mix(in srgb, var(--signal) 55%, transparent);
+  /* The hero's product frame — the one object on the site that is presented
+     rather than just placed: a panel inside a lit plate, so the screenshot
+     reads as a physical thing the light is coming from. */
+  .hero-frame {
+    position: relative;
+    border-radius: 14px;
+    border: 1px solid var(--panel-line);
+    background: var(--panel);
+    padding: 10px;
+  }
+  html:not(.dark) .hero-frame {
+    box-shadow: 0 30px 80px -44px rgba(0, 0, 0, 0.28);
   }
 
-  /* The primary action carries a halo in its own colour — the one place the
-     accent is allowed to bleed onto the page around it. */
-  .dark .moving-border,
-  [data-theme="dark"] .moving-border {
-    box-shadow:
-      0 18px 50px -24px rgba(0, 0, 0, 0.5),
-      0 0 36px -8px var(--glow-cta);
+  /* The bloom under that frame: the same aurora as the page top, freer and
+     brighter, because here it is the light SOURCE rather than ambience.
+     `z-index: -1` sits it above the page canvas but beneath the frame, so it
+     never washes the screenshot itself. */
+  .dark .hero-bloom,
+  [data-theme="dark"] .hero-bloom {
+    position: absolute;
+    left: 50%;
+    top: -10%;
+    width: min(1120px, 124%);
+    height: 76%;
+    translate: -50% 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--bg-glow-opacity, 1);
+    background:
+      radial-gradient(58% 62% at 50% 42%, var(--aurora-core), transparent 70%),
+      radial-gradient(38% 52% at 20% 56%, var(--aurora-mid), transparent 72%),
+      radial-gradient(38% 52% at 80% 50%, var(--aurora-edge), transparent 74%),
+      radial-gradient(24% 40% at 66% 24%, var(--aurora-kick), transparent 76%);
   }
+  html:not(.dark) .hero-bloom,
+  html[data-theme="light"] .hero-bloom {
+    position: absolute;
+    left: 50%;
+    top: -10%;
+    width: min(1000px, 120%);
+    height: 74%;
+    translate: -50% 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: calc(var(--bg-glow-opacity, 1) * 0.7);
+    background:
+      radial-gradient(58% 62% at 50% 42%, var(--aurora-core), transparent 72%),
+      radial-gradient(36% 50% at 78% 52%, var(--aurora-kick), transparent 74%);
+  }
+
 
   /* ------------------------------------------------
      Site footer — the same Apple glass spec as the About
@@ -751,17 +809,12 @@
      ------------------------------------------------ */
   .site-footer {
     --text-dim: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.02);
-    -webkit-backdrop-filter: blur(25px) saturate(160%);
-    backdrop-filter: blur(25px) saturate(160%);
-    border-top: 1px solid var(--glass-hairline);
-    box-shadow: 0 -30px 80px -40px rgba(0, 0, 0, 0.5);
+    background: var(--ink);
+    border-top: 1px solid var(--panel-line);
   }
   html:not(.dark) .site-footer {
     --text-dim: #333f4b;
-    background: rgba(255, 255, 255, 0.5);
-    border-top-color: rgba(0, 0, 0, 0.07);
-    box-shadow: 0 -30px 80px -40px rgba(31, 10, 8, 0.18);
+    background: var(--panel);
   }
 
   /* Gradient headline text — an "ember tail": the accent word starts in the
@@ -852,38 +905,25 @@
     -webkit-text-fill-color: transparent;
   }
 
-  /* Section kicker chip used above headings.
+  /* Section badge above headings.
 
-     Legibility: kickers are signal-red text that can sit directly over a
-     bright red blob, so instead of a bare red-tinted wash they get a soft
-     ink scrim (theme-aware: near-black in dark, near-cream in light) plus a
-     slight blur — the chip visibly lifts off the background in both themes
-     without becoming a heavy solid pill. */
+     This is a BADGE, not an eyebrow: sentence case at reading size, one flat
+     hairline, no glow and no letterspaced all-caps. Wide-tracked uppercase
+     micro-labels above every heading is the single most recognisable
+     template mannerism there is; product sites use a small grey pill, so
+     that is what this is. Because the label is sentence case at 12px it can
+     sit directly on the canvas — no scrim, no blur, no contrast floor to
+     engineer. */
   .kicker {
-    @apply inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em];
-    color: color-mix(in srgb, var(--signal) 88%, var(--text-main));
-    border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
-    /* A firmer ink scrim: the chip can sit directly over a bright red blob,
-       so the label needs its own contrast floor to stay sharp. */
-    background: color-mix(
-      in srgb,
-      var(--signal) 6%,
-      color-mix(in srgb, var(--ink) 78%, transparent)
-    );
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    backdrop-filter: blur(18px) saturate(160%);
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium;
+    color: var(--text-dim);
+    border: 1px solid var(--panel-line);
+    background: color-mix(in srgb, var(--text-main) 5%, transparent);
   }
   html:not(.dark) .kicker,
   [data-theme="light"] .kicker {
-    color: color-mix(in srgb, var(--signal) 92%, #000);
-  }
-  .kicker::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--signal);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 25%, transparent);
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.03);
   }
 
   /* ------------------------------------------------
@@ -893,26 +933,16 @@
     position: relative;
     display: inline-flex;
     border-radius: 999px;
-    padding: 1.5px;
-    /* The spin clock is JavaScript (cd-engine.ts): it lerps the disc's
-       seconds-per-turn toward fast on hover / busy and back toward slow on
-       leave, so BOTH the speed-up and the revert are smooth — a CSS
-       animation-duration change would snap. The engine writes --cd-angle
-       (sheen) and --cd-angle-r (rim) every frame. */
-    background: conic-gradient(
-      from var(--cd-angle-r, 0deg),
-      var(--moving-ring) 0deg,
-      var(--signal) 40deg,
-      var(--moving-ring) 90deg,
-      var(--moving-ring) 190deg,
-      var(--signal-2) 240deg,
-      var(--moving-ring) 300deg,
-      var(--moving-ring) 360deg
-    );
-    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.5);
-  }
-  html:not(.dark) .moving-border {
-    box-shadow: 0 16px 40px -22px rgba(120, 20, 16, 0.45);
+    padding: 0;
+    /* A FLAT button — no disc.
+
+       This used to be a spinning-CD pill: a conic gradient rotating under the
+       face, plus a white sheen wedge sweeping across the label, driven by a
+       permanent rAF loop. It was the loudest "designed by a generator" cue on
+       every screen, and on the landing page it ran six of them at once. A
+       primary action is a solid fill and a label; the entry, the press scale
+       and the hover tone carry all the motion now. */
+    background: transparent;
   }
   /* The inner carries the red body — these are primary action buttons —
      while the 1.5px conic ring outside it keeps the CD sweep. The 8s
@@ -922,70 +952,34 @@
   .cd-face {
     position: relative;
     overflow: hidden;
-    border-radius: calc(999px - 1.5px);
-    background: linear-gradient(180deg, var(--signal-strong) 0%, var(--signal-2) 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    border-radius: 999px;
+    /* The Vercel button: one solid `--primary` body — white in dark, the
+       accent in light — with the label in `--primary-foreground`, so the
+       label flips with the fill and can never end up white-on-white. */
+    background: var(--primary);
     color: var(--primary-foreground);
-    transition: filter 260ms ease, color 260ms ease;
+    transition: background 180ms ease, color 180ms ease;
   }
-  /* The CD sheen ON the face, BENEATH the label (the label span sits above
-     with z-10): a soft white wedge that sweeps with the disc — you see it
-     pass under the words, which is the effect being asked for. */
-  .cd-face::before {
-    content: "";
-    position: absolute;
-    /* A centered SQUARE large enough to cover the pill's diagonal at any
-       rotation — a non-square box would show gaps at 90°/270°. */
-    left: 50%;
-    top: 50%;
-    width: 260%;
-    aspect-ratio: 1 / 1;
-    translate: -50% -50%;
-    rotate: var(--cd-angle, 0deg);
-    background: conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      rgba(255, 255, 255, 0.34) 24deg,
-      rgba(255, 255, 255, 0.05) 58deg,
-      transparent 95deg,
-      transparent 360deg
-    );
-    pointer-events: none;
-  }
-  /* Hover: the disc races (engine) and the words brighten with it. */
-  .moving-border:hover .cd-face {
-    filter: brightness(1.08) saturate(1.05);
-    color: var(--primary-foreground);
-  }
-  .moving-border:focus-visible .cd-face {
-    filter: brightness(1.08) saturate(1.05);
-  }
+  /* Hover / keyboard focus: the fill steps one tone, the way a product site
+     does it. No filter, so nothing bleeds outside the pill. */
   .moving-border:hover .cd-face,
   .moving-border:focus-visible .cd-face {
-    filter: brightness(1.08) saturate(1.05);
-  }
-  /* Hover: the words brighten with the disc. */
-  .moving-border:hover .cd-face {
+    background: var(--signal-2);
     color: var(--primary-foreground);
   }
+  html:not(.dark) .moving-border:hover .cd-face,
+  html:not(.dark) .moving-border:focus-visible .cd-face {
+    background: color-mix(in srgb, var(--signal-strong) 88%, #000);
+  }
   .moving-border:disabled {
-    /* Dimmed and still: the engine freezes a disabled disc entirely. */
-    opacity: 0.6;
+    /* Dimmed, but still a button: no disc to freeze any more. */
+    opacity: 0.55;
   }
-  .moving-border:disabled .cd-face {
-    filter: saturate(0.7);
-  }
-  /* Loading: the engine's fast target covers is-busy; the styling just
-     drops the dimmed disabled look so an in-flight action reads as working,
-     not dead. */
+  /* Loading: a disabled-looking button reads as dead, so an in-flight action
+     keeps full strength and swaps the cursor instead. */
   .moving-border.is-busy {
     opacity: 1;
     cursor: progress;
-  }
-  .moving-border.is-busy .cd-face {
-    filter: brightness(1.05) saturate(1.08);
   }
   .moving-border:active {
     transform: scale(0.985);
@@ -999,35 +993,8 @@
   .cd-pill {
     position: relative;
     overflow: hidden;
-    border: 1px solid var(--card-border);
-    background-image: conic-gradient(
-      from var(--cd-angle-r, 0deg),
-      transparent 0deg,
-      color-mix(in srgb, var(--signal) 26%, transparent) 38deg,
-      transparent 85deg,
-      transparent 200deg,
-      color-mix(in srgb, var(--signal) 18%, transparent) 235deg,
-      transparent 285deg,
-      transparent 360deg
-    );
-  }
-  .cd-pill::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 240%;
-    aspect-ratio: 1 / 1;
-    translate: -50% -50%;
-    rotate: var(--cd-angle, 0deg);
-    background: conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      color-mix(in srgb, var(--signal) 22%, transparent) 26deg,
-      transparent 75deg,
-      transparent 360deg
-    );
-    pointer-events: none;
+    border: 1px solid var(--panel-line);
+    background: color-mix(in srgb, var(--text-main) 4%, transparent);
   }
   .cd-pill > * {
     position: relative;
@@ -1036,95 +1003,52 @@
   .cd-pill:hover,
   .cd-pill:active,
   .cd-pill:focus-visible {
-    border-color: color-mix(in srgb, var(--signal) 55%, transparent);
+    border-color: var(--panel-line-strong);
   }
   .cd-pill.is-busy {
     cursor: progress;
-  }
-  html[data-motion="reduced"] .cd-pill::before {
-    display: none;
-  }
-  html[data-motion="reduced"] .cd-pill {
-    background-image: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .cd-pill::before {
-      display: none;
-    }
-    .cd-pill {
-      background-image: none;
-    }
   }
 
   /* Touch feedback: press state for touch-first devices */
   @media (hover: none) {
     .moving-border:active .cd-face {
-      filter: brightness(1.12);
+      background: var(--signal-2);
     }
     .btn-ghost:active,
     .feature-card:active {
       transform: scale(0.985);
     }
-    /* Same reasoning as the hover above: the longhand keeps the glass
-       gradient and only layers the fill underneath it, so a tap never
-       erases the card's material. */
     .feature-card:active {
-      border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-      background-color: var(--glass-fill-strong);
+      border-color: var(--panel-line-strong);
+      background-color: color-mix(in srgb, var(--text-main) 6%, var(--panel));
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .moving-border {
-      /* static accent ring instead of the travelling conic sweep */
-      background: linear-gradient(120deg, var(--signal), var(--signal-2));
-    }
-    .cd-face::before {
-      display: none;
-    }
-  }
-  /* Motionless Mode (in-app accessibility switch) kills the disc too —
-     same deal as prefers-reduced-motion: static face, static ring. */
-  html[data-motion="reduced"] .moving-border {
-    background: linear-gradient(120deg, var(--signal), var(--signal-2));
-  }
-  html[data-motion="reduced"] .cd-face::before {
-    display: none;
-  }
 
   /* Feature / card hover (pointer devices only) */
   @media (hover: hover) and (pointer: fine) {
-    /* Every hovered property has to interpolate, or the surface snaps instead
-       of easing. Two shapes in the inherited `.glass-panel` spec break that:
-       its fill is a `linear-gradient` (an IMAGE, which cannot tween to a flat
-       colour), and the second layer of its shadow is `inset`. So the hover
-       animates `background-color` — the longhand, which fades in UNDER the
-       gradient instead of replacing it — and keeps the shadow's layer count
-       and inset-ness identical, tinting the lip that is already there rather
-       than swapping in an outset ring. The edge accent still lands on the
-       border, which tweens anyway. */
+    /* The card hover is two interpolable properties — border colour and
+       background — plus a 2px lift. That is the whole interaction: a surface
+       brightens its edge when you point at it. The previous version dropped
+       5px, tinted the border with the accent and swapped an inset shadow for
+       an outset one, which is why it used to flash on the way in AND out. */
     .feature-card {
       transition:
-        transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 280ms ease,
-        background-color 280ms ease,
-        box-shadow 280ms ease;
+        transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 200ms ease,
+        background-color 200ms ease;
     }
     .feature-card:hover {
-      transform: translateY(-5px);
-      border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-      background-color: var(--glass-fill-strong);
-      box-shadow:
-        var(--glass-shadow),
-        inset 0 1px 0 color-mix(in srgb, var(--signal) 42%, transparent);
+      transform: translateY(-2px);
+      border-color: var(--panel-line-strong);
+      background-color: color-mix(in srgb, var(--text-main) 3%, var(--panel));
     }
     .btn-ghost {
       transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
     }
     .btn-ghost:hover {
-      color: var(--signal);
-      border-color: var(--signal);
-      background: color-mix(in srgb, var(--signal) 8%, transparent);
+      border-color: var(--panel-line-strong);
+      background: color-mix(in srgb, var(--text-main) 8%, transparent);
     }
   }
 
@@ -1270,64 +1194,27 @@
   }
 
   /* ------------------------------------------------
-     DASHBOARD — Apple glass bento surfaces.
+     DASHBOARD — flat bento surfaces.
 
-     The overview is a bento of isolated frosted blocks: one wide resume
-     block, four metric tiles, the allowance line and the frosted spline
-     chart panel. They share the site's glass spec (gradient fill, hairline,
-     inset highlight, one soft ambient shadow) so the workspace reads as one
-     material, and the chart panel is the sheet that must additionally carry
-     `backdrop-filter: blur(12px)` beneath its grid.
+     The overview is a bento of blocks — one wide resume block, four metric
+     tiles, the allowance line and the chart sheet — and every one of them is
+     the same flat panel: `--panel` fill, 1px hairline, 12px radius. A
+     workspace reads as one material because the surfaces are identical, not
+     because they share a blur radius, and a dashboard specifically needs
+     calm: fourteen overlapping glass sheets with a shadow each is why a
+     screen of real numbers can still look garish.
      ------------------------------------------------ */
   .dashboard-bento {
     position: relative;
-    border-radius: 24px;
-    background:
-      linear-gradient(
-        150deg,
-        rgba(255, 255, 255, 0.085),
-        rgba(255, 255, 255, 0.02) 46%,
-        rgba(255, 255, 255, 0.05)
-      );
-    -webkit-backdrop-filter: blur(25px) saturate(165%);
-    backdrop-filter: blur(25px) saturate(165%);
-    border: 1px solid var(--glass-hairline);
-    box-shadow:
-      var(--glass-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-  html:not(.dark) .dashboard-bento,
-  html[data-theme="light"] .dashboard-bento {
-    background:
-      linear-gradient(
-        150deg,
-        rgba(255, 255, 255, 0.78),
-        rgba(255, 255, 255, 0.42) 52%,
-        rgba(255, 255, 255, 0.6)
-      );
-    border-color: rgba(255, 255, 255, 0.74);
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
   }
 
   .dashboard-chart-panel {
-    border-radius: 18px;
-    border: 1px solid var(--glass-hairline);
-    background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.055),
-      rgba(255, 255, 255, 0.014) 62%
-    );
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
-    backdrop-filter: blur(12px) saturate(150%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  }
-  html:not(.dark) .dashboard-chart-panel,
-  html[data-theme="light"] .dashboard-chart-panel {
-    background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.62),
-      rgba(255, 255, 255, 0.34)
-    );
-    border-color: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    border: 1px solid var(--panel-line);
+    background: var(--panel);
   }
 
   /* Recharts ink. These rules only ever set colour, so the library keeps full
@@ -1356,20 +1243,17 @@
     stop-color: var(--dash-frost-bottom);
   }
 
-  /* Dashboard kicker — small caps label above a block's heading. */
+  /* Dashboard kicker — the small grey label above a block's heading. Neutral
+     by design: an accent-tinted all-caps micro-label on every block paints the
+     workspace in one colour and flattens the hierarchy, and the accent is
+     reserved for state (active, wrong, done) rather than for chrome. */
   .dashboard-kicker {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
-  }
-  html:not(.dark) .dashboard-kicker,
-  html[data-theme="light"] .dashboard-kicker {
-    color: color-mix(in srgb, var(--signal) 92%, #000);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
   }
 
   /* The iCloud-style linear "used of total" line: one tracking line, read as
@@ -1386,11 +1270,7 @@
     position: absolute;
     inset: 0 auto 0 0;
     border-radius: 999px;
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--signal) 72%, transparent),
-      var(--signal)
-    );
+    background: var(--signal);
   }
 
   /* Resume-block completion timeline. */
@@ -1416,15 +1296,12 @@
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--primary-foreground);
-    background: linear-gradient(180deg, var(--signal-strong), var(--signal-2));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.24),
-      0 18px 40px -20px color-mix(in srgb, var(--signal) 70%, transparent);
-    transition: filter 220ms ease;
+    background: var(--primary);
+    transition: background 180ms ease;
     touch-action: manipulation;
   }
   .dashboard-resume:hover {
-    filter: brightness(1.06);
+    background: var(--signal-2);
   }
 
   /* ------------------------------------------------
@@ -1446,7 +1323,7 @@
       box-shadow 240ms ease;
   }
   .dash-tile:hover {
-    border-color: color-mix(in srgb, var(--signal) 46%, transparent);
+    border-color: var(--panel-line-strong);
   }
   .dash-tile:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--signal) 70%, transparent);
@@ -1459,9 +1336,11 @@
     pointer-events: none;
     opacity: 0;
     transition: opacity 260ms ease;
+    /* A pointer-tracked highlight, kept just this side of invisible: it is a
+       hint that the tile is a control, not a light show inside a card. */
     background: radial-gradient(
       220px circle at var(--tile-x, 50%) var(--tile-y, 0%),
-      color-mix(in srgb, var(--signal) 24%, transparent),
+      color-mix(in srgb, var(--text-main) 7%, transparent),
       transparent 72%
     );
   }
@@ -1491,24 +1370,20 @@
     padding: 0.7rem 1.35rem;
     font-size: 0.875rem;
     color: var(--primary-foreground);
-    background: linear-gradient(180deg, var(--signal-strong), var(--signal-2));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.24),
-      0 18px 40px -22px color-mix(in srgb, var(--signal) 70%, transparent);
+    background: var(--primary);
   }
   .dash-action--primary:hover {
-    filter: brightness(1.06);
+    background: var(--signal-2);
   }
   .dash-action--secondary {
     padding: 0.55rem 1rem;
     font-size: 0.8125rem;
-    border: 1px solid var(--card-border);
-    background: color-mix(in srgb, var(--text-main) 6%, transparent);
+    border: 1px solid var(--panel-line);
     color: var(--text-main);
   }
   .dash-action--secondary:hover {
-    border-color: color-mix(in srgb, var(--signal) 55%, transparent);
-    color: var(--foreground);
+    border-color: var(--panel-line-strong);
+    background: color-mix(in srgb, var(--text-main) 6%, transparent);
   }
 
   /* A `clip-path` on the wrapper clips its child, so the sweep is cut to the
@@ -1755,8 +1630,11 @@
   inset: 0;
   overflow: hidden;
   backface-visibility: hidden;
-  -webkit-backdrop-filter: var(--glass-blur, blur(25px) saturate(160%));
-  backdrop-filter: var(--glass-blur, blur(25px) saturate(160%));
+  /* Flat, like every other surface. This face used to carry a 25px backdrop
+     blur so the deck's canvas showed through the card — the last frosted
+     surface in the app, and the one that read as a stray pane of glass once
+     everything around it had gone flat. */
+  background: var(--panel);
   border-radius: var(--radius, 18px);
 }
 .flip-card__face--back {
@@ -1842,9 +1720,9 @@ html {
     min-width: 0;
   }
 
-  /* 5. Phones get the roomier card radius; the panel already reads as one
-     floating sheet at this width. */
+  /* 5. Phones keep the same panel radius as desktop — a 12px corner is the
+     design, not a desktop-only value. */
   .glass-panel {
-    border-radius: 20px;
+    border-radius: 12px;
   }
 }

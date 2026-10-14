@@ -99,39 +99,41 @@ html:not(.dark) .set-root.set-root--bare {
    ------------------------------------------------------------ */
 
 .set-root {
-  /* The settings dashboard keeps its own deep slate canvas (the instrument
-     look it shipped with) rather than the crimson field used elsewhere. */
-  --set-ink: #0b1120;
-  --set-bg: #0f172a;
+  /* The settings page is the same surface language as every other page: the
+     theme canvas, flat `--panel` cards, neutral hairlines. It used to carry
+     its own deep-slate/navy instrument theme with its own glass spec, its own
+     drop shadow and 24 `backdrop-filter` surfaces — a second design system
+     living inside one route, in a different colour, is the fastest way to
+     make a product feel assembled rather than designed. */
+  --set-ink: var(--ink);
+  --set-bg: var(--panel);
 
-  /* ---- Apple-style glass tokens: one source of truth for every surface ----
-     Card fill   rgba(255,255,255,0.03) dark / rgba(0,0,0,0.02) light
-     Hairline    1px rgba(255,255,255,0.07) dark / rgba(0,0,0,0.05) light
-     Blur        blur(25px) saturate(140%)
-     Ambient     0 30px 80px -20px rgba(0,0,0,0.25)
-     Deliberately translucent, never opaque: the animated backdrop has to
-     stay visible drifting underneath every panel. */
-  --set-glass: rgba(255, 255, 255, 0.03);
-  --set-glass-strong: rgba(255, 255, 255, 0.055);
-  --set-hairline: rgba(255, 255, 255, 0.07);
-  --set-blur: blur(25px) saturate(140%);
-  --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.25);
+  /* ---- Surface tokens: one source of truth for every panel ----
+     Fill      --panel        (#0a0a0a dark / #ffffff light)
+     Hairline  --panel-line   1px white-alpha dark / black-alpha light
+     Blur      none           — flat surfaces; overlays keep their own blur
+     Ambient   none           — depth is the page's light, not a shadow */
+  --set-glass: var(--panel);
+  --set-glass-strong: color-mix(in srgb, var(--text-main) 6%, var(--panel));
+  --set-hairline: var(--panel-line);
+  --set-blur: none;
+  --set-shadow: none;
   --set-ring: 0 0 12px color-mix(in srgb, var(--signal) 32%, transparent);
   --set-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* legacy aliases now resolve to the glass spec, so no surface keeps a
-     heavy fill or a thick solid border */
-  --set-panel: rgba(255, 255, 255, 0.03);
-  --set-panel-deep: rgba(255, 255, 255, 0.02);
-  --set-well: rgba(255, 255, 255, 0.03);
-  --set-border: rgba(255, 255, 255, 0.07);
-  --set-border-strong: rgba(255, 255, 255, 0.16);
+  /* legacy aliases resolve to the same panel, so no surface keeps a heavy
+     fill or a thick solid border of its own */
+  --set-panel: var(--panel);
+  --set-panel-deep: var(--panel);
+  --set-well: color-mix(in srgb, var(--text-main) 4%, var(--panel));
+  --set-border: var(--panel-line);
+  --set-border-strong: var(--panel-line-strong);
   /* Readable ink: every body/secondary node clears contrast against the
-     dark canvas — no dim grey text on glass. */
-  --set-text: #e2e8f0;
-  --set-title: #f1f5f9;
-  --set-dim: #b3c2d4;
-  --set-faint: #94a3b8;
+     black canvas, and none of the greys carry a blue cast. */
+  --set-text: rgba(255, 255, 255, 0.92);
+  --set-title: #fafafa;
+  --set-dim: rgba(255, 255, 255, 0.72);
+  --set-faint: rgba(255, 255, 255, 0.56);
   /* Accent layers resolve from the theme, not from a hardcoded red: the   settings canvas follows the app accent in both modes (white light at
       night, warm crimson in the light theme) so nothing on this page can
       drift back to a colour the rest of the app no longer uses. The
@@ -152,20 +154,20 @@ html:not(.dark) .set-root.set-root--bare {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Slate canvas with a soft crimson corner wash and a cool sky pool, both
-     scaled by the Ambient Intensity slider. */
+  /* The theme canvas, plus the same aurora bloom the rest of the site uses —
+     scaled by the Ambient Intensity slider like every other glow. */
   background:
     radial-gradient(
       900px 520px at 88% 0%,
-      color-mix(in srgb, var(--signal) calc(5% * var(--bg-glow-opacity, 1)), transparent),
-      transparent 62%
+      color-mix(in srgb, var(--aurora-core) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      transparent 64%
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      rgba(255, 255, 255, calc(0.045 * var(--bg-glow-opacity, 1))),
-      transparent 60%
+      color-mix(in srgb, var(--aurora-mid) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      transparent 62%
     ),
-    linear-gradient(180deg, #08080a, #0d0d10 44%, #000000);
+    var(--ink);
 }
 
 /* faint blueprint matrix, matched to the lab backdrop, scaled by ambient */
@@ -1325,17 +1327,18 @@ html:not(.dark) .set-hero__title {
    ------------------------------------------------------------ */
 
 html:not(.dark) .set-root {
-  /* light glass: translucent white base + rgba(0,0,0,0.04) hairline */
-  --set-glass: rgba(0, 0, 0, 0.02);
-  --set-glass-strong: rgba(0, 0, 0, 0.04);
-  --set-hairline: rgba(0, 0, 0, 0.05);
-  --set-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.12);
+  /* Light: the same flat panel tokens, resolved from the light theme — no
+     separate glass spec to drift out of sync. */
+  --set-glass: var(--panel);
+  --set-glass-strong: color-mix(in srgb, var(--text-main) 4%, var(--panel));
+  --set-hairline: var(--panel-line);
+  --set-shadow: none;
   --set-ring: 0 0 12px color-mix(in srgb, var(--signal) 28%, transparent);
-  --set-panel: rgba(0, 0, 0, 0.02);
-  --set-panel-deep: rgba(0, 0, 0, 0.03);
-  --set-well: rgba(0, 0, 0, 0.02);
-  --set-border: rgba(0, 0, 0, 0.05);
-  --set-border-strong: rgba(0, 0, 0, 0.1);
+  --set-panel: var(--panel);
+  --set-panel-deep: var(--panel);
+  --set-well: color-mix(in srgb, var(--text-main) 4%, var(--panel));
+  --set-border: var(--panel-line);
+  --set-border-strong: var(--panel-line-strong);
   /* High-contrast ink on pale glass: charcoal / deep slate for every
      secondary and legal node — nothing renders invisible. */
   --set-text: #1e293b;
@@ -1346,19 +1349,19 @@ html:not(.dark) .set-root {
   --set-neon-text: color-mix(in srgb, var(--signal) 78%, #000);
   --set-danger: #c81e1e;
   color: var(--set-text);
-  /* Light canvas: pale slate with the same corner washes at light strength. */
+  /* Light canvas: the theme ink with the same aurora at light strength. */
   background:
     radial-gradient(
       900px 520px at 88% 0%,
-      color-mix(in srgb, var(--signal) calc(6% * var(--bg-glow-opacity, 1)), transparent),
-      transparent 62%
+      color-mix(in srgb, var(--aurora-core) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      transparent 64%
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      rgba(255, 255, 255, calc(0.07 * var(--bg-glow-opacity, 1))),
-      transparent 60%
+      color-mix(in srgb, var(--aurora-kick) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      transparent 62%
     ),
-    linear-gradient(180deg, #eef2f7, #f8fafc 44%, #e6ecf4);
+    var(--ink);
 }
 html:not(.dark) .set-root::before {
   background-image:

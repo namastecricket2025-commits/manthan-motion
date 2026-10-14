@@ -32,63 +32,46 @@ html:not(.dark) .about-root .apple-card {
   --card-border: rgba(200, 30, 30, 0.22);
 }
 
-/* ---------- 1. Authentic Apple glass ----------
-   Smoky translucent glass (the same values `.glass-panel` uses in
-   index.css):
-     dark   rgba(255,255,255,0.03)   light  rgba(0,0,0,0.02)
-     blur   blur(25px) saturate(140%)
-     edge   1px rgba(255,255,255,0.07) dark / rgba(0,0,0,0.06) light
-   Never a saturated or opaque panel — the animated crimson field stays
-   visible drifting underneath while the copy keeps full contrast. */
+/* ---------- 1. The site panel ----------
+   The same flat surface as `.glass-panel` in index.css: a `--panel` fill on a
+   `--panel-line` hairline. The frosted variant this used to be (a 0.03 white
+   wash over a 25px backdrop blur, with a 100px ambient shadow under each
+   card) was a second, heavier material than the rest of the site — the About
+   page read as a different product the moment you scrolled into it. */
 .apple-glass {
-  background: rgba(255, 255, 255, 0.03);
-  -webkit-backdrop-filter: blur(25px) saturate(140%);
-  backdrop-filter: blur(25px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  /* The second layer is the same 1px accent ring `.apple-glass--lift:hover`
-     draws, held at zero alpha. `.apple-glass--lift` transitions `box-shadow`,
-     and a shadow list can only tween when both states have the SAME number of
-     layers — otherwise the ring pops in instantly while the card eases up,
-     and pops again on the way out. */
-  box-shadow:
-    0 40px 100px -20px rgba(0, 0, 0, 0.32),
-    0 0 0 1px rgba(200, 30, 30, 0);
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
 }
 html:not(.dark) .apple-glass {
-  background: rgba(255, 255, 255, 0.5);
-  border-color: rgba(0, 0, 0, 0.07);
-  box-shadow:
-    0 34px 80px -30px rgba(31, 10, 8, 0.22),
-    0 0 0 1px rgba(200, 30, 30, 0);
+  background: var(--panel);
+  border-color: var(--panel-line);
 }
-/* hover-lift variant: same glass, deepening ambient shadow */
+/* hover-lift variant: same panel, brighter edge. Only the border and the
+   transform change — both interpolable, so nothing snaps on the way in or
+   out. */
 .apple-glass--lift {
   transition:
-    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .apple-glass--lift:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 40px 100px -20px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(200, 30, 30, 0.1);
+  transform: translateY(-2px);
+  border-color: var(--panel-line-strong);
 }
 html:not(.dark) .apple-glass--lift:hover {
-  border-color: rgba(0, 0, 0, 0.09);
-  box-shadow:
-    0 40px 100px -20px rgba(0, 0, 0, 0.18),
-    0 0 0 1px rgba(200, 30, 30, 0.1);
+  border-color: var(--panel-line-strong);
 }
 
-/* The closing call to action ("Start churning") shares the app-wide solid
-   crimson primary fill (`.moving-border__inner`), so its label stays
-   near-white in every state — a crimson-on-crimson hover would vanish. */
+/* The closing call to action ("Start churning") shares the app-wide primary
+   fill, whose label is `--primary-foreground` — near-black over the white
+   dark-mode button. A hardcoded near-white label here (as this rule used to
+   be, back when the fill was crimson in both themes) would render the button
+   text white-on-white. It therefore resolves from the token, never from a
+   literal. */
 .moving-border.glass-cta > span,
 .moving-border.glass-cta:hover > span,
 .moving-border.glass-cta:active > span {
-  color: #fff7f5;
+  color: var(--primary-foreground);
 }
 
 /* ---------- 2. Page scaffolding ---------- */
@@ -286,16 +269,14 @@ html[data-motion="reduced"] .about-line {
   width: 46px;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--about-signal);
-  -webkit-backdrop-filter: blur(25px) saturate(140%);
-  backdrop-filter: blur(25px) saturate(140%);
+  border-radius: 12px;
+  border: 1px solid var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: var(--text-dim);
 }
 html:not(.dark) .about-pillar__icon {
-  border-color: rgba(0, 0, 0, 0.06);
-  background: rgba(0, 0, 0, 0.02);
+  border-color: var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
 }
 .about-pillar__title {
   margin-top: 1.25rem;

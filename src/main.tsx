@@ -15,10 +15,13 @@ import "./index.css";
 // user-preference hooks (theme, motion, ambient, text comfort) — imported
 // globally so a toggle in the settings dashboard lands on every route
 import "./components/settings/settings.css";
-import { installCdEngine } from "./components/landing/cd-engine";
-
-// One rAF loop drives every spinning-disc button's speed smoothing.
-installCdEngine();
+// NOTE: `installCdEngine()` used to be called here to drive the spinning-disc
+// primary buttons (a permanent rAF loop writing --cd-angle / --cd-angle-r on
+// every registered button). The buttons are flat fills now — there is no disc
+// to rotate and no sheen wedge to sweep — so the loop would run forever on
+// every page writing two custom properties that nothing consumes. Leaving it
+// uninstalled is the fix; every call site already guards on the engine
+// existing, so an absent engine is a no-op.
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));

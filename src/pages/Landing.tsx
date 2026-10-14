@@ -60,86 +60,97 @@ function Hero() {
 
   return (
     <div ref={ref}>
-      {/* Full-height mark — the landing page centrepiece: the large primary
-          circle anchored in the middle with the small light satellite
-          orbiting it on a continuous 360° loop. */}
-      <section
-        aria-label="Manthan"
-        className="relative flex min-h-[calc(100svh-72px)] items-center justify-center px-4 pb-10 pt-24"
-      >
-        {/* Ambient aura — light spilling from behind the mark. Static,
-            dark-only, and scaled by the Ambient Intensity slider
-            (`--bg-glow-opacity`). Rendered first, with the content below set
-            `relative`, so the glow sits behind the mark instead of washing
-            over it. */}
+      {/* The hero.
+
+          Centred, top-aligned and bounded by its own padding — NOT a
+          full-viewport art piece. The previous version opened with a 100svh
+          section holding only the orbiting mark, which pushed the headline,
+          the copy and both call to actions below the fold: a visitor saw a
+          logo animation instead of what the product does. The mark survives
+          at brand-mark size above the badge, where a product site puts one.
+
+          The reading order is the one every premium site uses, and it is a
+          deliberate sequence: badge (what's new) → headline (what it is) →
+          subcopy (what it does) → actions → the product itself, presented in
+          a lit frame. */}
+      <section className="relative px-4 pb-20 pt-28 sm:px-6 sm:pt-36">
+        {/* Ambient aurora — light spilling from behind the fold, dark-mode
+            chroma and scaled by the Ambient Intensity slider
+            (`--bg-glow-opacity`). Rendered first, with everything below set
+            `relative`, so it sits behind the content instead of over it. */}
         <div className="glow-aura" aria-hidden="true" />
-        <div data-hero-fade className="relative h-full w-full">
-          <OrbitMark />
-        </div>
-      </section>
 
-      {/* Badge → headline → copy → CTAs */}
-      <section className="relative mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:pb-24">
-        <div className="grid items-center gap-12 min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,440px)] min-[900px]:gap-16">
-          <div>
-            <span data-hero-fade className="kicker">
-              Manthan · study material, distilled
-            </span>
-
-            <TextGenerate
-              className="mt-6 font-display text-[40px] font-bold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-6xl md:text-[68px] md:leading-[1.0]"
-              delay={0.25}
-              spring
-              segments={[
-                { text: "Churn your notes into" },
-                { text: "clarity.", className: "gradient-text" },
-              ]}
-            />
-
-            <p
-              data-hero-fade
-              className="mt-6 max-w-xl text-base leading-relaxed text-text-dim sm:text-lg"
-            >
-              Drop in files, links or pasted notes. Manthan's five-step pipeline
-              distills them into summaries, flashcards and question banks — live,
-              labelled, and ready to revise.
-            </p>
-
-            {/* Mobile-first: on a phone both actions run the full column width at
-                a 48px height, so the primary CTA is unmissable and thumb-sized.
-                From sm up they snap back to the inline pair. */}
-            <div
-              data-hero-fade
-              className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center"
-            >
-              <MovingBorderButton
-                to={ctaTarget}
-                className="w-full sm:w-auto"
-                innerClassName="w-full justify-center px-7 py-3.5 text-sm sm:w-auto"
-              >
-                Generate study material
-                <ArrowRight className="h-4 w-4" />
-              </MovingBorderButton>
-              <a
-                href="#how"
-                className="btn-ghost glass-chip inline-flex w-full items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-foreground sm:w-auto"
-              >
-                <Sparkles className="h-4 w-4 text-[var(--signal)]" />
-                See how it works
-              </a>
-            </div>
-
-            <div
-              data-hero-fade
-              className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-medium text-text-dim"
-            >
-              <span>
-                PDFs · slides · links · handwritten notes — any material works
-              </span>
-            </div>
+        <div className="relative mx-auto max-w-4xl text-center">
+          <div data-hero-fade className="flex justify-center">
+            <OrbitMark svgClassName="h-14 w-14" />
           </div>
 
-          <HeroPreview />
+          <span data-hero-fade className="kicker mt-7">
+            Study material, distilled
+          </span>
+
+          <TextGenerate
+            className="mt-6 font-display text-[42px] font-bold leading-[1.06] tracking-[-0.045em] text-foreground sm:text-6xl md:text-[76px] md:leading-[0.98]"
+            delay={0.25}
+            spring
+            segments={[
+              { text: "Churn your notes into" },
+              { text: "clarity.", className: "gradient-text" },
+            ]}
+          />
+
+          <p
+            data-hero-fade
+            className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-text-dim sm:text-lg"
+          >
+            Drop in files, links or pasted notes. Manthan's five-step pipeline
+            distills them into summaries, flashcards and question banks — live,
+            labelled, and ready to revise.
+          </p>
+
+          {/* Mobile-first: on a phone both actions run the full column width at
+              a 48px height, so the primary CTA is unmissable and thumb-sized.
+              From sm up they snap back to the inline pair. */}
+          <div
+            data-hero-fade
+            className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+          >
+            <MovingBorderButton
+              to={ctaTarget}
+              className="w-full sm:w-auto"
+              innerClassName="w-full justify-center px-7 py-3.5 text-sm sm:w-auto"
+            >
+              Generate study material
+              <ArrowRight className="h-4 w-4" />
+            </MovingBorderButton>
+            <a
+              href="#how"
+              className="btn-ghost inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--panel-line)] px-6 py-3 text-sm font-medium text-foreground sm:w-auto"
+            >
+              <Sparkles className="h-4 w-4" />
+              See how it works
+            </a>
+          </div>
+
+          <p
+            data-hero-fade
+            className="mt-7 text-[13px] font-medium text-text-dim"
+          >
+            PDFs · slides · links · handwritten notes — any material works
+          </p>
+        </div>
+
+        {/* The product itself, in its lit frame. The bloom is painted behind
+            the frame (z-index -1 inside the page's stacking context), so the
+            light appears to come from the screenshot rather than over it. */}
+        <div
+          data-hero-fade
+          className="relative mx-auto mt-16 max-w-5xl sm:mt-20"
+        >
+          <div className="hero-bloom" aria-hidden="true" />
+          <div className="hero-frame">
+            <HeroPreview />
+          </div>
         </div>
       </section>
     </div>

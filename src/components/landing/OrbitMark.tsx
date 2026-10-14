@@ -14,7 +14,13 @@
 import { useEffect, useRef } from "react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 
-export default function OrbitMark() {
+export default function OrbitMark({
+  className,
+  svgClassName,
+}: {
+  className?: string;
+  svgClassName?: string;
+} = {}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,10 +40,16 @@ export default function OrbitMark() {
   return (
     <div
       ref={ref}
-      className="flex h-full w-full items-center justify-center"
+      className={
+        className ?? "flex h-full w-full items-center justify-center"
+      }
     >
       <svg
-        className="logo-svg h-auto w-[min(72vw,360px)]"
+        className={
+          svgClassName
+            ? `logo-svg ${svgClassName}`
+            : "logo-svg h-auto w-[min(72vw,360px)]"
+        }
         viewBox="0 0 400 400"
         role="img"
         aria-label="Manthan"

@@ -14,30 +14,27 @@
 
 :root {
   --ease-momentum: cubic-bezier(0.25, 1, 0.5, 1);
-  --glass-line: rgba(255, 255, 255, 0.1);
-  --premium-shadow: 0 30px 90px -40px rgba(0, 0, 0, 0.6);
-}
-
-html:not(.dark) {
-  --glass-line: rgba(20, 12, 11, 0.12);
-  --premium-shadow: 0 30px 80px -44px rgba(31, 10, 8, 0.3);
+  /* `--glass-line` is the historical name for this file's hairline and has ~76
+     call sites across the checkout and workspace components, so it is kept —
+     but it now ALIASES the one hairline token instead of holding its own
+     value. Two hairlines that drift apart by a few percent alpha is exactly
+     how a design ends up with three slightly different greys. */
+  --glass-line: var(--panel-line);
 }
 
 /* ------------------------------------------------------------------ */
 /* Frosted premium surfaces                                            */
 /* ------------------------------------------------------------------ */
 
+/* A flat panel on a hairline — the same surface as `.glass-panel`, so the
+   pricing table, the workspace and the marketing page are visibly one
+   product. There is no frost and no ambient drop shadow here any more: a
+   6px lift with the accent bleeding into the border and an inflated shadow
+   under every card is what made the price table look like a template. */
 .premium-glass {
-  background: rgba(255, 255, 255, 0.02);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid var(--glass-line);
-  border-radius: 22px;
-  box-shadow: var(--premium-shadow);
-}
-
-html:not(.dark) .premium-glass {
-  background: rgba(255, 255, 255, 0.46);
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
 }
 
 .premium-card {
@@ -45,49 +42,41 @@ html:not(.dark) .premium-glass {
   display: flex;
   flex-direction: column;
   padding: 26px;
-  background: rgba(255, 255, 255, 0.02);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid var(--glass-line);
-  border-radius: 24px;
-  box-shadow: var(--premium-shadow);
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
   transition:
-    transform 420ms var(--ease-momentum),
-    border-color 420ms var(--ease-momentum),
-    box-shadow 420ms var(--ease-momentum);
-}
-
-html:not(.dark) .premium-card {
-  background: rgba(255, 255, 255, 0.46);
+    transform 240ms var(--ease-momentum),
+    border-color 200ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .premium-card:hover {
-    transform: translateY(-6px);
-    border-color: color-mix(in srgb, var(--signal) 40%, transparent);
+    transform: translateY(-2px);
+    border-color: var(--panel-line-strong);
   }
 }
 
+/* The featured plan is told apart by a BRIGHTER EDGE, not by colour: a tinted
+   border plus an accent glow ring on one card of three is the loudest thing
+   on a pricing page and it competes with the price itself. */
 .premium-card--featured {
-  border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-  box-shadow:
-    var(--premium-shadow),
-    0 0 0 1px color-mix(in srgb, var(--signal) 16%, transparent);
+  border-color: var(--panel-line-strong);
+  box-shadow: 0 0 0 1px var(--panel-line);
 }
 
+/* Neutral badge: a state label, not a decoration. */
 .premium-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
-  background: color-mix(in srgb, var(--signal) 10%, transparent);
+  border: 1px solid var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
   padding: 4px 10px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--signal) 88%, var(--text-main));
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
 }
 
 .premium-divider {
@@ -104,20 +93,20 @@ html:not(.dark) .premium-card {
 .premium-select select {
   width: 100%;
   appearance: none;
-  border-radius: 14px;
-  border: 1px solid var(--glass-line);
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
   padding: 11px 38px 11px 14px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   outline: none;
-  transition: border-color 240ms var(--ease-momentum);
+  transition: border-color 200ms ease;
 }
 
 .premium-select select:focus-visible,
 .premium-select select:hover {
-  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
+  border-color: var(--panel-line-strong);
 }
 
 .premium-select select option {
@@ -149,11 +138,17 @@ html:not(.dark) .premium-card {
   overscroll-behavior: contain;
   padding: max(16px, env(safe-area-inset-top)) 16px
     max(16px, env(safe-area-inset-bottom));
-  /* Exactly as specified: saturate(180%) + a 40% white wash, so the whole
-     workspace reads as frosted glass behind the prompt. */
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  background: rgba(255, 255, 255, 0.4);
+  /* A plain scrim. An overlay is the one place a blur still earns its cost:
+     it separates the prompt from the workspace behind it. The white wash is
+     gone — a 40% WHITE overlay over a black app is the opposite of a dimmed
+     background. */
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+html:not(.dark) .lock-veil {
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .lock-card {
@@ -165,18 +160,12 @@ html:not(.dark) .premium-card {
   width: 100%;
   max-width: 440px;
   overflow: hidden;
-  border-radius: 26px;
-  border: 1px solid var(--glass-line);
-  background: color-mix(in srgb, var(--ink) 88%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
+  border-radius: 14px;
+  border: 1px solid var(--panel-line);
+  background: var(--panel);
   box-shadow: 0 40px 120px -50px rgba(0, 0, 0, 0.7);
   padding: 28px;
   text-align: center;
-}
-
-html:not(.dark) .lock-card {
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .lock-orb {
@@ -220,37 +209,27 @@ html:not(.dark) .lock-card {
   margin: auto;
   width: 100%;
   max-width: 520px;
-  border-radius: 28px;
-  border: 1px solid var(--glass-line);
-  background: color-mix(in srgb, var(--ink) 92%, transparent);
-  -webkit-backdrop-filter: blur(26px) saturate(170%);
-  backdrop-filter: blur(26px) saturate(170%);
+  border-radius: 14px;
+  border: 1px solid var(--panel-line);
+  background: var(--panel);
   box-shadow: 0 50px 140px -60px rgba(0, 0, 0, 0.8);
   padding: 26px;
 }
 
-html:not(.dark) .checkout-card {
-  background: rgba(255, 255, 255, 0.94);
-}
-
 .checkout-field {
   width: 100%;
-  border-radius: 14px;
-  border: 1px solid var(--glass-line);
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
   padding: 11px 13px;
   font-size: 14px;
   color: var(--text-main);
   outline: none;
-  transition: border-color 220ms var(--ease-momentum);
-}
-
-html:not(.dark) .checkout-field {
-  background: rgba(255, 255, 255, 0.7);
+  transition: border-color 200ms ease;
 }
 
 .checkout-field:focus-visible {
-  border-color: color-mix(in srgb, var(--signal) 60%, transparent);
+  border-color: var(--panel-line-strong);
 }
 
 .checkout-method {
@@ -284,9 +263,9 @@ html:not(.dark) .checkout-field {
   width: 116px;
   height: 116px;
   padding: 8px;
-  border-radius: 16px;
-  border: 1px solid var(--glass-line);
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  border: 1px solid var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
 }
 
 .checkout-qr span {

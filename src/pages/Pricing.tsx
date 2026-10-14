@@ -1,7 +1,6 @@
 import BlobBackground from "@/components/BlobBackground";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
-import { Logo } from "@/components/landing/Logo";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { CheckoutModal } from "@/components/plans/CheckoutModal";
 import { usePlan } from "@/components/plans/PlanProvider";
@@ -17,7 +16,8 @@ import {
   type DurationId,
   type PlanTier,
 } from "@/lib/plans";
-import { Check, ChevronDown, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 
@@ -28,7 +28,25 @@ import { useState } from "react";
  * pass, while EduVantage and Manthan Prime offer the 1 / 6 / 12 month schemes
  * with the discount applied to the running total. Checkout is an explicit
  * sandbox simulation — nothing here contacts a payment network.
+ *
+ * The layout is the one a product site uses, because it is the one that makes
+ * a price table readable:
+ *
+ *   centred heading → one row of equal cards → the CTA inside each card,
+ *   immediately under the price → the feature list, in the same order on
+ *   every card so the eye can compare across rather than scan down.
+ *
+ * The term control is a segmented switcher rather than a `<select>` all on its
+ * own: a dropdown hides two thirds of the offer behind a click, and the whole
+ * point of the multi-month terms is that the saving is visible.
  */
+
+/** Short segment labels — the saving is rendered separately, as a chip. */
+const TERM_LABEL: Record<DurationId, string> = {
+  "1m": "1 month",
+  "6m": "6 months",
+  "12m": "12 months",
+};
 
 export default function Pricing() {
   const { plan, setPlan } = usePlan();
@@ -46,20 +64,16 @@ export default function Pricing() {
     <div className="relative min-h-screen bg-background text-foreground">
       <BlobBackground />
       <div className="relative z-10">
-        {/* Page-top aura — ambient light spilling in from above, dark mode only. */}
+        {/* Page-top aurora — ambient light spilling in from above. */}
         <div className="glow-aura" aria-hidden="true" />
         <Navbar />
-        <main className="mx-auto w-full max-w-6xl px-4 pb-20 pt-28 sm:px-6 sm:pt-32">
-          <div data-reveal className="text-center">
-            <Logo markClassName="mx-auto h-9 w-9" />
-            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-text-dim">
-              Plans
-            </p>
-            <h1 className="text-fade mt-2 font-display text-4xl font-bold tracking-tight sm:text-5xl">
-              Study material, distilled
-              <span className="text-[var(--signal)]">.</span>
+        <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-28 sm:px-6 sm:pt-36">
+          <div data-reveal className="mx-auto max-w-2xl text-center">
+            <span className="kicker">Pricing</span>
+            <h1 className="text-fade mt-5 font-display text-4xl font-bold tracking-[-0.035em] sm:text-5xl md:text-[56px] md:leading-[1.05]">
+              Pricing for every study plan
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-text-dim">
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
               Every account starts free and stays useful — 60,000 tokens a day,
               every notebook, every source. The tiers below raise the ceiling and
               open the advanced workspaces. Checkout is a sandbox: nothing is
@@ -67,14 +81,15 @@ export default function Pricing() {
             </p>
           </div>
 
-          {/* What free already includes */}
+          {/* What free already includes — stated once, above the table, so the
+              paid cards only have to sell the difference. */}
           <div
             data-reveal
-            className="premium-glass mt-10 flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+            className="glass-panel mt-12 flex flex-wrap items-center justify-between gap-4 px-5 py-4"
           >
             <div>
-              <p className="font-display text-sm font-bold tracking-tight">
-                Free plan · included with every account
+              <p className="font-display text-sm font-semibold tracking-tight">
+                Free · included with every account
               </p>
               <p className="mt-1 text-xs leading-relaxed text-text-dim">
                 60,000 tokens per day · unlimited notebooks and sources ·
@@ -100,33 +115,65 @@ export default function Pricing() {
                 <section
                   key={tier.id}
                   data-reveal
-                  className={
-                    "premium-card" + (tier.featured ? " premium-card--featured" : "")
-                  }
-                >
-                  {/* Filled with --signal-strong, not --signal: the luminous
-                      accent is a text tone, and white on it would fail
-                      contrast in dark mode. */}
-                  {tier.featured && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--signal-strong)] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--primary-foreground)]">
-                      Most popular
-                    </span>
+                  className={cn(
+                    "premium-card",
+                    tier.featured && "premium-card--featured",
                   )}
-
-                  <div className="flex items-start justify-between gap-3">
+                >
+                  <header className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="font-display text-lg font-bold tracking-tight">
+                      <h2 className="font-display text-base font-semibold tracking-tight">
                         {tier.name}
                       </h2>
-                      <p className="mt-1 text-xs leading-relaxed text-text-dim">
+                      <p className="mt-1 text-sm leading-relaxed text-text-dim">
                         {tier.summary}
                       </p>
                     </div>
-                    {isCurrent && <span className="premium-chip">Current</span>}
-                  </div>
+                    {isCurrent ? (
+                      <span className="premium-chip shrink-0">Current</span>
+                    ) : tier.featured ? (
+                      <span className="premium-chip shrink-0">Popular</span>
+                    ) : null}
+                  </header>
+
+                  {/* Term switcher — only the tiers sold by term carry one. */}
+                  {tier.flexible && (
+                    <div className="mt-5 inline-flex w-fit rounded-lg border border-[var(--panel-line)] p-0.5">
+                      {DURATIONS.map((option) => {
+                        const active =
+                          (durations[tier.id] ?? DEFAULT_DURATION) === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setDurations((current) => ({
+                                ...current,
+                                [tier.id]: option.id,
+                              }))
+                            }
+                            className={cn(
+                              "rounded-md px-2.5 py-1.5 text-xs transition-colors",
+                              active
+                                ? "bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)] text-foreground"
+                                : "text-text-dim hover:text-foreground",
+                            )}
+                          >
+                            {TERM_LABEL[option.id]}
+                            {option.discount > 0 && (
+                              <span className="ml-1 text-[10px] text-text-dim">
+                                −{Math.round(option.discount * 100)}%
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Animated total — the number glides when the term changes. */}
-                  <div className="mt-6 flex items-end gap-2">
+                  <div className="mt-5 flex items-end gap-2">
                     <div className="relative h-11 overflow-hidden">
                       <AnimatePresence mode="wait" initial={false}>
                         <motion.span
@@ -134,8 +181,8 @@ export default function Pricing() {
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
                           exit={{ y: -20, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
-                          className="block font-display text-4xl font-bold tabular-nums tracking-tight"
+                          transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
+                          className="block font-display text-[40px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
                         >
                           {formatINR(total)}
                         </motion.span>
@@ -150,73 +197,38 @@ export default function Pricing() {
                     </span>
                   </div>
 
-                  <div className="mt-1 min-h-[18px]">
-                    {savings > 0 && (
+                  <div className="mt-1.5 min-h-[20px]">
+                    {savings > 0 ? (
                       <motion.p
                         key={`${tier.id}-saving-${savings}`}
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
-                        className="text-[11.5px] font-medium text-[var(--signal)]"
+                        transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
+                        className="text-xs text-text-dim"
                       >
-                        Save {formatINR(savings)} over{" "}
-                        {duration.months} monthly payments.
+                        Save {formatINR(savings)} over {duration.months} monthly
+                        payments.
                       </motion.p>
-                    )}
+                    ) : !tier.flexible ? (
+                      <p className="text-xs text-text-dim">
+                        Single seven-day pass · {tier.allowance}
+                      </p>
+                    ) : null}
                   </div>
 
-                  {tier.flexible && (
-                    <div className="mt-5">
-                      <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">
-                        Choose your term
-                      </label>
-                      <div className="premium-select mt-2">
-                        <select
-                          value={durations[tier.id] ?? DEFAULT_DURATION}
-                          onChange={(event) =>
-                            setDurations((current) => ({
-                              ...current,
-                              [tier.id]: event.target.value as DurationId,
-                            }))
-                          }
-                        >
-                          {DURATIONS.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="h-4 w-4" />
-                      </div>
-                    </div>
-                  )}
-
-                  {!tier.flexible && (
-                    <p className="mt-5 inline-flex items-center gap-1.5 text-[11.5px] font-medium text-text-dim">
-                      <Clock className="h-3.5 w-3.5" />
-                      Single seven-day pass · {tier.allowance}
-                    </p>
-                  )}
-
-                  <ul className="mt-5 flex-1 space-y-2.5">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex gap-2.5 text-sm">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--signal)]" />
-                        <span className="leading-relaxed">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
+                  {/* The action sits directly under the price on every card, at
+                      the same offset, so the three buttons line up across the
+                      row and do not have to be hunted for. */}
                   <div className="mt-6">
                     {isCurrent ? (
                       <button
                         type="button"
                         disabled
-                        className="w-full cursor-default rounded-full border border-[color-mix(in_srgb,var(--signal)_45%,transparent)] px-5 py-2.5 text-[13px] font-semibold text-[var(--signal)]"
+                        className="w-full cursor-default rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-text-dim"
                       >
                         Current plan
                       </button>
-                    ) : (
+                    ) : tier.featured ? (
                       <MovingBorderButton
                         onClick={() => setCheckout(tier)}
                         className="w-full"
@@ -224,8 +236,27 @@ export default function Pricing() {
                       >
                         Choose {tier.name}
                       </MovingBorderButton>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCheckout(tier)}
+                        className="w-full rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:border-[var(--panel-line-strong)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
+                      >
+                        Choose {tier.name}
+                      </button>
                     )}
                   </div>
+
+                  <div className="premium-divider my-6" />
+
+                  <ul className="flex-1 space-y-3">
+                    {tier.features.map((feature) => (
+                      <li key={feature} className="flex gap-2.5 text-sm">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-text-dim" />
+                        <span className="leading-relaxed">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </section>
               );
             })}
@@ -235,7 +266,7 @@ export default function Pricing() {
             <button
               type="button"
               onClick={() => setPlan("free")}
-              className="text-xs font-medium text-text-dim transition-colors hover:text-foreground"
+              className="text-xs text-text-dim transition-colors hover:text-foreground"
             >
               Return this account to the Free plan
             </button>

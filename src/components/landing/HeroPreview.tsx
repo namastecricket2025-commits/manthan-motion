@@ -93,7 +93,10 @@ export default function HeroPreview() {
   return (
     <div
       ref={rootRef}
-      className="glass-panel relative overflow-hidden p-5 sm:p-6"
+      /* No border of its own: the frame above owns the hairline and the
+         radius, so the screenshot reads as one plate instead of a card
+         inside a card. */
+      className="relative overflow-hidden rounded-[10px] bg-[color-mix(in_srgb,var(--text-main)_3%,var(--panel))] p-5 sm:p-6"
       data-hero-fade
     >
       {/* card chrome */}

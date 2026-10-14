@@ -1,36 +1,19 @@
-import { useEffect, useRef } from "react";
-import { installCdEngine } from "./cd-engine";
+import { useRef } from "react";
 
 /**
- * Wire a plain element (anything with the `cd-pill` class) into the shared CD
- * engine: registered on mount, hover speed-up on pointerenter, smooth revert
- * on pointerleave, optional fast spin while `busy`.
+ * A ref hook for the compact secondary pills (Regenerate / Delete, deck
+ * pagers) that carry the `cd-pill` class.
+ *
+ * These pills used to be wired into the shared CD engine — a rAF loop that
+ * rotated a conic sheen behind the pill and spun it up under the cursor. The
+ * pills are flat surfaces now (see `.cd-pill` in index.css), so there is no
+ * angle to drive and nothing for the hook to register. It keeps its signature
+ * and returns a ref, which is all every call site actually needs, and it no
+ * longer installs a permanent animation loop on the pages that use it.
+ *
+ * `busy` is still accepted so existing call sites keep type-checking; it no
+ * longer changes anything visual, because a flat pill has no spin speed.
  */
-export function useCdPill<T extends HTMLElement>(busy = false) {
-  const ref = useRef<T | null>(null);
-
-  useEffect(() => {
-    installCdEngine();
-    const el = ref.current;
-    if (!el) return;
-    const engine = window.__cdEngine;
-    if (!engine) return;
-    engine.register(el);
-    const enter = () => engine.setHover(el, true);
-    const leave = () => engine.setHover(el, false);
-    el.addEventListener("pointerenter", enter);
-    el.addEventListener("pointerleave", leave);
-    return () => {
-      el.removeEventListener("pointerenter", enter);
-      el.removeEventListener("pointerleave", leave);
-      engine.setHover(el, false);
-    };
-  }, []);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (el) window.__cdEngine?.setBusy(el, busy);
-  }, [busy]);
-
-  return ref;
+export function useCdPill<T extends HTMLElement>(_busy = false) {
+  return useRef<T | null>(null);
 }

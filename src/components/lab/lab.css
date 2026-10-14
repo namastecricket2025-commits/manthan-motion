@@ -1796,21 +1796,37 @@ html[data-theme="light"] .lab-root .lab-telemetry__head {
 /* STEM Lab — unified premium workspace                                 */
 /* ------------------------------------------------------------------ */
 .stem-root {
-  --stem-bg: #080b14;
-  --stem-panel: rgba(20, 28, 47, .72);
-  --stem-panel-soft: rgba(255, 255, 255, .035);
-  --stem-line: rgba(180, 212, 255, .14);
-  --stem-line-strong: rgba(180, 212, 255, .25);
-  --stem-text: #e8f1ff;
-  --stem-dim: #8fa5c5;
-  --stem-faint: #667b9c;
+  /* The Lab's own canvas, retuned to the house surface language: pure black,
+     `#0a0a0a` panels, neutral white hairlines. It used to be a navy/slate
+     theme with blue-tinted rules and a blue-violet corner wash — a completely
+     different colour world from every other page in the product, which is
+     what made the Lab look like a different app.
+
+     These are literal neutrals rather than the theme tokens on purpose: the
+     Lab has its own light/dark toggle (`data-lab-theme`) and its canvases are
+     authored for a black background, so resolving `--ink` here would turn the
+     room white in light mode and take the diagram ink with it. */
+  --stem-bg: #000000;
+  --stem-panel: #0a0a0a;
+  --stem-panel-soft: rgba(255, 255, 255, .04);
+  --stem-line: rgba(255, 255, 255, .1);
+  --stem-line-strong: rgba(255, 255, 255, .22);
+  --stem-text: rgba(255, 255, 255, .92);
+  --stem-dim: rgba(255, 255, 255, .72);
+  --stem-faint: rgba(255, 255, 255, .56);
+  /* The three subject hues are kept: they label physics, chemistry and
+     biology plates, so they carry meaning rather than decoration. */
   --stem-cyan: #67e8f9;
   --stem-violet: #b79bff;
   --stem-green: #70e1b4;
   position: relative;
   min-height: 100dvh;
   overflow: hidden;
-  background: radial-gradient(900px 520px at 8% 0%, rgba(55, 116, 255, .11), transparent 64%), radial-gradient(760px 480px at 96% 18%, rgba(144, 92, 255, .1), transparent 62%), var(--stem-bg);
+  /* The aurora literals, not the tokens: the Lab's canvas is authored black in
+     both themes, so it must take the dark theme's cool bloom rather than the
+     light theme's warm one, and at a lower alpha than the marketing page —
+     this is a workspace header, not a hero. */
+  background: radial-gradient(900px 520px at 8% 0%, rgba(0, 112, 243, .22), transparent 66%), radial-gradient(760px 480px at 96% 18%, rgba(121, 40, 202, .16), transparent 64%), var(--stem-bg);
   color: var(--stem-text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;

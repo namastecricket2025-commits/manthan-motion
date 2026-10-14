@@ -1,16 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
-import {
-  Atom,
-  LayoutDashboard,
-  LogIn,
-  Settings,
-  Sigma,
-  Tag,
-  User,
-} from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Logo } from "./Logo";
-import { FloatingDock, type DockItem } from "./FloatingDock";
 import { MobileMenu } from "./MobileMenu";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { ThemeToggle } from "./ThemeToggle";
@@ -18,128 +8,106 @@ import { ThemeToggle } from "./ThemeToggle";
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
 /**
- * Top-menu navigation via the Floating Dock.
+ * The site header.
  *
- * A single FloatingDock instance serves both modes: on desktop (md+) it is
- * an inline glass pill that magnifies icons subtly by mouse proximity, with
- * tooltips on hover; on mobile (<md) it is a compact +/× trigger that fans
- * the same links out downward.
+ * One full-width bar pinned to the top of every page: hairline bottom edge,
+ * a 72%-opaque canvas behind it with a blur (the one place a blur still earns
+ * its cost — content scrolling underneath stays legible), the mark on the
+ * left, plain TEXT links in the middle and the actions on the right, with the
+ * primary action as a filled pill.
  *
- * Routes only. Homepage section anchors (Features / How it works / Impact)
- * are deliberately absent — a visitor can scroll the page themselves, and a
- * nav button that merely scrolls is noise. The logo at the left returns home.
- * The workspace path is Dashboard -> Math Lab -> STEM Lab -> Settings ->
- * About Us.
+ * This replaced a floating magnifying icon-dock in a glass capsule. That dock
+ * was a lot of machinery — a pointer-proximity magnifier, tooltips, an icon
+ * grid — to express five links, and an icon-only nav makes a visitor hover to
+ * find out where anything goes. Text links are what a product site uses, and
+ * they are unambiguous at a glance.
+ *
+ * Below md the links collapse into MobileMenu; the theme toggle and the CTA
+ * stay put at every width.
  */
-const DOCK_LINKS: DockItem[] = [
-  {
-    title: "Math Lab",
-    icon: <Sigma className="h-full w-full" strokeWidth={1.7} />,
-    href: "/math-lab",
-  },
-  {
-    title: "STEM Lab",
-    icon: <Atom className="h-full w-full" strokeWidth={1.7} />,
-    href: "/lab",
-  },
-  {
-    title: "Plans",
-    icon: <Tag className="h-full w-full" strokeWidth={1.7} />,
-    href: "/pricing",
-  },
-  {
-    title: "Settings",
-    icon: <Settings className="h-full w-full" strokeWidth={1.7} />,
-    href: "/settings",
-  },
-  {
-    title: "About Us",
-    icon: <User className="h-full w-full" strokeWidth={1.7} />,
-    href: "/about",
-  },
-  {
-    title: "Dashboard",
-    icon: <LayoutDashboard className="h-full w-full" strokeWidth={1.7} />,
-    href: "/dashboard",
-  },
+
+const LINKS: { label: string; to: string }[] = [
+  { label: "Dashboard", to: "/dashboard" },
+  { label: "Math Lab", to: "/math-lab" },
+  { label: "STEM Lab", to: "/lab" },
+  { label: "Plans", to: "/pricing" },
+  { label: "About", to: "/about" },
 ];
 
-// Desktop icon magnification bounds (compact navbar placement).
-// Tuned slightly smaller than the previous default so icons never zoom past
-// the navbar on hover.
-export const DOCK_ZOOM = {
-  minSize: 34,
-  maxSize: 46,
-  minIconSize: 15,
-  maxIconSize: 22,
-};
-
 export default function Navbar() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const cta = isAuthenticated ? (
-    <MovingBorderButton to="/dashboard" innerClassName="px-5 py-2.5 text-[13px]">
-      Open dashboard
-    </MovingBorderButton>
-  ) : (
-    <MovingBorderButton
-      to={AUTH_URL}
-      innerClassName="px-5 py-2.5 text-[13px]"
-    >
-      Get started
-    </MovingBorderButton>
-  );
-
-  const dockItems: DockItem[] = DOCK_LINKS;
-  const signInItem: DockItem = {
-    title: "Sign in",
-    icon: (
-      <LogIn className="h-full w-full" strokeWidth={1.7} />
-    ),
-    href: AUTH_URL,
-  };
-
   return (
-    <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
-      <nav className="glass-chip mx-auto flex max-w-6xl items-center justify-between gap-3 py-2 pl-4 pr-2 sm:pl-5">
-        {/* With the section buttons gone from the dock, the logo is the way
-            home: navigate there from any other page, scroll to the top when
-            already on the landing page. */}
-        <Link
-          to="/"
-          aria-label="Manthan home"
-          onClick={() => {
-            if (pathname === "/") {
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            } else {
-              navigate("/");
-            }
-          }}
-          className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
-        >
-          <Logo markClassName="h-7 w-7" />
-        </Link>
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--ink)_72%,transparent)] backdrop-blur-xl">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* The mark is the way home: navigate there from any other page,
+            scroll to the top when already on the landing page. */}
+        <div className="flex min-w-0 items-center gap-1 sm:gap-6">
+          <Link
+            to="/"
+            aria-label="Manthan home"
+            onClick={() => {
+              if (pathname === "/") {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              } else {
+                navigate("/");
+              }
+            }}
+            className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--signal)]"
+          >
+            <Logo markClassName="h-6 w-6" />
+          </Link>
 
-        <div className="flex items-center gap-2">
-          {/* Desktop (md+): the magnifying glass dock. Mobile: a readable
-              labeled panel with a primary Get started / Open dashboard CTA,
-              replacing the old icon-only fan. */}
-          <div className="hidden md:block">
-            <FloatingDock
-              items={isAuthenticated ? dockItems : [...dockItems, signInItem]}
-              desktopClassName="h-14 items-center gap-2 px-3 pb-0"
-              minSize={DOCK_ZOOM.minSize}
-              maxSize={DOCK_ZOOM.maxSize}
-              minIconSize={DOCK_ZOOM.minIconSize}
-              maxIconSize={DOCK_ZOOM.maxIconSize}
-            />
+          <ul className="hidden items-center gap-1 md:flex">
+            {LINKS.map((link) => {
+              const active = pathname === link.to;
+              return (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    aria-current={active ? "page" : undefined}
+                    className={
+                      "rounded-md px-3 py-2 text-sm transition-colors " +
+                      (active
+                        ? "text-foreground"
+                        : "text-text-dim hover:text-foreground")
+                    }
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="md:hidden">
+            <MobileMenu />
           </div>
-          <MobileMenu />
-          <ThemeToggle />
-          {/* Sign in lives once, in the dock (icon + tooltip). */}
-          <div className="hidden sm:block">{cta}</div>
+          {/* At the narrowest widths the bar carries only the mark, the menu
+              and the primary action: a fourth control in a 320px row is how a
+              header starts wrapping. The theme control still lives on every
+              wider screen and in Settings (light / dark / system). */}
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
+          {!isAuthenticated && (
+            <Link
+              to={AUTH_URL}
+              className="hidden rounded-md px-3 py-2 text-sm text-text-dim transition-colors hover:text-foreground md:block"
+            >
+              Sign in
+            </Link>
+          )}
+          <MovingBorderButton
+            to={isAuthenticated ? "/dashboard" : AUTH_URL}
+            innerClassName="px-4 py-2 text-[13px]"
+          >
+            {isAuthenticated ? "Dashboard" : "Get started"}
+          </MovingBorderButton>
         </div>
       </nav>
     </header>
