@@ -57,12 +57,17 @@
   pointer-events: none;
   will-change: transform;
 }
+/* Both meshes are white light now, not a violet/cyan pair. At 4% opacity the
+   hue was barely legible as colour anyway, so the only thing it contributed
+   was a cool cast over two thirds of the canvas — the opposite of the neutral
+   ambient the rest of the site uses. The drift, the blur and the opacity are
+   unchanged. */
 .apple-lab__mesh--violet {
   top: -18vh;
   left: -10vw;
   width: 68vw;
   height: 68vw;
-  background: radial-gradient(circle at 40% 40%, #a78bfa, transparent 68%);
+  background: radial-gradient(circle at 40% 40%, #ffffff, transparent 68%);
   animation: apple-lab-drift-a 72s ease-in-out infinite alternate;
 }
 .apple-lab__mesh--cyan {
@@ -70,7 +75,7 @@
   bottom: -24vh;
   width: 62vw;
   height: 62vw;
-  background: radial-gradient(circle at 60% 60%, #67e8f9, transparent 68%);
+  background: radial-gradient(circle at 60% 60%, #ffffff, transparent 68%);
   animation: apple-lab-drift-b 88s ease-in-out infinite alternate;
 }
 @keyframes apple-lab-drift-a {

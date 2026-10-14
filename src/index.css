@@ -106,32 +106,40 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand palette (light) — warm sand-white canvas, so the crimson blob
-     field is the only saturated thing on the page. */
-  --ink: #f7f3f0;
+  /* Brand palette (light) — a NEUTRAL near-white canvas with the brand
+     crimson kept as the single accent.
+
+     The day theme used to be warm throughout: a sand-pink canvas, espresso
+     ink, crimson-tinted hairlines and a full-viewport crimson metaball field
+     at 0.78 opacity. Every surface sat on a tint, so nothing on the page read
+     as clean, and the field meant the "background colour" was never actually
+     a colour you could name. Neutral greys with one accent is what makes a
+     light theme look engineered — the crimson then reads as a deliberate
+     brand signal rather than as the page's ambient wash. */
+  --ink: #fafafa;
   --signal: #c81f27;
-  /* The filled-action tone. In the warm light theme it is the same crimson as
-     the accent; the dark theme splits them (see the .dark block) so button
-     fills can be deep enough for white text while the accent stays luminous. */
+  /* The filled-action tone. In light it is the same crimson as the accent;
+     the dark theme splits them (see the .dark block) so the button fill can
+     be white with a near-black label while the accent stays luminous. */
   --signal-strong: #c81f27;
   --signal-2: #8f1d22;
-  --text-main: #1b1110;
-  --text-dim: #333f4b;
-  --card-border: rgba(200, 31, 39, 0.26);
+  --text-main: #171717;
+  --text-dim: #52525b;
+  --card-border: rgba(0, 0, 0, 0.1);
   /* The app chrome (sidebar, sticky header) is the canvas with the page
      scrolling under it — never a tinted slab. */
   --panel-bg: color-mix(in srgb, var(--panel) 88%, transparent);
 
 
   /* ---- BACKGROUND BLOB FIELD (light) ---------------------------------
-     The three colour stops of the metaball field (see BlobBackground).
-     Light keeps the same hues but a pale base stop and a lower opacity
-     ceiling than dark, while the deep stop stays saturated enough that the
-     field reads as crimson light through paper — never muddy rose. */
-  --bg-canvas-a: #c81f27;
-  --bg-canvas-b: #a0242b;
-  --bg-canvas-c: #f2ece8;
-  --bg-canvas-opacity: 0.78;
+     Near-neutral stops at a low ceiling. The field used to be a saturated
+     crimson metaball wash covering the whole viewport — which is why the day
+     theme had no stable background colour to design against. It is now what
+     it is in dark mode: faint drifting texture, not a colour. */
+  --bg-canvas-a: #ececec;
+  --bg-canvas-b: #f5f5f5;
+  --bg-canvas-c: #fafafa;
+  --bg-canvas-opacity: 0.5;
 
   /* ---- Frosted glass (light) ----------------------------------------- */
   --glass-fill-strong: rgba(0, 0, 0, 0.035);
@@ -143,26 +151,29 @@
      card, tile, chart sheet and dropdown is built from these two tokens, in
      both themes, so nothing ever renders as a one-off frosted shape. */
   --panel: #ffffff;
-  --panel-line: rgba(0, 0, 0, 0.1);
-  --panel-line-strong: rgba(0, 0, 0, 0.24);
-  /* Light keeps a bloom, but in its OWN accent. The light theme is warm — a
-     cream canvas, espresso ink, a crimson accent — so re-using the dark
-     theme's blue/violet here would drop a cool hue on a warm page and muddy
-     every surface under it. The four stops are therefore re-pointed at the
-     theme's own crimson (plus the ochre already in its chart ramp); the token
-     NAMES describe the stop's ROLE, never its hue, precisely so each theme
-     can fill them with its own colour. */
-  --aurora-core: color-mix(in srgb, var(--signal) 16%, transparent);
-  --aurora-mid: color-mix(in srgb, var(--signal) 10%, transparent);
-  --aurora-edge: color-mix(in srgb, var(--signal) 7%, transparent);
-  --aurora-kick: color-mix(in srgb, #b0773c 10%, transparent);
+  --radius-panel: 6px;
+  /* The hairline alpha is the value Vercel's own cards measure at. */
+  --panel-line: rgba(0, 0, 0, 0.08);
+  --panel-line-strong: rgba(0, 0, 0, 0.16);
+  /* (No `--glow-edge` here: the lit top edge is a DARK-theme device. A light
+     panel is white on a #fafafa canvas, so it is already its own highlight —
+     see the `.dark .glass-panel` rule below.) */
+
+  /* ---- Halo (light) --------------------------------------------------
+     A light theme cannot bloom — there is nothing brighter than near-white
+     paper to bloom INTO. What it has instead is the same two-part light
+     Vercel's hero scene uses, inverted: a soft WHITE disk (the lit floor
+     under the hero mark) and a very faint neutral grey wash at the top of
+     the page so the hero area is not a flat field of white. No colour. */
+  --halo-near: rgba(255, 255, 255, 0.95);
+  --halo-far: rgba(0, 0, 0, 0.035);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
      word, then blends through two warm oxide stops into the signal red on
      the final letters. The extra intermediate stops make the black→red
      sweep silky instead of a hard snap. */
-  --gt-head: #241412;
+  --gt-head: #171717;
   --gt-tail: #c81f27;
 
   /* Stroke-text display gradient (light): a golden-ember sweep that pops
@@ -180,8 +191,8 @@
   ----chart-background: var(--card);
   ----chart-foreground: var(--text-main);
   ----chart-foreground-muted: var(--text-dim);
-  ----chart-grid: rgba(36, 20, 18, 0.12);
-  ----chart-crosshair: rgba(36, 20, 18, 0.2);
+  ----chart-grid: rgba(0, 0, 0, 0.1);
+  ----chart-crosshair: rgba(0, 0, 0, 0.18);
   ----chart-label: var(--text-dim);
   ----chart-line-primary: var(--signal);
   ----chart-line-secondary: var(--signal-2);
@@ -195,23 +206,27 @@
   ----chart-segment-line: rgba(200, 31, 39, 0.25);
 
   /* shadcn aliases (light) */
+  /* Neutral, not warm: the old values were espresso-tinted (#fdfaf8 card,
+     #efe6e1 muted, 36/20/18 hairlines), so every primitive in the app —
+     dialogs, menus, inputs, muted wells — carried a faint brown over paper
+     the moment the light theme was on. */
   --background: var(--ink);
   --foreground: var(--text-main);
-  --card: #fdfaf8;
+  --card: #ffffff;
   --card-foreground: var(--text-main);
-  --popover: #fdfaf8;
+  --popover: #ffffff;
   --popover-foreground: var(--text-main);
   --primary: var(--signal);
   --primary-foreground: #fff7f5;
-  --secondary: #efe6e1;
-  --secondary-foreground: #3a2320;
-  --muted: #efe6e1;
-  --muted-foreground: #7d6a64;
-  --accent: #f3e9e5;
-  --accent-foreground: #3a2320;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
   --destructive: #c81f27;
-  --border: rgba(36, 20, 18, 0.14);
-  --input: rgba(36, 20, 18, 0.16);
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.12);
   --ring: var(--signal);
   --chart-1: #c81f27;
   --chart-2: #8f1d22;
@@ -233,13 +248,13 @@
   --src-files: #c81f27;
   --src-links: #2f6f6b;
   --src-notes: #7d6a64;
-  --sidebar: #fbf7f4;
+  --sidebar: #fafafa;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
   --sidebar-primary-foreground: #fff7f5;
-  --sidebar-accent: #efe6e1;
-  --sidebar-accent-foreground: #3a2320;
-  --sidebar-border: rgba(36, 20, 18, 0.12);
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
   --sidebar-ring: var(--signal);
   /* Flat chart tokens (light) — every one mapped to the Manthan palette.
      These used to be template leftovers in the blue/violet oklch range, and
@@ -251,8 +266,8 @@
   --chart-foreground-muted: var(--text-dim);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: rgba(36, 20, 18, 0.28);
-  --chart-grid: rgba(36, 20, 18, 0.12);
+  --chart-crosshair: rgba(0, 0, 0, 0.24);
+  --chart-grid: rgba(0, 0, 0, 0.1);
   --chart-brush-border: var(--chart-grid);
   --chart-tooltip-background: var(--card);
   --chart-tooltip-foreground: var(--text-main);
@@ -272,14 +287,14 @@
      Chart ink for the dashboard's glass charts, and the concrete backing
      every dropdown / select / popover panel uses so its items are legible the
      instant the panel opens — never only on hover. */
-  --dash-chart-label: #333f4b;
-  --dash-chart-grid: rgba(36, 20, 18, 0.14);
+  --dash-chart-label: #52525b;
+  --dash-chart-grid: rgba(0, 0, 0, 0.1);
   --dash-series-primary: #c81f27;
-  --dash-series-secondary: #2f6f6b;
-  --dash-frost-top: rgba(36, 20, 18, 0.16);
-  --dash-frost-bottom: rgba(36, 20, 18, 0);
+  --dash-series-secondary: #52525b;
+  --dash-frost-top: rgba(0, 0, 0, 0.14);
+  --dash-frost-bottom: rgba(0, 0, 0, 0);
   --menu-bg: #ffffff;
-  --menu-ink: #1b1110;
+  --menu-ink: #171717;
 }
 
 /* ============================================================
@@ -478,21 +493,27 @@
   --menu-ink: rgba(255, 255, 255, 0.92);
 
   /* ---- Ambient light vocabulary (dark) -------------------------------
-     Two jobs, two tokens, one light source:
+     Three tokens, one light source, and NONE of them is a colour:
 
        --glow-edge   the lit lip on a panel's top hairline (its only depth)
-       --glow-aura   unused by the aurora itself (which composes the four
-                     `--aurora-*` stops directly) and kept for any surface
-                     that wants a plain white wash
+       --halo-near   the tight-backlight around the hero mark
+       --halo-far    the wide, very faint wash at the top of a page
 
-     Nothing else glows. The per-card pool, the chip bloom and the halo under
-     the primary action were all removed: light on every surface is
-     indistinguishable from no light, and it is what made a black page read
-     as grey. Each remaining use site still multiplies its opacity by
-     `--bg-glow-opacity` (the Ambient Intensity slider), so turning Ambient
-     down quiets the whole scene. */
-  --glow-aura: rgba(255, 255, 255, 0.16);
+     The theme used to carry a four-hue aurora (blue core, violet mid, pink
+     edge, teal kick) as its "one chroma". It read as decoration instead of
+     as light — a page with a coloured lamp on it — and it was the last
+     non-brand colour anywhere in the theme. Vercel's own hero lighting is
+     neutral: the mark is outlined by a white backlight that falls off into a
+     fine halo, on pure black. Neutral light also does something colour
+     cannot — it makes the surfaces it lands on look brighter rather than
+     merely tinted. So the bloom is white, and there is no chroma at all.
+
+     Each use site still multiplies its opacity by `--bg-glow-opacity` (the
+     Ambient Intensity slider), so turning Ambient down quiets the whole
+     scene instead of leaving these behind at full strength. */
   --glow-edge: rgba(255, 255, 255, 0.18);
+  --halo-near: rgba(255, 255, 255, 0.42);
+  --halo-far: rgba(255, 255, 255, 0.1);
 
   /* ---- Panel language (dark) -----------------------------------------
      Vercel's surface, exactly: a near-black fill (#0a0a0a, deliberately not
@@ -503,22 +524,7 @@
   --panel-line: rgba(255, 255, 255, 0.1);
   --panel-line-strong: rgba(255, 255, 255, 0.22);
 
-  /* ---- Aurora (dark) --------------------------------------------------
-     The only chroma the theme is allowed. The page itself stays pure black;
-     this is a single wide bloom of light behind the hero — a blue core, a
-     violet mid, a pink edge and a cool teal kick — diffused past its own
-     edges so it has no boundary anywhere. Because it is four stops of LOW
-     alpha, the canvas still measures black everywhere the bloom does not
-     reach, which is what separates "black site with a light on it" from "a
-     grey site". Chrome, type and every surface stay neutral on purpose: the
-     hue here reads as light only while nothing else competes with it.
 
-     The names mark ROLE, not hue — core / mid / edge / kick — because the
-     light theme fills the same four stops with its own warm accent. */
-  --aurora-core: rgba(0, 112, 243, 0.5);
-  --aurora-mid: rgba(121, 40, 202, 0.34);
-  --aurora-edge: rgba(255, 0, 128, 0.24);
-  --aurora-kick: rgba(0, 223, 216, 0.2);
 }
 
 /* ============================================================
@@ -639,7 +645,11 @@
        full-viewport blur pass from every card in the app. */
     background: var(--panel);
     border: 1px solid var(--panel-line);
-    border-radius: 12px;
+    /* 6px is Vercel's measured "base material" radius (its raised panels use
+       12px — see `.dashboard-bento` and `.hero-frame`). A single generous
+       radius on every box is what makes a card grid read as soft/rounded
+       rather than drawn. */
+    border-radius: var(--radius-panel);
   }
   .glass-panel::before {
     content: "";
@@ -683,21 +693,23 @@
      fastest way to make a black page look like a washed-out grey one.
 
      What remains, and why:
-       .glow-aura    the aurora — the page's only chroma and its only bloom
-       .kicker       a hairline badge, flat
+       .glow-aura    the wide, very faint wash at the top of a page
+       .mark-halo    the tight white backlight behind the hero mark
+       .hero-bloom   the light pooling under the framed product shot
        inset lip     one pixel of light on a panel's top edge (box-shadow)
 
-     Dark-scoped in full: light mode keeps its flat paper look. Every layer
-     is `pointer-events: none` and painted from gradient / shadow colour
+     Every layer is `pointer-events: none` and painted from gradient colour
      only (no `filter: blur()`), so it costs one paint and no layout — and
      each is scaled by `--bg-glow-opacity`, so the Ambient Intensity slider
-     still governs the whole scene.
+     still governs the whole scene. Light mode gets the same three layers
+     from its own two halo tokens, so the two themes share one model.
      ------------------------------------------------ */
 
-  /* The aurora: Vercel's signature, and the one place this theme is allowed
-     to be chromatic. Four LOW-alpha ellipses of light — blue core, violet
-     mid, pink edge, teal kick — laid on pure black and falling off to
-     nothing well inside the box, so there is no boundary and no banding.
+  /* The page wash. TWO neutral stops at very low alpha: a broad, barely
+     there lift at the top of the page and nothing beyond it. No hue, no
+     banding, no boundary — and because both stops are low-alpha and fall to
+     transparent inside the box, everything outside them still measures the
+     theme's ink exactly.
 
      Contract: render it as the FIRST child of a `position: relative` wrapper
      that also creates a stacking context (the pages use `relative z-10`).
@@ -706,11 +718,9 @@
      never have to force their content to `relative`.
 
      Height is a fixed band pinned to the wrapper's top edge rather than
-     `inset: 0`: the bloom belongs to the top of a page, and on a long page a
-     full-height box would stretch it until it vanished. Because the four
-     stops are low-alpha, everything outside them still measures pure black. */
-  .dark .glow-aura,
-  [data-theme="dark"] .glow-aura {
+     `inset: 0`: the wash belongs to the top of a page, and on a long page a
+     full-height box would stretch it until it vanished. */
+  .glow-aura {
     position: absolute;
     inset: 0 0 auto;
     height: min(720px, 100%);
@@ -718,32 +728,45 @@
     pointer-events: none;
     opacity: var(--bg-glow-opacity, 1);
     background:
-      radial-gradient(52% 400px at 50% -4%, var(--aurora-core), transparent 70%),
-      radial-gradient(40% 300px at 27% 3%, var(--aurora-mid), transparent 72%),
-      radial-gradient(36% 280px at 75% 1%, var(--aurora-edge), transparent 74%),
-      radial-gradient(28% 220px at 60% 13%, var(--aurora-kick), transparent 76%);
+      radial-gradient(70% 460px at 50% -6%, var(--halo-near), transparent 72%),
+      radial-gradient(120% 700px at 50% -14%, var(--halo-far), transparent 78%);
   }
-  /* Light mode keeps only a whisper of the same bloom, so the hero is still
-     lit from behind without the page losing its paper reading. */
-  html:not(.dark) .glow-aura,
-  html[data-theme="light"] .glow-aura {
+
+  /* The backlight behind the hero mark — Vercel's hero lighting, literally: a
+     white halo centred on the mark that falls off into nothing, so the mark
+     reads as an object lit from behind rather than a shape pasted on black.
+     Sized in `em` so the caller scales it with the mark by setting the
+     parent's font-size; `--halo-spread` lets a page widen it if needed. */
+  .mark-halo {
     position: absolute;
-    inset: 0 0 auto;
-    height: min(640px, 100%);
+    left: 50%;
+    top: 50%;
+    width: calc(100% + var(--halo-spread, 160px));
+    height: calc(100% + var(--halo-spread, 160px));
+    translate: -50% -50%;
     z-index: -1;
     pointer-events: none;
-    opacity: calc(var(--bg-glow-opacity, 1) * 0.8);
-    background:
-      radial-gradient(52% 360px at 50% -4%, var(--aurora-core), transparent 70%),
-      radial-gradient(38% 260px at 74% 2%, var(--aurora-kick), transparent 74%);
+    opacity: var(--bg-glow-opacity, 1);
+    background: radial-gradient(
+      closest-side,
+      var(--halo-near),
+      color-mix(in srgb, var(--halo-near) 42%, transparent) 46%,
+      transparent 100%
+    );
+  }
+  html:not(.dark) .mark-halo {
+    /* On paper the backlight is a lit floor: the same disk, read as a soft
+       white pool rather than light in a void. */
+    opacity: calc(var(--bg-glow-opacity, 1) * 0.9);
   }
 
   /* The lit lip: one pixel of light along a panel's top hairline, which is
-     the entire depth model of a flat surface. */
+     the entire depth model of a dark surface. Dark only — in light mode a
+     panel is WHITE on a #fafafa canvas and is already its own highlight, so a
+     second white line on it would draw nothing. What defines a light card is
+     the fill step plus the hairline, exactly as Vercel's do. */
   .dark .glass-panel,
-  [data-theme="dark"] .glass-panel {
-    box-shadow: inset 0 1px 0 var(--glow-edge);
-  }
+  [data-theme="dark"] .glass-panel,
   .dark .glass-chip,
   [data-theme="dark"] .glass-chip {
     box-shadow: inset 0 1px 0 var(--glow-edge);
@@ -763,41 +786,26 @@
     box-shadow: 0 30px 80px -44px rgba(0, 0, 0, 0.28);
   }
 
-  /* The bloom under that frame: the same aurora as the page top, freer and
-     brighter, because here it is the light SOURCE rather than ambience.
-     `z-index: -1` sits it above the page canvas but beneath the frame, so it
-     never washes the screenshot itself. */
-  .dark .hero-bloom,
-  [data-theme="dark"] .hero-bloom {
+  /* The bloom under that frame — the same neutral light as the mark halo,
+     freer and wider, because here it pools under a large object instead of
+     hugging a small one. `z-index: -1` sits it above the page canvas but
+     beneath the frame, so it never washes the screenshot itself. */
+  .hero-bloom {
     position: absolute;
     left: 50%;
-    top: -10%;
-    width: min(1120px, 124%);
-    height: 76%;
+    top: -6%;
+    width: min(1180px, 128%);
+    height: 80%;
     translate: -50% 0;
     z-index: -1;
     pointer-events: none;
     opacity: var(--bg-glow-opacity, 1);
     background:
-      radial-gradient(58% 62% at 50% 42%, var(--aurora-core), transparent 70%),
-      radial-gradient(38% 52% at 20% 56%, var(--aurora-mid), transparent 72%),
-      radial-gradient(38% 52% at 80% 50%, var(--aurora-edge), transparent 74%),
-      radial-gradient(24% 40% at 66% 24%, var(--aurora-kick), transparent 76%);
+      radial-gradient(56% 58% at 50% 40%, var(--halo-near), transparent 74%),
+      radial-gradient(96% 100% at 50% 34%, var(--halo-far), transparent 80%);
   }
-  html:not(.dark) .hero-bloom,
-  html[data-theme="light"] .hero-bloom {
-    position: absolute;
-    left: 50%;
-    top: -10%;
-    width: min(1000px, 120%);
-    height: 74%;
-    translate: -50% 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: calc(var(--bg-glow-opacity, 1) * 0.7);
-    background:
-      radial-gradient(58% 62% at 50% 42%, var(--aurora-core), transparent 72%),
-      radial-gradient(36% 50% at 78% 52%, var(--aurora-kick), transparent 74%);
+  html:not(.dark) .hero-bloom {
+    opacity: calc(var(--bg-glow-opacity, 1) * 0.85);
   }
 
 
@@ -905,26 +913,18 @@
     -webkit-text-fill-color: transparent;
   }
 
-  /* Section badge above headings.
+  /* The `.kicker` badge is GONE, and deliberately not replaced.
 
-     This is a BADGE, not an eyebrow: sentence case at reading size, one flat
-     hairline, no glow and no letterspaced all-caps. Wide-tracked uppercase
-     micro-labels above every heading is the single most recognisable
-     template mannerism there is; product sites use a small grey pill, so
-     that is what this is. Because the label is sentence case at 12px it can
-     sit directly on the canvas — no scrim, no blur, no contrast floor to
-     engineer. */
-  .kicker {
-    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium;
-    color: var(--text-dim);
-    border: 1px solid var(--panel-line);
-    background: color-mix(in srgb, var(--text-main) 5%, transparent);
-  }
-  html:not(.dark) .kicker,
-  [data-theme="light"] .kicker {
-    color: var(--text-main);
-    background: rgba(0, 0, 0, 0.03);
-  }
+     It was a small bordered pill sitting above every heading — "Pricing",
+     "How it works", "The name", "Study material, distilled" — thirteen of
+     them across the site. It carried no information the heading below it did
+     not already carry, and a pill above every H2 is the most recognisable
+     signature of a generated page: a heading does not need a label announcing
+     that it is a heading. Vercel's own hero has no eyebrow above its
+     headline at all.
+
+     The footer's column labels, which DO carry information, are now plain
+     text rather than pills. */
 
   /* ------------------------------------------------
      Aceternity-style moving border (primary buttons)
@@ -1720,9 +1720,9 @@ html {
     min-width: 0;
   }
 
-  /* 5. Phones keep the same panel radius as desktop — a 12px corner is the
+  /* 5. Phones keep the same panel radius as desktop — the corner is the
      design, not a desktop-only value. */
   .glass-panel {
-    border-radius: 12px;
+    border-radius: var(--radius-panel);
   }
 }

@@ -42,7 +42,12 @@ export default function Footer() {
             aria-label="Product"
             className="flex flex-col items-start gap-2.5 text-sm font-medium text-text-dim"
           >
-            <span className="kicker mb-1">Product</span>
+            {/* A plain label, not a bordered pill: these two DO carry
+                information (which column is which), so they stay — just
+                without a box around them. */}
+            <span className="mb-1 text-sm font-medium text-foreground">
+              Product
+            </span>
             <a href="#features" className="transition-colors hover:text-foreground">
               Features
             </a>
@@ -68,7 +73,9 @@ export default function Footer() {
             aria-label="Legal"
             className="flex flex-col items-start gap-2.5 text-sm font-medium text-text-dim"
           >
-            <span className="kicker mb-1">Legal</span>
+            <span className="mb-1 text-sm font-medium text-foreground">
+              Legal
+            </span>
             {LEGAL.map((item) => (
               <Link
                 key={item.to}

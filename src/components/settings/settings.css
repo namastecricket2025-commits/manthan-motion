@@ -159,12 +159,12 @@ html:not(.dark) .set-root.set-root--bare {
   background:
     radial-gradient(
       900px 520px at 88% 0%,
-      color-mix(in srgb, var(--aurora-core) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      color-mix(in srgb, var(--halo-far) calc(100% * var(--bg-glow-opacity, 1)), transparent),
       transparent 64%
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      color-mix(in srgb, var(--aurora-mid) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      color-mix(in srgb, var(--halo-far) calc(80% * var(--bg-glow-opacity, 1)), transparent),
       transparent 62%
     ),
     var(--ink);
@@ -208,19 +208,17 @@ html:not(.dark) .set-root.set-root--bare {
   gap: 14px;
   margin-bottom: 18px;
 }
+/* Plain text, not a pill: this is a section label on the settings page, and a
+   bordered, letterspaced, uppercase micro-chip is the same badge this site
+   removed from every other page. The heading under it already says what the
+   section is. */
 .set-kicker {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
-  background: color-mix(in srgb, var(--signal) 8%, transparent);
-  padding: 4px 10px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--set-neon-text);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--set-dim);
 }
 .set-head__title {
   margin-top: 11px;
@@ -1353,12 +1351,12 @@ html:not(.dark) .set-root {
   background:
     radial-gradient(
       900px 520px at 88% 0%,
-      color-mix(in srgb, var(--aurora-core) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      color-mix(in srgb, var(--halo-far) calc(100% * var(--bg-glow-opacity, 1)), transparent),
       transparent 64%
     ),
     radial-gradient(
       760px 460px at 4% 16%,
-      color-mix(in srgb, var(--aurora-kick) calc(100% * var(--bg-glow-opacity, 1)), transparent),
+      color-mix(in srgb, var(--halo-far) calc(80% * var(--bg-glow-opacity, 1)), transparent),
       transparent 62%
     ),
     var(--ink);

@@ -700,7 +700,10 @@ html:not(.dark) .avia-root {
   --avia-2: #b06ad8;
   --avia-3: #2aa7c4;
   --avia-4: #e0729f;
-  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #ffffff 0%, #f4f2fb 52%, #e6e4f2 100%);
+  /* Neutral, not lavender: the light-theme orb base carried a violet cast
+     (#f4f2fb → #e6e4f2), which put a cool lavender tint on the one element
+     that floats over every single page. */
+  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #ffffff 0%, #f7f7f8 52%, #ededf0 100%);
   --avia-orb-edge: rgba(30, 27, 75, 0.14);
   --avia-strand-blur: 6px;
   --avia-strand-mix: multiply;

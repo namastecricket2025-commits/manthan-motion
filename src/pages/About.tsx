@@ -192,8 +192,7 @@ function AboutHero() {
     <section className="about-hero about-shell">
       <span className="about-hero__glow" aria-hidden />
       <div className="about-hero__inner">
-        <span className="kicker">About Us</span>
-        <h1 ref={ref} className="about-hero__title mt-6">
+        <h1 ref={ref} className="about-hero__title">
           <AxisText
             segments={[{ text: "About" }, { text: "Manthan", className: "gradient-text" }]}
           />
@@ -250,8 +249,7 @@ function NameSection() {
       <div className="about-shell">
         <div className="about-split">
           <div className="about-split__pin">
-            <span className="kicker">The name</span>
-            <h2 ref={ref} className="about-split__title mt-5">
+            <h2 ref={ref} className="about-split__title">
               <AxisText segments={[{ text: "The Grand Significance of Our Name" }]} />
             </h2>
           </div>
@@ -328,8 +326,7 @@ function MissionSection() {
     <section ref={sectionRef} className="about-section">
       <div className="about-shell">
         <div className="about-mission__intro">
-          <span className="kicker">The mission</span>
-          <h2 ref={headRef} className="about-h2 mt-5">
+          <h2 ref={headRef} className="about-h2">
             <AxisText segments={[{ text: "Our Visionary Mission" }]} />
           </h2>
           <p className="about-lede">
@@ -431,8 +428,7 @@ function FounderSection() {
     <section className="about-section">
       <div className="about-shell">
         <div className="text-center">
-          <span className="kicker">The founder</span>
-          <h2 ref={headRef} className="about-h2 mt-5">
+          <h2 ref={headRef} className="about-h2">
             <AxisText segments={[{ text: "Meet the Founder" }]} />
           </h2>
           <p className="mt-4 font-display text-lg font-bold tracking-tight text-foreground sm:text-xl">
@@ -493,8 +489,7 @@ function WhySection() {
     <section className="about-section about-section--last">
       <div className="about-shell">
         <div className="text-center">
-          <span className="kicker">The difference</span>
-          <h2 ref={headRef} className="about-h2 mt-5">
+          <h2 ref={headRef} className="about-h2">
             <AxisText segments={[{ text: "Why Align with Manthan?" }]} />
           </h2>
         </div>

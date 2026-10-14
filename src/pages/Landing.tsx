@@ -31,13 +31,13 @@ function Hero() {
       return;
     }
     const ctx = gsap.context(() => {
-      // Apple-style entrance: the kicker, copy, action links and footnote settle
-      // one after another on a spring ease — a touch of overshoot on the way
-      // up, a blur burn-off, no bounce wobble once they land.
+      // Entrance: the mark, the headline, the copy, the actions and the
+      // footnote settle one after another on a spring ease — a touch of
+      // overshoot on the way up, no bounce wobble once they land.
       // No `filter` here on purpose: a filter on an ancestor turns it into a
-      // backdrop root, which would flatten the glass on the hero preview card
-      // and the CTA while the entrance plays. The word-level blur lives in
-      // TextGenerate instead, where it can't affect any glass surface.
+      // backdrop root, which would flatten the panels behind it while the
+      // entrance plays. The word-level blur lives in TextGenerate instead,
+      // where it affects nothing but its own spans.
       gsap.fromTo(
         els,
         { opacity: 0, y: 30, scale: 0.985 },
@@ -73,24 +73,39 @@ function Hero() {
           deliberate sequence: badge (what's new) → headline (what it is) →
           subcopy (what it does) → actions → the product itself, presented in
           a lit frame. */}
-      <section className="relative px-4 pb-20 pt-28 sm:px-6 sm:pt-36">
-        {/* Ambient aurora — light spilling from behind the fold, dark-mode
-            chroma and scaled by the Ambient Intensity slider
-            (`--bg-glow-opacity`). Rendered first, with everything below set
-            `relative`, so it sits behind the content instead of over it. */}
+      <section className="relative px-4 pb-20 pt-20 sm:px-6 sm:pt-24">
+        {/* The page wash — a very faint neutral lift at the top of the page,
+            scaled by the Ambient Intensity slider (`--bg-glow-opacity`).
+            Rendered first, with everything below set `relative`, so it sits
+            behind the content instead of over it. */}
         <div className="glow-aura" aria-hidden="true" />
 
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div data-hero-fade className="flex justify-center">
-            <OrbitMark svgClassName="h-14 w-14" />
+        {/* THE MARK — the hero's centrepiece, at size.
+
+            This is Vercel's hero composition: one large, lit object owning the
+            centre of the first screen, with everything else arranged around
+            it. The mark had been shrunk to a 56px badge so the headline could
+            start higher up, which inverted the whole design — a 56px logo is a
+            favicon, and a hero whose focal point is the size of a bullet point
+            has no focal point at all.
+
+            `.mark-halo` sits it in white backlight (see index.css): the mark
+            reads as an object lit from behind rather than a shape pasted on
+            black — the same trick as Vercel's own hero, where the triangle is
+            outlined by a white halo that falls off into nothing. */}
+        <div
+          data-hero-fade
+          className="relative flex items-center justify-center py-6 sm:py-10"
+        >
+          <div className="relative h-[clamp(180px,30svh,300px)] w-[clamp(180px,30svh,300px)]">
+            <div className="mark-halo" aria-hidden="true" />
+            <OrbitMark className="flex h-full w-full items-center justify-center" svgClassName="h-full w-full" />
           </div>
+        </div>
 
-          <span data-hero-fade className="kicker mt-7">
-            Study material, distilled
-          </span>
-
+        <div className="relative mx-auto max-w-4xl text-center">
           <TextGenerate
-            className="mt-6 font-display text-[42px] font-bold leading-[1.06] tracking-[-0.045em] text-foreground sm:text-6xl md:text-[76px] md:leading-[0.98]"
+            className="font-display text-[42px] font-bold leading-[1.06] tracking-[-0.045em] text-foreground sm:text-6xl md:text-[76px] md:leading-[0.98]"
             delay={0.25}
             spring
             segments={[
@@ -145,7 +160,7 @@ function Hero() {
             light appears to come from the screenshot rather than over it. */}
         <div
           data-hero-fade
-          className="relative mx-auto mt-16 max-w-5xl sm:mt-20"
+          className="relative mx-auto mt-20 max-w-5xl sm:mt-24"
         >
           <div className="hero-bloom" aria-hidden="true" />
           <div className="hero-frame">

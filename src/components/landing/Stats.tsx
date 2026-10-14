@@ -150,8 +150,7 @@ export default function Stats() {
       className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 md:py-20"
     >
       <div data-reveal className="mx-auto max-w-2xl text-center">
-        <span className="kicker">What Manthan does</span>
-        <h2 className="text-fade mt-4 font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
+        <h2 className="text-fade font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
           Numbers that <span className="gradient-text">matter</span> to your
           revision
         </h2>

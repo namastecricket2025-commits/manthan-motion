@@ -29,24 +29,21 @@ import { useState } from "react";
  * with the discount applied to the running total. Checkout is an explicit
  * sandbox simulation — nothing here contacts a payment network.
  *
- * The layout is the one a product site uses, because it is the one that makes
- * a price table readable:
+ * The card deliberately carries as little as possible: a name, one line of
+ * description, the term, the number, ONE muted line of billing context, the
+ * action, and the feature list.
  *
- *   centred heading → one row of equal cards → the CTA inside each card,
- *   immediately under the price → the feature list, in the same order on
- *   every card so the eye can compare across rather than scan down.
+ * What was removed, and why it was removed rather than restyled:
  *
- * The term control is a segmented switcher rather than a `<select>` all on its
- * own: a dropdown hides two thirds of the offer behind a click, and the whole
- * point of the multi-month terms is that the saving is visible.
+ *   - the "Popular" / "Current" bordered pills. A bordered micro-chip is a
+ *     third type of box competing with the card, the button and the field
+ *     around it; the featured plan is already told apart by a brighter border,
+ *     and this account's state is already told apart by its button.
+ *   - the `/ month` suffix and the `−10%` / `−20%` chips in the term switcher.
+ *     The unit and the saving belong in one sentence under the price, not
+ *     scattered as punctuation around it.
+ *   - the eyebrow pill above the heading.
  */
-
-/** Short segment labels — the saving is rendered separately, as a chip. */
-const TERM_LABEL: Record<DurationId, string> = {
-  "1m": "1 month",
-  "6m": "6 months",
-  "12m": "12 months",
-};
 
 export default function Pricing() {
   const { plan, setPlan } = usePlan();
@@ -64,13 +61,12 @@ export default function Pricing() {
     <div className="relative min-h-screen bg-background text-foreground">
       <BlobBackground />
       <div className="relative z-10">
-        {/* Page-top aurora — ambient light spilling in from above. */}
+        {/* Page-top wash — the same faint neutral light as the landing page. */}
         <div className="glow-aura" aria-hidden="true" />
         <Navbar />
         <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-28 sm:px-6 sm:pt-36">
           <div data-reveal className="mx-auto max-w-2xl text-center">
-            <span className="kicker">Pricing</span>
-            <h1 className="text-fade mt-5 font-display text-4xl font-bold tracking-[-0.035em] sm:text-5xl md:text-[56px] md:leading-[1.05]">
+            <h1 className="text-fade font-display text-4xl font-bold tracking-[-0.035em] sm:text-5xl md:text-[56px] md:leading-[1.05]">
               Pricing for every study plan
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
@@ -97,9 +93,9 @@ export default function Pricing() {
                 Lab
               </p>
             </div>
-            <span className="premium-chip">
-              {plan === "free" ? "Current plan" : "Included"}
-            </span>
+            <p className="text-xs font-medium text-text-dim">
+              {plan === "free" ? "Your current plan" : "Included"}
+            </p>
           </div>
 
           <div className="mt-6 grid gap-5 lg:grid-cols-3">
@@ -120,25 +116,25 @@ export default function Pricing() {
                     tier.featured && "premium-card--featured",
                   )}
                 >
-                  <header className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="font-display text-base font-semibold tracking-tight">
-                        {tier.name}
-                      </h2>
-                      <p className="mt-1 text-sm leading-relaxed text-text-dim">
-                        {tier.summary}
-                      </p>
-                    </div>
-                    {isCurrent ? (
-                      <span className="premium-chip shrink-0">Current</span>
-                    ) : tier.featured ? (
-                      <span className="premium-chip shrink-0">Popular</span>
-                    ) : null}
-                  </header>
+                  {/* A plain, unboxed label — the popular plan is named, not
+                      badged, and its card's brighter border does the rest. */}
+                  {tier.featured && !isCurrent && (
+                    <p className="mb-3 text-xs font-medium text-foreground">
+                      Most popular
+                    </p>
+                  )}
 
-                  {/* Term switcher — only the tiers sold by term carry one. */}
+                  <h2 className="font-display text-base font-semibold tracking-tight">
+                    {tier.name}
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-text-dim">
+                    {tier.summary}
+                  </p>
+
+                  {/* Term switcher — plain text, no discount chips: the saving
+                      is stated once, in the billing line under the price. */}
                   {tier.flexible && (
-                    <div className="mt-5 inline-flex w-fit rounded-lg border border-[var(--panel-line)] p-0.5">
+                    <div className="mt-5 flex items-center gap-1">
                       {DURATIONS.map((option) => {
                         const active =
                           (durations[tier.id] ?? DEFAULT_DURATION) === option.id;
@@ -154,18 +150,13 @@ export default function Pricing() {
                               }))
                             }
                             className={cn(
-                              "rounded-md px-2.5 py-1.5 text-xs transition-colors",
+                              "rounded-md px-2 py-1 text-[13px] transition-colors",
                               active
-                                ? "bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)] text-foreground"
+                                ? "bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] font-medium text-foreground"
                                 : "text-text-dim hover:text-foreground",
                             )}
                           >
-                            {TERM_LABEL[option.id]}
-                            {option.discount > 0 && (
-                              <span className="ml-1 text-[10px] text-text-dim">
-                                −{Math.round(option.discount * 100)}%
-                              </span>
-                            )}
+                            {option.months} mo
                           </button>
                         );
                       })}
@@ -173,48 +164,28 @@ export default function Pricing() {
                   )}
 
                   {/* Animated total — the number glides when the term changes. */}
-                  <div className="mt-5 flex items-end gap-2">
-                    <div className="relative h-11 overflow-hidden">
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={`${tier.id}-${total}`}
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -20, opacity: 0 }}
-                          transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
-                          className="block font-display text-[40px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
-                        >
-                          {formatINR(total)}
-                        </motion.span>
-                      </AnimatePresence>
-                    </div>
-                    <span className="pb-1.5 text-sm text-text-dim">
-                      {tier.flexible
-                        ? duration.months === 1
-                          ? "/ month"
-                          : `/ ${duration.months} months`
-                        : `/ ${tier.unit}`}
-                    </span>
+                  <div className="mt-5 h-11 overflow-hidden">
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={`${tier.id}-${total}`}
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -20, opacity: 0 }}
+                        transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
+                        className="block font-display text-[40px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
+                      >
+                        {formatINR(total)}
+                      </motion.span>
+                    </AnimatePresence>
                   </div>
 
-                  <div className="mt-1.5 min-h-[20px]">
-                    {savings > 0 ? (
-                      <motion.p
-                        key={`${tier.id}-saving-${savings}`}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
-                        className="text-xs text-text-dim"
-                      >
-                        Save {formatINR(savings)} over {duration.months} monthly
-                        payments.
-                      </motion.p>
-                    ) : !tier.flexible ? (
-                      <p className="text-xs text-text-dim">
-                        Single seven-day pass · {tier.allowance}
-                      </p>
-                    ) : null}
-                  </div>
+                  <p className="mt-3 min-h-[20px] text-xs leading-relaxed text-text-dim">
+                    {tier.flexible
+                      ? duration.months === 1
+                        ? "Billed monthly. Cancel any time."
+                        : `Billed every ${duration.months} months · saves ${formatINR(savings)}`
+                      : `One 7-day pass · ${tier.allowance}`}
+                  </p>
 
                   {/* The action sits directly under the price on every card, at
                       the same offset, so the three buttons line up across the

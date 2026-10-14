@@ -24,27 +24,37 @@ export default function HeroPreview() {
     );
     const status = root.querySelector<HTMLElement>("[data-status]");
 
+    /* Three states, one neutral ink. The tones come from `--text-main` (white
+       in dark, near-black in light) over `--panel` for the labels, so the
+       diagram is crisp in both themes without a single accent colour: a
+       finished step is a solid dot, the running step is an outlined dot with
+       a hairline ring, and a waiting step is a faint hairline. Previously a
+       finished step filled with `--signal` and the running one got a tinted
+       wash plus a 5px blurred-looking ring — colour on a 40px circle with no
+       defined edge, which is exactly the "undefined borders" read. */
     const activate = (i: number) => {
       nodes.forEach((node, j) => {
         if (i === -1 || j < i) {
-          node.style.borderColor = "var(--signal)";
-          node.style.background = "var(--signal)";
-          node.style.color = "var(--ink)";
+          node.style.borderColor = "var(--text-main)";
+          node.style.background = "var(--text-main)";
+          node.style.color = "var(--panel)";
+          node.style.boxShadow = "none";
         } else if (j === i) {
-          node.style.borderColor = "var(--signal)";
-          node.style.background = "color-mix(in srgb, var(--signal) 22%, transparent)";
+          node.style.borderColor = "var(--text-main)";
+          node.style.background = "transparent";
           node.style.color = "var(--text-main)";
           node.style.boxShadow =
-            "0 0 0 5px color-mix(in srgb, var(--signal) 18%, transparent)";
+            "0 0 0 6px color-mix(in srgb, var(--text-main) 8%, transparent)";
         } else {
-          node.style.borderColor = "var(--card-border)";
+          node.style.borderColor = "var(--panel-line)";
           node.style.background = "transparent";
           node.style.color = "var(--text-dim)";
           node.style.boxShadow = "none";
         }
       });
       segments.forEach((seg, j) => {
-        seg.style.background = j < i || i === -1 ? "var(--signal)" : "var(--card-border)";
+        seg.style.background =
+          j < i || i === -1 ? "var(--text-main)" : "var(--panel-line)";
       });
       if (status) {
         status.textContent = i === -1 ? DONE : STEPS[i]?.status ?? "";
@@ -99,35 +109,27 @@ export default function HeroPreview() {
       className="relative overflow-hidden rounded-[10px] bg-[color-mix(in_srgb,var(--text-main)_3%,var(--panel))] p-5 sm:p-6"
       data-hero-fade
     >
-      {/* card chrome */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--signal)] opacity-80" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--signal-2)] opacity-70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[var(--card-border)]" />
-        </div>
-        <span className="font-mono text-[11px] tracking-wider text-text-dim">
-          generation_07
-        </span>
-        <span className="glass-chip inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--signal)]">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--signal)] opacity-70" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--signal)]" />
-          </span>
-          Live
-        </span>
-      </div>
+      {/* The panel is a diagram, not a mocked-up application window.
+
+          It used to carry fake window chrome: three traffic-light dots in the
+          accent, a monospace `generation_07` build tag and a pulsing "Live"
+          pill with an uppercase letterspaced label. None of it was real — the
+          dots coloured nothing, the tag named nothing, and the pill claimed a
+          liveness the panel can't have — and three borrowed UI clichés in a
+          row is exactly what makes a mockup read as decoration. One plain
+          label says everything the chrome was pretending to. */}
+      <p className="text-sm font-medium text-foreground">Pipeline</p>
 
       {/* mini pipeline — flex-1 slots so node centres sit at exact 20% steps */}
-      <div className="relative mt-7 flex h-14 items-center">
+      <div className="relative mt-6 flex h-14 items-center">
         {/* connectors */}
         {STEPS.map((_, i) =>
           i === 0 ? null : (
             <span
               key={i}
               data-segment
-              className="absolute h-0.5 origin-left bg-[var(--card-border)]"
-              style={{ left: `${(i - 0.5) * 20}%`, width: "20%", top: "calc(50% - 1px)" }}
+              className="absolute h-px origin-left bg-[var(--panel-line)]"
+              style={{ left: `${(i - 0.5) * 20}%`, width: "20%", top: "calc(50% - 0.5px)" }}
             />
           ),
         )}
@@ -135,7 +137,7 @@ export default function HeroPreview() {
           <span key={step.short} className="flex h-14 flex-1 items-center justify-center">
             <span
               data-node
-              className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--card-border)] font-display text-xs font-bold"
+              className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--panel-line)] font-display text-xs font-semibold"
             >
               {i + 1}
             </span>
@@ -151,17 +153,11 @@ export default function HeroPreview() {
         Parsing sources…
       </p>
 
-      {/* output chips */}
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {["Summary", "24 flashcards", "12 prompts"].map((chip) => (
-          <span
-            key={chip}
-            className="glass-chip px-3 py-1 text-[11px] font-medium text-text-dim"
-          >
-            {chip}
-          </span>
-        ))}
-      </div>
+      {/* The output of the run, as plain text rather than three bordered
+          pills stacked under the diagram. */}
+      <p className="mt-4 text-center text-[13px] text-text-dim">
+        Summary · 24 flashcards · 12 prompts
+      </p>
     </div>
   );
 }

@@ -41,16 +41,18 @@ export default function CtaSection() {
         data-reveal
         className="glass-panel relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
       >
-        {/* soft signal glow behind the card content */}
+        {/* Soft neutral light pooling inside the card's top edge — the same
+            white glow as the hero, not a coloured blob. (`--signal` here was
+            an accent-tinted 3xl blur, which is a coloured smear rather than
+            light.) */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[130%] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--signal)_12%,transparent)] blur-3xl"
+          className="pointer-events-none absolute -top-40 left-1/2 h-72 w-[130%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,var(--halo-near),transparent)] opacity-60"
         />
         <div className="relative">
-          <span className="kicker">Start churning</span>
           <h2
             data-reveal
-            className="text-fade mx-auto mt-5 max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
+            className="text-fade mx-auto max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
           >
             Your notes are waiting to become{" "}
             <span className="gradient-text">study material</span>
