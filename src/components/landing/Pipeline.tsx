@@ -220,7 +220,7 @@ export default function Pipeline() {
                     crimson in both themes (lifted for black), so the card has
                     an identity to look at that is not just brightness. */}
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand)]">
+                  <span className="card-tile">
                     <step.icon className="h-5 w-5" />
                   </span>
                   <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--brand)_72%,transparent)]">

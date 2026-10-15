@@ -115,10 +115,11 @@ export default function Features() {
             data-card
             className="feature-card glass-panel p-6 will-change-transform"
           >
-            {/* `--brand`, not `--signal`: the accent is the same crimson in
-                both themes, where `--signal` is the theme's light and turns
-                white the moment dark mode does. */}
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand)]">
+            {/* `.card-tile` is the one tile for all three landing card
+                families, and it is painted with `--brand` — not `--signal`,
+                which is the theme's light and turns white the moment dark
+                mode does. */}
+            <span className="card-tile">
               <feature.icon className="h-5 w-5" />
             </span>
             <h3 className="mt-5 font-display text-lg font-bold tracking-tight text-foreground">

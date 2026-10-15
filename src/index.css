@@ -177,6 +177,7 @@
      under the hero mark) and a very faint neutral grey wash at the top of
      the page so the hero area is not a flat field of white. No colour. */
   --halo-near: rgba(255, 255, 255, 0.95);
+  --halo-mid: rgba(255, 255, 255, 0.32);
   --halo-far: rgba(0, 0, 0, 0.035);
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
@@ -533,6 +534,14 @@
      Ambient Intensity slider), so turning Ambient down quiets the whole
      scene instead of leaving these behind at full strength. */
   --halo-near: rgba(255, 255, 255, 0.26);
+  /* The halo's mid stop, as its own token rather than a `color-mix()` of
+     `--halo-near`. A color-mix here gets downlevelled by the CSS pipeline
+     into a `@supports` branch with a FALLBACK that holds the peak alpha all
+     the way to the mid stop — i.e. any browser without color-mix (and
+     therefore without the nesting the downlevelled rule needs) renders the
+     opaque disc this pass removed. A third token removes the branch, so the
+     gradient is byte-identical in every browser. */
+  --halo-mid: rgba(255, 255, 255, 0.09);
   --halo-far: rgba(255, 255, 255, 0.06);
 
   /* ---- Panel language (dark) -----------------------------------------
@@ -789,7 +798,7 @@
     background: radial-gradient(
       closest-side,
       var(--halo-near),
-      color-mix(in srgb, var(--halo-near) 34%, transparent) 42%,
+      var(--halo-mid) 42%,
       transparent 80%
     );
   }
@@ -797,6 +806,41 @@
     /* On paper the backlight is a lit floor: the same disk, read as a soft
        white pool rather than light in a void. */
     opacity: calc(var(--bg-glow-opacity, 1) * 0.9);
+  }
+
+  /* ------------------------------------------------
+     The hero capability rail (Vercel's right-hand stack).
+
+     Three rows, 8px apart, one line tall at rest. Hovering a row expands it
+     from 24px to Vercel's measured 84px over 200ms and fades in a muted
+     continuation: the ROW grows under the pointer instead of the card
+     lighting up, which is how the reference says "there is more here".
+
+     The collapse only exists where a hover can actually happen — a real
+     pointer on a screen wide enough for the composition. A touch device has
+     no pointer to trigger it, so the rows render expanded and no height is
+     ever animated there. The continuation stays in the DOM either way, so it
+     is never hidden from assistive tech, only clipped.
+     ------------------------------------------------ */
+  .cap-row {
+    max-height: 5.25rem;
+  }
+  @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+    .cap-row {
+      max-height: 1.5rem;
+      overflow: hidden;
+      transition: max-height 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cap-row:hover {
+      max-height: 5.25rem;
+    }
+    .cap-more {
+      opacity: 0;
+      transition: opacity 200ms ease-out;
+    }
+    .cap-row:hover .cap-more {
+      opacity: 1;
+    }
   }
 
   /* The hero's product frame — the one object on the site that is presented
@@ -1014,6 +1058,28 @@
     cursor: progress;
   }
 
+  /* ------------------------------------------------
+     The icon tile — ONE shared element for the three landing card families
+     (feature, stat and pipeline cards), which carried three copies of the same
+     44px tile in their markup.
+
+     Brand crimson in both themes: `--signal` is the theme's light, so a tile
+     keyed to it turns white the moment dark mode does and the card loses every
+     trace of the product's colour.
+     ------------------------------------------------ */
+  .card-tile {
+    display: inline-flex;
+    height: 2.75rem;
+    width: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    border: 1px solid var(--brand-line);
+    background: var(--brand-soft);
+    color: var(--brand);
+    transition: background 150ms ease-out, border-color 150ms ease-out;
+  }
+
   /* Touch feedback: press state for touch-first devices */
   @media (hover: none) {
     .moving-border:active .cd-face {
@@ -1032,21 +1098,29 @@
 
   /* Feature / card hover (pointer devices only) */
   @media (hover: hover) and (pointer: fine) {
-    /* The card hover is two interpolable properties — border colour and
-       background — plus a 2px lift. That is the whole interaction: a surface
-       brightens its edge when you point at it. The previous version dropped
-       5px, tinted the border with the accent and swapped an inset shadow for
-       an outset one, which is why it used to flash on the way in AND out. */
+    /* The card hover, the way both references do it.
+
+       Vercel animates the ART inside a card on hover and leaves the surface
+       alone. Ours repainted the whole surface — a 3% white wash across the
+       card plus a 2px shove — which is what made the grid flash grey on the
+       way in and out. Now the edge lights (one interpolable colour), the icon
+       tile is what actually animates, and the lift is Linear's measured 1px.
+       The timings are the reference set's too: 100–150ms for a state change,
+       not 240ms. */
     .feature-card {
       transition:
-        transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 200ms ease,
-        background-color 200ms ease;
+        transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 150ms ease-out;
     }
     .feature-card:hover {
-      transform: translateY(-2px);
+      transform: translateY(-1px);
       border-color: var(--panel-line-strong);
-      background-color: color-mix(in srgb, var(--text-main) 3%, var(--panel));
+    }
+    /* The art inside the card is what answers the pointer. */
+    .feature-card:hover .card-tile,
+    .how-card:hover .card-tile {
+      border-color: color-mix(in srgb, var(--brand) 48%, transparent);
+      background: color-mix(in srgb, var(--brand) 20%, transparent);
     }
     .btn-ghost {
       transition: color 200ms ease, background 200ms ease, border-color 200ms ease;

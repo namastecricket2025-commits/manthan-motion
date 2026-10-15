@@ -167,9 +167,10 @@ export default function Stats() {
             data-reveal
             className="feature-card glass-panel will-change-transform p-6 text-center sm:text-left"
           >
-            {/* Same `--brand` crimson as the feature and pipeline cards — one
-                accent across the three card families. */}
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand)]">
+            {/* Same `.card-tile` (and so the same brand crimson) as the
+                feature and pipeline cards — one accent and one tile across
+                the three card families. */}
+            <span className="card-tile">
               <stat.icon className="h-5 w-5" />
             </span>
             <div className="mt-5 font-display text-4xl font-bold tracking-tight text-foreground">
