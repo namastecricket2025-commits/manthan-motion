@@ -190,14 +190,15 @@ export default function Pipeline() {
         ref={viewportRef}
         className="how-sticky relative mt-10 h-[68svh] min-h-[400px] w-full overflow-hidden md:mt-16"
       >
-        {/* scrub progress line */}
+        {/* scrub progress line — brand crimson, because it reports progress
+            rather than ornamenting the section. */}
         <span
           aria-hidden="true"
           className="absolute inset-x-0 top-0 z-10 mx-auto block h-[2px] w-full max-w-6xl bg-[var(--card-border)]"
         >
           <span
             ref={progressRef}
-            className="block h-full w-full origin-left bg-[var(--signal)]"
+            className="block h-full w-full origin-left bg-[var(--brand)]"
             style={{ transform: "scaleX(0)" }}
           />
         </span>
@@ -210,11 +211,19 @@ export default function Pipeline() {
               className="how-card glass-panel flex flex-col justify-between p-6 will-change-transform sm:p-8"
             >
               <div>
+                {/* Brand crimson on the tile, the number and the rule.
+
+                    These three carried `--signal`, which is the theme's LIGHT
+                    — white in dark — so as soon as the theme went dark the
+                    card lost every trace of the product's colour and read as
+                    a grey box with a white icon in it. `--brand` is the same
+                    crimson in both themes (lifted for black), so the card has
+                    an identity to look at that is not just brightness. */}
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand)]">
                     <step.icon className="h-5 w-5" />
                   </span>
-                  <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--signal)_58%,transparent)]">
+                  <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--brand)_72%,transparent)]">
                     {step.num}
                   </span>
                 </div>
@@ -225,7 +234,7 @@ export default function Pipeline() {
                   {step.desc}
                 </p>
               </div>
-              <span className="mt-8 h-0.5 w-12 rounded-full bg-[var(--signal)] opacity-70" />
+              <span className="mt-8 h-0.5 w-12 rounded-full bg-[var(--brand)] opacity-80" />
             </article>
           ))}
         </div>

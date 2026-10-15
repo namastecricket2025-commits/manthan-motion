@@ -74,11 +74,14 @@ function Hero() {
           subcopy (what it does) → actions → the product itself, presented in
           a lit frame. */}
       <section className="relative px-4 pb-20 pt-20 sm:px-6 sm:pt-24">
-        {/* The page wash — a very faint neutral lift at the top of the page,
-            scaled by the Ambient Intensity slider (`--bg-glow-opacity`).
-            Rendered first, with everything below set `relative`, so it sits
-            behind the content instead of over it. */}
-        <div className="glow-aura" aria-hidden="true" />
+        {/* NO page wash and NO bloom behind the product shot.
+
+            The hero used to carry `.glow-aura` (a 460px-tall 42%-white radial
+            centred above the top of the viewport) and `.hero-bloom` (an
+            1180px white pool under the product frame). Between them they lit
+            the entire first screen, which is why a black page measured grey.
+            The product's own hero is flat black with exactly one light in it,
+            hugging the mark — so that is the only one left here. */}
 
         {/* THE MARK — the hero's centrepiece, at size.
 
@@ -155,14 +158,11 @@ function Hero() {
           </p>
         </div>
 
-        {/* The product itself, in its lit frame. The bloom is painted behind
-            the frame (z-index -1 inside the page's stacking context), so the
-            light appears to come from the screenshot rather than over it. */}
+        {/* The product itself, on flat black, in a hairline frame. */}
         <div
           data-hero-fade
           className="relative mx-auto mt-20 max-w-5xl sm:mt-24"
         >
-          <div className="hero-bloom" aria-hidden="true" />
           <div className="hero-frame">
             <HeroPreview />
           </div>

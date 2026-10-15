@@ -41,14 +41,11 @@ export default function CtaSection() {
         data-reveal
         className="glass-panel relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
       >
-        {/* Soft neutral light pooling inside the card's top edge — the same
-            white glow as the hero, not a coloured blob. (`--signal` here was
-            an accent-tinted 3xl blur, which is a coloured smear rather than
-            light.) */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-40 left-1/2 h-72 w-[130%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,var(--halo-near),transparent)] opacity-60"
-        />
+        {/* No light pooling inside the card. It used to carry a 130%-wide
+            radial at 60% opacity bleeding over the card's top edge, which on
+            a #0a0a0a panel is a grey smear across the whole CTA — the thing
+            every card on this page was doing. The closing panel is a flat
+            surface and a hairline, like the rest. */}
         <div className="relative">
           <h2
             data-reveal

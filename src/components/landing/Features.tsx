@@ -115,7 +115,10 @@ export default function Features() {
             data-card
             className="feature-card glass-panel p-6 will-change-transform"
           >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[var(--signal)]">
+            {/* `--brand`, not `--signal`: the accent is the same crimson in
+                both themes, where `--signal` is the theme's light and turns
+                white the moment dark mode does. */}
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand)]">
               <feature.icon className="h-5 w-5" />
             </span>
             <h3 className="mt-5 font-display text-lg font-bold tracking-tight text-foreground">

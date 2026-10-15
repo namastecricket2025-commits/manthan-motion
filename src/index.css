@@ -123,6 +123,16 @@
      be white with a near-black label while the accent stays luminous. */
   --signal-strong: #c81f27;
   --signal-2: #8f1d22;
+  /* ---- Brand chroma (light) ------------------------------------------
+     The one token that stays CHROMATIC in both themes. `--signal` cannot do
+     this job: it is the theme's light (white in dark), so anything tinted
+     with it goes monochrome the moment the lights go down, and the accent
+     disappears with them. This is the crimson itself, lifted in dark so it
+     still measures 5.8:1 on black, and it is what marks something as the
+     product's own — an icon, a step number, a rule under a card. */
+  --brand: #c81f27;
+  --brand-soft: rgba(200, 31, 39, 0.1);
+  --brand-line: rgba(200, 31, 39, 0.28);
   --text-main: #171717;
   --text-dim: #52525b;
   --card-border: rgba(0, 0, 0, 0.1);
@@ -155,9 +165,10 @@
   /* The hairline alpha is the value Vercel's own cards measure at. */
   --panel-line: rgba(0, 0, 0, 0.08);
   --panel-line-strong: rgba(0, 0, 0, 0.16);
-  /* (No `--glow-edge` here: the lit top edge is a DARK-theme device. A light
-     panel is white on a #fafafa canvas, so it is already its own highlight —
-     see the `.dark .glass-panel` rule below.) */
+  /* (No lit top edge in light mode: a white panel on a #fafafa canvas is
+     already its own highlight, so a second white line on it would draw
+     nothing. What defines a light card is the fill step plus the hairline,
+     exactly as Vercel's do.) */
 
   /* ---- Halo (light) --------------------------------------------------
      A light theme cannot bloom — there is nothing brighter than near-white
@@ -323,6 +334,12 @@
   --signal: #f5f5f7;
   --signal-strong: #ffffff;
   --signal-2: #e4e4e7;
+  /* The brand crimson, lifted for a black canvas: the base #c81f27 measures
+     about 2.6:1 on #000, which is muddy at icon size. This is the same hue
+     at 5.8:1, so the accent is legible while still reading as the brand. */
+  --brand: #ef4b52;
+  --brand-soft: rgba(239, 75, 82, 0.12);
+  --brand-line: rgba(239, 75, 82, 0.3);
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -349,7 +366,7 @@
      sitting on it — otherwise a card reads as a hole punched in a lighter
      page. At these stops the field peaks around rgb(6,6,8), i.e. the page
      still measures black, and a panel is cleanly separable from it. */
-  --bg-canvas-a: #08080a;
+  --bg-canvas-a: #050506;
   --bg-canvas-b: #020203;
   --bg-canvas-c: #000000;
   --bg-canvas-opacity: 0.9;
@@ -493,11 +510,15 @@
   --menu-ink: rgba(255, 255, 255, 0.92);
 
   /* ---- Ambient light vocabulary (dark) -------------------------------
-     Three tokens, one light source, and NONE of them is a colour:
+     Two tokens, one light source, and neither is a colour:
 
-       --glow-edge   the lit lip on a panel's top hairline (its only depth)
-       --halo-near   the tight-backlight around the hero mark
-       --halo-far    the wide, very faint wash at the top of a page
+       --halo-near   the tight backlight around the hero mark
+       --halo-far    the shallow lift on the top edge of an inner page
+
+     Both alphas are deliberately low. The hero mark is opaque, so the ONLY
+     part of a backlight a visitor ever sees is the rim just outside the
+     shape — a brighter core buys nothing but a grey disc behind the logo,
+     and it lifts the whole first screen off black.
 
      The theme used to carry a four-hue aurora (blue core, violet mid, pink
      edge, teal kick) as its "one chroma". It read as decoration instead of
@@ -511,9 +532,8 @@
      Each use site still multiplies its opacity by `--bg-glow-opacity` (the
      Ambient Intensity slider), so turning Ambient down quiets the whole
      scene instead of leaving these behind at full strength. */
-  --glow-edge: rgba(255, 255, 255, 0.18);
-  --halo-near: rgba(255, 255, 255, 0.42);
-  --halo-far: rgba(255, 255, 255, 0.1);
+  --halo-near: rgba(255, 255, 255, 0.26);
+  --halo-far: rgba(255, 255, 255, 0.06);
 
   /* ---- Panel language (dark) -----------------------------------------
      Vercel's surface, exactly: a near-black fill (#0a0a0a, deliberately not
@@ -521,8 +541,11 @@
      white-alpha hairline. No blur, no frost, no ambient drop shadow. Depth
      comes from the page's light, never from a shadow under every card. */
   --panel: #0a0a0a;
-  --panel-line: rgba(255, 255, 255, 0.1);
-  --panel-line-strong: rgba(255, 255, 255, 0.22);
+  /* Vercel's measured hairline on a #000 card. Now that no wash sits inside
+     a panel, the line is the entire card, so it has to read as a light line
+     rather than disappear. */
+  --panel-line: rgba(255, 255, 255, 0.14);
+  --panel-line-strong: rgba(255, 255, 255, 0.26);
 
 
 }
@@ -620,15 +643,17 @@
    ============================================================ */
 @layer components {
   /* ------------------------------------------------
-     Apple glass — the single surface language for every card, grid item,
+     The panel — the single surface language for every card, grid item,
      pipeline block, stats module and CTA wrapper on the home page (and
-     everywhere else that shares these classes). The accent canvas field
-     glints through all of them:
+     everywhere else that shares these classes):
 
-       fill      rgba(255,255,255,0.02) dark / rgba(0,0,0,0.015) light
-       blur      blur(25px) saturate(160%)
-       outline   1px rgba(255,255,255,0.06) dark / rgba(0,0,0,0.04) light
-       depth     one wide, soft ambient shadow (never a hard drop shadow)
+       fill      --panel          (#ffffff light / #0a0a0a dark)
+       outline   1px --panel-line (a white-alpha hairline in dark)
+       radius    --radius-panel   (6px, the base material)
+
+     That is the whole spec — no blur, no gradient, no shadow. Anything that
+     needs to read as raised uses the 12px variant (`.dashboard-bento`,
+     `.hero-frame`); nothing else gets a different treatment.
      ------------------------------------------------ */
   .glass-panel {
     position: relative;
@@ -650,26 +675,15 @@
        radius on every box is what makes a card grid read as soft/rounded
        rather than drawn. */
     border-radius: var(--radius-panel);
-  }
-  .glass-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    /* The one gradient any surface carries: a hair of light falling off the
-       top edge, which is what makes a flat panel read as a lit plane rather
-       than a flat rectangle. Dark only — on white it would be invisible. */
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 38%);
-  }
-  html:not(.dark) .glass-panel::before,
-  html[data-theme="light"] .glass-panel::before {
-    content: none;
-  }
-  .glass-panel > * {
-    position: relative;
-    z-index: 1;
+    /* NO fill gradient and NO lit top lip, in either theme.
+
+       A panel used to carry a `::before` wash of 6% white falling off its top
+       38%, plus an inset white lip along its top hairline. On a #0a0a0a fill
+       that wash is rgb(26,26,26) across the whole card — a grey slab on a
+       black page, which is exactly how every card grid came out looking, and
+       no amount of tuning the token could fix it because the paint itself was
+       the problem. Vercel's cards are a flat fill and a 1px line and nothing
+       else: the depth is the page's light, not paint on the panel. */
   }
 
   .glass-chip {
@@ -693,16 +707,29 @@
      fastest way to make a black page look like a washed-out grey one.
 
      What remains, and why:
-       .glow-aura    the wide, very faint wash at the top of a page
+       .glow-aura    a shallow wash on the top edge of an inner page
        .mark-halo    the tight white backlight behind the hero mark
-       .hero-bloom   the light pooling under the framed product shot
-       inset lip     one pixel of light on a panel's top edge (box-shadow)
+
+     Two layers, and neither is a dome.
+
+     `.glow-aura` used to be a 460px-tall 42%-white radial whose centre sat
+     ABOVE the top of the viewport, which paints a lit half-circle across the
+     whole first screen — the single largest reason a black page measured
+     grey. It is now a shallow band, spent before the page's first heading
+     arrives, and the landing hero does not render it at all: there, the only
+     light is the one hugging the mark, which is exactly how Vercel lights
+     its own hero.
+
+     The pool of light that used to sit under the framed product shot
+     (`.hero-bloom`) is gone with it. An 1180px-wide white radial at 42% is
+     not a highlight, it is a grey cloud over the second half of the first
+     screen, and Vercel puts nothing behind a product shot either.
 
      Every layer is `pointer-events: none` and painted from gradient colour
      only (no `filter: blur()`), so it costs one paint and no layout — and
      each is scaled by `--bg-glow-opacity`, so the Ambient Intensity slider
-     still governs the whole scene. Light mode gets the same three layers
-     from its own two halo tokens, so the two themes share one model.
+     still governs the whole scene. Light mode gets the same layers from its
+     own two halo tokens, so the two themes share one model.
      ------------------------------------------------ */
 
   /* The page wash. TWO neutral stops at very low alpha: a broad, barely
@@ -723,13 +750,16 @@
   .glow-aura {
     position: absolute;
     inset: 0 0 auto;
-    height: min(720px, 100%);
+    height: min(360px, 100%);
     z-index: -1;
     pointer-events: none;
     opacity: var(--bg-glow-opacity, 1);
+    /* Both centres sit ABOVE the box, so only the dim outer half of each
+       radial is ever on screen: a soft lift on the top edge that is spent
+       well before the page's first heading. */
     background:
-      radial-gradient(70% 460px at 50% -6%, var(--halo-near), transparent 72%),
-      radial-gradient(120% 700px at 50% -14%, var(--halo-far), transparent 78%);
+      radial-gradient(68% 300px at 50% -46%, var(--halo-near), transparent 74%),
+      radial-gradient(110% 420px at 50% -58%, var(--halo-far), transparent 80%);
   }
 
   /* The backlight behind the hero mark — Vercel's hero lighting, literally: a
@@ -741,35 +771,32 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: calc(100% + var(--halo-spread, 160px));
-    height: calc(100% + var(--halo-spread, 160px));
+    width: calc(100% + var(--halo-spread, 96px));
+    height: calc(100% + var(--halo-spread, 96px));
     translate: -50% -50%;
     z-index: -1;
     pointer-events: none;
     opacity: var(--bg-glow-opacity, 1);
+    /* Tight, and spent by 80% of the way out.
+
+       The mark is opaque, so it covers the centre of this gradient — what
+       survives is a rim of light just outside the shape, which is what a
+       backlight is for. The previous version was 160px wider than the mark
+       on every side at 42% white, i.e. a 460px opaque disc behind a 300px
+       logo: nothing of the shape was left to light, so it read as a grey
+       blob with a logo on it. The light now dies within roughly twice the
+       mark's radius, which is where Vercel's own halo stops. */
     background: radial-gradient(
       closest-side,
       var(--halo-near),
-      color-mix(in srgb, var(--halo-near) 42%, transparent) 46%,
-      transparent 100%
+      color-mix(in srgb, var(--halo-near) 34%, transparent) 42%,
+      transparent 80%
     );
   }
   html:not(.dark) .mark-halo {
     /* On paper the backlight is a lit floor: the same disk, read as a soft
        white pool rather than light in a void. */
     opacity: calc(var(--bg-glow-opacity, 1) * 0.9);
-  }
-
-  /* The lit lip: one pixel of light along a panel's top hairline, which is
-     the entire depth model of a dark surface. Dark only — in light mode a
-     panel is WHITE on a #fafafa canvas and is already its own highlight, so a
-     second white line on it would draw nothing. What defines a light card is
-     the fill step plus the hairline, exactly as Vercel's do. */
-  .dark .glass-panel,
-  [data-theme="dark"] .glass-panel,
-  .dark .glass-chip,
-  [data-theme="dark"] .glass-chip {
-    box-shadow: inset 0 1px 0 var(--glow-edge);
   }
 
   /* The hero's product frame — the one object on the site that is presented
@@ -784,28 +811,6 @@
   }
   html:not(.dark) .hero-frame {
     box-shadow: 0 30px 80px -44px rgba(0, 0, 0, 0.28);
-  }
-
-  /* The bloom under that frame — the same neutral light as the mark halo,
-     freer and wider, because here it pools under a large object instead of
-     hugging a small one. `z-index: -1` sits it above the page canvas but
-     beneath the frame, so it never washes the screenshot itself. */
-  .hero-bloom {
-    position: absolute;
-    left: 50%;
-    top: -6%;
-    width: min(1180px, 128%);
-    height: 80%;
-    translate: -50% 0;
-    z-index: -1;
-    pointer-events: none;
-    opacity: var(--bg-glow-opacity, 1);
-    background:
-      radial-gradient(56% 58% at 50% 40%, var(--halo-near), transparent 74%),
-      radial-gradient(96% 100% at 50% 34%, var(--halo-far), transparent 80%);
-  }
-  html:not(.dark) .hero-bloom {
-    opacity: calc(var(--bg-glow-opacity, 1) * 0.85);
   }
 
 
