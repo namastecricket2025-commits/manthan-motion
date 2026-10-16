@@ -1,8 +1,10 @@
 import BlobBackground from "@/components/BlobBackground";
 import CtaSection from "@/components/landing/CtaSection";
 import Features from "@/components/landing/Features";
+import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
 import HeroPreview from "@/components/landing/HeroPreview";
+import KitShowcase from "@/components/landing/KitShowcase";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import Navbar from "@/components/landing/Navbar";
 import OrbitMark from "@/components/landing/OrbitMark";
@@ -13,9 +15,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { settingsRuntime } from "@/lib/app-settings";
-import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Link } from "react-router";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
@@ -60,8 +61,13 @@ const FORMATS = [
   "HTML",
   "EPUB",
   "Images",
-  "Handwritten notes",
 ];
+
+/** The ninth line was "Handwritten notes" in this list, which made the strip
+ *  read as nine formats while the receipts rail and the FAQ both say eight.
+ *  Handwriting is read out of the Images format rather than being one of its
+ *  own, so it belongs in a note under the row, not in the row. */
+const FORMAT_NOTE = "Photos of handwritten notes are read with OCR.";
 
 /**
  * The hero, in Vercel's composition.
@@ -199,25 +205,13 @@ function Hero() {
             The product's own hero is flat black with exactly one light in it,
             hugging the mark — so that is the only one left here. */}
         <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col">
-          {/* The announcement line, in Vercel's slot at the top centre: a
-              14px/20px line and a 32px transparent pill that fills on hover.
-              Theirs is a conference; ours is the pricing fact the rest of the
-              page repeats, so it says the same thing the pricing table does. */}
-          <div
-            data-hero-fade
-            className="flex flex-col items-center justify-center gap-2 text-center sm:flex-row sm:gap-4"
-          >
-            <p className="text-sm leading-5 text-text-dim">
-              Manthan is in open beta — no card, no trial timer.
-            </p>
-            <Link
-              to={ctaTarget}
-              className="group inline-flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)]"
-            >
-              Start free
-              <ChevronRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
-            </Link>
-          </div>
+          {/* No announcement strip. There was one here — a centred note on
+              the product's maturity, with a Start free pill, borrowed from
+              the slot Vercel puts a conference announcement in. It was the
+              first thing on the page and it undersold it: the first line a
+              visitor read was about how finished the product was rather than
+              what it does. The facts worth knowing now sit under the hero's
+              buttons, at the point where someone is actually deciding. */}
 
           {/* The composition. `relative` on this layer is what the mark
               centres against below 1280px; from 1280px up the mark is
@@ -290,6 +284,23 @@ function Hero() {
                     See how it works
                   </a>
                 </div>
+
+                {/* What it costs and what it takes to start, on the line where
+                    the decision is made. The allowance is the number the
+                    server enforces (`src/lib/plans.ts`), not a marketing
+                    figure. */}
+                <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-text-dim xl:justify-start">
+                  {[
+                    "Free plan · 60,000 tokens a day",
+                    "8 formats, handwritten notes included",
+                    "No card required",
+                  ].map((fact) => (
+                    <li key={fact} className="inline-flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+                      {fact}
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {/* Right: the capability rail. Rows are 16px/24px, 8px apart,
@@ -314,14 +325,25 @@ function Hero() {
           </div>
         </div>
 
-        {/* The bottom strip, in the slot Vercel gives its customer logos. */}
+        {/* The formats the app reads, in the slot Vercel gives its customer
+            logos. Still deliberately not a logo wall — we have no customers to
+            name — but as labelled chips rather than a row of grey words, so the
+            strip reads as a specification instead of a caption. */}
         <div
           data-hero-fade
-          className="mx-auto mt-10 flex w-full max-w-[1400px] flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[13px] font-medium text-[color-mix(in_srgb,var(--text-main)_55%,transparent)]"
+          className="mx-auto mt-10 flex w-full max-w-[1400px] flex-col items-center gap-3"
         >
-          {FORMATS.map((format) => (
-            <span key={format}>{format}</span>
-          ))}
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--text-main)_50%,transparent)]">
+            Reads
+          </p>
+          <ul className="flex flex-wrap items-center justify-center gap-2">
+            {FORMATS.map((format) => (
+              <li key={format} className="glass-chip px-3 py-1.5 text-[12px] text-text-dim">
+                {format}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[12px] text-text-dim">{FORMAT_NOTE}</p>
         </div>
       </section>
 
@@ -356,7 +378,11 @@ export default function Landing() {
           <Hero />
           <Features />
           <Pipeline />
+          {/* The output, between "how it works" and the numbers: what the five
+              steps were for, shown as four real artifacts. */}
+          <KitShowcase />
           <Stats />
+          <Faq />
           <CtaSection />
         </main>
         <Footer />

@@ -3,12 +3,17 @@ import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { MovingBorderButton } from "./MovingBorderButton";
+import { useSpotlight } from "./use-spotlight";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
 
 export default function CtaSection() {
   const ref = useRef<HTMLElement | null>(null);
   const { isAuthenticated } = useAuth();
+  // The closing panel carries `.spot-card`, so it needs the listener that
+  // drives it — without this the card's light has no pointer to follow and
+  // would sit frozen at the gradient's default position.
+  useSpotlight(ref);
 
   useEffect(() => {
     const root = ref.current;
@@ -39,7 +44,7 @@ export default function CtaSection() {
     <section ref={ref} className="relative mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6 md:pb-32">
       <div
         data-reveal
-        className="glass-panel relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
+        className="glass-panel card-surface spot-card relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
       >
         {/* No light pooling inside the card. It used to carry a 130%-wide
             radial at 60% opacity bleeding over the card's top edge, which on
@@ -49,7 +54,7 @@ export default function CtaSection() {
         <div className="relative">
           <h2
             data-reveal
-            className="text-fade mx-auto max-w-2xl font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl md:leading-[1.12]"
+            className="text-fade mx-auto max-w-2xl font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]"
           >
             Your notes are waiting to become{" "}
             <span className="gradient-text">study material</span>
@@ -76,6 +81,12 @@ export default function CtaSection() {
               Explore features
             </a>
           </div>
+          {/* The three facts that decide it, on the line where the decision is
+              made — the free allowance is the number the server actually
+              enforces (`src/lib/plans.ts`). */}
+          <p data-reveal className="mt-6 text-[13px] text-text-dim">
+            Free plan · 60,000 tokens a day · 8 formats · no card
+          </p>
         </div>
       </div>
     </section>

@@ -1,73 +1,69 @@
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
-import {
-  Coins,
-  FileStack,
-  Gauge,
-  ShieldCheck,
-  Sparkles,
-  Timer,
-} from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 /**
- * Realistic Manthan facts (no invented user metrics):
- * - 8 file formats — PDF, DOCX, PPTX, TXT, MD, HTML, EPUB, images (OCR)
- * - <60s generation — the five-step pipeline finishes inside a minute
- * - 100% citations — every flashcard/question cites its source passage
- * - 5 pipeline steps — parse, summarise, structure, distill, deliver
- * - ₹0 upfront cost — free while in beta, no card required
- * - 24/7 availability — the pipeline is always awake
+ * The numbers, as one panel of receipts rather than six matching cards.
+ *
+ * Six identical boxes with an icon on top is the shape that reads as filler
+ * however good the numbers are — and these numbers are the least decorative
+ * thing on the page, so they get the treatment a spec table gets: one surface,
+ * hairline dividers, and the value set large enough to scan down the column.
+ * The dividers are painted by `.receipt-rail`'s 1px gap over a hairline
+ * background, so cells meet on a single line rather than a doubled border.
+ *
+ * Every figure is a fact the product holds somewhere else: the eight formats
+ * it accepts, the five steps, the 60,000-token daily free allowance from
+ * `src/lib/plans.ts`, the citation rule. There are no invented user counts —
+ * a landing page with no customers cannot quote one.
  */
-const STATS = [
+const STATS: {
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  label: string;
+  body: string;
+}[] = [
   {
-    icon: FileStack,
     value: 8,
-    suffix: "",
-    label: "File formats",
-    body: "PDF, DOCX, PPTX, TXT, MD, HTML, EPUB and images — drop in any of them.",
+    label: "Formats it reads",
+    body: "PDF, DOCX, PPTX, TXT, Markdown, HTML, EPUB and images — photos of handwritten notes included.",
   },
   {
-    icon: Timer,
     value: 60,
     prefix: "<",
     suffix: "s",
     label: "To a full study kit",
-    body: "The five-step pipeline finishes before your chai cools.",
+    body: "The five steps run end to end on a chapter-sized document, reporting status as they go.",
   },
   {
-    icon: ShieldCheck,
     value: 100,
     suffix: "%",
-    label: "Source citations",
-    body: "Every flashcard and question traces back to the exact passage it came from.",
+    label: "Cited output",
+    body: "Every card, question and summary keeps a pointer back to the passage it was written from.",
   },
   {
-    icon: Sparkles,
     value: 5,
-    suffix: "",
     label: "Pipeline steps",
-    body: "Parse, summarise, structure, distill, deliver — live status at every step.",
+    body: "Parse, summarise, structure, distill, deliver — the same five on every run, in that order.",
   },
   {
-    icon: Coins,
-    value: 0,
-    prefix: "₹",
-    label: "Upfront cost",
-    body: "Free while in beta. No card, no trial timer, no locked features.",
+    value: 60,
+    suffix: "k",
+    label: "Free tokens a day",
+    body: "The free plan's daily allowance, with the whole notebook workspace open on it and no card.",
   },
   {
-    icon: Gauge,
     value: 24,
     suffix: "/7",
-    label: "Study support",
-    body: "Late-night cramming session? Manthan's pipeline is always awake.",
+    label: "Awake when you are",
+    body: "The pipeline has no office hours, which is what a 1am revision session actually needs.",
   },
-] as const;
+];
 
 export default function Stats() {
   const ref = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return;
     const els = root.querySelectorAll<HTMLElement>("[data-reveal]");
@@ -77,65 +73,36 @@ export default function Stats() {
       return; // final values are already rendered in the JSX
     }
 
-    const heading = root.querySelectorAll<HTMLElement>("[data-reveal]:not(.feature-card)");
-    const cards = root.querySelectorAll<HTMLElement>(".feature-card");
-
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        heading,
-        { opacity: 0, y: 26 },
+        els,
+        { opacity: 0, y: 22 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.7,
+          duration: 0.6,
           ease: "power3.out",
           stagger: 0.08,
           scrollTrigger: { trigger: root, ...revealConfig },
         },
       );
 
-      // Alternating stagger: odd cards glide in from the left, even cards
-      // from the right, each settling on a spring overshoot so the grid
-      // assembles instead of appearing.
-      gsap.fromTo(
-        cards,
-        {
-          opacity: 0,
-          y: 22,
-          scale: 0.985,
-          x: (i: number) => (i % 2 === 0 ? -58 : 58),
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          x: 0,
-          duration: 0.9,
-          ease: "back.out(1.5)",
-          stagger: 0.09,
-          clearProps: "transform",
-          scrollTrigger: { trigger: root, ...revealConfig },
-        },
-      );
-
-      // Count-up. Duration scales with the number's magnitude: a 1-digit
-      // value counts in a tight, snappy window; a 3-digit value sweeps fast
-      // per digit so it feels weighty without dragging on.
+      // Count-up, once, on the way in. Duration scales with the number's
+      // magnitude so a single digit lands quickly and a three-digit value
+      // sweeps without dragging.
       gsap.fromTo(
         root.querySelectorAll<HTMLElement>("[data-count]"),
         { textContent: 0 },
         {
-          textContent: (i: number, el: unknown) =>
+          textContent: (_i: number, el: unknown) =>
             Number((el as HTMLElement).dataset.count ?? 0),
-          duration: (i: number, el: unknown) => {
-            const digits = String(
-              Number((el as HTMLElement).dataset.count ?? 0),
-            ).length;
-            return 0.7 + digits * 0.3;
+          duration: (_i: number, el: unknown) => {
+            const digits = String(Number((el as HTMLElement).dataset.count ?? 0)).length;
+            return 0.6 + digits * 0.28;
           },
           ease: "power2.out",
           snap: { textContent: 1 },
-          stagger: 0.12,
+          stagger: 0.1,
           scrollTrigger: { trigger: root, ...revealConfig },
         },
       );
@@ -147,49 +114,44 @@ export default function Stats() {
     <section
       id="stats"
       ref={ref}
-      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 md:py-20"
+      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6 md:py-24"
     >
       <div data-reveal className="mx-auto max-w-2xl text-center">
-        <h2 className="text-fade font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
+        <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
           Numbers that <span className="gradient-text">matter</span> to your
           revision
         </h2>
-        <p className="mt-4 text-base leading-relaxed text-text-dim">
+        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
           No vanity metrics — just the concrete facts of how Manthan turns your
           notes into a ready-to-revise study kit.
         </p>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-12 min-[900px]:grid-cols-3">
-        {STATS.map((stat) => (
-          <div
-            key={stat.label}
-            data-reveal
-            className="feature-card glass-panel will-change-transform p-6 text-center sm:text-left"
-          >
-            {/* Same `.card-tile` (and so the same brand crimson) as the
-                feature and pipeline cards — one accent and one tile across
-                the three card families. */}
-            <span className="card-tile">
-              <stat.icon className="h-5 w-5" />
-            </span>
-            <div className="mt-5 font-display text-4xl font-bold tracking-tight text-foreground">
-              {"prefix" in stat && stat.prefix ? (
-                <span className="mr-0.5 text-3xl text-text-dim">{stat.prefix}</span>
-              ) : null}
-              {/* Final value rendered server-side (SEO / no-JS); GSAP counts
-                  it up from 0 when the section scrolls into view. */}
-              <span data-count={stat.value}>{stat.value}</span>
-              {"suffix" in stat && stat.suffix ? (
-                <span className="text-2xl text-text-dim">{stat.suffix}</span>
-              ) : null}
+      <div
+        data-reveal
+        className="glass-panel card-surface mt-12 overflow-hidden md:mt-16"
+      >
+        <div className="receipt-rail grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="bg-[var(--panel)] p-6">
+              <div className="flex items-baseline gap-0.5 font-display text-[38px] font-normal leading-none tracking-[-0.03em] tabular-nums text-foreground">
+                {stat.prefix ? (
+                  <span className="text-[26px] text-text-dim">{stat.prefix}</span>
+                ) : null}
+                {/* Final value rendered in the markup (SEO and no-JS); GSAP
+                    counts it up from zero when the rail scrolls into view. */}
+                <span data-count={stat.value}>{stat.value}</span>
+                {stat.suffix ? (
+                  <span className="text-[26px] text-text-dim">{stat.suffix}</span>
+                ) : null}
+              </div>
+              <h3 className="mt-4 text-[15px] font-medium tracking-[-0.01em] text-foreground">
+                {stat.label}
+              </h3>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-text-dim">{stat.body}</p>
             </div>
-            <h3 className="mt-2 font-display text-lg font-bold tracking-tight text-foreground">
-              {stat.label}
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-text-dim">{stat.body}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

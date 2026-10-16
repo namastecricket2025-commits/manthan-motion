@@ -7,37 +7,49 @@ import {
 } from "@/lib/gsap";
 import { FileUp, ListChecks, Network, Layers, PackageCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useSpotlight } from "./use-spotlight";
 
+/**
+ * The five steps, each carrying what it HANDS ON to the next one. That
+ * "produces" line is what turns the sequence from a list of verbs into a
+ * pipeline: parse produces text, structure produces the tree that the mixing
+ * weights are read off, deliver produces the kit.
+ */
 const STEPS = [
   {
     icon: FileUp,
     num: "01",
     title: "Parse",
     desc: "Files, links and pasted notes are cleaned into plain text — sources stay visible in the queue the whole time.",
+    produces: "plain text",
   },
   {
     icon: ListChecks,
     num: "02",
     title: "Summarise",
     desc: "Core ideas are condensed into a crisp outline, flagging the concepts worth drilling.",
+    produces: "ranked outline",
   },
   {
     icon: Network,
     num: "03",
     title: "Structure",
     desc: "Material is organised by chapter, topic and weight so the mix knows what to emphasise.",
+    produces: "topic tree",
   },
   {
     icon: Layers,
     num: "04",
     title: "Distill",
     desc: "Summaries, flashcards, question banks and concept maps are generated from the structured outline.",
+    produces: "the material",
   },
   {
     icon: PackageCheck,
     num: "05",
     title: "Deliver",
     desc: "A study kit lands in your dashboard — every card labelled, every source cited back to the original.",
+    produces: "the study kit",
   },
 ];
 
@@ -54,6 +66,7 @@ export default function Pipeline() {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const progressRef = useRef<HTMLSpanElement | null>(null);
   const tlRef = useRef<ReturnType<typeof gsap.timeline> | null>(null);
+  useSpotlight(ref);
 
   useEffect(() => {
     const root = ref.current;
@@ -172,7 +185,7 @@ export default function Pipeline() {
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center" data-reveal>
-          <h2 className="text-fade font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-[42px] md:leading-[1.15]">
+          <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
             One pipeline:{" "}
             <span className="gradient-text">five guided steps</span>
           </h2>
@@ -208,7 +221,7 @@ export default function Pipeline() {
             <article
               key={step.num}
               data-reveal
-              className="how-card glass-panel flex flex-col justify-between p-6 will-change-transform sm:p-8"
+              className="how-card glass-panel card-surface spot-card flex flex-col justify-between p-6 will-change-transform sm:p-8"
             >
               <div>
                 {/* Brand crimson on the tile, the number and the rule.
@@ -234,7 +247,14 @@ export default function Pipeline() {
                   {step.desc}
                 </p>
               </div>
-              <span className="mt-8 h-0.5 w-12 rounded-full bg-[var(--brand)] opacity-80" />
+              {/* What this step hands on. The rule is the step's own mark on
+                  the pipeline; the label is the artifact it produced. */}
+              <div className="mt-8 flex items-center gap-3">
+                <span className="h-0.5 w-10 shrink-0 rounded-full bg-[var(--brand)] opacity-80" />
+                <span className="truncate text-[11px] font-medium uppercase tracking-[0.14em] text-text-dim">
+                  Produces {step.produces}
+                </span>
+              </div>
             </article>
           ))}
         </div>

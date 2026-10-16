@@ -180,6 +180,16 @@
   --halo-mid: rgba(255, 255, 255, 0.32);
   --halo-far: rgba(0, 0, 0, 0.035);
 
+  /* The pointer light on a card (`--spot-light`, used by `.spot-card`).
+
+     Its own token rather than a `color-mix()` of `--text-main`, because the
+     CSS pipeline downlevels a color-mix inside a gradient into a `@supports`
+     branch whose fallback holds the RAW token — i.e. every browser without
+     color-mix would paint a full-strength ink radial over the card instead of
+     a 5% tint. Same failure the halo's mid stop was given a token to avoid.
+     Ink at 5% in the day theme: a lift you can see, not a lamp. */
+  --spot-light: rgba(23, 23, 23, 0.05);
+
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
      word, then blends through two warm oxide stops into the signal red on
@@ -543,6 +553,11 @@
      gradient is byte-identical in every browser. */
   --halo-mid: rgba(255, 255, 255, 0.09);
   --halo-far: rgba(255, 255, 255, 0.06);
+
+  /* The pointer light on a card (see the light-theme note). White at 8% on
+     the night theme: enough to lift a #0a0a0a panel where the pointer is,
+     without the fallback-wash failure the halo comment above describes. */
+  --spot-light: rgba(255, 255, 255, 0.08);
 
   /* ---- Panel language (dark) -----------------------------------------
      Vercel's surface, exactly: a near-black fill (#0a0a0a, deliberately not
@@ -1804,4 +1819,84 @@ html {
   .glass-panel {
     border-radius: var(--radius-panel);
   }
+}
+
+/* ============================================================
+   Card language — the surface every card on the landing page shares
+   ============================================================ */
+
+/* Cards are the RAISED material, so they take `--radius` (12px) rather than
+   the 6px base panel corner — the same step `.dashboard-bento` takes.
+
+   Unlayered on purpose. `.glass-panel` lives in `@layer components`, and the
+   phone block directly above re-seats `.glass-panel`'s radius at 6px below
+   900px from outside any layer. A layered rule would lose to that block on
+   every phone and each card would snap back to the base corner, so this
+   declaration has to sit above both. */
+.card-surface {
+  border-radius: var(--radius);
+}
+
+/* The pointer light on a card.
+
+   One `pointermove` listener per section writes `--spot-x`/`--spot-y` on
+   whichever card the pointer is over (see use-spotlight.ts). Every card's
+   own gradient is static — the light does not animate, it moves — so the
+   whole effect costs one CSS variable write per frame, however many cards
+   are on screen.
+
+   The layer sits at `z-index: -1` INSIDE the card's own stacking context
+   (`isolation: isolate`). That is the one position in the paint order that
+   puts it above the card's fill and below the card's content: the card's own
+   background paints first, negative-z children second, in-flow content
+   third. Without the isolation the pseudo-element would paint over the text
+   instead of under it. */
+.spot-card {
+  isolation: isolate;
+}
+.spot-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  /* Paired with the strong hairline rather than a wash: the light is what
+     answers the pointer, the surface itself never repaints.
+
+     `--spot-light` rather than an inline `color-mix()`, so this stays ONE
+     declaration with no `@supports` fallback to disagree with it. */
+  background: radial-gradient(
+    320px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+    var(--spot-light),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 240ms ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  .spot-card:hover::before {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The light still follows the pointer (it is not motion), but it arrives
+     instantly instead of fading in. */
+  .spot-card::before {
+    transition: none;
+  }
+}
+
+/* The receipts rail: numbers on ONE panel, separated by hairlines instead of
+   repeated into six identical boxes.
+
+   `gap: 1px` over a hairline-coloured background is what draws the dividers —
+   each cell paints `--panel` over it, so the lines are the panel's own
+   hairline and there is no double border where cells meet. Same technique as
+   Vercel's spec tables, and it reads as one surface carrying data rather than
+   as a row of cards. */
+.receipt-rail {
+  display: grid;
+  gap: 1px;
+  background: var(--panel-line);
 }
