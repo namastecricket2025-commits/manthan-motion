@@ -224,7 +224,7 @@ function useChartInk() {
         : {
             label: "#333f4b",
             grid: "rgba(36, 26, 10, 0.14)",
-            primary: "#8f5a00",
+            primary: "#b45309",
             secondary: "#2f6f6b",
           };
     if (typeof document === "undefined") return fallback;

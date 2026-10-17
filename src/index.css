@@ -106,49 +106,58 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand palette (light) — a NEUTRAL near-white canvas with ochre ink kept
-     as the single accent.
+  /* Brand palette (light) — a NEUTRAL near-white canvas with amber kept as
+     the single accent.
 
      The day theme used to be warm throughout: a sand-pink canvas, espresso
      ink, tinted hairlines and a full-viewport coloured metaball field at 0.78
      opacity. Every surface sat on a tint, so nothing on the page read as
      clean, and the field meant the "background colour" was never actually a
      colour you could name. Neutral greys with one accent is what makes a
-     light theme look engineered — the gold then reads as a deliberate brand
+     light theme look engineered — the amber then reads as a deliberate brand
      signal rather than as the page's ambient wash. */
   --ink: #fafafa;
   /* ---- Accent (light) -------------------------------------------------
-     Highlighter gold: one hue in three values, each with a job. Yellow has
-     no error meaning in any UI system, which is exactly why it works as the
-     brand here — a checkmark, a step number or a donut wedge can be gold
-     without reading as a problem. Red stays on `--destructive` alone.
+     Amber: one hue in three values, each with a job. It replaces the crimson
+     this theme used to run — at a 10px checkmark or a donut wedge, red read
+     as "something went wrong" rather than as a brand, and red is the one hue
+     every UI system has already spent on errors. Amber carries no error
+     meaning, so a mark, a step number or a rule can be the accent without
+     implying a fault. Red stays on `--destructive` alone.
 
-       --signal       text, icons, hairlines, chart strokes. A yellow light
-                      enough to look like a marker (#ffd60a) measures 1.5:1
-                      on paper, so the light theme's step is the same hue as
-                      DEEP OCHRE ink: 5.5:1 on this canvas, 5.8:1 on a white
-                      panel — AA at text size, not just at icon size.
-       --signal-strong  the filled action's body (brass, one step lighter
-                      than the text ochre); its label `--primary-foreground`
-                      is a warm cream at 5.0:1 on it.
-       --signal-2     the darkest step: hover fills, gradient ends.
+       --signal       text, icons, hairlines, chart strokes. Caramel, not a
+                      pale yellow: 4.81:1 on this canvas and 5.02:1 on a white
+                      panel, so it passes AA at TEXT size — a light amber
+                      (#fbbf24) would measure 1.5:1 here and could only ever
+                      be a fill.
+       --signal-strong  the filled action's body. Deliberately the SAME value
+                      as the text step: the light theme's hover rule darkens
+                      this token by 12%, and a lighter caramel (#c2700c) put
+                      the cream label at 4.31:1 on that hover fill — under AA.
+       --signal-2     the darkest step: pressed fills and deep gradient ends.
 
      The dark theme splits these tokens (see the .dark block): its filled
-     action is white with a near-black label, and the highlighter itself
-     comes back at full brightness as `--brand`. */
-  --signal: #8f5a00;
-  --signal-strong: #b87400;
-  --signal-2: #6b4400;
+     action is white with a near-black label, and the amber itself comes back
+     at full strength as `--brand`. */
+  --signal: #b45309;
+  --signal-strong: #b45309;
+  --signal-2: #8a4207;
   /* ---- Brand chroma (light) ------------------------------------------
      The one token that stays CHROMATIC in both themes. `--signal` cannot do
      this job: it is the theme's light (white in dark), so anything tinted
      with it goes monochrome the moment the lights go down, and the accent
-     disappears with them. This is the highlighter itself — 5.5:1 on paper,
-     14.9:1 in dark — and it is what marks something as the product's own:
-     an icon, a step number, a rule under a card. */
-  --brand: #8f5a00;
-  --brand-soft: rgba(143, 90, 0, 0.1);
-  --brand-line: rgba(143, 90, 0, 0.28);
+     disappears with them. This is the amber itself — 4.81:1 on paper, 12.6:1
+     in dark — and it is what marks something as the product's own: an icon,
+     a step number, a rule under a card. */
+  --brand: #b45309;
+  --brand-soft: rgba(180, 83, 9, 0.1);
+  --brand-line: rgba(180, 83, 9, 0.28);
+  /* The amber AS TEXT when it sits on `--brand-soft` rather than on paper.
+     The brand step measures 4.39:1 on its own 10% tint — a 10px pill label
+     wants 4.5 — so text on a brand fill uses the deeper step (7.3:1 on the
+     panel, ~6.4:1 on the tint). Icons on the tint keep using `--brand`,
+     where 3:1 is the bar and 4.39:1 clears it. */
+  --brand-ink: #8a4207;
   --text-main: #171717;
   --text-dim: #52525b;
   --card-border: rgba(0, 0, 0, 0.1);
@@ -208,17 +217,17 @@
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
-     word, then blends through two bronze stops into the signal ochre on the
-     final letters. The extra intermediate stops make the black→gold
+     word, then blends through two bronze stops into the signal amber on the
+     final letters. The extra intermediate stops make the black→amber
      sweep silky instead of a hard snap. */
   --gt-head: #171717;
-  --gt-tail: #8f5a00;
+  --gt-tail: #b45309;
 
-  /* Stroke-text display gradient (light): a honey-to-brass sweep that pops
+  /* Stroke-text display gradient (light): a honey-to-caramel sweep that pops
      on the pale ink wash. */
-  --stroke-a: #d9a72b;
-  --stroke-b: #b57900;
-  --stroke-c: #8f5a00;
+  --stroke-a: #e0982b;
+  --stroke-b: #c2700c;
+  --stroke-c: #b45309;
 
   /* Bklit chart tokens (light) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -240,8 +249,8 @@
   ----chart-marker-background: var(--card);
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(143, 90, 0, 0.1);
-  ----chart-segment-line: rgba(143, 90, 0, 0.25);
+  ----chart-segment-background: rgba(180, 83, 9, 0.1);
+  ----chart-segment-line: rgba(180, 83, 9, 0.25);
 
   /* shadcn aliases (light) */
   /* Neutral, not warm: the old values were espresso-tinted (#fdfaf8 card,
@@ -268,24 +277,24 @@
   --border: rgba(0, 0, 0, 0.1);
   --input: rgba(0, 0, 0, 0.12);
   --ring: var(--signal);
-  --chart-1: #8f5a00;
-  --chart-2: #6b4400;
+  --chart-1: #b45309;
+  --chart-2: #8a4207;
   --chart-3: #a3546b;
   --chart-4: #6d7f63;
   --chart-5: #7d6a64;
 
   /* ---- Artefact ramp (light) ----------------------------------------
      One colour per generated artefact kind, plus the three source kinds.
-     These are deliberately deeper and warmer than the dark set: the dark
-     neon (mint, amber, lilac grey) sits close to the cream canvas and reads
-     as washed out, so light mode runs an ochre/sage/clay ramp that stays
-     legible on paper. Dark keeps the bright set it was tuned against. */
-  --kind-summary: #8f5a00;
+     Amber leads the ramp because it is the brand, and the rest step away from
+     it and from each other: teal, plum, sage, clay. Every one is a deep step,
+     because the dark theme's grey set sits close to paper and reads washed
+     out here. Dark keeps the grey ramp it was tuned against. */
+  --kind-summary: #b45309;
   --kind-flashcards: #2f6f6b;
   --kind-quiz: #a3546b;
   --kind-mindmap: #6d7f63;
   --kind-slides: #7d6a64;
-  --src-files: #8f5a00;
+  --src-files: #b45309;
   --src-links: #2f6f6b;
   --src-notes: #7d6a64;
   --sidebar: #fafafa;
@@ -316,12 +325,12 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: var(--text-main);
   --chart-label: var(--text-dim);
-  --chart-scale-01: rgba(143, 90, 0, 0.06);
-  --chart-scale-02: rgba(143, 90, 0, 0.12);
-  --chart-scale-03: rgba(143, 90, 0, 0.2);
-  --chart-scale-04: rgba(143, 90, 0, 0.34);
-  --chart-scale-05: rgba(143, 90, 0, 0.52);
-  --chart-scale-pattern-color: rgba(143, 90, 0, 0.08);
+  --chart-scale-01: rgba(180, 83, 9, 0.06);
+  --chart-scale-02: rgba(180, 83, 9, 0.12);
+  --chart-scale-03: rgba(180, 83, 9, 0.2);
+  --chart-scale-04: rgba(180, 83, 9, 0.34);
+  --chart-scale-05: rgba(180, 83, 9, 0.52);
+  --chart-scale-pattern-color: rgba(180, 83, 9, 0.08);
 
   /* ---- Dashboard ink + selection surfaces (light) ---------------------
      Chart ink for the dashboard's glass charts, and the concrete backing
@@ -329,7 +338,7 @@
      instant the panel opens — never only on hover. */
   --dash-chart-label: #52525b;
   --dash-chart-grid: rgba(0, 0, 0, 0.1);
-  --dash-series-primary: #8f5a00;
+  --dash-series-primary: #b45309;
   --dash-series-secondary: #52525b;
   --dash-frost-top: rgba(0, 0, 0, 0.14);
   --dash-frost-bottom: rgba(0, 0, 0, 0);
@@ -363,15 +372,21 @@
   --signal: #f5f5f7;
   --signal-strong: #ffffff;
   --signal-2: #e4e4e7;
-  /* The highlighter gold at full brightness: a black canvas is the ONLY place
-     this hue can be itself, because #ffd60a measures 1.5:1 on paper and
-     14.9:1 here (14.0:1 on a #0a0a0a panel). It is light, not a colour cast —
-     the same reason the theme's button fill is white. Its 14% tint over the
-     panel composites to #2a2408: a warm charcoal, and the gold icon on top of
-     it still measures 12:1 against that fill. */
-  --brand: #ffd60a;
-  --brand-soft: rgba(255, 214, 10, 0.14);
-  --brand-line: rgba(255, 214, 10, 0.32);
+  /* Amber at the strength a black canvas allows: honey (#fbbf24), which is
+     12.6:1 here and 11.9:1 on a #0a0a0a panel. It stops well short of the
+     lemon (#ffd60a) this token first shipped as — at that brightness the
+     accent read as neon rather than as a brand — and it is the same hue the
+     light theme runs as caramel, so the product has one accent, not two.
+     Its 14% tint over the panel composites to #2c230e: a warm charcoal, with
+     the amber icon on top still measuring 9.3:1 against that fill. */
+  --brand: #fbbf24;
+  --brand-soft: rgba(251, 191, 36, 0.14);
+  --brand-line: rgba(251, 191, 36, 0.32);
+  /* Amber as text on `--brand-soft`. On this canvas the brand step already
+     measures 9.3:1 on its own tint, so the "ink" case and the brand are the
+     same colour; the token exists so the two themes answer the same question
+     the same way (see the light-theme note). */
+  --brand-ink: #fbbf24;
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -456,7 +471,7 @@
   --foreground: var(--text-main);
   /* Neutral dark surface ramp (dialogs, popovers, menus, muted wells) built
      on the same base as `--ink`, so no primitive falls back to a default
-     grey template or a mismatched warm fill. Ember stays the only accent. */
+     grey template or a mismatched warm fill. Amber stays the only accent. */
   --card: #0b0b0c;
   --card-foreground: var(--text-main);
   /* Menus, selects, command palettes and popovers open ON a concrete slate
@@ -942,8 +957,8 @@
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
-      #3f2d05 68%,
-      #6b4400 82%,
+      #4a2606 68%,
+      #7a3d07 82%,
       var(--gt-tail) 100%
     );
     background-clip: text;
@@ -1101,7 +1116,7 @@
      (feature, stat and pipeline cards), which carried three copies of the same
      44px tile in their markup.
 
-     Brand gold in both themes: `--signal` is the theme's light, so a tile
+     Brand amber in both themes: `--signal` is the theme's light, so a tile
      keyed to it turns white the moment dark mode does and the card loses every
      trace of the product's colour.
      ------------------------------------------------ */
@@ -1177,7 +1192,7 @@
     letter-spacing: 0.02em;
   }
 
-  /* Glow layers for the filled display word — a blurred gold halo sits
+  /* Glow layers for the filled display word — a blurred amber halo sits
      behind the crisp gradient glyphs, plus a subtle drop-shadow on the
      glyphs themselves. Layer opacity is animated so the halo breathes
      gently on hover instead of popping. */

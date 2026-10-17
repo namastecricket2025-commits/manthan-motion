@@ -46,8 +46,11 @@ function Tag({ children, tone = "muted" }: { children: ReactNode; tone?: "muted"
     <span
       className={cn(
         "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+        /* `--brand-ink`, not `--brand`: a 10px label on the brand tint wants
+           AA text contrast, which the brand step alone misses in the light
+           theme (4.39:1). See the token note in index.css. */
         tone === "brand"
-          ? "bg-[var(--brand-soft)] text-[var(--brand)]"
+          ? "bg-[var(--brand-soft)] text-[var(--brand-ink)]"
           : "bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] text-text-dim",
       )}
     >
@@ -163,7 +166,7 @@ function MixArt() {
   );
 }
 
-/** Seven days of study as bars, with the busiest day in the brand gold. */
+/** Seven days of study as bars, with the busiest day in the brand amber. */
 function ActivityArt() {
   const days = [
     { day: "M", value: 34 },
