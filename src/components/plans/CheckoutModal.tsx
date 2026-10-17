@@ -301,10 +301,15 @@ export function CheckoutModal({
               disabled={paying}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 font-display text-sm font-semibold tracking-wide text-[var(--primary-foreground)] transition-transform duration-200 active:scale-[0.98] disabled:opacity-80"
               style={{
-                /* Deep fill tone, same as .btn-primary: this pill carries white
-                   type, which the luminous accent tone cannot support. */
+                /* The filled-action tone, with `--primary-foreground` as the
+                   label — the pair flips with the theme (near-black on bright
+                   amber in light, near-black on white in dark), so no literal
+                   label colour can go stale here. The deeper stop is a mix
+                   toward the ink amber rather than `--signal-2`: that token is
+                   the DEEP caramel in the light theme, which would put the
+                   near-black label on a ~1.9:1 fill. */
                 background:
-                  "linear-gradient(180deg, var(--signal-strong) 0%, var(--signal-2) 100%)",
+                  "linear-gradient(180deg, var(--signal-strong) 0%, color-mix(in srgb, var(--signal-strong) 86%, var(--signal)) 100%)",
                 boxShadow:
                   "inset 0 1px 0 rgba(255,255,255,0.22), 0 18px 50px -24px rgba(0,0,0,0.6)",
               }}

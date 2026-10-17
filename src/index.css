@@ -125,22 +125,27 @@
      meaning, so a mark, a step number or a rule can be the accent without
      implying a fault. Red stays on `--destructive` alone.
 
-       --signal       text, icons, hairlines, chart strokes. Caramel, not a
-                      pale yellow: 4.81:1 on this canvas and 5.02:1 on a white
-                      panel, so it passes AA at TEXT size — a light amber
-                      (#fbbf24) would measure 1.5:1 here and could only ever
-                      be a fill.
-       --signal-strong  the filled action's body. Deliberately the SAME value
-                      as the text step: the light theme's hover rule darkens
-                      this token by 12%, and a lighter caramel (#c2700c) put
-                      the cream label at 4.31:1 on that hover fill — under AA.
-       --signal-2     the darkest step: pressed fills and deep gradient ends.
+       --signal       text, icons, hairlines, chart strokes — the amber as
+                      INK, on paper. Caramel: 4.81:1 on this canvas and
+                      5.02:1 on a white panel, so it passes AA at text size.
+                      The bright tone cannot do this job: #fbbf24 measures
+                      1.5:1 here.
+       --signal-strong  the FILLED action's body — and it is the bright tone
+                      (#fbbf24, the same amber the dark theme runs), carrying
+                      a near-black label at 10.3:1. This is the split that
+                      makes the light theme look like a highlighter instead
+                      of a brown button: deep amber for type, bright amber
+                      for fills. A caramel fill with a cream label (what this
+                      used to be) read as mud, and shrinking it to fix that
+                      only made the text fail AA on hover.
+       --signal-2     the darkest step: deep gradient ends and pressed states
+                      that need to stay dark in both themes.
 
      The dark theme splits these tokens (see the .dark block): its filled
      action is white with a near-black label, and the amber itself comes back
      at full strength as `--brand`. */
   --signal: #b45309;
-  --signal-strong: #b45309;
+  --signal-strong: #fbbf24;
   --signal-2: #8a4207;
   /* ---- Brand chroma (light) ------------------------------------------
      The one token that stays CHROMATIC in both themes. `--signal` cannot do
@@ -263,8 +268,11 @@
   --card-foreground: var(--text-main);
   --popover: #ffffff;
   --popover-foreground: var(--text-main);
-  --primary: var(--signal);
-  --primary-foreground: #fdf6e6;
+  --primary: var(--signal-strong);
+  /* Near-black, not cream: the light theme's primary body is the bright amber
+     (`--signal-strong`), and cream on amber measures 1.9:1. In dark mode the
+     same pair flips to white with a near-black label. */
+  --primary-foreground: #241a02;
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
   --muted: #f4f4f5;
@@ -1135,8 +1143,13 @@
 
   /* Touch feedback: press state for touch-first devices */
   @media (hover: none) {
+    /* Touch has no hover, so the press IS the state change: one darkened step
+       off `--primary`, which keeps the label legible in both themes (light:
+       #dda820, dark: #e0e0e0). `--signal-2` was the old value here and it is
+       the DEEP caramel in the light theme, which would have put the
+       near-black label on a 1.9:1 fill. */
     .moving-border:active .cd-face {
-      background: var(--signal-2);
+      background: color-mix(in srgb, var(--primary) 88%, #000);
     }
     .btn-ghost:active,
     .feature-card:active {

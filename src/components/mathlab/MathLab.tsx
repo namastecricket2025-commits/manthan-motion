@@ -492,7 +492,9 @@ export function MathLab() {
     <div className="relative">
       {/* The plane of the current chapter, behind everything the lab draws. */}
       <Suspense fallback={null}>
-        <MathField3D plotId={model.id} pulse={fieldPulse} />
+        {/* `quiet` while gated: the plane must not flow at full strength behind
+            the blur/lock card — see the prop's note in MathField3D. */}
+        <MathField3D plotId={model.id} pulse={fieldPulse} quiet={locked} />
       </Suspense>
       <div className={"mathlab-root" + (locked ? " pointer-events-none select-none blur-[7px]" : "")} aria-hidden={locked}>
         <div className="mathlab-commandbar">

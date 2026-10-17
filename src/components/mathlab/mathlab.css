@@ -2436,7 +2436,13 @@ html[data-motion="reduced"] .mathlab-walk__index {
 .mathlab-field {
   position: absolute;
   inset: 0 0 auto 0;
-  height: clamp(320px, 58vh, 560px);
+  /* A backdrop band, not half the screen: at 58vh this plane covered most of
+     the first viewport and read as the page's content. It is clipped to its
+     own box as well, so no camera or buffer change can ever spill the mesh
+     past it. */
+  height: clamp(240px, 44vh, 460px);
+  overflow: hidden;
+  contain: paint;
   z-index: 0;
   opacity: calc(0.5 + 0.5 * var(--ambient, 1));
   -webkit-mask-image: radial-gradient(135% 118% at 50% 0%, #000 34%, rgba(0, 0, 0, 0.6) 68%, transparent 100%);

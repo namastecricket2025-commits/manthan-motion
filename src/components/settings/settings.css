@@ -458,10 +458,14 @@ html:not(.dark) .set-root.set-root--bare {
   width: 15px;
   border: 0;
   background: #fff;
+  /* A hairline ring, not just a drop shadow: the knob travels along a gradient
+     that is light in the dark theme (white → #e4e4e7), so a white knob needs a
+     defined edge to stay a knob at the filled end. In the light theme the same
+     ring reads as the knob's outline against the deep caramel end. */
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
     0 3px 10px -2px rgba(0, 0, 0, 0.35),
-    0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    0 0 0 0.5px rgba(0, 0, 0, 0.34);
 }
 .set-slider [data-slot="slider-thumb"]:hover {
   box-shadow:
@@ -508,7 +512,14 @@ html:not(.dark) .set-root.set-root--bare {
 }
 .set-switch [data-slot="switch-thumb"][data-state="checked"] {
   translate: 22px 0;
-  background: #fff;
+  /* The knob rides the FILLED track, and the filled track is the action tone:
+     bright amber in the light theme, white in the dark one. A white knob on
+     either of those measures ~1.5:1 and ~1:1 — the dark theme shipped that
+     white-on-white switch. `--primary-foreground` is by definition the colour
+     that goes on the filled action (near-black in both themes), which is also
+     what the app's own shadcn switch does with
+     `dark:data-[state=checked]:bg-primary-foreground`. */
+  background: var(--primary-foreground);
 }
 
 /* --- select: borderless glass field --- */
@@ -1434,10 +1445,13 @@ html:not(.dark) .set-slider [data-slot="slider-track"] {
 /* sharp white knob with a slightly firmer shadow so it reads on pale glass */
 html:not(.dark) .set-slider [data-slot="slider-thumb"] {
   background: #fff;
+  /* Same three-layer shadow as the dark theme, tuned for paper — the ring is
+     what keeps a white knob readable while it sits on the bright amber end of
+     the range. */
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.18),
     0 3px 10px -2px rgba(0, 0, 0, 0.22),
-    0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    0 0 0 0.5px rgba(0, 0, 0, 0.3);
 }
 html:not(.dark) .set-switch [data-slot="switch-thumb"] {
   box-shadow:

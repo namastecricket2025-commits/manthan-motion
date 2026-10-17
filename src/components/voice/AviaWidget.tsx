@@ -61,6 +61,14 @@ const QUICK_ACTIONS = [
   "Why does that work?",
 ];
 
+/**
+ * How long a gap has to last before what she has heard counts as the finished
+ * question. Long enough to sit through the pause inside a normal sentence
+ * ("solve for x ... where x is positive"), short enough that handing over the
+ * floor does not feel laggy.
+ */
+const SILENCE_MS = 1400;
+
 export function AviaWidget() {
   const askAvia = useAction(api.ai.aviaReply);
 
@@ -83,6 +91,10 @@ export function AviaWidget() {
   const turnsRef = useRef(turns);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
+  /** What the recogniser has heard this session, and the pause timer. */
+  const heardRef = useRef("");
+  const silenceRef = useRef<number | null>(null);
+  const sentRef = useRef(false);
   const queuedRef = useRef(0);
   const greetedRef = useRef(false);
   const openRef = useRef(false);
@@ -205,13 +217,69 @@ export function AviaWidget() {
   const sendRef = useRef(send);
   sendRef.current = send;
 
-  /* ---------------- listening ---------------- */
+  /* ---------------- listening ----------------
 
-  const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
-    setListening(false);
+     The recogniser fires a result the moment IT thinks the speaker paused,
+     which on the first word is almost immediately — the old build sent "so"
+     as a message while the student was still asking their question. Waiting is
+     the entire job here, so the technique is:
+
+       1. `interimResults` and `continuous` both ON: the engine keeps listening
+          through the small pauses inside a sentence, and hands over its best
+          guess as it revises it.
+       2. Every result rebuilds one buffer (settled results plus the one still
+          being revised) and that buffer is written into the composer, so the
+          student can watch the sentence being taken down.
+       3. Nothing is sent until the room is actually quiet: a silence timer is
+          re-armed on every result and only fires when no new words arrive for
+          SILENCE_MS. Tapping the mic while it listens commits immediately,
+          because that tap means "that's what I said".
+       4. If the browser ends the session on its own (Safari does, Chrome does
+          after about a minute), whatever was heard is committed rather than
+          dropped. */
+
+  const clearSilence = useCallback(() => {
+    if (silenceRef.current !== null) {
+      window.clearTimeout(silenceRef.current);
+      silenceRef.current = null;
+    }
   }, []);
+
+  /** Hand the accumulated speech to Avia — at most once per listening session. */
+  const commit = useCallback(() => {
+    clearSilence();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    try {
+      recognition?.stop();
+    } catch {
+      // Already stopped or never started; nothing to do.
+    }
+    setListening(false);
+    const heard = heardRef.current;
+    const transcript = heard.replace(/\s+/g, " ").trim();
+    heardRef.current = "";
+    /* Clear the composer only while it is still showing the live transcript —
+       never wipe something the student typed over the top of it. */
+    setDraft((current) => (current === heard ? "" : current));
+    if (!transcript || sentRef.current) return;
+    sentRef.current = true;
+    void sendRef.current(transcript);
+  }, [clearSilence]);
+
+  /** Drop the session without sending anything (closing the panel, new chat). */
+  const stopListening = useCallback(() => {
+    clearSilence();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    try {
+      recognition?.stop();
+    } catch {
+      // See `commit`.
+    }
+    heardRef.current = "";
+    setListening(false);
+  }, [clearSilence]);
 
   const startListening = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -223,38 +291,72 @@ export function AviaWidget() {
       return;
     }
     if (recognitionRef.current) {
-      stopListening();
+      // Already listening: this tap means "I'm done" — send what she has.
+      commit();
       return;
     }
 
     stopSpeaking();
     const recognition = new Ctor();
     recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+
+    heardRef.current = "";
+    sentRef.current = false;
+    /* The draft is NOT cleared here, and neither is it cleared when a session
+       ends empty: anything the student had typed is theirs, and the live
+       transcript simply replaces the box once the first word arrives
+       (`setDraft(heardRef.current)` in onresult). */
+
+    /** Re-arm the pause timer: it is the only thing that sends a message. */
+    const armSilence = () => {
+      clearSilence();
+      silenceRef.current = window.setTimeout(() => commit(), SILENCE_MS);
+    };
 
     recognition.onstart = () => {
       setListening(true);
       setNote(null);
     };
     recognition.onresult = (event) => {
-      const result = event.results[event.resultIndex] ?? event.results[0];
-      const transcript = result?.[0]?.transcript?.trim();
-      if (transcript) void sendRef.current(transcript);
+      let settled = "";
+      let pending = "";
+      for (let i = 0; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        const text = result?.[0]?.transcript ?? "";
+        if (result?.isFinal) settled += text + " ";
+        else pending += text + " ";
+      }
+      heardRef.current = (settled + pending).replace(/\s+/g, " ").trim();
+      setDraft(heardRef.current);
+      armSilence();
     };
     recognition.onerror = (event) => {
-      setListening(false);
       recognitionRef.current = null;
+      setListening(false);
+      clearSilence();
+      if (heardRef.current.trim()) {
+        // Whatever reached us before the error is still their question.
+        commit();
+        return;
+      }
       setNote(
         event.error === "not-allowed"
           ? "I need microphone permission to hear you. Allow it in the address bar and try again."
-          : "I didn't catch that. Give the mic another tap and speak clearly.",
+          : event.error === "no-speech"
+            ? "I didn't hear anything. Tap the mic when you're ready."
+            : "I didn't catch that. Give the mic another tap and speak clearly.",
       );
     };
     recognition.onend = () => {
-      setListening(false);
       recognitionRef.current = null;
+      clearSilence();
+      /* The engine ended the session itself. Anything it did hand over is the
+         student's question, so it is committed, not discarded. */
+      if (heardRef.current.trim()) commit();
+      else setListening(false);
     };
 
     recognitionRef.current = recognition;
@@ -263,7 +365,7 @@ export function AviaWidget() {
     } catch {
       recognitionRef.current = null;
     }
-  }, [stopListening]);
+  }, [clearSilence, commit]);
 
   listenRef.current = startListening;
 
@@ -271,6 +373,7 @@ export function AviaWidget() {
 
   useEffect(
     () => () => {
+      if (silenceRef.current !== null) window.clearTimeout(silenceRef.current);
       recognitionRef.current?.abort();
       recognitionRef.current = null;
       stopSpeaking();
@@ -488,7 +591,10 @@ export function AviaWidget() {
                 type="button"
                 onClick={startListening}
                 aria-pressed={listening}
-                aria-label={listening ? "Stop listening" : "Start listening"}
+                /* While it listens this button means "that's what I said": it
+                   commits and sends, which is the student's way of skipping the
+                   silence wait. */
+                aria-label={listening ? "Finish and send" : "Start listening"}
                 className={"avia-mic" + (listening ? " is-live" : "")}
               >
                 {listening ? (

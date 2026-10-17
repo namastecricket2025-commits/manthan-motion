@@ -160,7 +160,15 @@ const checks = [
   ["light accent text on the canvas", L.signal, L.ink, 4.5],
   ["light accent text on a panel", L.signal, L.panel, 4.5],
   ["light accent as a small icon (3:1 is enough)", L.signal, L.panel, 3],
-  ["light button label on the accent fill", L.fg, L.signal, 4.5],
+  /* The light theme splits the accent in two on purpose: the DEEP caramel is
+     the ink (text, icons, hairlines) and the BRIGHT amber is the filled
+     action. `--primary-foreground` is therefore only ever paired with the fill
+     — measuring it against the ink colour would be testing a pairing that does
+     not exist anywhere in the app (verify-fixes.cjs scans the CSS to prove
+     that). So: the label is checked against the fill it is actually painted on,
+     and the ink amber is checked against the surfaces it is actually painted on
+     above. */
+  ["light button label on the filled action", L.fg, L.signalStrong, 4.5],
   ["light button label on the hover fill", L.fg, mix(L.signalStrong, 0.88, "#000000"), 4.5],
   /* Text on the brand tint uses `--brand-ink`, not the brand step; an icon on
      it uses the brand step, where 3:1 is the bar. Both are asserted, because
@@ -311,6 +319,11 @@ const ports = [5173, 8080, 3000, 4173];
     ok(sToken(sLight, "brand") === L.brand, "served light --brand matches source", String(sToken(sLight, "brand")));
     ok(sToken(sDark, "brand") === D.brand, "served dark --brand matches source", String(sToken(sDark, "brand")));
     ok(sToken(sLight, "brand-ink") === L.brandInk, "served light --brand-ink matches source", String(sToken(sLight, "brand-ink")));
+    /* The light button is the pair the browser has to paint: bright amber body,
+       near-black label. Asserted on the SERVED css, not the source, because the
+       whole point of the fix is what renders. */
+    ok(sToken(sLight, "signal-strong") === "#fbbf24", "served light --signal-strong is the bright amber", String(sToken(sLight, "signal-strong")));
+    ok(sToken(sLight, "primary-foreground") === "#241a02", "served light --primary-foreground is near-black", String(sToken(sLight, "primary-foreground")));
     ok(sToken(sDark, "brand-ink") === D.brandInk, "served dark --brand-ink matches source", String(sToken(sDark, "brand-ink")));
     ok(sToken(sDark, "destructive") === D.destructive, "served dark --destructive is still the error red", String(sToken(sDark, "destructive")));
     ok(!/--brand:\s*#(c81f27|ef4b52)/i.test(served), "served CSS declares no crimson --brand");
@@ -325,7 +338,7 @@ const ports = [5173, 8080, 3000, 4173];
   const ratios = {
     "light accent on canvas": contrast(L.signal, L.ink).toFixed(2) + ":1",
     "light accent on panel": contrast(L.signal, L.panel).toFixed(2) + ":1",
-    "light button label": contrast(L.fg, L.signal).toFixed(2) + ":1",
+    "light button label": contrast(L.fg, L.signalStrong).toFixed(2) + ":1 on " + L.signalStrong,
     "dark brand on black": contrast(D.brand, D.ink).toFixed(2) + ":1",
     "dark brand on panel": contrast(D.brand, D.panel).toFixed(2) + ":1",
     "light tint composite": hex(mix(L.brand, 0.1, L.panel)),

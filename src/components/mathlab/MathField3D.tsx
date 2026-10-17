@@ -76,11 +76,19 @@ const PALETTE = {
 export function MathField3D({
   plotId,
   pulse,
+  quiet = false,
 }: {
   /** The active chapter's plot model id — picks the terrain. */
   plotId: string;
   /** Increments on every Solve, stamping a ripple into the sheet. */
   pulse: number;
+  /**
+   * True while the workspace is gated (no Math Lab access). The sheet then
+   * holds its wave still and drops to a backdrop instead of flowing at full
+   * strength behind a blurred, locked page — which is what made opening a
+   * gated Math Lab look like a wave washing over the whole screen.
+   */
+  quiet?: boolean;
 }) {
   const theme = useResolvedTheme();
   const { ref, size } = useCanvasSize<HTMLCanvasElement>();
@@ -114,6 +122,11 @@ export function MathField3D({
   /** Pointer lean, in -1..1, and whether the loop can do any work at all. */
   const pointer = useRef({ x: 0, y: 0, easedX: 0, easedY: 0 });
   const active = useRef(true);
+
+  /** Live mirror of `quiet`, plus the last wave time, so a paused sheet holds. */
+  const quietRef = useRef(quiet);
+  quietRef.current = quiet;
+  const waveTime = useRef(0);
 
   /** Scratch buffers, sized once per grid. */
   const grid = useMemo(
@@ -287,11 +300,22 @@ export function MathField3D({
     const dots = crest.current;
     if (!gl || !sc || !cam || !lines || !dots || !active.current) return;
 
-    /* Frame the sheet to the canvas: recomputed from the live aspect so the
-       field always bleeds past all four edges. */
+    /* Never draw before the canvas has a measured CSS box. The renderer starts
+       at the canvas's intrinsic 300×150 buffer, and rendering into that while
+       the element is stretched by CSS is exactly how a squeezed mesh appears
+       for a frame or two on mount — the "sometimes" in "sometimes a wave
+       appears". The ResizeObserver fills `size` within one frame, so this
+       costs the first frame and nothing else. */
     const { w, h, dpr } = size.current;
+    if (w < 2 || h < 2) return;
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
+
+    /* While the workspace is gated the wave clock stops, so the plane holds a
+       still frame instead of flowing behind the lock card. */
+    const hushed = quietRef.current;
+    if (!hushed) waveTime.current = t;
+    const time = waveTime.current;
     syncViewport(vp.current, gl, cam, cssW, cssH, false);
     const aspect = cssW > 0 && cssH > 0 ? cssW / cssH : 2;
     SHEET.w = 2 * Math.abs(cam.position.z) * Math.tan((cam.fov * Math.PI) / 360) * aspect * 1.12;
@@ -347,14 +371,14 @@ export function MathField3D({
 
         let y =
           L.amp *
-          (Math.sin(L.kx * u + t * 0.62) * Math.cos(L.kz * v - t * 0.44) +
-            0.42 * Math.sin((L.kx + L.kz) * 0.5 * (u + v) + t * 0.3) +
+          (Math.sin(L.kx * u + time * 0.62) * Math.cos(L.kz * v - time * 0.44) +
+            0.42 * Math.sin((L.kx + L.kz) * 0.5 * (u + v) + time * 0.3) +
             L.swirl * Math.sin(L.kx * u) * Math.sin(L.kz * v));
 
         y += L.tilt * nx * 9;
 
         if (impulse.current > 0) {
-          y += impulse.current * 3.4 * Math.sin(r * 0.24 - t * 3.2) * Math.exp(-r * 0.021);
+          y += impulse.current * 3.4 * Math.sin(r * 0.24 - time * 3.2) * Math.exp(-r * 0.021);
         }
 
         field[i * (segZ + 1) + j] = y * fall * ease;
@@ -437,7 +461,7 @@ export function MathField3D({
     pointCol.needsUpdate = true;
 
     /* 4. Camera: a slow sway, the pointer lean, and the ink carries Ambient. */
-    const sway = reduce ? 0 : Math.sin(t * 0.16) * 0.5;
+    const sway = reduce ? 0 : Math.sin(time * 0.16) * 0.5;
     cam.position.x = p.easedX * 7 + sway;
     cam.position.y = 24 - p.easedY * 5;
     cam.position.z = 78 - ease * 22;
@@ -449,8 +473,12 @@ export function MathField3D({
     dots.rotation.copy(lines.rotation);
 
     const visible = ambient > 0.02 ? 1 : 0;
-    (lines.material as THREE.LineBasicMaterial).opacity = (0.32 + 0.58 * ambient) * ease * visible;
-    (dots.material as THREE.PointsMaterial).opacity = (0.3 + 0.55 * ambient) * ease * visible;
+    /* The gated state is a backdrop, not a feature: a quarter strength is
+       enough to keep the plane present under the lock card and not enough to
+       read as the page's content. */
+    const hush = hushed ? 0.25 : 1;
+    (lines.material as THREE.LineBasicMaterial).opacity = (0.32 + 0.58 * ambient) * ease * visible * hush;
+    (dots.material as THREE.PointsMaterial).opacity = (0.3 + 0.55 * ambient) * ease * visible * hush;
     lines.visible = visible > 0;
     dots.visible = visible > 0;
 
