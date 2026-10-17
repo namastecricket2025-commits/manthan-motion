@@ -70,7 +70,7 @@ const SHEET = { w: 120, d: 62 };
 /** Themed hairline / glow colours, matching the site tokens. */
 const PALETTE = {
   dark: { line: "#fafafa", crest: "#d4d4d8", fade: "#000000" },
-  light: { line: "#c81f27", crest: "#8f1d22", fade: "#f7f3f0" },
+  light: { line: "#3a5bc7", crest: "#27418c", fade: "#f6f7fa" },
 };
 
 export function MathField3D({

@@ -2,7 +2,7 @@
  * The Manthan hero mark — the site's central brand asset, restored from the
  * previous build.
  *
- * The large crimson circle (`.big-circle`) is anchored at the centre of the
+ * The large indigo circle (`.big-circle`) is anchored at the centre of the
  * 400×400 viewBox and never moves. The connector line and the small light
  * satellite (`.small-circle`) live in an `.orbit-group` that GSAP rotates a
  * full 360° around the core, forever, on a 14s linear loop with

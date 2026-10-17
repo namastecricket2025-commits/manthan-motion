@@ -134,15 +134,17 @@ html:not(.dark) .set-root.set-root--bare {
   --set-title: #fafafa;
   --set-dim: rgba(255, 255, 255, 0.72);
   --set-faint: rgba(255, 255, 255, 0.56);
-  /* Accent layers resolve from the theme, not from a hardcoded red: the   settings canvas follows the app accent in both modes (white light at
-      night, warm crimson in the light theme) so nothing on this page can
-      drift back to a colour the rest of the app no longer uses. The
-      historical token names are kept so every rule below keeps working. */
-  --set-crimson: var(--signal-strong);
-  --set-crimson-deep: var(--signal-2);
+  /* Accent layers resolve from the theme, not from a hardcoded colour: the
+     settings canvas follows the app accent in both modes (white light at
+     night, indigo ink in the light theme) so nothing on this page can drift
+     back to a colour the rest of the app no longer uses. The `--set-accent*`
+     and `--set-neon*` names are kept for the rules below and are aliases of
+     the same theme tokens. */
+  --set-accent: var(--signal-strong);
+  --set-accent-deep: var(--signal-2);
   --set-neon: var(--signal);
   --set-neon-2: var(--signal-2);
-  --set-crimson-text: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+  --set-accent-text: color-mix(in srgb, var(--signal) 74%, var(--text-main));
   --set-neon-text: color-mix(in srgb, var(--signal) 74%, var(--text-main));
   /* Red is kept for genuine danger only. */
   --set-danger: var(--destructive);
@@ -301,7 +303,7 @@ html:not(.dark) .set-root.set-root--bare {
   border-radius: 11px;
   border: 1px solid color-mix(in srgb, var(--signal) 28%, transparent);
   background: color-mix(in srgb, var(--signal) 10%, transparent);
-  color: var(--set-crimson-text);
+  color: var(--set-accent-text);
   box-shadow: 0 0 calc(14px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 16%, transparent);
 }
 .set-panel-title__icon svg {
@@ -447,7 +449,7 @@ html:not(.dark) .set-root.set-root--bare {
   background: rgba(148, 148, 152, 0.16);
 }
 .set-slider [data-slot="slider-range"] {
-  background: linear-gradient(90deg, var(--set-crimson), var(--set-crimson-deep));
+  background: linear-gradient(90deg, var(--set-accent), var(--set-accent-deep));
   box-shadow: 0 0 calc(11px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 28%, transparent);
 }
 .set-slider [data-slot="slider-thumb"] {
@@ -492,7 +494,7 @@ html:not(.dark) .set-root.set-root--bare {
 }
 .set-switch[data-state="checked"] {
   border-color: color-mix(in srgb, var(--signal) 42%, transparent);
-  background: linear-gradient(135deg, var(--set-crimson), var(--set-crimson-deep));
+  background: linear-gradient(135deg, var(--set-accent), var(--set-accent-deep));
   box-shadow: 0 0 calc(14px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 32%, transparent);
 }
 .set-switch [data-slot="switch-thumb"] {
@@ -555,7 +557,7 @@ html:not(.dark) .set-select-content [role="option"] {
   color: #1e293b;
 }
 
-/* --- theme picker: borderless until chosen, then a soft crimson ring --- */
+/* --- theme picker: borderless until chosen, then a soft accent ring --- */
 .set-block {
   padding: 13px;
 }
@@ -635,7 +637,7 @@ html:not(.dark) .set-select-content [role="option"] {
   height: 10px;
   width: 10px;
   border-radius: 999px;
-  background: var(--set-crimson);
+  background: var(--set-accent);
   box-shadow: 0 0 calc(10px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 40%, transparent);
 }
 .set-theme__label {
@@ -656,7 +658,7 @@ html:not(.dark) .set-select-content [role="option"] {
   position: absolute;
   top: 10px;
   right: 10px;
-  color: var(--set-crimson-text);
+  color: var(--set-accent-text);
 }
 
 /* --- text comfort steps: same borderless-to-glowing-ring language --- */
@@ -821,7 +823,7 @@ html:not(.dark) .set-select-content [role="option"] {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--set-crimson-text);
+  color: var(--set-accent-text);
 }
 
 .set-actions {
@@ -977,7 +979,7 @@ html:not(.dark) .set-select-content [role="option"] {
   color: var(--set-dim);
 }
 
-/* danger card — the same glass, warmed by a faint muted-crimson wash */
+/* danger card — the same glass, warmed by a faint muted-accent wash */
 .set-card--danger {
   border-color: color-mix(in srgb, var(--signal) 18%, transparent);
   background: color-mix(in srgb, var(--signal) 4%, transparent);
@@ -1343,7 +1345,7 @@ html:not(.dark) .set-root {
   --set-title: #111827;
   --set-dim: #374151;
   --set-faint: #4b5563;
-  --set-crimson-text: color-mix(in srgb, var(--signal) 78%, #000);
+  --set-accent-text: color-mix(in srgb, var(--signal) 78%, #000);
   --set-neon-text: color-mix(in srgb, var(--signal) 78%, #000);
   --set-danger: #c81e1e;
   color: var(--set-text);
@@ -1423,7 +1425,7 @@ html:not(.dark) .set-switch {
   background: rgba(0, 0, 0, 0.12);
 }
 html:not(.dark) .set-switch[data-state="checked"] {
-  background: linear-gradient(135deg, var(--set-crimson), var(--set-crimson-deep));
+  background: linear-gradient(135deg, var(--set-accent), var(--set-accent-deep));
 }
 html:not(.dark) .set-slider [data-slot="slider-track"] {
   background: rgba(0, 0, 0, 0.1);

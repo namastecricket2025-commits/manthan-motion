@@ -106,33 +106,45 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand palette (light) — a NEUTRAL near-white canvas with the brand
-     crimson kept as the single accent.
+  /* Brand palette (light) — a NEUTRAL near-white canvas with indigo ink kept
+     as the single accent.
 
      The day theme used to be warm throughout: a sand-pink canvas, espresso
-     ink, crimson-tinted hairlines and a full-viewport crimson metaball field
-     at 0.78 opacity. Every surface sat on a tint, so nothing on the page read
-     as clean, and the field meant the "background colour" was never actually
-     a colour you could name. Neutral greys with one accent is what makes a
-     light theme look engineered — the crimson then reads as a deliberate
+     ink, tinted hairlines and a full-viewport coloured metaball field at 0.78
+     opacity. Every surface sat on a tint, so nothing on the page read as
+     clean, and the field meant the "background colour" was never actually a
+     colour you could name. Neutral greys with one accent is what makes a
+     light theme look engineered — the indigo then reads as a deliberate
      brand signal rather than as the page's ambient wash. */
   --ink: #fafafa;
-  --signal: #c81f27;
-  /* The filled-action tone. In light it is the same crimson as the accent;
-     the dark theme splits them (see the .dark block) so the button fill can
-     be white with a near-black label while the accent stays luminous. */
-  --signal-strong: #c81f27;
-  --signal-2: #8f1d22;
+  /* ---- Accent (light) -------------------------------------------------
+     Indigo ink: one hue in three values, each with a job.
+
+       --signal          text, icons, hairlines, chart strokes — 5.75:1 on
+                         this canvas, 6.0:1 on a white panel
+       --signal-strong   the filled action's body; its label is
+                         `--primary-foreground` at 4.95:1
+       --signal-2        the darker step: hover fills, gradient ends
+
+     The accent used to be crimson, and crimson is the one hue UI users are
+     trained to read as "something went wrong" — as a 10px checkmark or a
+     donut wedge it read as an alarm rather than a brand. Red is now reserved
+     for `--destructive` (a failed read, a wrong answer), so the two can
+     never be confused again. The dark theme splits these tokens (see the
+     .dark block) so its button fill can be white with a near-black label. */
+  --signal: #3a5bc7;
+  --signal-strong: #3e63dd;
+  --signal-2: #27418c;
   /* ---- Brand chroma (light) ------------------------------------------
      The one token that stays CHROMATIC in both themes. `--signal` cannot do
      this job: it is the theme's light (white in dark), so anything tinted
      with it goes monochrome the moment the lights go down, and the accent
-     disappears with them. This is the crimson itself, lifted in dark so it
-     still measures 5.8:1 on black, and it is what marks something as the
-     product's own — an icon, a step number, a rule under a card. */
-  --brand: #c81f27;
-  --brand-soft: rgba(200, 31, 39, 0.1);
-  --brand-line: rgba(200, 31, 39, 0.28);
+     disappears with them. This is the indigo itself — 6.0:1 on paper,
+     10.2:1 in dark — and it is what marks something as the product's own:
+     an icon, a step number, a rule under a card. */
+  --brand: #3a5bc7;
+  --brand-soft: rgba(58, 91, 199, 0.1);
+  --brand-line: rgba(58, 91, 199, 0.28);
   --text-main: #171717;
   --text-dim: #52525b;
   --card-border: rgba(0, 0, 0, 0.1);
@@ -143,7 +155,7 @@
 
   /* ---- BACKGROUND BLOB FIELD (light) ---------------------------------
      Near-neutral stops at a low ceiling. The field used to be a saturated
-     crimson metaball wash covering the whole viewport — which is why the day
+     coloured metaball wash covering the whole viewport — which is why the day
      theme had no stable background colour to design against. It is now what
      it is in dark mode: faint drifting texture, not a colour. */
   --bg-canvas-a: #ececec;
@@ -192,17 +204,17 @@
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
-     word, then blends through two warm oxide stops into the signal red on
-     the final letters. The extra intermediate stops make the black→red
+     word, then blends through two navy stops into the signal indigo on the
+     final letters. The extra intermediate stops make the black→indigo
      sweep silky instead of a hard snap. */
   --gt-head: #171717;
-  --gt-tail: #c81f27;
+  --gt-tail: #3a5bc7;
 
-  /* Stroke-text display gradient (light): a golden-ember sweep that pops
-     on the pale ink wash — honey gold through signal red. */
-  --stroke-a: #e8a33d;
-  --stroke-b: #e8543f;
-  --stroke-c: #c81f27;
+  /* Stroke-text display gradient (light): a periwinkle-to-indigo sweep that
+     pops on the pale ink wash. */
+  --stroke-a: #8fa4ee;
+  --stroke-b: #4f6ada;
+  --stroke-c: #3a5bc7;
 
   /* Bklit chart tokens (light) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -224,8 +236,8 @@
   ----chart-marker-background: var(--card);
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(200, 31, 39, 0.1);
-  ----chart-segment-line: rgba(200, 31, 39, 0.25);
+  ----chart-segment-background: rgba(58, 91, 199, 0.1);
+  ----chart-segment-line: rgba(58, 91, 199, 0.25);
 
   /* shadcn aliases (light) */
   /* Neutral, not warm: the old values were espresso-tinted (#fdfaf8 card,
@@ -239,19 +251,21 @@
   --popover: #ffffff;
   --popover-foreground: var(--text-main);
   --primary: var(--signal);
-  --primary-foreground: #fff7f5;
+  --primary-foreground: #f7f9ff;
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
   --muted: #f4f4f5;
   --muted-foreground: #71717a;
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
+  /* Error stays red now that the brand does not: `--destructive` is the only
+     crimson left in the light theme. */
   --destructive: #c81f27;
   --border: rgba(0, 0, 0, 0.1);
   --input: rgba(0, 0, 0, 0.12);
   --ring: var(--signal);
-  --chart-1: #c81f27;
-  --chart-2: #8f1d22;
+  --chart-1: #3a5bc7;
+  --chart-2: #27418c;
   --chart-3: #b0773c;
   --chart-4: #6d7f63;
   --chart-5: #7d6a64;
@@ -262,18 +276,18 @@
      neon (mint, amber, lilac grey) sits close to the cream canvas and reads
      as washed out, so light mode runs an ochre/sage/clay ramp that stays
      legible on paper. Dark keeps the bright set it was tuned against. */
-  --kind-summary: #c81f27;
+  --kind-summary: #3a5bc7;
   --kind-flashcards: #2f6f6b;
   --kind-quiz: #b0773c;
   --kind-mindmap: #6d7f63;
   --kind-slides: #7d6a64;
-  --src-files: #c81f27;
+  --src-files: #3a5bc7;
   --src-links: #2f6f6b;
   --src-notes: #7d6a64;
   --sidebar: #fafafa;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
-  --sidebar-primary-foreground: #fff7f5;
+  --sidebar-primary-foreground: #f7f9ff;
   --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: rgba(0, 0, 0, 0.08);
@@ -298,12 +312,12 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: var(--text-main);
   --chart-label: var(--text-dim);
-  --chart-scale-01: rgba(200, 31, 39, 0.06);
-  --chart-scale-02: rgba(200, 31, 39, 0.12);
-  --chart-scale-03: rgba(200, 31, 39, 0.2);
-  --chart-scale-04: rgba(200, 31, 39, 0.34);
-  --chart-scale-05: rgba(200, 31, 39, 0.52);
-  --chart-scale-pattern-color: rgba(200, 31, 39, 0.08);
+  --chart-scale-01: rgba(58, 91, 199, 0.06);
+  --chart-scale-02: rgba(58, 91, 199, 0.12);
+  --chart-scale-03: rgba(58, 91, 199, 0.2);
+  --chart-scale-04: rgba(58, 91, 199, 0.34);
+  --chart-scale-05: rgba(58, 91, 199, 0.52);
+  --chart-scale-pattern-color: rgba(58, 91, 199, 0.08);
 
   /* ---- Dashboard ink + selection surfaces (light) ---------------------
      Chart ink for the dashboard's glass charts, and the concrete backing
@@ -311,7 +325,7 @@
      instant the panel opens — never only on hover. */
   --dash-chart-label: #52525b;
   --dash-chart-grid: rgba(0, 0, 0, 0.1);
-  --dash-series-primary: #c81f27;
+  --dash-series-primary: #3a5bc7;
   --dash-series-secondary: #52525b;
   --dash-frost-top: rgba(0, 0, 0, 0.14);
   --dash-frost-bottom: rgba(0, 0, 0, 0);
@@ -345,12 +359,15 @@
   --signal: #f5f5f7;
   --signal-strong: #ffffff;
   --signal-2: #e4e4e7;
-  /* The brand crimson, lifted for a black canvas: the base #c81f27 measures
-     about 2.6:1 on #000, which is muddy at icon size. This is the same hue
-     at 5.8:1, so the accent is legible while still reading as the brand. */
-  --brand: #ef4b52;
-  --brand-soft: rgba(239, 75, 82, 0.12);
-  --brand-line: rgba(239, 75, 82, 0.3);
+  /* The brand indigo, lifted for a black canvas: the paper step (#3a5bc7)
+     measures about 3.5:1 here — legible as a shape, dull as a 10px icon. This
+     is the same hue at 10.2:1 (9.6:1 on a #0a0a0a panel), so the accent
+     reads as light on black without introducing a second chroma. Its 12%
+     tint composites to #1c1e27: a cool slate lift, not the brown a red tint
+     turns into over near-black. */
+  --brand: #9eb1ff;
+  --brand-soft: rgba(158, 177, 255, 0.12);
+  --brand-line: rgba(158, 177, 255, 0.3);
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -391,10 +408,12 @@
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
      heading warm-white (`--text-main`) and holds it for just over half the
-     word, then blends through a warm mid stop into the ember on the final
-     letters. Matching the heading colour exactly plus two intermediate stops
-     keeps the word reading as heading text while the tail lights up smoothly.
-     The two mid stops live in the `.dark .gradient-text` rule below. */
+     word, then blends through two neutral mid stops into the final grey —
+     the night theme's accent is light itself, so the tail dims rather than
+     changing hue. Matching the heading colour exactly plus two intermediate
+     stops keeps the word reading as heading text while the tail settles
+     smoothly. The two mid stops live in the `.dark .gradient-text` rule
+     below. */
   --gt-head: #ffffff;
   --gt-tail: #a1a1aa;
 
@@ -889,13 +908,13 @@
     background: var(--panel);
   }
 
-  /* Gradient headline text — an "ember tail": the accent word starts in the
+  /* Gradient headline text — an "ink tail": the accent word starts in the
      heading colour (pure warm white in dark mode, espresso black in light
-     mode) and holds it for well over half the word, then sweeps into a
-     bright red across its final letters. Because the dominant stop is the
-     heading colour and not red, the word always reads exactly like the text
-     around it — no "invisible red word on a red blob" failure mode at any
-     scroll position.
+     mode) and holds it for well over half the word, then sweeps into the
+     theme's accent across its final letters. Because the dominant stop is the
+     heading colour and not the accent, the word always reads exactly like the
+     text around it — no "invisible accent word on an accent field" failure
+     mode at any scroll position.
 
      Robustness hardening (kept from previous fixes):
      - `color: var(--text-main)` is the declared fallback, not transparent —
@@ -919,8 +938,8 @@
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
-      #6b1c14 68%,
-      #a1261f 82%,
+      #1b2a63 68%,
+      #2c4aa8 82%,
       var(--gt-tail) 100%
     );
     background-clip: text;
@@ -1078,7 +1097,7 @@
      (feature, stat and pipeline cards), which carried three copies of the same
      44px tile in their markup.
 
-     Brand crimson in both themes: `--signal` is the theme's light, so a tile
+     Brand indigo in both themes: `--signal` is the theme's light, so a tile
      keyed to it turns white the moment dark mode does and the card loses every
      trace of the product's colour.
      ------------------------------------------------ */
@@ -1154,7 +1173,7 @@
     letter-spacing: 0.02em;
   }
 
-  /* Glow layers for the filled display word — a blurred ember halo sits
+  /* Glow layers for the filled display word — a blurred indigo halo sits
      behind the crisp gradient glyphs, plus a subtle drop-shadow on the
      glyphs themselves. Layer opacity is animated so the halo breathes
      gently on hover instead of popping. */

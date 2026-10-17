@@ -366,8 +366,8 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen">
-      {/* The signature crimson blob field — the canvas metaball engine, its
-          opacity capped by the theme tokens and the Ambient Intensity slider. */}
+      {/* The signature blob field — the canvas metaball engine, its opacity
+          capped by the theme tokens and the Ambient Intensity slider. */}
       <BlobBackground />
       <div className="relative z-10">
         {/* Anchor target for the "Home" nav item — the header is fixed, so

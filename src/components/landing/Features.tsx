@@ -163,7 +163,7 @@ function MixArt() {
   );
 }
 
-/** Seven days of study as bars, with the busiest day in the brand crimson. */
+/** Seven days of study as bars, with the busiest day in the brand indigo. */
 function ActivityArt() {
   const days = [
     { day: "M", value: 34 },
@@ -227,7 +227,7 @@ function ThemeArt() {
             style={{ background: theme.dim, opacity: 0.5 }}
           />
           <span className="mt-3 flex items-center gap-1.5">
-            <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: "#c81f27" }} />
+            <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: "var(--brand)" }} />
             <span
               className="h-3.5 flex-1 rounded-[4px]"
               style={{ background: theme.dim, opacity: 0.22 }}

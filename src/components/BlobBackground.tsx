@@ -15,8 +15,9 @@
  *   2. The metaball sum is evaluated per grid cell — K = Σ r² / (d² + 1) —
  *      and mapped through two thresholds into a colour that ramps from the
  *      canvas ink (`--bg-canvas-c`) through the deep accent
- *      (`--bg-canvas-b`) into the bright accent (`--bg-canvas-a`) — indigo by
- *      night, warm crimson by day, straight from the theme tokens.
+ *      (`--bg-canvas-b`) into the bright accent (`--bg-canvas-a`) — both
+ *      themes are neutral by design (faint texture, never a colour wash),
+ *      straight from the theme tokens.
  *   3. The palette is read from the live CSS custom properties, and re-read
  *      whenever the theme class on <html> changes, so light/dark swap the
  *      field instead of leaving a stale frame.
