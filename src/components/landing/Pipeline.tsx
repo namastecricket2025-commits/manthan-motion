@@ -203,7 +203,7 @@ export default function Pipeline() {
         ref={viewportRef}
         className="how-sticky relative mt-10 h-[68svh] min-h-[400px] w-full overflow-hidden md:mt-16"
       >
-        {/* scrub progress line — brand indigo, because it reports progress
+        {/* scrub progress line — brand gold, because it reports progress
             rather than ornamenting the section. */}
         <span
           aria-hidden="true"
@@ -224,13 +224,13 @@ export default function Pipeline() {
               className="how-card glass-panel card-surface spot-card flex flex-col justify-between p-6 will-change-transform sm:p-8"
             >
               <div>
-                {/* Brand indigo on the tile, the number and the rule.
+                {/* Brand gold on the tile, the number and the rule.
 
                     These three carried `--signal`, which is the theme's LIGHT
                     — white in dark — so as soon as the theme went dark the
                     card lost every trace of the product's colour and read as
                     a grey box with a white icon in it. `--brand` is the same
-                    indigo in both themes (lifted for black), so the card has
+                    gold in both themes (lit for black), so the card has
                     an identity to look at that is not just brightness. */}
                 <div className="flex items-center justify-between">
                   <span className="card-tile">

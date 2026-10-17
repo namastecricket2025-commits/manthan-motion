@@ -163,7 +163,7 @@ function MixArt() {
   );
 }
 
-/** Seven days of study as bars, with the busiest day in the brand indigo. */
+/** Seven days of study as bars, with the busiest day in the brand gold. */
 function ActivityArt() {
   const days = [
     { day: "M", value: 34 },

@@ -3,15 +3,15 @@
    Inherits the global Manthan theme — background, ink and signal
    tokens — and layers authentic Apple-style glassmorphism on top.
    No slate-charcoal: every colour here resolves from the theme, so
-   the page follows the accent (indigo by night, warm crimson by day)
-   instead of pinning a red of its own.
+   the page follows the accent (white light by night, highlighter gold by
+   day) instead of pinning a colour of its own.
    ============================================================ */
 
 .about-root {
   /* ---- Accent + ink ----------------------------------------------------
-     Dark mode inherits the app accent straight from the theme (electric
-     indigo), so this page can never fall out of step with the rest of the
-     product. The light theme re-points the same tokens to the paper indigo
+     Dark mode inherits the app accent straight from the theme (the theme's
+     own light), so this page can never fall out of step with the rest of the
+     product. The light theme re-points the same tokens to the ochre ink
      below (see the html:not(.dark) block) — one page, two honest palettes. */
   --about-signal: var(--signal);
   --about-signal-glow: color-mix(in srgb, var(--signal) 85%, transparent);
@@ -22,14 +22,14 @@ html:not(.dark) .about-root {
   --about-dim: #374151;
   --about-faint: #1e293b;
   /* Daylight palette: the accent word, kicker dots, hairlines and the CTA's
-     orbiting border all resolve to the deep indigo here. */
-  --about-signal: #3a5bc7;
-  --about-signal-glow: rgba(58, 91, 199, 0.85);
+     orbiting border all resolve to the deep ochre here. */
+  --about-signal: #8f5a00;
+  --about-signal-glow: rgba(143, 90, 0, 0.85);
 }
 html:not(.dark) .about-root .apple-glass,
 html:not(.dark) .about-root .apple-card {
   /* glass edges keep their contrast on the pale canvas */
-  --card-border: rgba(58, 91, 199, 0.22);
+  --card-border: rgba(143, 90, 0, 0.22);
 }
 
 /* ---------- 1. The site panel ----------

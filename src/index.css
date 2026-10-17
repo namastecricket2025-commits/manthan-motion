@@ -106,7 +106,7 @@
 :root {
   --radius: 0.75rem;
 
-  /* Brand palette (light) — a NEUTRAL near-white canvas with indigo ink kept
+  /* Brand palette (light) — a NEUTRAL near-white canvas with ochre ink kept
      as the single accent.
 
      The day theme used to be warm throughout: a sand-pink canvas, espresso
@@ -114,37 +114,41 @@
      opacity. Every surface sat on a tint, so nothing on the page read as
      clean, and the field meant the "background colour" was never actually a
      colour you could name. Neutral greys with one accent is what makes a
-     light theme look engineered — the indigo then reads as a deliberate
-     brand signal rather than as the page's ambient wash. */
+     light theme look engineered — the gold then reads as a deliberate brand
+     signal rather than as the page's ambient wash. */
   --ink: #fafafa;
   /* ---- Accent (light) -------------------------------------------------
-     Indigo ink: one hue in three values, each with a job.
+     Highlighter gold: one hue in three values, each with a job. Yellow has
+     no error meaning in any UI system, which is exactly why it works as the
+     brand here — a checkmark, a step number or a donut wedge can be gold
+     without reading as a problem. Red stays on `--destructive` alone.
 
-       --signal          text, icons, hairlines, chart strokes — 5.75:1 on
-                         this canvas, 6.0:1 on a white panel
-       --signal-strong   the filled action's body; its label is
-                         `--primary-foreground` at 4.95:1
-       --signal-2        the darker step: hover fills, gradient ends
+       --signal       text, icons, hairlines, chart strokes. A yellow light
+                      enough to look like a marker (#ffd60a) measures 1.5:1
+                      on paper, so the light theme's step is the same hue as
+                      DEEP OCHRE ink: 5.5:1 on this canvas, 5.8:1 on a white
+                      panel — AA at text size, not just at icon size.
+       --signal-strong  the filled action's body (brass, one step lighter
+                      than the text ochre); its label `--primary-foreground`
+                      is a warm cream at 5.0:1 on it.
+       --signal-2     the darkest step: hover fills, gradient ends.
 
-     The accent used to be crimson, and crimson is the one hue UI users are
-     trained to read as "something went wrong" — as a 10px checkmark or a
-     donut wedge it read as an alarm rather than a brand. Red is now reserved
-     for `--destructive` (a failed read, a wrong answer), so the two can
-     never be confused again. The dark theme splits these tokens (see the
-     .dark block) so its button fill can be white with a near-black label. */
-  --signal: #3a5bc7;
-  --signal-strong: #3e63dd;
-  --signal-2: #27418c;
+     The dark theme splits these tokens (see the .dark block): its filled
+     action is white with a near-black label, and the highlighter itself
+     comes back at full brightness as `--brand`. */
+  --signal: #8f5a00;
+  --signal-strong: #b87400;
+  --signal-2: #6b4400;
   /* ---- Brand chroma (light) ------------------------------------------
      The one token that stays CHROMATIC in both themes. `--signal` cannot do
      this job: it is the theme's light (white in dark), so anything tinted
      with it goes monochrome the moment the lights go down, and the accent
-     disappears with them. This is the indigo itself — 6.0:1 on paper,
-     10.2:1 in dark — and it is what marks something as the product's own:
+     disappears with them. This is the highlighter itself — 5.5:1 on paper,
+     14.9:1 in dark — and it is what marks something as the product's own:
      an icon, a step number, a rule under a card. */
-  --brand: #3a5bc7;
-  --brand-soft: rgba(58, 91, 199, 0.1);
-  --brand-line: rgba(58, 91, 199, 0.28);
+  --brand: #8f5a00;
+  --brand-soft: rgba(143, 90, 0, 0.1);
+  --brand-line: rgba(143, 90, 0, 0.28);
   --text-main: #171717;
   --text-dim: #52525b;
   --card-border: rgba(0, 0, 0, 0.1);
@@ -204,17 +208,17 @@
 
   /* Accent-word gradient stops (light): the accent word starts in the exact
      heading espresso (`--text-main`) and holds it for just over half the
-     word, then blends through two navy stops into the signal indigo on the
-     final letters. The extra intermediate stops make the black→indigo
+     word, then blends through two bronze stops into the signal ochre on the
+     final letters. The extra intermediate stops make the black→gold
      sweep silky instead of a hard snap. */
   --gt-head: #171717;
-  --gt-tail: #3a5bc7;
+  --gt-tail: #8f5a00;
 
-  /* Stroke-text display gradient (light): a periwinkle-to-indigo sweep that
-     pops on the pale ink wash. */
-  --stroke-a: #8fa4ee;
-  --stroke-b: #4f6ada;
-  --stroke-c: #3a5bc7;
+  /* Stroke-text display gradient (light): a honey-to-brass sweep that pops
+     on the pale ink wash. */
+  --stroke-a: #d9a72b;
+  --stroke-b: #b57900;
+  --stroke-c: #8f5a00;
 
   /* Bklit chart tokens (light) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -236,8 +240,8 @@
   ----chart-marker-background: var(--card);
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(58, 91, 199, 0.1);
-  ----chart-segment-line: rgba(58, 91, 199, 0.25);
+  ----chart-segment-background: rgba(143, 90, 0, 0.1);
+  ----chart-segment-line: rgba(143, 90, 0, 0.25);
 
   /* shadcn aliases (light) */
   /* Neutral, not warm: the old values were espresso-tinted (#fdfaf8 card,
@@ -251,7 +255,7 @@
   --popover: #ffffff;
   --popover-foreground: var(--text-main);
   --primary: var(--signal);
-  --primary-foreground: #f7f9ff;
+  --primary-foreground: #fdf6e6;
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
   --muted: #f4f4f5;
@@ -264,9 +268,9 @@
   --border: rgba(0, 0, 0, 0.1);
   --input: rgba(0, 0, 0, 0.12);
   --ring: var(--signal);
-  --chart-1: #3a5bc7;
-  --chart-2: #27418c;
-  --chart-3: #b0773c;
+  --chart-1: #8f5a00;
+  --chart-2: #6b4400;
+  --chart-3: #a3546b;
   --chart-4: #6d7f63;
   --chart-5: #7d6a64;
 
@@ -276,18 +280,18 @@
      neon (mint, amber, lilac grey) sits close to the cream canvas and reads
      as washed out, so light mode runs an ochre/sage/clay ramp that stays
      legible on paper. Dark keeps the bright set it was tuned against. */
-  --kind-summary: #3a5bc7;
+  --kind-summary: #8f5a00;
   --kind-flashcards: #2f6f6b;
-  --kind-quiz: #b0773c;
+  --kind-quiz: #a3546b;
   --kind-mindmap: #6d7f63;
   --kind-slides: #7d6a64;
-  --src-files: #3a5bc7;
+  --src-files: #8f5a00;
   --src-links: #2f6f6b;
   --src-notes: #7d6a64;
   --sidebar: #fafafa;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
-  --sidebar-primary-foreground: #f7f9ff;
+  --sidebar-primary-foreground: #fdf6e6;
   --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: rgba(0, 0, 0, 0.08);
@@ -312,12 +316,12 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: var(--text-main);
   --chart-label: var(--text-dim);
-  --chart-scale-01: rgba(58, 91, 199, 0.06);
-  --chart-scale-02: rgba(58, 91, 199, 0.12);
-  --chart-scale-03: rgba(58, 91, 199, 0.2);
-  --chart-scale-04: rgba(58, 91, 199, 0.34);
-  --chart-scale-05: rgba(58, 91, 199, 0.52);
-  --chart-scale-pattern-color: rgba(58, 91, 199, 0.08);
+  --chart-scale-01: rgba(143, 90, 0, 0.06);
+  --chart-scale-02: rgba(143, 90, 0, 0.12);
+  --chart-scale-03: rgba(143, 90, 0, 0.2);
+  --chart-scale-04: rgba(143, 90, 0, 0.34);
+  --chart-scale-05: rgba(143, 90, 0, 0.52);
+  --chart-scale-pattern-color: rgba(143, 90, 0, 0.08);
 
   /* ---- Dashboard ink + selection surfaces (light) ---------------------
      Chart ink for the dashboard's glass charts, and the concrete backing
@@ -325,7 +329,7 @@
      instant the panel opens — never only on hover. */
   --dash-chart-label: #52525b;
   --dash-chart-grid: rgba(0, 0, 0, 0.1);
-  --dash-series-primary: #3a5bc7;
+  --dash-series-primary: #8f5a00;
   --dash-series-secondary: #52525b;
   --dash-frost-top: rgba(0, 0, 0, 0.14);
   --dash-frost-bottom: rgba(0, 0, 0, 0);
@@ -359,15 +363,15 @@
   --signal: #f5f5f7;
   --signal-strong: #ffffff;
   --signal-2: #e4e4e7;
-  /* The brand indigo, lifted for a black canvas: the paper step (#3a5bc7)
-     measures about 3.5:1 here — legible as a shape, dull as a 10px icon. This
-     is the same hue at 10.2:1 (9.6:1 on a #0a0a0a panel), so the accent
-     reads as light on black without introducing a second chroma. Its 12%
-     tint composites to #1c1e27: a cool slate lift, not the brown a red tint
-     turns into over near-black. */
-  --brand: #9eb1ff;
-  --brand-soft: rgba(158, 177, 255, 0.12);
-  --brand-line: rgba(158, 177, 255, 0.3);
+  /* The highlighter gold at full brightness: a black canvas is the ONLY place
+     this hue can be itself, because #ffd60a measures 1.5:1 on paper and
+     14.9:1 here (14.0:1 on a #0a0a0a panel). It is light, not a colour cast —
+     the same reason the theme's button fill is white. Its 14% tint over the
+     panel composites to #2a2408: a warm charcoal, and the gold icon on top of
+     it still measures 12:1 against that fill. */
+  --brand: #ffd60a;
+  --brand-soft: rgba(255, 214, 10, 0.14);
+  --brand-line: rgba(255, 214, 10, 0.32);
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -938,8 +942,8 @@
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
-      #1b2a63 68%,
-      #2c4aa8 82%,
+      #3f2d05 68%,
+      #6b4400 82%,
       var(--gt-tail) 100%
     );
     background-clip: text;
@@ -1097,7 +1101,7 @@
      (feature, stat and pipeline cards), which carried three copies of the same
      44px tile in their markup.
 
-     Brand indigo in both themes: `--signal` is the theme's light, so a tile
+     Brand gold in both themes: `--signal` is the theme's light, so a tile
      keyed to it turns white the moment dark mode does and the card loses every
      trace of the product's colour.
      ------------------------------------------------ */
@@ -1173,7 +1177,7 @@
     letter-spacing: 0.02em;
   }
 
-  /* Glow layers for the filled display word — a blurred indigo halo sits
+  /* Glow layers for the filled display word — a blurred gold halo sits
      behind the crisp gradient glyphs, plus a subtle drop-shadow on the
      glyphs themselves. Layer opacity is animated so the halo breathes
      gently on hover instead of popping. */

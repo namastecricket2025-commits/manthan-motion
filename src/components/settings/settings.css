@@ -136,7 +136,7 @@ html:not(.dark) .set-root.set-root--bare {
   --set-faint: rgba(255, 255, 255, 0.56);
   /* Accent layers resolve from the theme, not from a hardcoded colour: the
      settings canvas follows the app accent in both modes (white light at
-     night, indigo ink in the light theme) so nothing on this page can drift
+     night, ochre gold in the light theme) so nothing on this page can drift
      back to a colour the rest of the app no longer uses. The `--set-accent*`
      and `--set-neon*` names are kept for the rules below and are aliases of
      the same theme tokens. */
