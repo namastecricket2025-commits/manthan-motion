@@ -1,11 +1,19 @@
 /* ============================================================
    STEM Lab — Apple glass surface language.
 
-   The lab is its own dark room: a #0F0F16 canvas lit by two deeply blurred
-   colour meshes at 4% opacity, and nothing else. Structural modules (the
+   The lab is its own black room: a #050505 canvas lit by two deeply blurred
+   white meshes at 4% opacity, and nothing else. Structural modules (the
    header, the tab rail, every workspace panel) carry the strict glass spec —
    `backdrop-filter: blur(24px)`, a 1px `rgba(255,255,255,0.08)` hairline and
    text at `rgba(255,255,255,0.9)`.
+
+   The palette is deliberately monochrome. It used to run a violet accent (the
+   tab hover, the selected button, the slider thumb's halo, the vector ink in
+   the diagrams) over a blue-black canvas — a cool purple cast across the whole
+   room that read as "science app" rather than as a bench. The accent is ink
+   now, white by night and black on paper, which is why the diagram geometry
+   can be read at a glance and the only hues left on screen are the ones that
+   carry data.
 
    The palette is scoped here on purpose rather than taken from the app theme:
    a physics bench should not change colour when the student flips the site to
@@ -19,7 +27,7 @@
    ============================================================ */
 
 .apple-lab {
-  --lab-canvas: #0f0f16;
+  --lab-canvas: #050505;
   --lab-ink: rgba(255, 255, 255, 0.9);
   --lab-ink-dim: rgba(255, 255, 255, 0.68);
   --lab-ink-micro: rgba(255, 255, 255, 0.58);
@@ -27,20 +35,23 @@
   --lab-line-soft: rgba(255, 255, 255, 0.05);
   --lab-fill: rgba(255, 255, 255, 0.028);
   --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.85);
-  --lab-violet: #a78bfa;
+  /* Kept as the two accent slots the benches already read. Both are ink now:
+     the lab's accent is the writing, not a hue. */
+  --lab-violet: #f5f5f5;
   --lab-cyan: #7dd3fc;
 
   /* The vector benches draw their own geometry, so the diagram strokes need
      their own tokens. Ink and plate are RGB triples — every line picks its own
-     alpha — and the accents keep their dark-room hue on the dark bench. */
+     alpha. `--lab-diagram-violet` is the primary vector stroke and is ink; the
+     remaining accents are data colours, each tied to a quantity. */
   --lab-diagram-ink: 255, 255, 255;
-  --lab-diagram-plate: 15, 15, 22;
-  --lab-diagram-violet: #a78bfa;
+  --lab-diagram-plate: 5, 5, 5;
+  --lab-diagram-violet: #f5f5f5;
   --lab-diagram-cyan: #7dd3fc;
   --lab-diagram-amber: #fcd34d;
   --lab-diagram-mint: #6ee7b7;
   --lab-diagram-rose: #fda4af;
-  --lab-diagram-lilac: #d8b4fe;
+  --lab-diagram-lilac: #d9d9d9;
   position: relative;
   min-height: 100vh;
   background: var(--lab-canvas);
@@ -166,13 +177,44 @@
   transition: border-color 240ms ease, background 240ms ease, color 240ms ease;
   touch-action: manipulation;
 }
+/* Hover and selection are a lift in LIGHTNESS, not a hue change: the same
+   glass surface with more of its own highlight in it. That is also what keeps
+   the pressed state legible on both benches — ink cannot disappear into ink. */
 .apple-lab-btn:hover {
-  border-color: rgba(167, 139, 250, 0.42);
-  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.075);
 }
 .apple-lab-btn[data-active="true"] {
-  border-color: rgba(167, 139, 250, 0.5);
-  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+/* The one filled action on a bench (Release, Run): ink body, canvas label, so
+   it inverts cleanly on both benches — white on the black bench, black on the
+   day bench. This is the lab's answer to the site's primary button, and it is
+   the only button in the room that is not glass. */
+.apple-lab-btn--solid,
+.apple-lab-btn--solid:hover,
+.apple-lab-btn--solid[data-active="true"] {
+  border-color: transparent;
+  background: var(--lab-ink);
+  color: var(--lab-canvas);
+  font-weight: 600;
+}
+.apple-lab-btn--solid:hover {
+  background: color-mix(in srgb, var(--lab-ink) 86%, var(--lab-canvas));
+}
+
+.apple-lab-btn:disabled,
+.apple-lab-btn:disabled:hover {
+  opacity: 0.42;
+  cursor: not-allowed;
+  border-color: var(--lab-line);
+  background: var(--lab-fill);
+  /* The filled action's label is the canvas colour; on a disabled transparent
+     button that would be near-white on near-white in the light bench, so a
+     disabled control always falls back to the dim ink step. */
+  color: var(--lab-ink-dim);
 }
 
 /* ---- Typography ---------------------------------------------------- */
@@ -211,10 +253,22 @@
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
   padding: 0.3rem;
+  /* Four benches plus the theme switch no longer fit a 360px phone on one
+     line. The rail scrolls sideways instead of wrapping (a wrapped pill rail
+     reads as two separate controls) and hides its bar, because the fade at the
+     edge is the affordance. */
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.apple-lab-tabrail::-webkit-scrollbar {
+  display: none;
 }
 .apple-lab-tab {
   position: relative;
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 0.5rem;
   border-radius: 999px;
@@ -265,7 +319,7 @@
   border-radius: 999px;
   background: #ffffff;
   box-shadow:
-    0 0 0 4px rgba(167, 139, 250, 0.18),
+    0 0 0 4px rgba(255, 255, 255, 0.14),
     0 2px 10px rgba(0, 0, 0, 0.55);
 }
 .apple-lab-range::-moz-range-track {
@@ -280,7 +334,7 @@
   border-radius: 999px;
   background: #ffffff;
   box-shadow:
-    0 0 0 4px rgba(167, 139, 250, 0.18),
+    0 0 0 4px rgba(255, 255, 255, 0.14),
     0 2px 10px rgba(0, 0, 0, 0.55);
 }
 
@@ -431,26 +485,27 @@ html[data-motion="reduced"] .apple-lab-drop {
    ============================================================ */
 
 .apple-lab [data-lab-theme="light"] {
-  --lab-canvas: #f4f2fb;
-  --lab-ink: rgba(26, 25, 36, 0.92);
-  --lab-ink-dim: rgba(26, 25, 36, 0.66);
-  --lab-ink-micro: rgba(26, 25, 36, 0.54);
-  --lab-line: rgba(26, 25, 36, 0.12);
-  --lab-line-soft: rgba(26, 25, 36, 0.07);
+  --lab-canvas: #f5f5f5;
+  --lab-ink: rgba(16, 16, 16, 0.92);
+  --lab-ink-dim: rgba(16, 16, 16, 0.66);
+  --lab-ink-micro: rgba(16, 16, 16, 0.55);
+  --lab-line: rgba(16, 16, 16, 0.12);
+  --lab-line-soft: rgba(16, 16, 16, 0.07);
   --lab-fill: rgba(255, 255, 255, 0.66);
-  --lab-shadow: 0 26px 60px -36px rgba(48, 38, 92, 0.35);
+  --lab-shadow: 0 26px 60px -36px rgba(0, 0, 0, 0.3);
 
   /* Diagram strokes: the same geometry, drawn as ink on paper. Ink and plate
-     swap their triples, and the accents deepen until they hold contrast on a
-     light panel — a sky-blue sine wave would otherwise wash out to nothing. */
-  --lab-diagram-ink: 26, 25, 36;
+     swap their triples, the primary vector goes black, and the data accents
+     deepen until they hold contrast on a light panel — a sky-blue sine wave
+     would otherwise wash out to nothing. */
+  --lab-diagram-ink: 16, 16, 16;
   --lab-diagram-plate: 255, 255, 255;
-  --lab-diagram-violet: #6d4ede;
+  --lab-diagram-violet: #111111;
   --lab-diagram-cyan: #0e7490;
   --lab-diagram-amber: #b45309;
   --lab-diagram-mint: #0f766e;
   --lab-diagram-rose: #be123c;
-  --lab-diagram-lilac: #7e22ce;
+  --lab-diagram-lilac: #3a3a3a;
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-glass {
@@ -460,7 +515,7 @@ html[data-motion="reduced"] .apple-lab-drop {
     rgba(255, 255, 255, 0.62) 55%,
     rgba(255, 255, 255, 0.8)
   );
-  border-color: rgba(26, 25, 36, 0.1);
+  border-color: rgba(16, 16, 16, 0.1);
   box-shadow:
     var(--lab-shadow),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -468,61 +523,79 @@ html[data-motion="reduced"] .apple-lab-drop {
 
 .apple-lab [data-lab-theme="light"] .apple-lab-card {
   background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(26, 25, 36, 0.1);
+  border-color: rgba(16, 16, 16, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-chip {
   background: rgba(255, 255, 255, 0.62);
-  border-color: rgba(26, 25, 36, 0.12);
+  border-color: rgba(16, 16, 16, 0.12);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-btn {
   background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(26, 25, 36, 0.12);
+  border-color: rgba(16, 16, 16, 0.12);
 }
 .apple-lab [data-lab-theme="light"] .apple-lab-btn:hover {
-  border-color: rgba(124, 92, 222, 0.45);
-  background: rgba(124, 92, 222, 0.1);
+  border-color: rgba(16, 16, 16, 0.32);
+  background: rgba(16, 16, 16, 0.06);
 }
 .apple-lab [data-lab-theme="light"] .apple-lab-btn[data-active="true"] {
-  border-color: rgba(124, 92, 222, 0.5);
-  background: rgba(124, 92, 222, 0.14);
+  border-color: rgba(16, 16, 16, 0.42);
+  background: rgba(16, 16, 16, 0.1);
+  color: #0b0b0b;
+}
+
+/* The filled action on paper: true black, cream label. */
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--solid,
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--solid:hover,
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--solid[data-active="true"] {
+  border-color: transparent;
+  background: var(--lab-ink);
+  color: var(--lab-canvas);
+}
+/* A disabled filled action must not keep the cream label on a faded body: it
+   falls back to the same dim ink as every other disabled control. */
+.apple-lab [data-lab-theme="light"] .apple-lab-btn:disabled,
+.apple-lab [data-lab-theme="light"] .apple-lab-btn:disabled:hover {
+  border-color: var(--lab-line);
+  background: var(--lab-fill);
+  color: var(--lab-ink-dim);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-tabrail {
   background: rgba(255, 255, 255, 0.66);
-  border-color: rgba(26, 25, 36, 0.1);
+  border-color: rgba(16, 16, 16, 0.1);
 }
 
 /* The shared-layout pill becomes an ink-tinted keyline. */
 .apple-lab [data-lab-theme="light"] .apple-lab-pill {
   background: linear-gradient(
     180deg,
-    rgba(26, 25, 36, 0.1),
-    rgba(26, 25, 36, 0.035)
+    rgba(16, 16, 16, 0.1),
+    rgba(16, 16, 16, 0.035)
   );
-  border-color: rgba(26, 25, 36, 0.14);
+  border-color: rgba(16, 16, 16, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-range::-webkit-slider-runnable-track {
-  background: rgba(26, 25, 36, 0.22);
+  background: rgba(16, 16, 16, 0.22);
 }
 .apple-lab [data-lab-theme="light"] .apple-lab-range::-webkit-slider-thumb {
-  background: #241f36;
+  background: #111111;
   box-shadow:
-    0 0 0 4px rgba(124, 92, 222, 0.22),
-    0 2px 10px rgba(26, 25, 36, 0.25);
+    0 0 0 4px rgba(16, 16, 16, 0.14),
+    0 2px 10px rgba(16, 16, 16, 0.25);
 }
 .apple-lab [data-lab-theme="light"] .apple-lab-range::-moz-range-track {
-  background: rgba(26, 25, 36, 0.22);
+  background: rgba(16, 16, 16, 0.22);
 }
 .apple-lab [data-lab-theme="light"] .apple-lab-range::-moz-range-thumb {
-  background: #241f36;
+  background: #111111;
   box-shadow:
-    0 0 0 4px rgba(124, 92, 222, 0.22),
-    0 2px 10px rgba(26, 25, 36, 0.25);
+    0 0 0 4px rgba(16, 16, 16, 0.14),
+    0 2px 10px rgba(16, 16, 16, 0.25);
 }
 
 /* Periodic tiles: opaque paper cards so the category colours stay vivid. */
@@ -533,14 +606,14 @@ html[data-motion="reduced"] .apple-lab-drop {
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-scroll {
-  scrollbar-color: rgba(26, 25, 36, 0.26) transparent;
+  scrollbar-color: rgba(16, 16, 16, 0.26) transparent;
 }
 .apple-lab [data-lab-theme="light"] .apple-lab-scroll::-webkit-scrollbar-thumb {
-  background: rgba(26, 25, 36, 0.2);
+  background: rgba(16, 16, 16, 0.2);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-flag {
-  border-color: rgba(26, 25, 36, 0.14);
+  border-color: rgba(16, 16, 16, 0.14);
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 44px -26px rgba(48, 38, 92, 0.4);
+  box-shadow: 0 18px 44px -26px rgba(0, 0, 0, 0.34);
 }

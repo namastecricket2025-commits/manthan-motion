@@ -1248,7 +1248,9 @@ function ReactionsTab() {
                     </span>
                     <span
                       className="relative z-10 h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: active ? "#a78bfa" : "var(--lab-line)" }}
+                      style={{
+                        background: active ? "var(--lab-diagram-violet)" : "var(--lab-line)",
+                      }}
                     />
                   </button>
                 );

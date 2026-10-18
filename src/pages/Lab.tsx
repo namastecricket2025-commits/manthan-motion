@@ -20,7 +20,7 @@ const SUBJECTS: Array<{
     id: "physics",
     label: "Physics",
     icon: Atom,
-    blurb: "Vector circuits, projectile kinematics and looping wave streams.",
+    blurb: "Vector circuits, a drop tower with live energy and an oracle, plus wave streams.",
   },
   {
     id: "chemistry",
@@ -41,8 +41,8 @@ const SUBJECTS: Array<{
  *
  * A dark room, two blurred colour meshes at 4% and glass — nothing else on the
  * canvas. Three environments live inside it, each one vector-first:
- * Physics (circuits / motion / waves), Chemistry (periodic table + Bohr model)
- * and Biology (structural schematics + the DNA indicator).
+ * Physics (circuits / motion / dynamics / waves), Chemistry (periodic table +
+ * Bohr model) and Biology (structural schematics + the DNA indicator).
  *
  * Switching subject is a state shift, so it moves on the shared spring: the
  * outgoing bench lifts away and the incoming one settles in. No blur cut, no

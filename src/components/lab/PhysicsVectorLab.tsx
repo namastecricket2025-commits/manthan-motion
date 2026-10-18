@@ -1,3 +1,5 @@
+import { AMBER, CYAN, MINT, Picker, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
+import DynamicsBench from "@/components/lab/DynamicsBench";
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
@@ -5,7 +7,7 @@ import { Pause, Play, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Physics — three vector instruments on the lab's glass.
+ * Physics — four vector instruments on the lab's glass.
  *
  *   Circuits  a closed loop whose *topology* is the experiment: one resistor,
  *             two in series, or two in parallel bridging the loop's right edge.
@@ -16,6 +18,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
  *             in), pick the tool the body offers, then press Run. Every run
  *             starts from rest, Pause and Reset are always there, and the
  *             readouts are live while the vectors ride the real equations.
+ *   Dynamics  a drop tower: one specimen released from 80 m, read as free
+ *             fall, as an energy ledger, or with quadratic drag. Its own file
+ *             (`DynamicsBench`) so the tower, the oracle and the velocity
+ *             graph stay together; it shares the same atoms and light bench.
  *   Waves     two streams with their own shape, amplitude, frequency and phase,
  *             plus the sum they make. Where they agree the sum doubles, where
  *             they disagree it flattens — the envelope beats at 1/|f₂ − f₁|.
@@ -27,109 +33,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * into ink on paper instead of disappearing into the page.
  */
 
-/* Accents and diagram ink are tokens rather than literals, so a bench switched
-   to light can deepen the whole drawing. Ink and plate are RGB triples because
-   every line picks its own alpha. */
-const VIOLET = "var(--lab-diagram-violet)";
-const CYAN = "var(--lab-diagram-cyan)";
-const AMBER = "var(--lab-diagram-amber)";
-const MINT = "var(--lab-diagram-mint)";
-const ink = (alpha: number) => `rgba(var(--lab-diagram-ink), ${alpha})`;
-const plate = (alpha: number) => `rgba(var(--lab-diagram-plate), ${alpha})`;
+/* Accents, ink and the shared bench atoms come from `bench-atoms` so the
+   Dynamics bench (its own file) draws with exactly the same vocabulary. */
 
-type Bench = "circuits" | "motion" | "waves";
+type Bench = "circuits" | "motion" | "dynamics" | "waves";
 
 const BENCHES: { id: Bench; label: string }[] = [
   { id: "circuits", label: "Circuits" },
   { id: "motion", label: "Motion" },
+  { id: "dynamics", label: "Dynamics" },
   { id: "waves", label: "Waves" },
 ];
 
 /* ------------------------------------------------------------------ */
 /* Shared bits                                                         */
 /* ------------------------------------------------------------------ */
-
-function Range({
-  label,
-  value,
-  min,
-  max,
-  step,
-  unit,
-  format,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  format?: (value: number) => string;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex items-baseline justify-between gap-3">
-        <span className="apple-lab-micro">{label}</span>
-        <span className="apple-lab-value text-[12.5px] font-semibold">
-          {format ? format(value) : value.toFixed(step < 1 ? 2 : 0)}
-          <span className="ml-1 text-[11px] text-[var(--lab-ink-dim)]">{unit}</span>
-        </span>
-      </span>
-      <input
-        type="range"
-        className="apple-lab-range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-    </label>
-  );
-}
-
-function Readout({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="apple-lab-card px-3 py-2.5">
-      <p className="apple-lab-micro">{label}</p>
-      <p className="apple-lab-value mt-1 text-[15px] font-semibold">{value}</p>
-    </div>
-  );
-}
-
-/** A row of buttons that choose one option — the picker every bench leans on. */
-function Picker<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: Array<{ id: T; label: string }>;
-  onChange: (id: T) => void;
-}) {
-  return (
-    <div>
-      <p className="apple-lab-micro">{label}</p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onChange(option.id)}
-            data-active={option.id === value}
-            className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** A number that eases to its target on the shared spring. Frame loops read the
  *  ref, so the readouts can stay exact while the drawing stays smooth. */
@@ -1227,7 +1145,7 @@ function MotionSandbox() {
               type="button"
               onClick={run}
               data-active={phase === "running"}
-              className="apple-lab-btn !px-3.5 !py-2"
+              className="apple-lab-btn apple-lab-btn--solid !px-3.5 !py-2"
             >
               {phase === "running" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               <span>{phase === "running" ? "Pause" : phase === "paused" ? "Resume" : "Run"}</span>
@@ -1754,6 +1672,7 @@ export function PhysicsVectorLab() {
         >
           {bench === "circuits" && <CircuitsBench />}
           {bench === "motion" && <MotionSandbox />}
+          {bench === "dynamics" && <DynamicsBench />}
           {bench === "waves" && <WaveBench />}
         </motion.div>
       </AnimatePresence>
