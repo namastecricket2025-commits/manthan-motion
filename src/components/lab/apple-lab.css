@@ -344,6 +344,29 @@
     0 2px 10px rgba(0, 0, 0, 0.55);
 }
 
+/* ---- 3D organ stage ------------------------------------------------
+   The biology bench's single WebGL canvas. It sits on a soft radial
+   vignette that reads as a studio backdrop on a dark bench and as a clean
+   daylight sweep on a light one, and it keeps a fixed 16:10 box so the
+   renderer's size never jumps while a GLB streams in. */
+.apple-lab-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--lab-line);
+  background: radial-gradient(ellipse at 50% 32%, #16233c 0%, #0a1120 74%);
+}
+.apple-lab-stage__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  cursor: grab;
+  touch-action: none; /* the orbit controls own every gesture on this box */
+}
+.apple-lab-stage__canvas:active {
+  cursor: grabbing;
+}
+
 /* ---- Continuous orbits (Bohr shells, DNA core) --------------------- */
 .apple-lab-orbit {
   transform-box: view-box;
@@ -655,6 +678,12 @@ html[data-motion="reduced"] .apple-lab-drop {
   box-shadow:
     0 0 0 4px rgba(16, 16, 16, 0.14),
     0 2px 10px rgba(16, 16, 16, 0.25);
+}
+
+/* The stage backdrop becomes a paper sweep — same shape, daylight values,
+   so a studio-lit model still reads as lit rather than pasted on. */
+.apple-lab [data-lab-theme="light"] .apple-lab-stage {
+  background: radial-gradient(ellipse at 50% 32%, #ffffff 0%, #e7ebf2 74%);
 }
 
 /* Periodic tiles: opaque paper cards so the category colours stay vivid. */

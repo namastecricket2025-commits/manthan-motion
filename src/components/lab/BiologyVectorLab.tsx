@@ -1,4 +1,5 @@
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
+import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
 import { useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion, useAnimationFrame } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
@@ -43,8 +44,12 @@ type Part = {
   flag: [number, number];
 };
 
+/** The four plates: the cell stays a vector schematic, the three organ
+    systems render in the shared Three.js stage (OrganStage). */
+type Plate = "cell" | OrganSystem;
+
 type Diagram = {
-  id: string;
+  id: Plate;
   label: string;
   blurb: string;
   viewBox: string;
@@ -1264,7 +1269,7 @@ function DnaHelix() {
 export function BiologyVectorLab() {
   const transition = useSpringTransition();
   const { theme, toggle } = useLabTheme();
-  const [plate, setPlate] = useState("cell");
+  const [plate, setPlate] = useState<Plate>("cell");
   const [plant, setPlant] = useState(false);
 
   const diagrams: Diagram[] = [
@@ -1280,8 +1285,8 @@ export function BiologyVectorLab() {
     },
     {
       id: "heart",
-      label: "Heart",
-      blurb: "Four chambers, two valves and the aortic arch",
+      label: "Heart System",
+      blurb: "A beating model with live red and blue blood-flow paths",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <path
@@ -1294,8 +1299,8 @@ export function BiologyVectorLab() {
     },
     {
       id: "respiratory",
-      label: "Respiratory system",
-      blurb: "Airway, lungs, alveoli and the diaphragm",
+      label: "Respiratory System",
+      blurb: "Lungs you can inflate with a deep-breathing slider",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <>
@@ -1316,8 +1321,8 @@ export function BiologyVectorLab() {
     },
     {
       id: "excretory",
-      label: "Excretory system",
-      blurb: "Kidneys, ureters, bladder and the way out",
+      label: "Excretory System",
+      blurb: "A kidney you can filter down to the nephrons",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <path
@@ -1373,16 +1378,39 @@ export function BiologyVectorLab() {
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={`${plate}-${plant}`}
-          variants={viewVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={transition}
-        >
-          <VectorDiagram diagram={active} />
-        </motion.div>
+        {plate !== "cell" ? (
+          /* The three organ systems share one WebGL canvas: the key stays
+             constant across them, so moving Heart → Respiratory → Excretory
+             swaps the model inside the same renderer instead of remounting
+             it. Only leaving for the cell plate tears the stage down (and
+             disposes the model with it). */
+          <motion.div
+            key="organ-stage"
+            variants={viewVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={transition}
+          >
+            <OrganStage
+              system={plate}
+              label={active.label}
+              blurb={active.blurb}
+              theme={theme}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`cell-${plant}`}
+            variants={viewVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={transition}
+          >
+            <VectorDiagram diagram={active} />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <DnaHelix />
