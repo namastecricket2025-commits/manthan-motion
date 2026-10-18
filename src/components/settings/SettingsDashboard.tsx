@@ -500,53 +500,17 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           onValueChange={setOpenPanels}
           className="set-acc"
         >
-          {/* ============ 1. MOTION & ATMOSPHERE ============ */}
+          {/* ============ 1. MOTION ============ */}
           <AccordionItem id="set-panel-experience" value="experience" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={Waves}
-                title="Motion & Atmosphere"
-                blurb="How much the interface moves, glows and animates"
+                title="Motion"
+                blurb="How much the interface moves and animates"
               />
             </AccordionTrigger>
             <AccordionContent className="set-content">
               <div className="set-group">
-                <ListRow
-                  title="Background glow"
-                  badge={`${settings.ambient}%`}
-                  hint="Brightness of the animated background field. At 0% the page is a flat, perfectly still surface; 60% is the brightest the design ever goes."
-                >
-                  <div className="set-slider-wrap">
-                    <Slider
-                      className="set-slider"
-                      value={[settings.ambient]}
-                      min={0}
-                      max={100}
-                      step={5}
-                      aria-label="Background glow"
-                      onValueChange={(v) => update({ ambient: v[0] ?? 0 })}
-                    />
-                    <div className="set-scale">
-                      <span>0% · still</span>
-                      <span>60% · brightest</span>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                </ListRow>
-
-                <ListRow
-                  title="Pointer-tracking background"
-                  badge={settings.cursorField ? "Following" : "Off"}
-                  hint="Lets the background field lean gently toward your pointer. Everything else — drifting shapes, page transitions, lab simulations — keeps moving either way."
-                >
-                  <Switch
-                    className="set-switch"
-                    checked={settings.cursorField}
-                    aria-label="Pointer-tracking background"
-                    onCheckedChange={(v) => update({ cursorField: v })}
-                  />
-                </ListRow>
-
                 <ListRow
                   title="Motionless mode"
                   badge={settings.reduceMotion ? "On" : "Off"}

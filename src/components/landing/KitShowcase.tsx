@@ -183,7 +183,9 @@ const TABS: KitTab[] = [
                     )}
                   >
                     {correct ? (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+                      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
+                        <Check className="h-2 w-2" strokeWidth={3.5} />
+                      </span>
                     ) : (
                       <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--panel-line-strong)]" />
                     )}
@@ -386,7 +388,9 @@ export default function KitShowcase() {
             </h3>
             <p className="mt-3 text-[14px] leading-relaxed text-text-dim">{tab.body}</p>
             <p className="mt-4 flex items-start gap-2 text-[13px] text-foreground">
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+              <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
+                <Check className="h-2 w-2" strokeWidth={3.5} />
+              </span>
               {tab.proof}
             </p>
             <Link

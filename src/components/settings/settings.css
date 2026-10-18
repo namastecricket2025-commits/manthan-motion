@@ -33,11 +33,6 @@ html[data-text="dyslexic"] {
   font-size: calc(16px * var(--text-scale, 1.06));
 }
 
-/* Ambient intensity — the global background-glow driver. The animated blob
-   field reads it (`.blob-canvas`), so 0% is a completely flat page. */
-html[data-ambient="flat"] .blob-canvas {
-  opacity: 0;
-}
 /* Dyslexic-friendly letterforms: wider tracking, generous word spacing and a
    high-x-height stack. Applied last so it wins everywhere, including the lab
    bench which pins its own Inter stack. */
@@ -118,7 +113,10 @@ html:not(.dark) .set-root.set-root--bare {
   --set-hairline: var(--panel-line);
   --set-blur: none;
   --set-shadow: none;
-  --set-ring: 0 0 12px color-mix(in srgb, var(--signal) 32%, transparent);
+  /* Selection is a hairline + a faint tint, not a neon halo: the ring marks
+     which item is chosen, and a 1px edge does that at a glance without
+     lighting up the panel. */
+  --set-ring: 0 0 0 1px var(--panel-line-strong);
   --set-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* legacy aliases resolve to the same panel, so no surface keeps a heavy
@@ -128,12 +126,18 @@ html:not(.dark) .set-root.set-root--bare {
   --set-well: color-mix(in srgb, var(--text-main) 4%, var(--panel));
   --set-border: var(--panel-line);
   --set-border-strong: var(--panel-line-strong);
-  /* Readable ink: every body/secondary node clears contrast against the
-     black canvas, and none of the greys carry a blue cast. */
-  --set-text: rgba(255, 255, 255, 0.92);
-  --set-title: #fafafa;
-  --set-dim: rgba(255, 255, 255, 0.72);
-  --set-faint: rgba(255, 255, 255, 0.56);
+  /* Readable ink, resolved from the theme rather than hardcoded.
+
+     These four were white alphas pinned to the dark canvas, with a second
+     hand-written set of slate values pasted into a light-mode block further
+     down. Two ink palettes for one page is how a settings screen ends up with
+     a label that is 1.1:1 in one theme while the other theme looks fine — the
+     theme tokens are already contrast-checked per mode, so this page reads
+     them too. */
+  --set-text: var(--text-main);
+  --set-title: var(--text-main);
+  --set-dim: var(--text-dim);
+  --set-faint: color-mix(in srgb, var(--text-main) 58%, transparent);
   /* Accent layers resolve from the theme, not from a hardcoded colour: the
      settings canvas follows the app accent in both modes (white light at
      night, caramel amber in the light theme) so nothing on this page can
@@ -157,42 +161,12 @@ html:not(.dark) .set-root.set-root--bare {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* The theme canvas, plus the same aurora bloom the rest of the site uses —
-     scaled by the Ambient Intensity slider like every other glow. */
-  background:
-    radial-gradient(
-      900px 520px at 88% 0%,
-      color-mix(in srgb, var(--halo-far) calc(100% * var(--bg-glow-opacity, 1)), transparent),
-      transparent 64%
-    ),
-    radial-gradient(
-      760px 460px at 4% 16%,
-      color-mix(in srgb, var(--halo-far) calc(80% * var(--bg-glow-opacity, 1)), transparent),
-      transparent 62%
-    ),
-    var(--ink);
-}
-
-/* faint blueprint matrix, matched to the lab backdrop, scaled by ambient */
-.set-root::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(to right, rgba(103, 232, 249, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(103, 232, 249, 0.06) 1px, transparent 1px),
-    linear-gradient(to right, rgba(148, 163, 184, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
-  background-size:
-    48px 48px,
-    48px 48px,
-    240px 240px,
-    240px 240px;
-  mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 26%, transparent 82%);
-  -webkit-mask-image: radial-gradient(ellipse 120% 80% at 50% 0%, #000 26%, transparent 82%);
-  opacity: calc(0.95 * var(--bg-glow-opacity, 1));
+  /* Flat canvas. Settings is a control surface, not a scene: the aurora bloom
+     and the blueprint matrix that used to live here both existed to make the
+     background field feel continuous with this page, and the field is gone. A
+     settings screen reads professional when it is paper (or slate), hairlines
+     and type — nothing moving behind the controls. */
+  background: var(--ink);
 }
 
 .set-shell {
@@ -268,7 +242,7 @@ html:not(.dark) .set-root.set-root--bare {
     background 0.5s var(--set-ease);
 }
 .set-item[data-state="open"] {
-  border-color: rgba(255, 255, 255, 0.11) !important;
+  border-color: var(--panel-line-strong) !important;
   background: var(--set-glass-strong);
   box-shadow:
     var(--set-shadow),
@@ -305,7 +279,6 @@ html:not(.dark) .set-root.set-root--bare {
   border: 1px solid color-mix(in srgb, var(--signal) 28%, transparent);
   background: color-mix(in srgb, var(--signal) 10%, transparent);
   color: var(--set-accent-text);
-  box-shadow: 0 0 calc(14px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 16%, transparent);
 }
 .set-panel-title__icon svg {
   color: inherit;
@@ -450,8 +423,10 @@ html:not(.dark) .set-root.set-root--bare {
   background: rgba(148, 148, 152, 0.16);
 }
 .set-slider [data-slot="slider-range"] {
-  background: linear-gradient(90deg, var(--set-accent), var(--set-accent-deep));
-  box-shadow: 0 0 calc(11px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 28%, transparent);
+  /* Flat, one tone — the filled range is a quantity, not a gradient.
+     `--primary` is the filled action in both themes, so the rail matches the
+     button it belongs to. */
+  background: var(--primary);
 }
 .set-slider [data-slot="slider-thumb"] {
   height: 15px;
@@ -497,10 +472,11 @@ html:not(.dark) .set-root.set-root--bare {
   border: 1px solid var(--set-hairline);
   background: rgba(148, 148, 152, 0.18);
 }
+/* One flat fill, the same tone as the filled action: a switch is on or off,
+   and a gradient track made it look like a slider that had been bent. */
 .set-switch[data-state="checked"] {
-  border-color: color-mix(in srgb, var(--signal) 42%, transparent);
-  background: linear-gradient(135deg, var(--set-accent), var(--set-accent-deep));
-  box-shadow: 0 0 calc(14px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 32%, transparent);
+  border-color: transparent;
+  background: var(--primary);
 }
 .set-switch [data-slot="switch-thumb"] {
   height: 18px;
@@ -545,28 +521,21 @@ html:not(.dark) .set-root.set-root--bare {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 14%, transparent);
 }
 /* portalled — must carry its own colours */
+/* Portalled outside .set-root, so it reads the GLOBAL theme tokens — the same
+   panel, hairline and ink every menu in the app uses. It used to be a
+   navy-tinted sheet with a hardcoded slate label, plus a light-mode override
+   that painted a second, brighter panel: a dropdown that belongs to a different
+   product than the field it opens from. */
 .set-select-content {
   z-index: 80;
-  border: 1px solid var(--set-hairline);
+  border: 1px solid var(--panel-line);
   border-radius: 14px;
-  background: rgba(18, 24, 38, 0.72);
-  /* portalled outside .set-root, so the token needs a fallback here */
-  -webkit-backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
-  backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
-  color: #e2e8f0;
-  box-shadow: var(--set-shadow);
+  background: var(--panel);
+  color: var(--text-main);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.35);
 }
 .set-select-content [role="option"] {
-  color: #e2e8f0;
-}
-html:not(.dark) .set-select-content {
-  border-color: rgba(0, 0, 0, 0.05);
-  background: rgba(255, 255, 255, 0.86);
-  color: #1e293b;
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.18);
-}
-html:not(.dark) .set-select-content [role="option"] {
-  color: #1e293b;
+  color: var(--text-main);
 }
 
 /* --- theme picker: borderless until chosen, then a soft accent ring --- */
@@ -650,7 +619,6 @@ html:not(.dark) .set-select-content [role="option"] {
   width: 10px;
   border-radius: 999px;
   background: var(--set-accent);
-  box-shadow: 0 0 calc(10px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 40%, transparent);
 }
 .set-theme__label {
   position: relative;
@@ -991,10 +959,13 @@ html:not(.dark) .set-select-content [role="option"] {
   color: var(--set-dim);
 }
 
-/* danger card — the same glass, warmed by a faint muted-accent wash */
+/* Danger card — the same panel, with a faint red wash so the destructive
+   zone is readable as one before the copy is read. It used to be tinted with
+   the brand accent, which on this page means the delete box looked like every
+   other setting. */
 .set-card--danger {
-  border-color: color-mix(in srgb, var(--signal) 18%, transparent);
-  background: color-mix(in srgb, var(--signal) 4%, transparent);
+  border-color: color-mix(in srgb, var(--destructive) 22%, transparent);
+  background: color-mix(in srgb, var(--destructive) 4%, transparent);
 }
 
 /* ------------------------------------------------------------
@@ -1035,36 +1006,44 @@ html:not(.dark) .set-select-content [role="option"] {
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* The primary action uses the app's own filled pair — `--primary` as the body
+   and `--primary-foreground` as the label. It used to be a gradient of
+   `--signal` with white type, and since `--signal` is near-white in the dark
+   theme, that rendered a white label on a white pill: the settings page had an
+   invisible primary button at night. The tokens cannot drift, because these
+   are the exact two the app's `<Button>` paints with. */
 .set-btn--primary {
-  border: 1px solid color-mix(in srgb, var(--signal) 50%, transparent);
-  color: #fff;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 95%, transparent), color-mix(in srgb, var(--signal-2) 95%, transparent));
-  box-shadow:
-    0 0 calc(18px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 22%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 60%, transparent);
+  color: var(--primary-foreground);
+  background: var(--primary);
 }
 .set-btn--primary:hover {
-  color: #fff;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 100%, transparent), color-mix(in srgb, var(--signal-2) 100%, transparent));
-  box-shadow:
-    0 0 calc(24px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 30%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  /* One step deeper in both themes: amber gains ink, white gains black. */
+  color: var(--primary-foreground);
+  background: color-mix(in srgb, var(--primary) 88%, var(--primary-foreground));
 }
 .set-btn--ghost {
   background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+/* Destructive is RED, not the brand tone. A "delete account" control painted in
+   the same amber as "Save" is not a design choice, it is a misclick waiting to
+   happen. The label colour flips with the theme (`--ink` is near-white on paper,
+   black at night) because the light destructive is a deep crimson and the dark
+   one is a soft red. */
 .set-btn--danger {
-  border: 1px solid color-mix(in srgb, var(--signal) 55%, transparent);
-  color: #fff;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 92%, transparent), color-mix(in srgb, var(--signal-2) 94%, transparent));
-  box-shadow: 0 0 calc(16px * var(--ambient, 1)) color-mix(in srgb, var(--signal) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--destructive) 60%, transparent);
+  color: var(--ink);
+  background: var(--destructive);
+}
+.set-btn--danger:hover {
+  background: color-mix(in srgb, var(--destructive) 88%, var(--ink));
 }
 .set-btn--danger-soft {
-  border-color: color-mix(in srgb, var(--signal) 45%, transparent);
-  background: color-mix(in srgb, var(--signal) 12%, transparent);
-  color: var(--set-neon-text);
+  border-color: color-mix(in srgb, var(--destructive) 45%, transparent);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  color: var(--destructive);
 }
 
 /* ============================================================
@@ -1270,68 +1249,41 @@ html:not(.dark) .set-select-content [role="option"] {
   background: var(--set-glass);
 }
 
-/* ---------------- light-mode parity for the new surfaces ---------------- */
+/* ---------------- light-mode parity for the new surfaces ----------------
 
-html:not(.dark) .set-group {
-  background: rgba(255, 255, 255, 0.62);
-  border-color: rgba(15, 23, 42, 0.06);
-  box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.22);
-}
-html:not(.dark) .set-lrow:hover {
-  background: rgba(15, 23, 42, 0.028);
-}
-html:not(.dark) .set-lrow__note,
-html:not(.dark) .set-lrow__title {
+   Nothing to re-specify for the surfaces themselves: `--set-glass`,
+   `--set-hairline`, `--set-shadow` and the ink tokens now resolve from the
+   theme, so the light page is the same flat panel on paper that the dark page
+   is on slate. The block that used to live here painted a second system — a
+   translucent white glass, a 60px drop shadow under every group and a
+   hand-picked slate for every label — which is why the light page read as a
+   different, much heavier app than the dark one. */
+html:not(.dark) .set-lrow__note {
   color: color-mix(in srgb, var(--signal) 78%, #000);
-}
-html:not(.dark) .set-lrow__hint {
-  color: #3f4854;
-  opacity: 0.9;
-}
-html:not(.dark) .set-lrow + .set-lrow::before,
-html:not(.dark) .set-group > .set-card + .set-card::before {
-  background: rgba(15, 23, 42, 0.07);
-}
-html:not(.dark) .set-item {
-  background: rgba(255, 255, 255, 0.55);
-  border-color: rgba(15, 23, 42, 0.06) !important;
-  box-shadow: 0 30px 70px -34px rgba(15, 23, 42, 0.26);
-}
-html:not(.dark) .set-item[data-state="open"] {
-  background: rgba(255, 255, 255, 0.74);
-  border-color: rgba(15, 23, 42, 0.09) !important;
-}
-html:not(.dark) .set-panel-title__text {
-  color: #0f172a;
-}
-html:not(.dark) .set-hero__title {
-  color: #0f172a;
 }
 
 /* ------------------------------------------------------------
    8. DELETE DIALOG
    ------------------------------------------------------------ */
 
+/* Portalled, so global tokens again: the confirmation is a panel of the same
+   material as the page, not a navy sheet floating over it. */
 .set-dialog {
   z-index: 90;
-  border: 1px solid var(--set-hairline);
+  border: 1px solid var(--panel-line);
   border-radius: 20px;
-  background: rgba(18, 24, 38, 0.76);
-  /* portalled outside .set-root, so the token needs a fallback here */
-  -webkit-backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
-  backdrop-filter: var(--set-blur, blur(25px) saturate(140%));
-  color: #e2e8f0;
-  box-shadow: var(--set-shadow);
+  background: var(--panel);
+  color: var(--text-main);
+  box-shadow: 0 32px 80px -32px rgba(0, 0, 0, 0.45);
 }
 .set-dialog__title {
   font-family: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
-  color: #f1f5f9;
+  color: var(--text-main);
 }
 .set-dialog__desc {
-  color: #cbd5e1;
+  color: var(--text-dim);
   font-size: 0.8rem;
   line-height: 1.7;
-  opacity: 0.92;
 }
 
 /* ------------------------------------------------------------
@@ -1345,45 +1297,19 @@ html:not(.dark) .set-root {
   --set-glass-strong: color-mix(in srgb, var(--text-main) 4%, var(--panel));
   --set-hairline: var(--panel-line);
   --set-shadow: none;
-  --set-ring: 0 0 12px color-mix(in srgb, var(--signal) 28%, transparent);
+  --set-ring: 0 0 0 1px var(--panel-line-strong);
   --set-panel: var(--panel);
   --set-panel-deep: var(--panel);
   --set-well: color-mix(in srgb, var(--text-main) 4%, var(--panel));
   --set-border: var(--panel-line);
   --set-border-strong: var(--panel-line-strong);
-  /* High-contrast ink on pale glass: charcoal / deep slate for every
-     secondary and legal node — nothing renders invisible. */
-  --set-text: #1e293b;
-  --set-title: #111827;
-  --set-dim: #374151;
-  --set-faint: #4b5563;
+  /* Ink stays theme-driven (see the note on `--set-text` in section 2) — only
+     the accent-derived text tones need a deeper step on paper. */
   --set-accent-text: color-mix(in srgb, var(--signal) 78%, #000);
   --set-neon-text: color-mix(in srgb, var(--signal) 78%, #000);
-  --set-danger: #c81e1e;
   color: var(--set-text);
-  /* Light canvas: the theme ink with the same aurora at light strength. */
-  background:
-    radial-gradient(
-      900px 520px at 88% 0%,
-      color-mix(in srgb, var(--halo-far) calc(100% * var(--bg-glow-opacity, 1)), transparent),
-      transparent 64%
-    ),
-    radial-gradient(
-      760px 460px at 4% 16%,
-      color-mix(in srgb, var(--halo-far) calc(80% * var(--bg-glow-opacity, 1)), transparent),
-      transparent 62%
-    ),
-    var(--ink);
-}
-html:not(.dark) .set-root::before {
-  background-image:
-    linear-gradient(to right, rgba(20, 20, 24, 0.075) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(20, 20, 24, 0.075) 1px, transparent 1px),
-    linear-gradient(to right, rgba(20, 20, 24, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(20, 20, 24, 0.05) 1px, transparent 1px);
-}
-html:not(.dark) .set-item[data-state="open"] {
-  border-color: rgba(0, 0, 0, 0.09) !important;
+  /* Flat canvas, same as the dark theme — see the note on the dark rule. */
+  background: var(--ink);
 }
 html:not(.dark) .set-theme--on {
   background: color-mix(in srgb, var(--signal) 4%, transparent);
@@ -1400,44 +1326,11 @@ html:not(.dark) .set-device--current {
 html:not(.dark) .set-theme__preview {
   border-color: rgba(0, 0, 0, 0.07);
 }
-html:not(.dark) .set-btn {
-  color: #374151;
-}
-html:not(.dark) .set-btn:hover {
-  color: #111827;
-}
-html:not(.dark) .set-btn--primary,
-html:not(.dark) .set-btn--primary:hover {
-  color: #fff;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 95%, transparent), color-mix(in srgb, var(--signal-2) 95%, transparent));
-}
-html:not(.dark) .set-btn--danger,
-html:not(.dark) .set-btn--danger:hover {
-  color: #fff;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 92%, transparent), color-mix(in srgb, var(--signal-2) 94%, transparent));
-}
-html:not(.dark) .set-btn--ghost {
-  background: transparent;
-}
-html:not(.dark) .set-card--danger {
-  background: color-mix(in srgb, var(--signal) 3.5%, transparent);
-}
-html:not(.dark) .set-dialog {
-  background: rgba(255, 255, 255, 0.86);
-  color: #1e293b;
-}
-html:not(.dark) .set-dialog__title {
-  color: #111827;
-}
-html:not(.dark) .set-dialog__desc {
-  color: #374151;
-  opacity: 0.95;
-}
 html:not(.dark) .set-switch {
   background: rgba(0, 0, 0, 0.12);
 }
 html:not(.dark) .set-switch[data-state="checked"] {
-  background: linear-gradient(135deg, var(--set-accent), var(--set-accent-deep));
+  background: var(--primary);
 }
 html:not(.dark) .set-slider [data-slot="slider-track"] {
   background: rgba(0, 0, 0, 0.1);
@@ -1459,7 +1352,7 @@ html:not(.dark) .set-switch [data-slot="switch-thumb"] {
     0 2px 6px -1px rgba(0, 0, 0, 0.2);
 }
 html:not(.dark) .set-inline-btn:hover {
-  color: #111827;
+  color: var(--text-main);
 }
 html:not(.dark) .set-row__note {
   color: color-mix(in srgb, var(--signal) 78%, #000);

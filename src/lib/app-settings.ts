@@ -1,6 +1,12 @@
 /**
- * Global user preferences — theme mode, motion control, ambient intensity,
- * simulation framerate and text comfort.
+ * Global user preferences — theme mode, motion control, simulation framerate
+ * and text comfort.
+ *
+ * The animated background field and its two knobs ("background glow" and
+ * "pointer-tracking background") were removed with the field itself. The glow
+ * strength is therefore a CONSTANT now (`GLOW_LEVEL` below), pinned at the
+ * value the old slider's ceiling produced, so every layer that used to brighten
+ * or dim with it keeps exactly the look it was designed against.
  *
  * Deliberately framework-free: the live values live in a module singleton so
  * the STEM Lab's requestAnimationFrame loops can read them every frame
@@ -11,36 +17,28 @@ import { useEffect, useState } from "react";
 export type ThemeMode = "light" | "dark" | "system";
 export type TextComfort = "small" | "medium" | "large" | "dyslexic";
 export type FrameTarget = "30" | "60" | "uncapped";
-export type AmbientBand = "flat" | "low" | "mid" | "full";
 
 export interface AppSettings {
-  /** 0 = fully static / flat, 100 = maximum neon glow, blur and particles. */
-  ambient: number;
   /** Motionless mode: freezes every continuous loop and idle 3D orbit. */
   reduceMotion: boolean;
-  /** The background field leaning toward the pointer — off keeps every other
-   *  animation but nothing follows the cursor. */
-  cursorField: boolean;
   frameTarget: FrameTarget;
   themeMode: ThemeMode;
   textComfort: TextComfort;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  ambient: 100,
   reduceMotion: false,
-  cursorField: true,
   frameTarget: "60",
   themeMode: "dark",
   textComfort: "medium",
 };
 
 /**
- * Ambient slider value (0-100) at which the background glow hits its ceiling.
- * Above this the glow holds at maximum — the top of the slider is headroom,
- * not extra glare, so the backdrop can never wash the page out.
+ * The one glow strength the site renders at. It is the value the old
+ * "Background glow" slider produced at its ceiling (60%), because that is the
+ * brightness every glow layer in the app was tuned against.
  */
-export const GLOW_CEILING = 60;
+export const GLOW_LEVEL = 1;
 
 const STORE_KEY = "manthan-settings";
 /** Legacy key the header toggle already reads/writes. */
@@ -49,12 +47,13 @@ const LEGACY_THEME_KEY = "manthan-theme";
 /** Mutable mirror read inside 60fps render loops. */
 export const settingsRuntime = {
   reduceMotion: false,
-  /** Whether ambient loops may lean toward the pointer. */
+  /** Simulation canvases lean toward the pointer; always on now that the knob
+   *  that used to disable it is gone. */
   cursorField: true,
   /** 0 means "uncapped". */
   frameTarget: 60,
-  /** 0..1 mirror of `ambient`. */
-  ambient: 1,
+  /** 0..1 glow strength — a constant, see `GLOW_LEVEL`. */
+  ambient: GLOW_LEVEL,
 };
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -72,18 +71,6 @@ export const TEXT_SCALE: Record<TextComfort, number> = {
 
 export function frameTargetToFps(target: FrameTarget) {
   return target === "30" ? 30 : target === "60" ? 60 : 0;
-}
-
-export function ambientBand(ambient: number): AmbientBand {
-  if (ambient <= 0) return "flat";
-  if (ambient < 34) return "low";
-  if (ambient < 67) return "mid";
-  return "full";
-}
-
-/** Ambient loops slow down (never stop) as intensity is dialled back. */
-function ambientDuration(ambient: number) {
-  return (1 + (1 - clamp01(ambient / 100)) * 1.2).toFixed(2);
 }
 
 function mediaMatches(query: string, fallback: boolean) {
@@ -110,15 +97,10 @@ export function loadSettings(): AppSettings {
     const raw = window.localStorage.getItem(STORE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      ambient: typeof parsed.ambient === "number" ? parsed.ambient : DEFAULT_SETTINGS.ambient,
-      cursorField:
-        typeof parsed.cursorField === "boolean"
-          ? parsed.cursorField
-          : DEFAULT_SETTINGS.cursorField,
-    };
+    /* Fields from before the background field was removed (`ambient`,
+       `cursorField`) are simply ignored: they are not part of AppSettings any
+       more, so a stored object carrying them still loads cleanly. */
+    return { ...DEFAULT_SETTINGS, ...parsed };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -138,40 +120,29 @@ export function saveSettings(settings: AppSettings) {
  * single call repaints the whole experience instantly.
  */
 export function applySettings(settings: AppSettings) {
-  const ambient = clamp01(settings.ambient / 100);
-
   settingsRuntime.reduceMotion = settings.reduceMotion;
-  settingsRuntime.cursorField = settings.cursorField;
   settingsRuntime.frameTarget = frameTargetToFps(settings.frameTarget);
-  settingsRuntime.ambient = ambient;
+  settingsRuntime.cursorField = true;
+  settingsRuntime.ambient = GLOW_LEVEL;
 
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const dark = resolveTheme(settings.themeMode) === "dark";
 
-  /*
-   * The glow level, normalised to the ceiling: 60% on the slider (and
-   * everything above it) is the maximum glow the site ever renders — the
-   * exact brightness the old 100% produced. Below 60 the glow scales down
-   * proportionally to 0 at 0%.
-   */
-  const glowLevel = Math.min(1, ambient / (GLOW_CEILING / 100));
-
   root.classList.toggle("dark", dark);
   root.setAttribute("data-theme", dark ? "dark" : "light");
   root.setAttribute("data-motion", settings.reduceMotion ? "reduced" : "full");
-  root.setAttribute("data-cursor-field", settings.cursorField ? "on" : "off");
   root.setAttribute("data-text", settings.textComfort);
-  root.setAttribute("data-ambient", ambientBand(settings.ambient));
-  root.style.setProperty("--ambient", glowLevel.toFixed(3));
-  root.style.setProperty("--ambient-dur", ambientDuration(settings.ambient));
-  root.style.setProperty("--ambient-blur", (0.55 + 0.45 * glowLevel).toFixed(2));
-  // Ambient Intensity -> the single global driver for every background glow.
-  // 0% fades the blurred backdrop shapes out completely; GLOW_CEILING (60%)
-  // already renders them at full softness, and everything above is clamped so
-  // the backdrop stays an aura and never a wall. Read by `.blob-canvas` and
-  // the ambient glow layers.
-  root.style.setProperty("--bg-glow-opacity", glowLevel.toFixed(3));
+  /* Glow strength is pinned, not scalable. These three properties plus the
+     band attribute are still written so every existing rule that reads them
+     (`var(--ambient)`, `var(--ambient-dur)`, `var(--ambient-blur)`,
+     `[data-ambient]`) keeps the exact look it was tuned against instead of
+     falling back to a hardcoded default. */
+  root.setAttribute("data-ambient", "full");
+  root.style.setProperty("--ambient", GLOW_LEVEL.toFixed(3));
+  root.style.setProperty("--ambient-dur", "1.00");
+  root.style.setProperty("--ambient-blur", "1.00");
+  root.style.setProperty("--bg-glow-opacity", GLOW_LEVEL.toFixed(3));
   // Text Comfort -> the typography scaling module (root rem size).
   root.style.setProperty("--text-scale", String(TEXT_SCALE[settings.textComfort] ?? 1));
 

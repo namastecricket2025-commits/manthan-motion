@@ -1,4 +1,3 @@
-import BlobBackground from "@/components/BlobBackground";
 import CtaSection from "@/components/landing/CtaSection";
 import Features from "@/components/landing/Features";
 import Faq from "@/components/landing/Faq";
@@ -296,7 +295,13 @@ function Hero() {
                     "No card required",
                   ].map((fact) => (
                     <li key={fact} className="inline-flex items-center gap-2">
-                      <Check className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+                      {/* A filled amber disc, not an amber glyph: the mark is
+                          the bright brand yellow in both themes now, so a thin
+                          stroke of it on paper would not be seen. Same yellow
+                          as the button, with the button's ink on top. */}
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
+                        <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
+                      </span>
                       {fact}
                     </li>
                   ))}
@@ -366,9 +371,6 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen">
-      {/* The signature blob field — the canvas metaball engine, its opacity
-          capped by the theme tokens and the Ambient Intensity slider. */}
-      <BlobBackground />
       <div className="relative z-10">
         {/* Anchor target for the "Home" nav item — the header is fixed, so
             an anchor on it can't scroll the page; this spans the top. */}

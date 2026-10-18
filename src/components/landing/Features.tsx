@@ -254,11 +254,11 @@ function PhoneArt() {
             <span className="mt-1.5 block h-1.5 w-20 rounded-full bg-[var(--text-dim)] opacity-35" />
           </div>
           <div className="flex items-center gap-1.5 rounded-md bg-[var(--panel)] p-2">
-            <span className="h-4 w-4 rounded-[4px] bg-[var(--brand-soft)]" />
+            <span className="h-4 w-4 rounded-[4px] bg-[var(--brand)]" />
             <span className="h-1.5 flex-1 rounded-full bg-[var(--text-dim)] opacity-35" />
           </div>
           <div className="flex items-center gap-1.5 rounded-md bg-[var(--panel)] p-2">
-            <span className="h-4 w-4 rounded-[4px] bg-[var(--brand-soft)]" />
+            <span className="h-4 w-4 rounded-[4px] bg-[var(--brand)]" />
             <span className="h-1.5 flex-1 rounded-full bg-[var(--text-dim)] opacity-35" />
           </div>
         </div>
@@ -420,7 +420,9 @@ export default function Features() {
             <ul className="mt-4 grid gap-2 sm:grid-cols-3">
               {MOBILE_POINTS.map((point) => (
                 <li key={point} className="flex items-start gap-2 text-[13px] text-text-dim">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+                  <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
+                    <Check className="h-2 w-2" strokeWidth={3.5} />
+                  </span>
                   {point}
                 </li>
               ))}

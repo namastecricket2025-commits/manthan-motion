@@ -1,4 +1,3 @@
-import BlobBackground from "@/components/BlobBackground";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -59,7 +58,6 @@ export default function Pricing() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <BlobBackground />
       <div className="relative z-10">
         {/* Page-top wash — the same faint neutral light as the landing page. */}
         <div className="glow-aura" aria-hidden="true" />

@@ -236,7 +236,7 @@ export default function Pipeline() {
                   <span className="card-tile">
                     <step.icon className="h-5 w-5" />
                   </span>
-                  <span className="font-display text-4xl font-bold tracking-tight text-[color-mix(in_srgb,var(--brand)_72%,transparent)]">
+                  <span className="font-display text-4xl font-bold tracking-tight text-[var(--brand)]">
                     {step.num}
                   </span>
                 </div>

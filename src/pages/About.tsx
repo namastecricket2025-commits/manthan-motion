@@ -1,6 +1,5 @@
 import "@/components/about/about.css";
 
-import BlobBackground from "@/components/BlobBackground";
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -556,7 +555,6 @@ export default function About() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <BlobBackground />
       <div className="relative z-10">
         {/* Page-top aura — ambient light spilling in from above, dark mode only. */}
         <div className="glow-aura" aria-hidden="true" />

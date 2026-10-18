@@ -1,6 +1,5 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import BlobBackground from "@/components/BlobBackground";
 import {
   DashboardNav,
   type DashboardSection,
@@ -214,7 +213,6 @@ export default function Dashboard() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      <BlobBackground />
       <div className="relative z-10">
         {/* Page-top aura — ambient light spilling in from above, dark mode only. */}
         <div className="glow-aura" aria-hidden="true" />

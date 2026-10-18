@@ -115,10 +115,12 @@ const L = {
   dashPrimary: token(lightSrc, "dash-series-primary"),
   brandInk: token(lightSrc, "brand-ink"),
   brandSoft: token(lightSrc, "brand-soft"),
+  brandMark: token(lightSrc, "brand-mark"),
 };
 const D = {
   brandInk: token(darkSrc, "brand-ink"),
   brand: token(darkSrc, "brand"),
+  brandMark: token(darkSrc, "brand-mark"),
   signal: token(darkSrc, "signal"),
   signalStrong: token(darkSrc, "signal-strong"),
   ink: token(darkSrc, "ink"),
@@ -129,7 +131,12 @@ const D = {
 console.log("\n== 1. declared values ==");
 const declared = [
   ["light --signal", L.signal, "#b45309"],
-  ["light --brand", L.brand, "#b45309"],
+  /* One brand yellow in both themes. `--brand` is the MARK tone (filled tiles,
+     discs, rules, the big circle) and is the same #fbbf24 the filled action
+     uses; it is no longer a dark ink in the light theme. */
+  ["light --brand", L.brand, "#fbbf24"],
+  ["light --brand-mark", L.brandMark, "#fbbf24"],
+  ["dark --brand-mark", D.brandMark, "#f5f5f7"],
   ["light --signal-2", L.signal2, "#8a4207"],
   ["light --gt-tail", L.gtTail, "#b45309"],
   ["light --chart-1", L.chart1, "#b45309"],
@@ -170,15 +177,17 @@ const checks = [
      above. */
   ["light button label on the filled action", L.fg, L.signalStrong, 4.5],
   ["light button label on the hover fill", L.fg, mix(L.signalStrong, 0.88, "#000000"), 4.5],
-  /* Text on the brand tint uses `--brand-ink`, not the brand step; an icon on
-     it uses the brand step, where 3:1 is the bar. Both are asserted, because
-     the pill in Features is the one place the two differ. */
+  /* The light theme's brand tone is a bright yellow now, so the pairing that
+     matters is INK ON THE FILL (the filled tile, the filled check disc, the
+     button): `--primary-foreground` on `--brand`. Brand-coloured type on paper
+     is not a pairing that exists any more — text takes `--brand-ink`, which is
+     the deep ink step, checked below on the tint it actually sits on. */
   ["light brand TEXT on the brand tint (uses --brand-ink)", L.brandInk, mix(L.brand, 0.1, L.panel), 4.5],
-  ["light brand icon on its own 10% tint", L.signal, mix(L.brand, 0.1, L.panel), 3],
+  ["light ink on the amber mark/fill", L.fg, L.brand, 4.5],
+  ["dark ink on the amber mark/fill", D.brand, D.panel, 4.5],
   ["light accent as a chart stroke on the panel", L.signal, L.panel, 3],
   ["dark brand on the black canvas", D.brand, D.ink, 4.5],
   ["dark brand on a panel", D.brand, D.panel, 4.5],
-  ["dark brand icon on its own 14% tint", D.brand, mix(D.brand, 0.14, D.panel), 4.5],
   ["dark brand TEXT on the brand tint", D.brandInk, mix(D.brand, 0.14, D.panel), 4.5],
 ];
 for (const [label, fg, bg, min] of checks) {
@@ -268,9 +277,14 @@ console.log("\n== 5b. the wiring, not just the tokens ==");
   ok(onTint.length === 0, "no class string paints brand text straight on the brand tint", onTint.join(" | "));
   ok(tintClasses.some((c) => /text-\[var\(--brand-ink\)\]/.test(c)), "the tinted pill labels itself with --brand-ink");
   const settings = fs.readFileSync(path.join(process.cwd(), "src/components/settings/settings.css"), "utf8");
-  const setDanger = /--set-danger:\s*(#[0-9a-fA-F]{6})/.exec(settings);
-  ok(!!setDanger, "the settings page overrides --set-danger with a concrete colour", setDanger && setDanger[1]);
-  if (setDanger) ok(hue(setDanger[1]) < 20 || hue(setDanger[1]) > 340, "that settings danger colour is red", setDanger[1] + " / " + hue(setDanger[1]).toFixed(0) + "deg");
+  /* The settings page used to hand-pick its own error red (`#c81e1e`) next to
+     the theme's. That is the drift this whole file exists to catch: it now
+     aliases the theme token, so there is one error colour in the app and it is
+     already hue- and contrast-checked in section 4. */
+  const setDanger = /--set-danger:\s*var\(--destructive\)/.test(settings);
+  ok(setDanger, "the settings page aliases --set-danger to the theme error token", String(setDanger));
+  const setDangerLiteral = /--set-danger:\s*#[0-9a-fA-F]{6}/.test(settings);
+  ok(!setDangerLiteral, "the settings page no longer hardcodes its own danger colour");
 }
 
 /* ---------------- 6. what the dev server actually serves ---------------- */
