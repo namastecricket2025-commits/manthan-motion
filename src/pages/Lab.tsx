@@ -26,7 +26,7 @@ const SUBJECTS: Array<{
     id: "chemistry",
     label: "Chemistry",
     icon: FlaskConical,
-    blurb: "A frosted periodic table, element morphs and a live Bohr model.",
+    blurb: "A complete periodic table with a profile that pushes in, plus a reaction builder and titration bench.",
   },
   {
     id: "biology",

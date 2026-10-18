@@ -11,20 +11,21 @@ import {
   type ElementData,
 } from "@/components/lab/periodic-data";
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
+import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
-import type { Transition } from "motion/react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-react";
 
 /**
  * Chemistry — a frosted periodic table, a live Bohr model, a titration bench
  * and a reaction stage, in four sub-tabs.
  *
  * The periodic table is a glass grid: each tile carries a 1px border tinted by
- * its category, and selecting an element morphs the tile's identity into the
- * detail panel via a shared layout id. The Bohr model draws the real electron
- * grouping (Aufbau per principal shell) with each shell orbiting continuously
- * on its own CSS timeline — slower the further out it sits.
+ * its category, all 18 groups share the panel's width, and selecting an element
+ * grows a profile column in from the right that pushes the table across. The
+ * Bohr model draws the ground-state electron grouping (exceptions included)
+ * with each shell orbiting on its own CSS timeline.
  *
  * The bench carries its own light/dark toggle (`data-lab-theme` on this root,
  * the same switch Physics and Biology use) so the four tabs can be read in
@@ -263,36 +264,38 @@ function ElementTile({
   return (
     <motion.button
       type="button"
-      /* The tile's identity is the shared layout element the detail panel
-         morphs out of, so this is where the layout id lives. Selection is
-         that morph alone: the tile keeps one steady category border, because
-         a selected border snapped on here would flash a second outline ahead
-         of the panel arriving. */
-      layoutId={`element-${element.n}`}
       onClick={() => onSelect(element.n)}
       aria-label={`${element.name}, atomic number ${element.n}`}
       aria-pressed={isSelected}
-      whileHover={{ scale: 1.06 }}
+      whileHover={{ scale: 1.1, zIndex: 5 }}
       transition={transition}
-      className="apple-lab-tile h-[52px] w-full min-w-0 !gap-0.5 !justify-between !items-stretch px-[3px] py-[3px] text-left"
+      /* The tile is fluid, not fixed: all 18 columns share the panel's width so
+         the whole table is on screen at once, whether the element panel is
+         open or not. Height and type shrink only enough to keep the symbol
+         legible at the narrowest open-panel width. */
+      className="apple-lab-tile h-[36px] w-full min-w-0 !gap-0 !justify-between !items-stretch px-[2px] py-[2px] text-left sm:h-[42px] xl:h-[48px]"
       style={{
-        borderColor: tint(color, faint ? "30" : "59"),
+        borderColor: isSelected ? "var(--lab-ink)" : tint(color, faint ? "30" : "59"),
+        background: isSelected ? "color-mix(in srgb, var(--lab-ink) 14%, transparent)" : undefined,
         opacity: faint ? 0.24 : 1,
       }}
     >
       <span
-        className="w-full truncate text-[8.5px] font-medium leading-none"
+        className="w-full truncate text-[7.5px] font-medium leading-none"
         style={{ color: "var(--lab-ink-micro)" }}
       >
         {element.n}
       </span>
       <span
-        className="flex w-full items-center justify-center truncate text-[14.5px] font-bold leading-none"
+        className="flex w-full items-center justify-center truncate text-[11.5px] font-bold leading-none xl:text-[13px]"
         style={{ color: "var(--lab-ink)" }}
       >
         {element.sym}
       </span>
-      <span className="hidden w-full truncate text-[8px] leading-none md:block" style={{ color: "var(--lab-ink-dim)" }}>
+      <span
+        className="hidden w-full truncate text-[7.5px] leading-none xl:block"
+        style={{ color: "var(--lab-ink-dim)" }}
+      >
         {element.name}
       </span>
     </motion.button>
@@ -351,6 +354,14 @@ function PeriodicTableTab({
   const [query, setQuery] = useState("");
   const light = theme === "light";
 
+  const shownCategories = useMemo(() => {
+    const counts = new Map<Category, number>();
+    for (const element of ELEMENTS) {
+      counts.set(element.cat, (counts.get(element.cat) ?? 0) + 1);
+    }
+    return CATEGORIES.filter((category) => (counts.get(category) ?? 0) > 0);
+  }, []);
+
   const rows = useMemo(() => {
     const grid: (ElementData | null)[][] = Array.from({ length: 10 }, () =>
       Array.from({ length: 18 }, () => null),
@@ -365,6 +376,34 @@ function PeriodicTableTab({
   const selectedElement =
     selected === null ? null : ELEMENTS.find((el) => el.n === selected) ?? null;
   const panelTransition = useSpringTransition();
+
+  /* Drag-to-pan: on a phone the 18-column grid is wider than the screen, so the
+     table is grabbed and dragged sideways instead of forcing a scrollbar. The
+     browser's own touch pan handles fingers; this adds the same gesture to a
+     mouse and swallows the click that would otherwise open a tile mid-drag. */
+  const panRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef({ active: false, x: 0, left: 0, moved: false });
+  const startPan = (event: React.PointerEvent) => {
+    const el = panRef.current;
+    if (!el || event.pointerType !== "mouse" || el.scrollWidth <= el.clientWidth + 1) return;
+    drag.current = { active: true, x: event.clientX, left: el.scrollLeft, moved: false };
+  };
+  const movePan = (event: React.PointerEvent) => {
+    const el = panRef.current;
+    if (!el || !drag.current.active) return;
+    const dx = event.clientX - drag.current.x;
+    if (Math.abs(dx) > 6) drag.current.moved = true;
+    el.scrollLeft = drag.current.left - dx;
+  };
+  const endPan = () => {
+    drag.current.active = false;
+  };
+  const guardClick = (event: React.MouseEvent) => {
+    if (!drag.current.moved) return;
+    event.preventDefault();
+    event.stopPropagation();
+    drag.current.moved = false;
+  };
 
   const needle = query.trim().toLowerCase();
   const dimmed = (element: ElementData) => {
@@ -392,12 +431,12 @@ function PeriodicTableTab({
   );
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
+    <div className="lab-element-split" data-open={selectedElement ? "1" : "0"}>
       <div className="apple-lab-panel apple-lab-glass min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="apple-lab-micro">Periodic table</p>
-            <h3 className="apple-lab-title mt-1 text-lg">118 elements, one glass grid</h3>
+            <h3 className="apple-lab-title mt-1 text-lg">118 elements, in their real groups</h3>
           </div>
           <label className="apple-lab-card flex items-center gap-2 px-3 py-2">
             <span className="apple-lab-micro">Find</span>
@@ -411,9 +450,11 @@ function PeriodicTableTab({
           </label>
         </div>
 
-        {/* Category legend doubles as a highlight switch. */}
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {CATEGORIES.map((category) => (
+        {/* Category legend doubles as a highlight switch. A category with no
+            elements ("synthetic" used to hold the superheavies) is not listed:
+            a legend that promises eleven colours and shows ten is noise. */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {shownCategories.map((category) => (
             <LegendButton
               key={category}
               category={category}
@@ -429,31 +470,79 @@ function PeriodicTableTab({
           ))}
         </div>
 
-        <div className="apple-lab-scroll mt-4 overflow-x-auto pb-1">
-          <div className="min-w-[760px]">
+        {/* The whole table fits the panel: every row is a flex line of 18
+            equal tracks, so opening the profile narrows the tiles instead of
+            hiding the right-hand groups behind a scrollbar. On a phone the
+            grid keeps a readable minimum width and is panned by dragging. */}
+        <div
+          ref={panRef}
+          onPointerDown={startPan}
+          onPointerMove={movePan}
+          onPointerUp={endPan}
+          onPointerLeave={endPan}
+          onClickCapture={guardClick}
+          className="lab-pan mt-4 cursor-grab pb-1 active:cursor-grabbing"
+        >
+          <div className="min-w-[600px] lg:min-w-0">
+            <div className="mb-1 flex gap-[3px]">
+              {Array.from({ length: 18 }, (_, index) => (
+                <span
+                  key={index}
+                  title={GROUP_NAMES[index + 1] ?? `Group ${index + 1}`}
+                  className="flex-1 text-center text-[7.5px] font-semibold tracking-wide text-[var(--lab-ink-micro)]"
+                >
+                  {index + 1}
+                </span>
+              ))}
+            </div>
             {rows.slice(0, 7).map((row, rowIndex) => (
-              <div key={`row-${rowIndex}`} className="mb-1 flex gap-1">
-                {row.map((element, columnIndex) =>
-                  element ? (
-                    renderTile(element)
-                  ) : (
-                    <span key={`gap-${rowIndex}-${columnIndex}`} className="h-[52px] w-full" />
-                  ),
-                )}
+              <div key={`row-${rowIndex}`} className="mb-[3px] flex gap-[3px]">
+                {row.map((element, columnIndex) => {
+                  if (element) return renderTile(element);
+                  /* Group 3 holds the f-block by reference, exactly as a
+                     printed table does — the row is not an empty hole. */
+                  if (columnIndex === 2 && (rowIndex === 5 || rowIndex === 6)) {
+                    const series = rowIndex === 5 ? 57 : 89;
+                    return (
+                      <button
+                        key={`series-${rowIndex}`}
+                        type="button"
+                        onClick={() => onSelect(series)}
+                        title={rowIndex === 5 ? "Lanthanides 57–71" : "Actinides 89–103"}
+                        className="apple-lab-tile h-[36px] w-full min-w-0 !justify-center !border-dashed px-0 text-center sm:h-[42px] xl:h-[48px]"
+                        style={{ borderColor: "var(--lab-line)" }}
+                      >
+                        <span className="text-[7px] leading-none text-[var(--lab-ink-micro)]">
+                          {rowIndex === 5 ? "57–71" : "89–103"}
+                        </span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <span
+                      key={`gap-${rowIndex}-${columnIndex}`}
+                      className="h-[36px] w-full sm:h-[42px] xl:h-[48px]"
+                    />
+                  );
+                })}
               </div>
             ))}
-            <div className="mb-1 flex gap-1">
-              <span className="apple-lab-micro flex h-6 items-center truncate">f-block</span>
+            <div className="mb-[3px] mt-2 flex gap-[3px] text-[8px] leading-none text-[var(--lab-ink-micro)]">
+              <span className="apple-lab-micro !text-[8px]">f-block</span>
+              <span>57–71 lanthanides · 89–103 actinides</span>
             </div>
             {/* The f-block rows keep all 18 columns (the first two are
                 spacers) so the tiles stay aligned with the main grid. */}
             {rows.slice(8).map((row, rowIndex) => (
-              <div key={`frow-${rowIndex}`} className="mb-1 flex gap-1">
+              <div key={`frow-${rowIndex}`} className="mb-[3px] flex gap-[3px]">
                 {row.map((element, columnIndex) =>
                   element ? (
                     renderTile(element)
                   ) : (
-                    <span key={`fgap-${rowIndex}-${columnIndex}`} className="h-[52px] w-full" />
+                    <span
+                      key={`fgap-${rowIndex}-${columnIndex}`}
+                      className="h-[36px] w-full sm:h-[42px] xl:h-[48px]"
+                    />
                   ),
                 )}
               </div>
@@ -461,44 +550,85 @@ function PeriodicTableTab({
           </div>
         </div>
 
-        <p className="apple-lab-note mt-3">
-          Search and category highlights dim the rest of the table rather than
-          removing it — a periodic table that keeps its shape teaches the
-          layout, and nothing jumps under your pointer.
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="apple-lab-note text-[11.5px]">
+            All 18 groups stay on screen. Click a tile and the profile slides in
+            from the right, pushing the table across; close it and the table
+            takes the full width again.
+          </p>
+          <span className="apple-lab-chip !py-0.5 !text-[10px] lg:hidden">drag to pan</span>
+        </div>
       </div>
 
-      {/* Detail panel. The header tile shares its layout identity with the
-          tile in the grid, so the selection *morphs* into this panel. */}
-      <div className="apple-lab-panel apple-lab-glass min-w-0">
-        {selectedElement ? (
-          <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <motion.div
-                layout
-                layoutId={`element-${selectedElement.n}`}
-                transition={panelTransition}
-                className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border"
-                style={{
-                  borderColor: tint(colorOf(selectedElement), "bb"),
-                  background: tint(colorOf(selectedElement), "26"),
-                }}
-              >
-                <span className="text-[17px] font-bold leading-none text-[var(--lab-ink)]">
-                  {selectedElement.sym}
-                </span>
-                <span className="mt-1 text-[9px] leading-none text-[var(--lab-ink-dim)]">
-                  {selectedElement.n}
-                </span>
-              </motion.div>
-              <div className="min-w-0">
-                <p className="apple-lab-micro truncate">{selectedElement.cat}</p>
-                <h3 className="apple-lab-title mt-1 truncate text-xl">{selectedElement.name}</h3>
-                <p className="apple-lab-note mt-0.5 truncate">
-                  {selectedElement.mass} u · {PHASE_LABEL[selectedElement.phase]}
-                </p>
-              </div>
-            </div>
+      {/* Element profile. On a desktop it grows in from the right as its own
+          column, pushing the table and narrowing the tiles, so the whole table
+          is still readable while the panel is open. Closing gives the table
+          its full width back. */}
+      {selectedElement && (
+        <motion.div
+          key="element-profile"
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={panelTransition}
+          className="min-w-0 overflow-hidden lg:pl-5"
+        >
+          <div className="apple-lab-panel apple-lab-glass w-full min-w-0 lg:w-[352px]">
+              <div className="flex min-w-0 flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border"
+                    style={{
+                      borderColor: tint(colorOf(selectedElement), "bb"),
+                      background: tint(colorOf(selectedElement), "26"),
+                    }}
+                  >
+                    <span className="text-[17px] font-bold leading-none text-[var(--lab-ink)]">
+                      {selectedElement.sym}
+                    </span>
+                    <span className="mt-1 text-[9px] leading-none text-[var(--lab-ink-dim)]">
+                      {selectedElement.n}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="apple-lab-micro truncate">{selectedElement.cat}</p>
+                    <h3 className="apple-lab-title mt-1 truncate text-xl">{selectedElement.name}</h3>
+                    <p className="apple-lab-note mt-0.5 truncate">
+                      {selectedElement.mass} u · {PHASE_LABEL[selectedElement.phase]}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const index = ELEMENTS.findIndex((el) => el.n === selectedElement.n);
+                        onSelect(ELEMENTS[Math.max(0, index - 1)].n);
+                      }}
+                      className="apple-lab-btn !px-1.5 !py-1.5"
+                      aria-label="Previous element"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const index = ELEMENTS.findIndex((el) => el.n === selectedElement.n);
+                        onSelect(ELEMENTS[Math.min(ELEMENTS.length - 1, index + 1)].n);
+                      }}
+                      className="apple-lab-btn !px-1.5 !py-1.5"
+                      aria-label="Next element"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(null)}
+                      className="apple-lab-btn !px-1.5 !py-1.5"
+                      aria-label="Close element profile"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
 
             <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:grid-cols-3">
               <FactCard
@@ -563,63 +693,27 @@ function PeriodicTableTab({
               </div>
             </div>
 
-            {USES[selectedElement.n] ? (
-              <div className="apple-lab-card min-w-0 px-3 py-3">
-                <p className="apple-lab-micro">Where you meet it</p>
-                <p className="apple-lab-note mt-1.5">{USES[selectedElement.n]}</p>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-2 text-center">
-            <p className="apple-lab-title text-base">Pick an element</p>
-            <p className="apple-lab-note max-w-xs">
-              Tap any tile and it grows into this panel — mass, phase, the exact
-              electron shells and a live Bohr model.
-            </p>
-          </div>
-        )}
-      </div>
+                <div className="apple-lab-card min-w-0 px-3 py-3">
+                  <p className="apple-lab-micro">Ground-state configuration</p>
+                  <p className="apple-lab-value mt-1 break-words text-[11.5px] leading-relaxed">
+                    {configFor(selectedElement.n)}
+                  </p>
+                  <p className="apple-lab-note mt-1 text-[10.5px]">
+                    The real configuration, half-filled d⁵/d¹⁰ exceptions
+                    included (Cr, Cu, Pd, Au …).
+                  </p>
+                </div>
 
-      {/* Group names, so the columns mean something. */}
-      <div className="apple-lab-panel apple-lab-glass min-w-0 xl:col-span-2">
-        <p className="apple-lab-micro">Named groups</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {GROUP_NAMES.map((name, index) =>
-            name ? (
-              <motion.span
-                key={name}
-                variants={viewVariants}
-                initial="hidden"
-                animate="visible"
-                transition={{ ...panelTransition, delay: index * 0.02 }}
-                className="apple-lab-chip !max-w-full"
-              >
-                <span className="apple-lab-value whitespace-nowrap text-[11px] font-semibold">
-                  Group {index}
-                </span>
-                <span className="truncate">{name}</span>
-              </motion.span>
-            ) : null,
-          )}
-        </div>
-        <AnimatePresence>
-          {selectedElement && (
-            <motion.p
-              key="footnote"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={panelTransition}
-              className="apple-lab-note mt-3"
-            >
-              Electron configurations are derived from the Aufbau filling order,
-              so chromium and copper show the textbook ordering rather than
-              their half-filled-d anomalies.
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
+                {USES[selectedElement.n] ? (
+                  <div className="apple-lab-card min-w-0 px-3 py-3">
+                    <p className="apple-lab-micro">Where you meet it</p>
+                    <p className="apple-lab-note mt-1.5">{USES[selectedElement.n]}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -678,8 +772,9 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
         </div>
 
         <p className="apple-lab-note mt-2 text-center">
-          Shells fill in Aufbau order (1s → 2s → 2p → …), grouped per principal
-          shell — the Bohr picture students draw first, with the real counts.
+          Shells are grouped from the real ground-state configuration — Aufbau
+          order plus the half/full-filled d-subshell exceptions (Cr, Cu, Pd,
+          Au …) — so the electron counts are the measured ones.
         </p>
       </div>
 
@@ -765,45 +860,281 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
 }
 
 /* ============================================================
-   Sub-tab 3 — Titration bench (decorative but believable)
+   Sub-tab 3 — Titration bench
+
+   A real monoprotic/diprotic neutralisation model, not a colour script: the
+   flask holds a known volume and concentration, the burette delivers a chosen
+   titrant, and pH comes out of the amounts actually present. Strong/weak and
+   mono/di-protic behave differently, the equivalence volume moves when the
+   concentrations move, and the indicator is a separate choice with its own
+   transition range so the two can disagree — which is the whole lesson.
    ============================================================ */
 
-const INDICATOR_STOPS: Array<{ upTo: number; ph: number; name: string; color: string }> = [
-  { upTo: 8, ph: 1.2, name: "strongly acidic", color: "#e04a3a" },
-  { upTo: 16, ph: 3.1, name: "acidic", color: "#e07b30" },
-  { upTo: 23.2, ph: 5.4, name: "weakly acidic", color: "#e0b83a" },
-  { upTo: 24.4, ph: 7.0, name: "neutralising", color: "#58b06a" },
-  { upTo: 24.9, ph: 8.3, name: "just alkaline", color: "#3f9ad0" },
-  { upTo: 26, ph: 10.2, name: "alkaline", color: "#7a5fd0" },
-  { upTo: 40, ph: 12.3, name: "strongly alkaline", color: "#9a4fd0" },
-];
+type TitrantKind = "strong-acid" | "weak-acid" | "strong-base";
 
-function solutionAt(volume: number) {
-  const stop =
-    INDICATOR_STOPS.find((entry) => volume < entry.upTo) ??
-    INDICATOR_STOPS[INDICATOR_STOPS.length - 1];
-  return stop;
+interface Titrant {
+  id: string;
+  formula: string;
+  name: string;
+  kind: TitrantKind;
+  /** Equivalents of H⁺ or OH⁻ delivered per formula unit. */
+  protons: number;
+  pKa?: number;
 }
 
+const ANALYTES: Titrant[] = [
+  { id: "hcl", formula: "HCl", name: "Hydrochloric acid", kind: "strong-acid", protons: 1 },
+  { id: "ch3cooh", formula: "CH₃COOH", name: "Acetic acid", kind: "weak-acid", protons: 1, pKa: 4.76 },
+  { id: "naoh", formula: "NaOH", name: "Sodium hydroxide", kind: "strong-base", protons: 1 },
+];
+
+const TITRANTS: Titrant[] = [
+  { id: "naoh", formula: "NaOH", name: "Sodium hydroxide", kind: "strong-base", protons: 1 },
+  { id: "koh", formula: "KOH", name: "Potassium hydroxide", kind: "strong-base", protons: 1 },
+  { id: "hcl", formula: "HCl", name: "Hydrochloric acid", kind: "strong-acid", protons: 1 },
+  { id: "h2so4", formula: "H₂SO₄", name: "Sulfuric acid", kind: "strong-acid", protons: 2 },
+  { id: "ch3cooh", formula: "CH₃COOH", name: "Acetic acid", kind: "weak-acid", protons: 1, pKa: 4.76 },
+];
+
+const TITRATION_V0 = 25;
+const BURETTE_ML = 50;
+const clampPH = (value: number, low = 0, high = 14) => Math.min(high, Math.max(low, value));
+
+/**
+ * Exact pH of a weak-acid / strong-base mixture from mass and charge balance.
+ *
+ * `acidTotal` is the analytical concentration of the weak acid (HA + A⁻) and
+ * `strongBase` the concentration of the strong-base cation. Solving
+ *
+ *   [Na⁺] + [H⁺] = [A⁻] + [OH⁻],   [A⁻] = C·Ka/(H⁺ + Ka)
+ *
+ * by bisection keeps the whole curve smooth — including the first drops, where
+ * the textbook buffer formula alone would dive below the pure-acid pH.
+ */
+function weakPairPH(acidTotal: number, strongBase: number, pKa: number): number {
+  const ka = 10 ** -pKa;
+  const kw = 1e-14;
+  let low = 0;
+  let high = 14;
+  for (let step = 0; step < 70; step++) {
+    const mid = (low + high) / 2;
+    const h = 10 ** -mid;
+    const anion = (acidTotal * ka) / (h + ka);
+    const excess = strongBase + h - anion - kw / h;
+    if (excess > 0) low = mid;
+    else high = mid;
+  }
+  return (low + high) / 2;
+}
+
+/**
+ * pH of the flask after `volume` mL of titrant.
+ *
+ * Acid in the flask is neutralised by a base (and vice versa), so only the
+ * opposite kind is offered in the burette. Weak acids are solved exactly, so
+ * the buffer plateau and the basic equivalence point both fall out of the
+ * same equation instead of being stitched together from special cases.
+ */
+export function phAt(volume: number, analyte: Titrant, titrant: Titrant, c0: number, ct: number): number {
+  const V = TITRATION_V0 + volume;
+  const nAnalyte = c0 * TITRATION_V0 * analyte.protons;
+  const nTitrant = ct * volume * titrant.protons;
+
+  if (analyte.kind === "weak-acid") {
+    return weakPairPH(nAnalyte / V, nTitrant / V, analyte.pKa!);
+  }
+  if (titrant.kind === "weak-acid") {
+    return weakPairPH(nTitrant / V, nAnalyte / V, titrant.pKa!);
+  }
+
+  /* Strong acid with strong base: closed form on whichever is in excess. */
+  if (analyte.kind === "strong-acid") {
+    const excessAcid = nAnalyte - nTitrant;
+    if (Math.abs(excessAcid) <= 1e-12) return 7;
+    if (excessAcid > 0) return -Math.log10(excessAcid / V);
+    return 14 + Math.log10(-excessAcid / V);
+  }
+
+  const excessBase = nAnalyte - nTitrant;
+  if (Math.abs(excessBase) <= 1e-12) return 7;
+  if (excessBase > 0) return 14 + Math.log10(excessBase / V);
+  return -Math.log10(-excessBase / V);
+}
+
+interface Indicator {
+  id: string;
+  label: string;
+  range: string;
+  low: string;
+  high: string;
+  lowName: string;
+  highName: string;
+  from: number;
+  to: number;
+}
+
+const INDICATORS: Indicator[] = [
+  {
+    id: "pp",
+    label: "Phenolphthalein",
+    range: "8.2 – 10.0",
+    low: "#dfeaec",
+    high: "#e0559b",
+    lowName: "colourless",
+    highName: "magenta",
+    from: 8.2,
+    to: 10,
+  },
+  {
+    id: "mo",
+    label: "Methyl orange",
+    range: "3.1 – 4.4",
+    low: "#d23b32",
+    high: "#e2b23a",
+    lowName: "red",
+    highName: "yellow",
+    from: 3.1,
+    to: 4.4,
+  },
+  {
+    id: "btb",
+    label: "Bromothymol blue",
+    range: "6.0 – 7.6",
+    low: "#c8b63a",
+    high: "#2f7fd0",
+    lowName: "yellow",
+    highName: "blue",
+    from: 6,
+    to: 7.6,
+  },
+];
+
+function mixHex(from: string, to: string, t: number) {
+  const parse = (hex: string) => [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  const [r1, g1, b1] = parse(from);
+  const [r2, g2, b2] = parse(to);
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
+  return `rgb(${mix(r1, r2)}, ${mix(g1, g2)}, ${mix(b1, b2)})`;
+}
+
+function indicatorLook(indicator: Indicator, pH: number) {
+  const t = clampPH((pH - indicator.from) / (indicator.to - indicator.from), 0, 1);
+  return {
+    t,
+    color: mixHex(indicator.low, indicator.high, t),
+    label:
+      t <= 0.04 ? indicator.lowName : t >= 0.96 ? indicator.highName : "mid-transition",
+  };
+}
+
+/* Flask outline (250 mL Erlenmeyer). The liquid is clipped to this same path,
+   so the solution sits on the real base of the flask instead of floating above
+   a separate curve of its own. */
+const FLASK_D =
+  "M 172 272 L 172 300 L 138 360 Q 132 371 136 383 L 141 402 Q 147 414 160 414 L 212 414 Q 225 414 231 402 L 236 383 Q 240 371 234 360 L 200 300 L 200 272 Z";
+
 function TitrationTab() {
-  const transition = useSpringTransition();
   const still = useStillMotion();
-  const [rate, setRate] = useState(2);
+  const transition = useSpringTransition();
+  const [analyteId, setAnalyteId] = useState("hcl");
+  const [titrantId, setTitrantId] = useState("naoh");
+  const [indicatorId, setIndicatorId] = useState("pp");
+  const [c0, setC0] = useState(0.1);
+  const [ct, setCt] = useState(0.1);
+  const [rate, setRate] = useState(1.5);
   const [running, setRunning] = useState(true);
   const [volume, setVolume] = useState(0);
 
-  // Every second, 0.5 mL lands in the flask and every readout follows it.
+  const analyte = ANALYTES.find((entry) => entry.id === analyteId) ?? ANALYTES[0];
+  const acidInFlask = analyte.kind !== "strong-base";
+  /* Only the opposite kind can titrate the flask: acid into base or base into
+     acid. Offering acetic acid as a titrant for HCl would be nonsense, so the
+     list is filtered rather than allowed to produce a fake curve. */
+  const titrantOptions = TITRANTS.filter((entry) =>
+    acidInFlask ? entry.kind === "strong-base" : entry.kind !== "strong-base",
+  );
+  const titrant = titrantOptions.find((entry) => entry.id === titrantId) ?? titrantOptions[0];
+  const indicator = INDICATORS.find((entry) => entry.id === indicatorId) ?? INDICATORS[0];
+
+  const eqVolume = (c0 * TITRATION_V0 * analyte.protons) / (ct * titrant.protons);
+  const beyondBurette = eqVolume > BURETTE_ML;
+  const ph = phAt(volume, analyte, titrant, c0, ct);
+  const eqPH = phAt(eqVolume, analyte, titrant, c0, ct);
+  const look = indicatorLook(indicator, ph);
+  const fill = Math.min(1, (TITRATION_V0 + volume) / (TITRATION_V0 + BURETTE_ML));
+  /* Surface height inside the flask. It only ever depends on the volume, so it
+     rises by exactly the amount delivered — no spring overshoot, no bob. */
+  const surface = 408 - 84 * fill;
+  const atMax = volume >= BURETTE_ML - 0.05;
+
+  /* The drip is integrated every frame instead of stepping once a second, so
+     the burette level, the flask level and the pH all move together. */
   useEffect(() => {
     if (!running || still) return;
-    const id = window.setInterval(() => {
-      setVolume((v) => (v >= 40 ? v : v + 0.5));
-    }, 1001);
-    return () => window.clearInterval(id);
-  }, [running, still]);
+    let frame = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(0.06, (now - last) / 1000);
+      last = now;
+      setVolume((value) => Math.min(BURETTE_ML, value + 0.62 * rate * dt));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [running, rate, still]);
 
-  const stop = solutionAt(volume);
-  const atEndpoint = volume >= 24.9;
-  const fillFraction = Math.min(1, volume / 40);
+  const reset = () => {
+    setVolume(0);
+    setRunning(true);
+  };
+
+  const selectAnalyte = (id: string) => {
+    const next = ANALYTES.find((entry) => entry.id === id) ?? ANALYTES[0];
+    setAnalyteId(next.id);
+    setTitrantId(next.kind === "strong-base" ? "hcl" : "naoh");
+    setVolume(0);
+  };
+
+  const curve = useMemo(() => {
+    const points: string[] = [];
+    for (let millilitres = 0; millilitres <= BURETTE_ML; millilitres += 0.25) {
+      const x = 34 + (millilitres / BURETTE_ML) * 312;
+      const y = 146 - (clampPH(phAt(millilitres, analyte, titrant, c0, ct)) / 14) * 126;
+      points.push(`${millilitres === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`);
+    }
+    return points.join(" ");
+  }, [analyte, titrant, c0, ct]);
+
+  const pointX = 34 + (volume / BURETTE_ML) * 312;
+  const pointY = 146 - (clampPH(ph) / 14) * 126;
+  const eqX = 34 + (Math.min(BURETTE_ML, eqVolume) / BURETTE_ML) * 312;
+
+  const weakBuffer =
+    analyte.kind === "weak-acid" && volume > 0.1 && volume < eqVolume - 0.1;
+  const nearEquivalence = Math.abs(volume - eqVolume) < 0.15;
+  const status = atMax
+    ? "Burette empty — refill to run the titration again."
+    : nearEquivalence
+      ? `At equivalence — ${eqVolume.toFixed(1)} mL delivered and the flask sits at pH ${eqPH.toFixed(2)}.`
+      : volume < eqVolume
+        ? weakBuffer
+          ? "Buffer region — the weak acid and its conjugate base resist the pH change, so the curve is almost flat."
+          : acidInFlask
+            ? "Before equivalence — excess acid keeps the flask acidic, and the curve barely lifts."
+            : "Before equivalence — excess base keeps the flask basic, and the curve barely falls."
+        : `Past equivalence — excess ${titrant.formula} now controls the pH.`;
+
+  const indicatorGap =
+    eqPH < indicator.from
+      ? { side: "below", gap: indicator.from - eqPH, when: "after" }
+      : eqPH > indicator.to
+        ? { side: "above", gap: eqPH - indicator.to, when: "before" }
+        : null;
+  const indicatorNote = indicatorGap
+    ? `The equivalence pH (${eqPH.toFixed(2)}) is ${indicatorGap.gap.toFixed(1)} units ${indicatorGap.side} the ${indicator.label} window (${indicator.range}), so the colour change arrives ${indicatorGap.when} the true end point.`
+    : `The equivalence pH (${eqPH.toFixed(2)}) sits inside the ${indicator.label} window (${indicator.range}) — the colour change marks the end point.`;
+
+  const dropDuration = Math.max(0.32, 0.9 / rate);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
@@ -813,449 +1144,869 @@ function TitrationTab() {
           <div className="min-w-0">
             <p className="apple-lab-micro">Titration bench</p>
             <h3 className="apple-lab-title mt-1 text-lg">
-              NaOH into HCl — universal indicator
+              {titrant.formula} into {analyte.formula} — {indicator.label}
             </h3>
           </div>
-          <button type="button" className="apple-lab-btn" onClick={() => setRunning((r) => !r)}>
-            {running ? "Pause drip" : "Resume drip"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="apple-lab-chip">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: running ? "#7dd3fc" : "var(--lab-ink-micro)" }}
+              />
+              {atMax ? "burette empty" : running ? "dripping" : "paused"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setRunning((value) => !value)}
+              className="apple-lab-btn apple-lab-btn--solid !px-3 !py-2"
+            >
+              {running ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              <span>{running ? "Pause" : "Resume"}</span>
+            </button>
+            <button type="button" onClick={reset} className="apple-lab-btn !px-3 !py-2">
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Refill</span>
+            </button>
+          </div>
         </div>
 
-        <svg viewBox="0 0 300 340" className="mx-auto mt-2 h-[340px] w-full max-w-[340px]" role="img" aria-label="Animated titration: a burette dripping into a flask">
-          {/* Stand */}
-          <line x1="52" y1="18" x2="52" y2="322" stroke="rgba(128,128,128,0.4)" strokeWidth="3" strokeLinecap="round" />
-          <line x1="52" y1="30" x2="248" y2="30" stroke="rgba(128,128,128,0.4)" strokeWidth="3" strokeLinecap="round" />
-          <line x1="40" y1="322" x2="66" y2="322" stroke="rgba(128,128,128,0.4)" strokeWidth="3" strokeLinecap="round" />
+        <svg
+          viewBox="0 0 300 430"
+          className="mx-auto mt-2 h-[380px] w-full max-w-[330px] sm:h-[400px]"
+          role="img"
+          aria-label={`A burette of ${titrant.name} dripping into a flask of ${analyte.name}`}
+        >
+          <defs>
+            <linearGradient id="titration-glass" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="rgba(148,163,184,0.18)" />
+              <stop offset="45%" stopColor="rgba(226,232,240,0.06)" />
+              <stop offset="100%" stopColor="rgba(148,163,184,0.2)" />
+            </linearGradient>
+            <clipPath id="titration-flask">
+              <path d={FLASK_D} />
+            </clipPath>
+          </defs>
 
-          {/* Burette */}
-          <rect x="180" y="34" width="14" height="196" rx="7" fill="var(--lab-fill)" stroke="rgba(128,128,128,0.45)" />
-          {/* Titrant level inside the burette (50 mL total) — the burette
-              holds plain base; the colour story happens in the flask. */}
-          <motion.rect
-            x="181.5"
-            width="11"
+          {/* Stand and clamp */}
+          <line x1="40" y1="18" x2="40" y2="412" stroke="rgba(128,128,128,0.45)" strokeWidth="3" strokeLinecap="round" />
+          <line x1="22" y1="412" x2="112" y2="412" stroke="rgba(128,128,128,0.45)" strokeWidth="3" strokeLinecap="round" />
+          <line x1="40" y1="112" x2="170" y2="112" stroke="rgba(128,128,128,0.4)" strokeWidth="2.5" strokeLinecap="round" />
+          <rect x="160" y="106" width="30" height="11" rx="4" fill="var(--lab-fill)" stroke="rgba(128,128,128,0.45)" />
+
+          {/* Burette: 0 mL at the top, 50 mL at the bottom */}
+          <rect x="176" y="34" width="20" height="198" rx="7" fill="url(#titration-glass)" stroke="rgba(148,163,184,0.5)" />
+          <rect
+            x="178"
+            y={38 + (volume / BURETTE_ML) * 190}
+            width="16"
+            height={Math.max(0, 190 - (volume / BURETTE_ML) * 190)}
             rx="5"
             fill="#7d8fa8"
-            opacity="0.7"
-            animate={{ y: 36 + (188 * volume) / 50, height: Math.max(2, 188 - (188 * volume) / 50) }}
-            transition={transition}
+            opacity="0.55"
           />
-          {/* Burette graduations */}
-          {Array.from({ length: 9 }, (_, i) => (
-            <line
-              key={i}
-              x1="180"
-              y1={50 + i * 20}
-              x2={i % 2 === 0 ? 194 : 190}
-              y2={50 + i * 20}
-              stroke="rgba(128,128,128,0.4)"
-              strokeWidth="1"
-            />
-          ))}
-          {/* Stopcock + tip */}
-          <rect x="176" y="230" width="22" height="12" rx="4" fill="var(--lab-fill)" stroke="rgba(128,128,128,0.45)" />
-          <path d="M183 242 L191 242 L189 268 L185 268 Z" fill="var(--lab-fill)" stroke="rgba(128,128,128,0.45)" />
+          <line
+            x1="176"
+            y1={38 + (volume / BURETTE_ML) * 190}
+            x2="196"
+            y2={38 + (volume / BURETTE_ML) * 190}
+            stroke="rgba(226,232,240,0.6)"
+            strokeWidth="1.2"
+          />
+          {Array.from({ length: 11 }, (_, index) => {
+            const y = 40 + index * 19;
+            return (
+              <g key={index}>
+                <line
+                  x1="196"
+                  y1={y}
+                  x2={index % 2 === 0 ? 205 : 200}
+                  y2={y}
+                  stroke="rgba(148,163,184,0.55)"
+                />
+                <text x="209" y={y + 3} fontSize="7.5" fill="rgba(148,163,184,0.85)" fontFamily="monospace">
+                  {index * 5}
+                </text>
+              </g>
+            );
+          })}
 
-          {/* Falling drops — two beats per cycle for a believable rhythm */}
-          {running && !still ? (
+          {/* Stopcock and tip */}
+          <rect x="169" y="232" width="34" height="14" rx="5" fill="var(--lab-fill)" stroke="rgba(128,128,128,0.45)" />
+          <motion.g
+            animate={{ rotate: running && !atMax ? 0 : -78 }}
+            transition={transition}
+            style={{ transformBox: "view-box", transformOrigin: "186px 239px" }}
+          >
+            <circle cx="186" cy="239" r="8" fill="var(--lab-canvas)" stroke="var(--lab-ink)" opacity="0.9" />
+            <line x1="186" y1="239" x2="186" y2="251" stroke="var(--lab-ink)" strokeWidth="2.5" strokeLinecap="round" />
+          </motion.g>
+          <path d="M180 246 L192 246 L189 264 L183 264 Z" fill="var(--lab-fill)" stroke="rgba(128,128,128,0.45)" />
+
+          {/* Flask glass, then the clipped liquid inside it */}
+          <path d={FLASK_D} fill="rgba(148,163,184,0.07)" />
+          <g clipPath="url(#titration-flask)">
+            {/* The level is written straight from the delivered volume, not
+                tweened: there is nothing to overshoot, so it cannot bob. Only
+                the indicator colour fades. */}
+            <rect
+              x="110"
+              y={surface}
+              width="152"
+              height={430 - surface}
+              fill={look.color}
+              opacity="0.78"
+              style={{ transition: "fill 300ms linear" }}
+            />
+          </g>
+          <path d={FLASK_D} fill="none" stroke="rgba(148,163,184,0.5)" strokeWidth="1.6" />
+          <ellipse cx="186" cy="272" rx="14" ry="3.4" fill="none" stroke="rgba(148,163,184,0.55)" strokeWidth="1.4" />
+          <ellipse cx="186" cy={surface} rx="28" ry="2.2" fill="#ffffff" opacity="0.3" />
+
+          {/* Drops fall from the tip to the liquid surface, never through it. */}
+          {running && !still && !atMax ? (
             <>
-              <circle className="apple-lab-drop" cx="187" cy="272" r="3" fill="#7d8fa8" style={{ ["--drop-duration" as string]: `${Math.max(0.5, 2.2 / rate)}s` }} />
-              <circle
-                className="apple-lab-drop"
-                cx="187"
-                cy="272"
-                r="2.6"
-                fill="#7d8fa8"
-                style={{
-                  ["--drop-duration" as string]: `${Math.max(0.5, 2.2 / rate)}s`,
-                  animationDelay: `${Math.max(0.25, 1.1 / rate)}s`,
-                  opacity: 0,
-                }}
+              {[0, 1].map((drop) => (
+                <motion.circle
+                  key={drop}
+                  cx="186"
+                  r={drop === 0 ? 3 : 2.5}
+                  fill="#7d8fa8"
+                  initial={{ cy: 266, opacity: 0 }}
+                  animate={{ cy: [266, surface - 2], opacity: [0, 1, 1, 0] }}
+                  transition={{
+                    duration: dropDuration,
+                    repeat: Infinity,
+                    delay: drop * dropDuration * 0.5,
+                    ease: "easeIn",
+                  }}
+                />
+              ))}
+              <motion.ellipse
+                cx="186"
+                ry="1.8"
+                fill={look.color}
+                animate={{ cy: surface, rx: [4, 15], opacity: [0.45, 0] }}
+                transition={{ duration: dropDuration, repeat: Infinity, ease: "easeOut" }}
               />
             </>
           ) : null}
-
-          {/* Flask (Erlenmeyer) */}
-          <path
-            d="M160 292 L160 268 L172 258 L172 244 L202 244 L202 258 L214 268 L214 292 Q214 316 187 316 Q160 316 160 292 Z"
-            fill="var(--lab-fill)"
-            stroke="rgba(128,128,128,0.5)"
-          />
-          {/* Solution body — rises and recolours as base is added */}
-          <motion.path
-            d={`
-              M ${162 + 10 * (1 - fillFraction)} ${314 - 52 * fillFraction}
-              L ${214 - 10 * (1 - fillFraction)} ${314 - 52 * fillFraction}
-              L 214 290 Q 214 314 187 314 Q 160 314 160 290 Z
-            `}
-            animate={{
-              d: `
-                M ${162 + 10 * (1 - fillFraction)} ${314 - 52 * fillFraction}
-                L ${214 - 10 * (1 - fillFraction)} ${314 - 52 * fillFraction}
-                L 214 290 Q 214 314 187 314 Q 160 314 160 290 Z
-              `,
-              fill: stop.color,
-            }}
-            transition={transition}
-            opacity="0.85"
-          />
-          {/* Meniscus highlight on the solution surface */}
-          <motion.ellipse
-            cx="187"
-            cy={314 - 52 * fillFraction}
-            rx={20 - 8 * (1 - fillFraction)}
-            ry="2.4"
-            fill="#ffffff"
-            opacity="0.35"
-            animate={{ cy: 314 - 52 * fillFraction, rx: 20 - 8 * (1 - fillFraction) }}
-            transition={transition}
-          />
-          {/* Splash on impact */}
-          {running && !still ? (
-            <motion.g
-              animate={{ opacity: [0.5, 0.15, 0.5], scale: [1, 1.12, 1] }}
-              transition={{ duration: Math.max(0.5, 2.2 / rate), repeat: Infinity }}
-              style={{ transformBox: "view-box", transformOrigin: "187px " + (314 - 52 * fillFraction) + "px" }}
-            >
-              <ellipse cx="187" cy={314 - 52 * fillFraction} rx="9" ry="1.8" fill={stop.color} />
-            </motion.g>
-          ) : null}
         </svg>
 
-        <div className="mt-1">
-          <label className="apple-lab-card flex flex-col gap-2 px-3 py-3">
-            <span className="flex items-center justify-between">
-              <span className="apple-lab-micro">Drip rate</span>
-              <span className="apple-lab-value text-[12px] font-semibold">{rate}×</span>
+        {/* What is in the flask and what is being added. */}
+        <div className="mt-1 grid gap-2 sm:grid-cols-2">
+          <label className="apple-lab-card flex min-w-0 flex-col gap-1 px-3 py-2">
+            <span className="apple-lab-micro">In the flask</span>
+            <select
+              value={analyte.id}
+              onChange={(event) => selectAnalyte(event.target.value)}
+              className="w-full cursor-pointer truncate bg-transparent text-[12.5px] font-semibold text-[var(--lab-ink)] outline-none"
+            >
+              {ANALYTES.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.formula} — {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="apple-lab-card flex min-w-0 flex-col gap-1 px-3 py-2">
+            <span className="apple-lab-micro">In the burette</span>
+            <select
+              value={titrant.id}
+              onChange={(event) => {
+                setTitrantId(event.target.value);
+                setVolume(0);
+              }}
+              className="w-full cursor-pointer truncate bg-transparent text-[12.5px] font-semibold text-[var(--lab-ink)] outline-none"
+            >
+              {titrantOptions.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.formula} — {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3">
+          <p className="apple-lab-micro">Indicator</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {INDICATORS.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => setIndicatorId(entry.id)}
+                data-active={entry.id === indicator.id}
+                className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+              >
+                <span className="h-2 w-2 rounded-full" style={{ background: entry.high }} />
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="apple-lab-card block px-3 py-2.5">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="apple-lab-micro">Flask concentration</span>
+              <span className="apple-lab-value text-[12px] font-semibold">{c0.toFixed(2)} M</span>
             </span>
             <input
               type="range"
-              min={0.5}
-              max={6}
-              step={0.5}
-              value={rate}
-              onChange={(event) => setRate(Number(event.target.value))}
-              className="apple-lab-range"
-              aria-label="Drip rate"
+              className="apple-lab-range mt-1"
+              min={0.02}
+              max={0.4}
+              step={0.01}
+              value={c0}
+              onChange={(event) => {
+                setC0(Number(event.target.value));
+                setVolume(0);
+              }}
+            />
+          </label>
+          <label className="apple-lab-card block px-3 py-2.5">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="apple-lab-micro">Burette concentration</span>
+              <span className="apple-lab-value text-[12px] font-semibold">{ct.toFixed(2)} M</span>
+            </span>
+            <input
+              type="range"
+              className="apple-lab-range mt-1"
+              min={0.02}
+              max={0.4}
+              step={0.01}
+              value={ct}
+              onChange={(event) => {
+                setCt(Number(event.target.value));
+                setVolume(0);
+              }}
             />
           </label>
         </div>
-        <button
-          type="button"
-          className="apple-lab-btn mt-3 w-full justify-center"
-          onClick={() => setVolume(0)}
-        >
-          Reset bench
-        </button>
+
+        <label className="apple-lab-card mt-3 block px-3 py-2.5">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="apple-lab-micro">Drip rate</span>
+            <span className="apple-lab-value text-[12px] font-semibold">{rate.toFixed(1)}×</span>
+          </span>
+          <input
+            type="range"
+            className="apple-lab-range mt-1"
+            min={0.5}
+            max={6}
+            step={0.5}
+            value={rate}
+            onChange={(event) => setRate(Number(event.target.value))}
+          />
+        </label>
       </div>
 
-      {/* Live readouts */}
+      {/* Readouts + the curve they trace */}
       <div className="apple-lab-panel apple-lab-glass min-w-0">
-        <div className="flex flex-col gap-3">
-          <div className="apple-lab-card px-4 py-3.5">
-            <p className="apple-lab-micro">Volume added</p>
-            <p className="apple-lab-value mt-1 text-2xl font-bold tabular-nums">
-              {volume.toFixed(1)} <span className="text-[13px] font-medium text-[var(--lab-ink-dim)]">mL</span>
-            </p>
-          </div>
-          <div className="apple-lab-card px-4 py-3.5">
-            <p className="apple-lab-micro">pH of flask solution</p>
-            <p className="apple-lab-value mt-1 text-2xl font-bold tabular-nums">
-              {stop.ph.toFixed(1)}
-            </p>
-          </div>
-          <div className="apple-lab-card flex items-center gap-3 px-4 py-3.5">
-            <span
-              className="h-9 w-9 shrink-0 rounded-full border border-white/20 shadow-inner"
-              style={{ background: stop.color }}
-              aria-hidden
-            />
-            <div className="min-w-0">
-              <p className="apple-lab-micro">Indicator</p>
-              <p className="apple-lab-value mt-0.5 truncate text-[13.5px] font-semibold">
-                {stop.name}
-              </p>
+        <div className="grid grid-cols-2 gap-2.5">
+          {[
+            { label: "Titrant added", value: `${volume.toFixed(1)} mL` },
+            { label: "pH of flask", value: ph.toFixed(2) },
+            { label: "Equivalence", value: `${eqVolume.toFixed(1)} mL` },
+            { label: "Indicator colour", value: look.label },
+          ].map((item) => (
+            <div key={item.label} className="apple-lab-card px-3 py-2.5">
+              <p className="apple-lab-micro">{item.label}</p>
+              <p className="apple-lab-value mt-1 text-[14px] font-semibold">{item.value}</p>
             </div>
-          </div>
-          <div className="apple-lab-card px-4 py-3.5">
-            <p className="apple-lab-micro">Status</p>
-            <p className="apple-lab-note mt-1">
-              {atEndpoint
-                ? "Past the endpoint — the flask has swung to violet and pH is climbing steeply. Reset to run it again."
-                : volume >= 24.4
-                  ? "Right at the endpoint — the last acid is neutralised and the colour is swinging from green to blue."
-                  : volume >= 23.2
-                    ? "Approaching the endpoint — the final mL cross yellow, green and blue fastest."
-                    : "Base is neutralising the acid; pH creeps up slowly until the endpoint nears."}
-            </p>
-          </div>
-          <p className="apple-lab-note">
-            A decorative bench, not a simulator: the numbers are chosen to move
-            together believably — the burette drains, the flask fills and the
-            colour sweeps red → yellow → green → violet as pH crosses 7 at
-            25 mL of 0.1 M NaOH against 25 mL of 0.1 M HCl.
-          </p>
+          ))}
         </div>
+
+        <div className="mt-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="apple-lab-micro">pH against volume</p>
+            <span className="apple-lab-chip !py-0.5 !text-[10px]">
+              {beyondBurette ? "end point beyond 50 mL" : `endpoint pH ${eqPH.toFixed(2)}`}
+            </span>
+          </div>
+          <svg
+            viewBox="0 0 360 180"
+            className="mt-2 h-[190px] w-full"
+            role="img"
+            aria-label={`Titration curve for ${analyte.formula} against ${titrant.formula}`}
+          >
+            {[0, 2, 4, 6, 8, 10, 12, 14].map((value) => {
+              const y = 146 - (value / 14) * 126;
+              return (
+                <g key={value}>
+                  <line x1="30" y1={y} x2="350" y2={y} stroke="rgba(148,163,184,0.12)" />
+                  <text x="24" y={y + 3} fontSize="7.5" textAnchor="end" fill="rgba(148,163,184,0.75)" fontFamily="monospace">
+                    {value}
+                  </text>
+                </g>
+              );
+            })}
+            {[0, 10, 20, 30, 40, 50].map((value) => {
+              const x = 34 + (value / BURETTE_ML) * 312;
+              return (
+                <g key={value}>
+                  <line x1={x} y1="12" x2={x} y2="146" stroke="rgba(148,163,184,0.08)" />
+                  <text x={x} y="162" fontSize="7.5" textAnchor="middle" fill="rgba(148,163,184,0.75)" fontFamily="monospace">
+                    {value}
+                  </text>
+                </g>
+              );
+            })}
+            <line x1="30" y1="146" x2="350" y2="146" stroke="rgba(148,163,184,0.3)" />
+            <line x1="30" y1="12" x2="30" y2="146" stroke="rgba(148,163,184,0.3)" />
+            <text x="190" y="176" fontSize="8" textAnchor="middle" fill="rgba(148,163,184,0.8)" fontFamily="monospace">
+              titrant / mL
+            </text>
+
+            {!beyondBurette ? (
+              <line
+                x1={eqX}
+                y1="12"
+                x2={eqX}
+                y2="146"
+                stroke="rgba(148,163,184,0.42)"
+                strokeDasharray="4 5"
+              />
+            ) : null}
+            <path d={curve} fill="none" stroke="var(--lab-ink)" strokeWidth="1.7" opacity="0.75" />
+            <path
+              d={curve}
+              fill="none"
+              stroke="var(--lab-ink)"
+              strokeWidth="2.4"
+              strokeDasharray="1000"
+              strokeDashoffset={1000 - 1000 * Math.min(1, volume / BURETTE_ML)}
+            />
+            <circle cx={pointX} cy={pointY} r="4" fill="var(--lab-ink)" />
+            <circle cx={pointX} cy={pointY} r="7.5" fill="none" stroke="var(--lab-ink)" opacity="0.35" />
+          </svg>
+        </div>
+
+        <div className="apple-lab-card mt-3 px-3 py-2.5">
+          <p className="apple-lab-micro">What is happening</p>
+          <p className="apple-lab-note mt-1">{status}</p>
+        </div>
+        <div className="apple-lab-card mt-2 px-3 py-2.5">
+          <p className="apple-lab-micro">{indicator.label} · {indicator.range}</p>
+          <p className="apple-lab-note mt-1">{indicatorNote}</p>
+        </div>
+
+        <p className="apple-lab-note mt-3">
+          25.0 mL of {c0.toFixed(2)} M {analyte.formula} in the flask; equivalence
+          volume nₐ/cₜ = <span className="apple-lab-value">{eqVolume.toFixed(1)} mL</span>. Change
+          either concentration and the end point moves with it.
+        </p>
       </div>
     </div>
   );
 }
 
 /* ============================================================
-   Sub-tab 4 — Reactions stage
+   Sub-tab 4 — Reactions builder
+
+   Two reactant slots and a shelf of 39 real reagents. Drag a reagent into a
+   slot (or tap it to load the first free one) and the bench looks the pair up
+   in a curated reaction table: a balanced equation, a classification and an
+   honest "these two do not react" when there is no entry. Selection is ink on
+   glass — the lab has no violet accent left to leak into a highlight.
    ============================================================ */
 
-import { REACTIONS } from "@/components/lab/reactions-data";
+interface ReagentTerm {
+  coefficient: string;
+  formula: string;
+}
 
-function MoleculeChip({
-  item,
-  state = "docked",
-  dimmed = false,
-}: {
-  item: { formula: string; coefficient: string; color: string };
-  state?: "docked" | "flying" | "arrived";
-  dimmed?: boolean;
-}) {
-  const transition = useSpringTransition();
-  const still = useStillMotion();
-  // The arrival pop is a keyframe array, and keyframe arrays must ride a
-  // duration-based tween — motion's spring generator only supports two
-  // numeric keyframes, so handing it this array would throw at run time.
-  const popTransition: Transition =
-    state === "arrived" && !still
-      ? { duration: 0.45, type: "tween", ease: "easeOut" }
-      : still
-        ? { duration: 0, type: "tween" }
-        : transition;
+function splitSide(side: string): ReagentTerm[] {
+  return side
+    .split("+")
+    .map((term) => term.trim())
+    .filter(Boolean)
+    .map((term) => {
+      const match = term.match(/^(\d+)\s+(.+)$/);
+      return match
+        ? { coefficient: match[1], formula: match[2] }
+        : { coefficient: "1", formula: term };
+    });
+}
+
+/** Digits inside a formula become true subscripts (H2O → H₂O). */
+function Formula({ text, className }: { text: string; className?: string }) {
   return (
-    <motion.div
-      layout
-      transition={popTransition}
-      initial={false}
-      animate={
-        state === "flying"
-          ? { opacity: 0.35, scale: 0.82, filter: "blur(1.5px)" }
-          : state === "arrived"
-            ? { opacity: 1, scale: [0.86, 1], filter: "blur(0px)" }
-            : { opacity: 1, scale: 1, filter: "blur(0px)" }
-      }
-      style={dimmed ? { opacity: 0.45, filter: "saturate(0.4)" } : undefined}
-      className="flex shrink-0 items-center gap-1.5"
-    >
-      <span className="apple-lab-value text-[12px] font-semibold">{item.coefficient}</span>
-      <span
-        className="rounded-xl border px-3 py-2 text-[14px] font-bold"
-        style={{
-          borderColor: tint(item.color, "88"),
-          background: tint(item.color, "1f"),
-          color: item.color,
-        }}
-      >
-        {item.formula}
-      </span>
-    </motion.div>
+    <span className={className}>
+      {text.split(/(\d+)/).map((chunk, index) =>
+        /^\d+$/.test(chunk) ? (
+          <sub key={index} className="text-[0.72em]">
+            {chunk}
+          </sub>
+        ) : (
+          <span key={index}>{chunk}</span>
+        ),
+      )}
+    </span>
   );
 }
+
+function Equation({ eq }: { eq: string }) {
+  const [left, right] = eq.split("->");
+  return (
+    <span className="apple-lab-value inline-flex flex-wrap items-center justify-center gap-x-1.5 text-[14px] font-bold leading-relaxed">
+      {splitSide(left ?? "").map((term, index) => (
+        <span key={`left-${index}`} className="inline-flex items-baseline gap-1">
+          {index > 0 ? <span className="text-[var(--lab-ink-micro)]">+</span> : null}
+          {term.coefficient !== "1" ? (
+            <span className="text-[11px] text-[var(--lab-ink-dim)]">{term.coefficient}</span>
+          ) : null}
+          <Formula text={term.formula} />
+        </span>
+      ))}
+      <span className="px-1 text-[var(--lab-ink-micro)]">→</span>
+      {splitSide(right ?? "").map((term, index) => (
+        <span key={`right-${index}`} className="inline-flex items-baseline gap-1">
+          {index > 0 ? <span className="text-[var(--lab-ink-micro)]">+</span> : null}
+          {term.coefficient !== "1" ? (
+            <span className="text-[11px] text-[var(--lab-ink-dim)]">{term.coefficient}</span>
+          ) : null}
+          <Formula text={term.formula} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+const SHELF_GROUPS: Array<{ id: string; label: string; ids: string[] }> = [
+  {
+    id: "metals",
+    label: "Metals & elements",
+    ids: ["na", "k", "ca", "mg", "al", "zn", "fe", "cu", "pb", "c", "s"],
+  },
+  {
+    id: "acids",
+    label: "Acids, bases & oxides",
+    ids: ["hcl", "h2so4", "naoh", "nh3", "cao", "fe2o3", "nahco3", "na2co3", "caco3"],
+  },
+  {
+    id: "solutions",
+    label: "Salt solutions",
+    ids: ["h2o", "h2o2", "nacl", "cuso4", "agno3", "bacl2", "na2so4", "ki", "pbno3", "nabr", "kmno4"],
+  },
+  {
+    id: "gases",
+    label: "Gases",
+    ids: ["h2", "o2", "n2", "cl2", "co2", "ch4", "h2s", "so2"],
+  },
+];
+
+const REACTION_PRESETS: Array<{ ids: [string, string]; label: string }> = [
+  { ids: ["hcl", "naoh"], label: "Acid + base" },
+  { ids: ["caco3", "hcl"], label: "Acid + carbonate" },
+  { ids: ["mg", "o2"], label: "Combustion" },
+  { ids: ["cuso4", "fe"], label: "Displacement" },
+];
 
 function ReactionsTab() {
   const transition = useSpringTransition();
   const still = useStillMotion();
-  const [presetId, setPresetId] = useState(REACTIONS[0].id);
-  const [runKey, setRunKey] = useState(0); // bump per React click to replay the product entrance
-  const [resultOpen, setResultOpen] = useState(false); // the classification block, opened per run
-  const [flashKey, setFlashKey] = useState(0);
-  const [flashVisible, setFlashVisible] = useState(false);
-  const preset = REACTIONS.find((entry) => entry.id === presetId) ?? REACTIONS[0];
+  const [slotA, setSlotA] = useState<Substance | null>(null);
+  const [slotB, setSlotB] = useState<Substance | null>(null);
+  const [over, setOver] = useState<"a" | "b" | null>(null);
+  const [group, setGroup] = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [runKey, setRunKey] = useState(0);
+  const [flash, setFlash] = useState(false);
 
-  /* One run per click: products remount (their entrance replays), the energy
-     flash plays once inside the opened result card, and reactants dim —
-     never a loop. Switching rows closes the previous run's readout. */
-  const react = () => {
-    setRunKey((k) => k + 1);
-    setResultOpen(true);
-    setFlashKey((k) => k + 1);
-    setFlashVisible(true);
+  const pairKey = slotA && slotB ? [slotA.id, slotB.id].sort().join("|") : null;
+  const reaction: Reaction | undefined = pairKey ? REACTIONS[pairKey] : undefined;
+  const products = useMemo(
+    () => (reaction ? splitSide(reaction.eq.split("->")[1] ?? "") : []),
+    [reaction],
+  );
+
+  const load = (slot: "a" | "b", substance: Substance) => {
+    setFlash(false);
+    setRunKey(0);
+    if (slot === "a") {
+      setSlotB((current) => (current?.id === substance.id ? null : current));
+      setSlotA(substance);
+    } else {
+      setSlotA((current) => (current?.id === substance.id ? null : current));
+      setSlotB(substance);
+    }
   };
+
+  /** Tap-to-fill: the next free slot, then the second slot. */
+  const pick = (substance: Substance) => {
+    if (!slotA) return load("a", substance);
+    if (!slotB && slotA.id !== substance.id) return load("b", substance);
+    load("b", substance);
+  };
+
+  const loadPreset = (ids: [string, string]) => {
+    const first = SUBSTANCES.find((entry) => entry.id === ids[0]);
+    const second = SUBSTANCES.find((entry) => entry.id === ids[1]);
+    if (!first || !second) return;
+    setSlotA(first);
+    setSlotB(second);
+    setRunKey(0);
+    setFlash(false);
+  };
+
+  const clearSlot = (slot: "a" | "b") => {
+    if (slot === "a") setSlotA(null);
+    else setSlotB(null);
+    setRunKey(0);
+    setFlash(false);
+  };
+
+  const dropZone = (slot: "a" | "b") => ({
+    onDragOver: (event: React.DragEvent) => {
+      event.preventDefault();
+      setOver(slot);
+    },
+    onDragLeave: () => setOver((current) => (current === slot ? null : current)),
+    onDrop: (event: React.DragEvent) => {
+      event.preventDefault();
+      setOver(null);
+      const substance = SUBSTANCES.find((entry) => entry.id === event.dataTransfer.getData("text/plain"));
+      if (substance) load(slot, substance);
+    },
+  });
+
+  const needle = query.trim().toLowerCase();
+  const groupIds = group === "all" ? null : SHELF_GROUPS.find((entry) => entry.id === group)?.ids ?? null;
+  const shelf = SUBSTANCES.filter((substance) => {
+    if (groupIds && !groupIds.includes(substance.id)) return false;
+    if (!needle) return true;
+    return (
+      substance.name.toLowerCase().includes(needle) ||
+      substance.formula.toLowerCase().includes(needle)
+    );
+  });
+
+  const suggestions = slotA
+    ? Object.keys(REACTIONS)
+        .filter((key) => key.split("|").includes(slotA.id))
+        .map((key) => key.split("|").find((id) => id !== slotA.id))
+        .filter((id): id is string => Boolean(id) && id !== slotB?.id)
+        .slice(0, 4)
+        .map((id) => SUBSTANCES.find((entry) => entry.id === id))
+        .filter((entry): entry is Substance => Boolean(entry))
+    : [];
+
+  const canReact = Boolean(reaction);
+
+  const renderSlot = (id: "a" | "b", label: string, substance: Substance | null) => (
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div
+        {...dropZone(id)}
+        className="flex h-[86px] w-full items-center justify-center rounded-2xl border p-2.5 transition-colors"
+        style={{
+          borderColor: over === id ? "var(--lab-ink)" : "var(--lab-line)",
+          borderStyle: substance ? "solid" : "dashed",
+          background:
+            over === id
+              ? "color-mix(in srgb, var(--lab-ink) 7%, transparent)"
+              : substance
+                ? tint(substance.color, "18")
+                : "transparent",
+        }}
+      >
+        {substance ? (
+          <div className="flex w-full min-w-0 items-center gap-2.5">
+            <span
+              className="h-9 w-9 shrink-0 rounded-lg border"
+              style={{
+                borderColor: tint(substance.color, "88"),
+                background: tint(substance.color, "33"),
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <Formula
+                text={substance.formula}
+                className="block text-[18px] font-bold leading-tight text-[var(--lab-ink)]"
+              />
+              <p className="truncate text-[10.5px] leading-tight text-[var(--lab-ink-dim)]">
+                {substance.name}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => clearSlot(id)}
+              aria-label={`Clear ${label}`}                      className="lab-hover-ink rounded-full p-1 text-[var(--lab-ink-dim)] transition-colors hover:text-[var(--lab-ink)]"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <p className="px-2 text-center text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
+            Drop a reagent here
+            <br />
+            or tap one on the shelf
+          </p>
+        )}
+      </div>
+      <span className="apple-lab-micro text-center">{label}</span>
+    </div>
+  );
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-      {/* Stage */}
+      {/* The bench */}
       <div className="apple-lab-panel apple-lab-glass min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="apple-lab-micro">Reactions stage</p>
-            <h3 className="apple-lab-title mt-1 truncate text-lg">{preset.type}</h3>
+            <p className="apple-lab-micro">Reactions builder</p>
+            <h3 className="apple-lab-title mt-1 truncate text-lg">
+              {reaction ? reaction.type : "Load two reagents"}
+            </h3>
           </div>
-          <button type="button" className="apple-lab-btn" onClick={react}>
-            React ▸
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!canReact) return;
+                setRunKey((value) => value + 1);
+                setFlash(true);
+              }}
+              disabled={!canReact}
+              className="apple-lab-btn apple-lab-btn--solid !px-3.5 !py-2"
+            >
+              React ▸
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearSlot("a");
+                clearSlot("b");
+              }}
+              className="apple-lab-btn !px-3 !py-2"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          </div>
         </div>
 
-        {/* Reactants → products, one shared-layout morph per run */}
-        <div className="mt-6 flex flex-col items-center gap-4">
-          <div className="flex min-w-0 flex-wrap items-center justify-center gap-2.5">
-            {preset.reactants.map((item, index) => (
-              <MoleculeChip
-                key={`r-${index}`}
-                item={item}
-                dimmed={runKey > 0}
-              />
-            ))}
-            <span className="apple-lab-title px-1 text-xl text-[var(--lab-ink-dim)]">→</span>
-            {preset.products.map((item, index) => (
-              <MoleculeChip key={`p-${runKey}-${index}`} item={item} state={runKey > 0 ? "arrived" : "docked"} dimmed={false} />
-            ))}
-          </div>
+        {/* Two drop slots. Drag a reagent from the shelf, or tap one. */}
+        <div className="mt-4 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          {renderSlot("a", "Reactant A", slotA)}
+          <span className="self-center text-lg leading-none text-[var(--lab-ink-micro)]">+</span>
+          {renderSlot("b", "Reactant B", slotB)}
+        </div>
 
-          {/* The run's readout: classification, plain-language explanation,
-              real-world use, and the heat sign. The energy flash plays inside
-              it, so the line under the equation is plain preset data — it can
-              never error out, whatever the animation does. */}
-          <AnimatePresence initial={false}>
-            {resultOpen && (
-              <motion.div
-                key={preset.id}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={transition}
-                className="apple-lab-card w-full max-w-xl px-4 py-3.5 text-left"
-              >
-                <div className="flex min-h-10 items-center justify-center overflow-hidden">
+        {/* What the pair does, before the animation runs. */}
+        <div className="mt-4">
+          {slotA && slotB ? (
+            reaction ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="apple-lab-card w-full px-3 py-3 text-center">
+                  <p className="apple-lab-micro">Balanced equation</p>
+                  <div className="mt-1.5">
+                    <Equation eq={reaction.eq} />
+                  </div>
+                </div>
+
+                <div className="flex min-h-8 flex-wrap items-center justify-center gap-2">
+                  {products.map((product, index) => (
+                    <motion.span
+                      key={`${runKey}-${index}-${product.formula}`}
+                      initial={runKey > 0 ? { opacity: 0, scale: 0.82, y: 8 } : false}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ ...transition, delay: still ? 0 : index * 0.08 }}
+                      className="inline-flex items-baseline gap-1 rounded-xl border border-[var(--lab-line)] px-2.5 py-1.5"
+                      style={{ background: "color-mix(in srgb, var(--lab-ink) 5%, transparent)" }}
+                    >
+                      {product.coefficient !== "1" ? (
+                        <span className="text-[10px] text-[var(--lab-ink-dim)]">{product.coefficient}</span>
+                      ) : null}
+                      <Formula text={product.formula} className="apple-lab-value text-[13.5px] font-bold" />
+                    </motion.span>
+                  ))}
                   <AnimatePresence>
-                    {flashVisible ? (
+                    {flash ? (
                       <motion.span
-                        key={`flash-${flashKey}`}
-                        initial={{ opacity: 0, scaleX: 0.4 }}
-                        animate={{ opacity: [0, 1, 1, 0], scaleX: [0.6, 1, 1, 1] }}
-                        exit={{ opacity: 0 }}
-                        transition={
-                          still
-                            ? { duration: 0.4, times: [0, 0.5, 0.9, 1], type: "tween" }
-                            : { duration: 1.6, times: [0, 0.2, 0.6, 1], type: "tween" }
-                        }
-                        onAnimationComplete={() => setFlashVisible(false)}
+                        key={`flash-${runKey}`}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: [0, 1, 1, 0], scale: [0.9, 1, 1, 1] }}
+                        transition={{
+                          duration: still ? 0.4 : 1.6,
+                          times: [0, 0.2, 0.7, 1],
+                          type: "tween",
+                        }}
+                        onAnimationComplete={() => setFlash(false)}
                         className="apple-lab-chip"
-                        style={{ borderColor: "rgba(224,98,120,0.55)" }}
+                        style={{ borderColor: "rgba(224,98,120,0.45)", color: "#e06278" }}
                       >
                         ⚡ bonds break, bonds form — atoms are conserved
                       </motion.span>
                     ) : null}
                   </AnimatePresence>
                 </div>
-                <p className="apple-lab-micro">Classification</p>
-                <p className="apple-lab-value mt-1 text-[13px] font-semibold">
-                  {preset.classification}
+
+                <div className="w-full">
+                  <p className="apple-lab-micro">Classification</p>
+                  <p className="apple-lab-value mt-1 text-[13px] font-semibold">{reaction.type}</p>
+                  <p className="apple-lab-note mt-2 leading-relaxed">{reaction.note}</p>
+                  {reaction.energy ? (
+                    <span
+                      className="apple-lab-chip mt-2 inline-flex items-center gap-1.5"
+                      style={{
+                        borderColor:
+                          reaction.energy === "exo"
+                            ? "rgba(224,98,120,0.45)"
+                            : "rgba(42,168,196,0.45)",
+                        color: reaction.energy === "exo" ? "#e06278" : "#2aa8c4",
+                      }}
+                    >
+                      {reaction.energy === "exo"
+                        ? "↑ exothermic — heat released"
+                        : "↓ endothermic — heat absorbed"}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="apple-lab-card px-3.5 py-3">
+                <p className="apple-lab-value text-[13px] font-semibold">No direct reaction</p>
+                <p className="apple-lab-note mt-1.5 leading-relaxed">
+                  {slotA.name} and {slotB.name} do not react under bench
+                  conditions. A reaction is not invented just because two
+                  substances are on the bench — swap one of them for a partner
+                  from the list below.
                 </p>
-                <p className="apple-lab-note mt-3 leading-relaxed">{preset.explanation}</p>
-                <p className="apple-lab-note mt-2 leading-relaxed">{preset.realWorld}</p>
-                {preset.heat ? (
-                  <span
-                    className="apple-lab-chip mt-3 inline-flex items-center gap-1.5"
-                    style={{
-                      borderColor:
-                        preset.heat === "exothermic"
-                          ? "rgba(224,98,120,0.5)"
-                          : "rgba(42,168,196,0.5)",
-                      color: preset.heat === "exothermic" ? "#e06278" : "#2aa8c4",
-                    }}
-                  >
-                    {preset.heat === "exothermic"
-                      ? "↑ exothermic — heat released"
-                      : "↓ endothermic — heat absorbed"}
-                  </span>
+                {suggestions.length > 0 ? (
+                  <div className="mt-2.5">
+                    <p className="apple-lab-micro">Partners that do react with {slotA.formula}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {suggestions.map((partner) => (
+                        <button
+                          key={partner.id}
+                          type="button"
+                          onClick={() => load("b", partner)}
+                          className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+                        >
+                          <Formula text={partner.formula} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ) : null}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="apple-lab-card w-full max-w-xl px-4 py-3 text-center">
-            <p className="apple-lab-micro">Balanced equation</p>
-            <p className="apple-lab-value mt-1 break-words text-[15px] font-bold">
-              {preset.label}
-            </p>
-          </div>
-
-          <p className="apple-lab-note max-w-xl text-center">{preset.note}</p>
+              </div>
+            )
+          ) : (
+            <div className="flex min-h-[145px] flex-col items-center justify-center gap-2 text-center">
+              <p className="apple-lab-title text-base">Build a reaction</p>
+              <p className="apple-lab-note max-w-sm">
+                Drag one reagent into each slot. The bench looks the pair up and
+                shows the balanced equation before you run it.
+              </p>
+            </div>
+          )}
         </div>
 
-        <p className="apple-lab-note mt-5">
-          Press <span className="apple-lab-value font-semibold">React</span> and
-          the mixture crosses the arrow: coefficients stay fixed because atoms
-          are never created or destroyed — only rearranged.
+        <p className="apple-lab-note mt-4">
+          Coefficients stay fixed because atoms are never created or destroyed —
+          only rearranged. Unlisted pairs honestly report that nothing happens.
         </p>
       </div>
 
-      {/* Reaction picker */}
+      {/* Reagent shelf */}
       <div className="apple-lab-panel apple-lab-glass min-w-0">
-        <p className="apple-lab-micro">Pick a reaction</p>
-        <div className="mt-3 flex flex-col gap-4">
-          {([
-            {
-              key: "types" as const,
-              heading: "Reaction Types",
-              blurb: "The seven general categories",
-            },
-            {
-              key: "named" as const,
-              heading: "Real-World Reactions",
-              blurb: "Named reactions from daily life and industry",
-            },
-          ]).map((group) => (
-            <div key={group.key} className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2 px-1">
-                <span className="apple-lab-value text-[12px] font-bold tracking-wide">
-                  {group.heading}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="apple-lab-micro">Reagent shelf</p>
+            <p className="apple-lab-note mt-1 text-[11px]">
+              {SUBSTANCES.length} substances · drag into a slot, or tap to load
+              the next one.
+            </p>
+          </div>
+          <label className="apple-lab-card flex items-center gap-2 px-2.5 py-1.5">
+            <span className="apple-lab-micro">Find</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="name or formula"
+              aria-label="Search reagents"
+              className="w-24 bg-transparent text-[11.5px] text-[var(--lab-ink)] outline-none placeholder:text-[var(--lab-ink-micro)]"
+            />
+          </label>
+        </div>
+
+        <div className="lab-pan mt-2.5 flex gap-1.5 pb-1">
+          <button
+            type="button"
+            onClick={() => setGroup("all")}
+            data-active={group === "all"}
+            className="apple-lab-btn shrink-0 !px-2.5 !py-1 !text-[10.5px]"
+          >
+            All
+          </button>
+          {SHELF_GROUPS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setGroup(group === entry.id ? "all" : entry.id)}
+              data-active={group === entry.id}
+              className="apple-lab-btn shrink-0 !px-2.5 !py-1 !text-[10.5px]"
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 grid max-h-[420px] grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-2 overflow-y-auto pr-1 apple-lab-scroll">
+          {shelf.map((substance) => {
+            const active = slotA?.id === substance.id || slotB?.id === substance.id;
+            return (
+              <button
+                key={substance.id}
+                type="button"
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData("text/plain", substance.id);
+                  event.dataTransfer.effectAllowed = "copy";
+                }}
+                onClick={() => pick(substance)}
+                aria-pressed={active}
+                title={`${substance.name} · ${substance.state}`}
+                className="apple-lab-tile flex h-[62px] min-w-0 flex-col items-start justify-between px-2 py-1.5 text-left"
+                style={{
+                  borderColor: active ? "var(--lab-ink)" : tint(substance.color, "55"),
+                  background: active
+                    ? "color-mix(in srgb, var(--lab-ink) 12%, transparent)"
+                    : tint(substance.color, "14"),
+                }}
+              >
+                <span className="text-[7.5px] uppercase tracking-widest text-[var(--lab-ink-micro)]">
+                  {substance.state}
                 </span>
-                <span className="apple-lab-note text-[10.5px]">{group.blurb}</span>
-              </div>
-              {REACTIONS.filter((entry) => entry.group === group.key).map((entry) => {
-                const active = entry.id === presetId;
-                return (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => {
-                      setPresetId(entry.id);
-                      setRunKey(0);
-                      setResultOpen(false);
-                      setFlashVisible(false);
-                    }}
-                    aria-pressed={active}
-                    className="apple-lab-card flex min-w-0 items-center justify-between gap-3 px-3.5 py-3 text-left"
-                  >
-                    {/* The picked row is one shared-layout box that travels
-                        between the rows. The row itself carries no static fill
-                        or border, so nothing flashes in before the box
-                        arrives. */}
-                    {active && (
-                      <motion.span
-                        layoutId="reaction-picked"
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 rounded-[18px] border"
-                        transition={transition}
-                        style={{
-                          borderColor: "rgba(167,139,250,0.5)",
-                          background: "rgba(167,139,250,0.09)",
-                        }}
-                      />
-                    )}
-                    <span className="relative z-10 min-w-0">
-                      <span className="block truncate text-[13px] font-semibold text-[var(--lab-ink)]">
-                        {entry.type}
-                      </span>
-                      <span className="apple-lab-note mt-0.5 block truncate">{entry.label}</span>
-                    </span>
-                    <span
-                      className="relative z-10 h-2 w-2 shrink-0 rounded-full"
-                      style={{
-                        background: active ? "var(--lab-diagram-violet)" : "var(--lab-line)",
-                      }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+                <Formula
+                  text={substance.formula}
+                  className="text-[14px] font-bold leading-none text-[var(--lab-ink)]"
+                />
+                <span className="w-full truncate text-[8px] leading-none text-[var(--lab-ink-dim)]">
+                  {substance.name}
+                </span>
+              </button>
+            );
+          })}
+          {shelf.length === 0 ? (
+            <p className="apple-lab-note col-span-3 py-6 text-center text-[11px]">
+              No reagent matches “{query}”.
+            </p>
+          ) : null}
+        </div>
+
+        <p className="apple-lab-micro mt-4">Try a reaction</p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {REACTION_PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => loadPreset(preset.ids)}
+              className="apple-lab-btn !px-2.5 !py-1 !text-[10.5px]"
+            >
+              {preset.label}
+            </button>
           ))}
         </div>
       </div>
@@ -1269,7 +2020,7 @@ function ReactionsTab() {
 
 export function ChemistryGlassLab() {
   const [tab, setTab] = useState<SubTab>("table");
-  const [selected, setSelected] = useState<number | null>(6);
+  const [selected, setSelected] = useState<number | null>(null);
   const { theme, toggle } = useLabTheme();
   const transition = useSpringTransition();
   const stagger = useStagger(0.05);

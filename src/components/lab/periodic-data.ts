@@ -1,8 +1,9 @@
 /**
  * Periodic table data — atomic number, symbol, name, standard atomic weight,
  * category and phase at STP (or "synthetic" for man-made elements).
- * Electron configurations are derived from the Aufbau filling order at
- * runtime (see configFor), so they stay consistent with atomic number.
+ * Grid positions are the real IUPAC groups (period 2 and 3 jump from group 2
+ * to group 13), and electron configurations are the ground-state ones, with
+ * the half/full-filled d-subshell exceptions written out explicitly.
  */
 
 export type Category =
@@ -134,21 +135,21 @@ export const ELEMENTS: ElementData[] = [
   { n: 101, sym: "Md", name: "Mendelevium", mass: "258", cat: "actinide", phase: "solid" },
   { n: 102, sym: "No", name: "Nobelium", mass: "259", cat: "actinide", phase: "solid" },
   { n: 103, sym: "Lr", name: "Lawrencium", mass: "266", cat: "actinide", phase: "solid" },
-  { n: 104, sym: "Rf", name: "Rutherfordium", mass: "267", cat: "synthetic", phase: "synthetic" },
-  { n: 105, sym: "Db", name: "Dubnium", mass: "268", cat: "synthetic", phase: "synthetic" },
-  { n: 106, sym: "Sg", name: "Seaborgium", mass: "269", cat: "synthetic", phase: "synthetic" },
-  { n: 107, sym: "Bh", name: "Bohrium", mass: "270", cat: "synthetic", phase: "synthetic" },
-  { n: 108, sym: "Hs", name: "Hassium", mass: "277", cat: "synthetic", phase: "synthetic" },
-  { n: 109, sym: "Mt", name: "Meitnerium", mass: "278", cat: "synthetic", phase: "synthetic" },
-  { n: 110, sym: "Ds", name: "Darmstadtium", mass: "281", cat: "synthetic", phase: "synthetic" },
-  { n: 111, sym: "Rg", name: "Roentgenium", mass: "282", cat: "synthetic", phase: "synthetic" },
-  { n: 112, sym: "Cn", name: "Copernicium", mass: "285", cat: "synthetic", phase: "synthetic" },
-  { n: 113, sym: "Nh", name: "Nihonium", mass: "286", cat: "synthetic", phase: "synthetic" },
-  { n: 114, sym: "Fl", name: "Flerovium", mass: "289", cat: "synthetic", phase: "synthetic" },
-  { n: 115, sym: "Mc", name: "Moscovium", mass: "290", cat: "synthetic", phase: "synthetic" },
-  { n: 116, sym: "Lv", name: "Livermorium", mass: "293", cat: "synthetic", phase: "synthetic" },
-  { n: 117, sym: "Ts", name: "Tennessine", mass: "294", cat: "synthetic", phase: "synthetic" },
-  { n: 118, sym: "Og", name: "Oganesson", mass: "294", cat: "synthetic", phase: "synthetic" },
+  { n: 104, sym: "Rf", name: "Rutherfordium", mass: "267", cat: "transition", phase: "synthetic" },
+  { n: 105, sym: "Db", name: "Dubnium", mass: "268", cat: "transition", phase: "synthetic" },
+  { n: 106, sym: "Sg", name: "Seaborgium", mass: "269", cat: "transition", phase: "synthetic" },
+  { n: 107, sym: "Bh", name: "Bohrium", mass: "270", cat: "transition", phase: "synthetic" },
+  { n: 108, sym: "Hs", name: "Hassium", mass: "277", cat: "transition", phase: "synthetic" },
+  { n: 109, sym: "Mt", name: "Meitnerium", mass: "278", cat: "transition", phase: "synthetic" },
+  { n: 110, sym: "Ds", name: "Darmstadtium", mass: "281", cat: "transition", phase: "synthetic" },
+  { n: 111, sym: "Rg", name: "Roentgenium", mass: "282", cat: "transition", phase: "synthetic" },
+  { n: 112, sym: "Cn", name: "Copernicium", mass: "285", cat: "transition", phase: "synthetic" },
+  { n: 113, sym: "Nh", name: "Nihonium", mass: "286", cat: "post-transition", phase: "synthetic" },
+  { n: 114, sym: "Fl", name: "Flerovium", mass: "289", cat: "post-transition", phase: "synthetic" },
+  { n: 115, sym: "Mc", name: "Moscovium", mass: "290", cat: "post-transition", phase: "synthetic" },
+  { n: 116, sym: "Lv", name: "Livermorium", mass: "293", cat: "post-transition", phase: "synthetic" },
+  { n: 117, sym: "Ts", name: "Tennessine", mass: "294", cat: "halogen", phase: "synthetic" },
+  { n: 118, sym: "Og", name: "Oganesson", mass: "294", cat: "noble gas", phase: "synthetic" },
 ];
 
 /** Subshell filling order (Aufbau) — capacities per subshell. */
@@ -159,25 +160,94 @@ const AUFBAU: [string, number][] = [
   ["7s", 2], ["5f", 14], ["6d", 10], ["7p", 6],
 ];
 
-/** Ground-state electron configuration from atomic number (Aufbau order). */
-export function configFor(z: number): string {
+/**
+ * Ground-state exceptions to strict Aufbau filling.
+ *
+ * A pure Aufbau walk is only an approximation: a half-filled or filled
+d-subshell is extra stable, which is why chromium really is 3d⁵4s¹ and not
+3d⁴4s², and why palladium has no 5s electron at all. These are the standard
+IUPAC ground-state configurations, written compactly and parsed below, so the
+Atomic Models tab and the element profile do not print textbook fiction.
+ */
+const CONFIG_EXCEPTIONS: Record<number, string> = {
+  24: "1s2 2s2 2p6 3s2 3p6 3d5 4s1", // Cr
+  29: "1s2 2s2 2p6 3s2 3p6 3d10 4s1", // Cu
+  41: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s1 4d4", // Nb
+  42: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s1 4d5", // Mo
+  44: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s1 4d7", // Ru
+  45: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s1 4d8", // Rh
+  46: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10", // Pd — no 5s
+  47: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s1 4d10", // Ag
+  57: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 5d1", // La
+  58: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f1 5d1", // Ce
+  64: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f7 5d1", // Gd
+  78: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s1 4f14 5d9", // Pt
+  79: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s1 4f14 5d10", // Au
+  89: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 6d1", // Ac
+  90: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 6d2", // Th
+  91: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 5f2 6d1", // Pa
+  92: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 5f3 6d1", // U
+  93: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 5f4 6d1", // Np
+  96: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 5f7 6d1", // Cm
+  103: "1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6 7s2 5f14 7p1", // Lr
+};
+
+/** One subshell with its electron count, e.g. ["3d", 5]. */
+export type Subshell = [string, number];
+
+/** Ground-state subshells, exceptions included. */
+export function subshellsFor(z: number): Subshell[] {
+  const exception = CONFIG_EXCEPTIONS[z];
+  if (exception) {
+    return [...exception.matchAll(/(\d)([spdf])(\d+)/g)].map((match) => [
+      `${match[1]}${match[2]}`,
+      Number(match[3]),
+    ]);
+  }
   let remaining = z;
-  const parts: string[] = [];
+  const parts: Subshell[] = [];
   for (const [orbital, capacity] of AUFBAU) {
     if (remaining <= 0) break;
     const count = Math.min(capacity, remaining);
-    parts.push(`${orbital}${count}`);
+    parts.push([orbital, count]);
     remaining -= count;
   }
-  return parts.join(" ");
+  return parts;
 }
 
-/** Grid position within the 18-column periodic layout (main rows 1–7). */
+const SUPERSCRIPT: Record<string, string> = {
+  "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+  "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+};
+
+const superscript = (value: number) =>
+  String(value)
+    .split("")
+    .map((digit) => SUPERSCRIPT[digit] ?? digit)
+    .join("");
+
+/** Ground-state electron configuration from atomic number (with exceptions). */
+export function configFor(z: number): string {
+  return subshellsFor(z)
+    .map(([orbital, count]) => `${orbital}${superscript(count)}`)
+    .join(" ");
+}
+
+/**
+ * Grid position within the 18-column periodic layout (main rows 1–7).
+ *
+ * The short periods are why this cannot be one linear formula: period 2 runs
+ * Li, Be at columns 1–2 and then jumps to the p-block at column 13 (B), and
+ * period 3 does the same after Na, Mg. A table that puts boron in column 3 is
+ * simply not the periodic table — group number is chemistry, not decoration.
+ */
 export function gridPos(n: number): { row: number; col: number } {
   if (n === 1) return { row: 1, col: 1 };
   if (n === 2) return { row: 1, col: 18 };
-  if (n <= 10) return { row: 2, col: n - 2 };
-  if (n <= 18) return { row: 3, col: n - 10 };
+  if (n <= 4) return { row: 2, col: n - 2 }; // Li, Be
+  if (n <= 10) return { row: 2, col: n + 8 }; // B 13 … Ne 18
+  if (n <= 12) return { row: 3, col: n - 10 }; // Na, Mg
+  if (n <= 18) return { row: 3, col: n }; // Al 13 … Ar 18
   if (n <= 36) return { row: 4, col: n - 18 };
   if (n <= 54) return { row: 5, col: n - 36 };
   if (n <= 56) return { row: 6, col: n - 54 };
@@ -227,31 +297,20 @@ export const GROUP_NAMES: (string | null)[] = [
 ];
 
 /** Electrons per principal quantum number shell (n = 1, 2, 3, …), derived
- * from the Aufbau configuration — used for Bohr-style diagrams. */
+ * from the ground-state configuration — used for Bohr-style diagrams. */
 export function shellsFor(z: number): number[] {
   const shells: number[] = [];
-  let remaining = z;
-  for (const [orbital, capacity] of AUFBAU) {
-    if (remaining <= 0) break;
+  for (const [orbital, count] of subshellsFor(z)) {
     const n = Number(orbital[0]);
-    const count = Math.min(capacity, remaining);
     shells[n - 1] = (shells[n - 1] ?? 0) + count;
-    remaining -= count;
   }
   return shells.filter((s) => s !== undefined && s > 0);
 }
 
 /** Block letter (s/p/d/f) of the element's outermost subshell. */
 export function blockFor(z: number): string {
-  let remaining = z;
-  let last = "s";
-  for (const [orbital, capacity] of AUFBAU) {
-    if (remaining <= 0) break;
-    const count = Math.min(capacity, remaining);
-    remaining -= count;
-    if (count > 0) last = orbital[1];
-  }
-  return last;
+  const parts = subshellsFor(z);
+  return parts[parts.length - 1]?.[0][1] ?? "s";
 }
 
 /** Period (row) and group (column) as printed on the periodic table.

@@ -3,7 +3,7 @@ import DynamicsBench from "@/components/lab/DynamicsBench";
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
-import { Pause, Play, RotateCcw } from "lucide-react";
+import { Pause, Play, Power, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
@@ -100,7 +100,12 @@ const POLARITY: Array<{ id: "add" | "oppose"; label: string }> = [
 
 const VOLTAGE_STEPS = [1.5, 3, 4.5, 6, 9, 12];
 
-/** A cell: one long plate, one short one, its signs and its caption. */
+/**
+ * A cell, drawn as the schematic symbol rather than a battery-shaped prop:
+ * a long thin positive plate and a short thick negative plate, with the wire
+ * broken between them. Reversing the second cell swaps the plates, which is
+ * exactly what "the cells oppose each other" means in the diagram.
+ */
 function Cell({
   x,
   value,
@@ -112,16 +117,18 @@ function Cell({
   label: string;
   reversed: boolean;
 }) {
-  const longX = reversed ? x + 24 : x;
-  const shortX = reversed ? x : x + 24;
+  const longX = reversed ? x + 26 : x;
+  const shortX = reversed ? x : x + 26;
   return (
     <g>
-      <line x1={longX} y1={270} x2={longX} y2={306} strokeWidth={2.5} strokeLinecap="round" style={{ stroke: ink(0.9) }} />
-      <line x1={shortX} y1={280} x2={shortX} y2={296} strokeWidth={2.5} strokeLinecap="round" style={{ stroke: ink(0.6) }} />
-      <text x={reversed ? x + 34 : x - 14} y={264} fontSize={11} fontWeight={600} style={{ fill: ink(0.9) }}>
+      {/* Mask the loop between the plates so the wire terminates on them. */}
+      <rect x={x - 1} y={282} width={28} height={12} style={{ fill: plate(0.98) }} />
+      <line x1={longX} y1={270} x2={longX} y2={306} strokeWidth={2} style={{ stroke: ink(0.9) }} />
+      <line x1={shortX} y1={280} x2={shortX} y2={296} strokeWidth={4} style={{ stroke: ink(0.9) }} />
+      <text x={longX} y={264} fontSize={11} fontWeight={700} textAnchor="middle" style={{ fill: ink(0.85) }}>
         +
       </text>
-      <text x={reversed ? x - 4 : x + 20} y={268} fontSize={13} fontWeight={600} style={{ fill: ink(0.6) }}>
+      <text x={shortX} y={266} fontSize={13} fontWeight={700} textAnchor="middle" style={{ fill: ink(0.6) }}>
         −
       </text>
       <text x={x + 12} y={330} fontSize={11} textAnchor="middle" style={{ fill: ink(0.7) }}>
@@ -131,40 +138,98 @@ function Cell({
   );
 }
 
-/** A resistor on the wire: a plate-coloured box, hatched, carrying its value. */
+/**
+ * An IEC resistor: the plain rectangle that textbooks draw on a circuit
+ * diagram. The plate-coloured fill breaks the wire underneath, so the
+ * component sits *in* the loop instead of floating on top of it.
+ */
 function Resistor({
   cx,
   cy,
   height = 64,
   label,
   labelAt,
-  hatch = true,
 }: {
   cx: number;
   cy: number;
   height?: number;
   label?: string;
   labelAt?: { x: number; y: number };
-  hatch?: boolean;
 }) {
   const half = height / 2;
   return (
     <g>
-      <rect x={cx - 18} y={cy - half} width={36} height={height} rx={10} strokeWidth={1.5} style={{ fill: plate(0.85), stroke: ink(0.45) }} />
-      {hatch
-        ? [0, 1, 2].map((i) => {
-            const y = cy - half + 14 + i * ((height - 28) / 2);
-            return (
-              <line key={i} x1={cx - 10} y1={y} x2={cx + 10} y2={y} strokeWidth={1.5} strokeLinecap="round" style={{ stroke: VIOLET }} />
-            );
-          })
-        : null}
+      <rect
+        x={cx - 17}
+        y={cy - half}
+        width={34}
+        height={height}
+        rx={2}
+        strokeWidth={1.6}
+        style={{ fill: plate(0.98), stroke: ink(0.72) }}
+      />
       {label ? (
-        <text x={labelAt?.x ?? cx} y={labelAt?.y ?? cy + half + 22} fontSize={11} textAnchor="middle" style={{ fill: ink(0.7) }}>
+        <text
+          x={labelAt?.x ?? cx}
+          y={labelAt?.y ?? cy + half + 22}
+          fontSize={11}
+          textAnchor="middle"
+          style={{ fill: ink(0.7) }}
+        >
           {label}
         </text>
       ) : null}
     </g>
+  );
+}
+
+/** A key for the four symbols used above, so the diagram teaches itself. */
+function SymbolKey({
+  kind,
+  label,
+}: {
+  kind: "cell" | "resistor" | "lamp" | "switch";
+  label: string;
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg viewBox="0 0 30 22" className="h-5 w-7 shrink-0" aria-hidden>
+        {kind === "cell" && (
+          <g>
+            <line x1="4" y1="11" x2="11" y2="11" style={{ stroke: ink(0.6) }} />
+            <line x1="11" y1="4" x2="11" y2="18" strokeWidth={1.4} style={{ stroke: ink(0.85) }} />
+            <line x1="16" y1="7" x2="16" y2="15" strokeWidth={2.6} style={{ stroke: ink(0.85) }} />
+            <line x1="16" y1="11" x2="26" y2="11" style={{ stroke: ink(0.6) }} />
+          </g>
+        )}
+        {kind === "resistor" && (
+          <g>
+            <line x1="3" y1="11" x2="9" y2="11" style={{ stroke: ink(0.6) }} />
+            <rect x="9" y="5" width="12" height="12" fill="none" strokeWidth={1.4} style={{ stroke: ink(0.85) }} />
+            <line x1="21" y1="11" x2="27" y2="11" style={{ stroke: ink(0.6) }} />
+          </g>
+        )}
+        {kind === "lamp" && (
+          <g>
+            <line x1="15" y1="2" x2="15" y2="5" style={{ stroke: ink(0.6) }} />
+            <circle cx="15" cy="11" r="6" fill="none" strokeWidth={1.4} style={{ stroke: ink(0.85) }} />
+            <line x1="11" y1="7" x2="19" y2="15" strokeWidth={1.2} style={{ stroke: ink(0.85) }} />
+            <line x1="19" y1="7" x2="11" y2="15" strokeWidth={1.2} style={{ stroke: ink(0.85) }} />
+            <line x1="15" y1="17" x2="15" y2="20" style={{ stroke: ink(0.6) }} />
+          </g>
+        )}
+        {kind === "switch" && (
+          <g>
+            <line x1="3" y1="15" x2="9" y2="15" style={{ stroke: ink(0.6) }} />
+            <circle cx="9" cy="15" r="1.6" style={{ fill: ink(0.85) }} />
+            <line x1="9" y1="15" x2="20" y2="6" strokeWidth={1.6} style={{ stroke: ink(0.85) }} />
+            <circle cx="21" cy="15" r="1.6" style={{ fill: ink(0.85) }} />
+            <line x1="21" y1="15" x2="27" y2="15" style={{ stroke: ink(0.6) }} />
+          </g>
+        )}
+      </svg>
+      <span className="apple-lab-note text-[10.5px]">{label}</span>
+    </span>
   );
 }
 
@@ -216,6 +281,16 @@ function CircuitsBench() {
 
   const glow = Math.min(1, Math.abs(power) / 3.6);
 
+  const resetCircuit = () => {
+    setClosed(true);
+    setCell1(6);
+    setCell2(1.5);
+    setPolarity("add");
+    setR1(22);
+    setR2(33);
+    setTopology("series");
+  };
+
   const readouts = [
     ["Supply", `${emf.toFixed(1)} V`],
     ["Load", `${resistance.toFixed(1)} Ω`],
@@ -251,13 +326,28 @@ function CircuitsBench() {
                 : "Circuit open — no current"}
             </h3>
           </div>
-          <span className="apple-lab-chip">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{ background: closed ? (current < 0 ? AMBER : CYAN) : ink(0.35) }}
-            />
-            {current.toFixed(2)} A
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="apple-lab-chip">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ background: closed ? (current < 0 ? AMBER : CYAN) : ink(0.35) }}
+              />
+              {current.toFixed(2)} A
+            </span>
+            <button
+              type="button"
+              onClick={() => setClosed((value) => !value)}
+              data-active={!closed}
+              className="apple-lab-btn apple-lab-btn--solid !px-3 !py-2"
+            >
+              <Power className="h-3.5 w-3.5" />
+              <span>{closed ? "Open switch" : "Close switch"}</span>
+            </button>
+            <button type="button" onClick={resetCircuit} className="apple-lab-btn !px-3 !py-2">
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          </div>
         </div>
 
         <svg
@@ -346,25 +436,41 @@ function CircuitsBench() {
                   animate={{ opacity: closed ? 1 : 0 }}
                   transition={transition}
                 />
-                <Resistor cx={600} cy={190} height={48} hatch={false} label={`R₁ ${r1} Ω`} labelAt={{ x: 600, y: 194 }} />
-                <Resistor cx={640} cy={190} height={48} hatch={false} label={`R₂ ${r2} Ω`} labelAt={{ x: 640, y: 194 }} />
+                <Resistor cx={600} cy={190} height={48} label="R₁" labelAt={{ x: 600, y: 228 }} />
+                <Resistor cx={640} cy={190} height={48} label="R₂" labelAt={{ x: 640, y: 228 }} />
                 <text x={620} y={266} fontSize={10.5} textAnchor="middle" style={{ fill: ink(0.7) }}>
                   {`I₁ ${branchA.toFixed(2)} A · I₂ ${branchB.toFixed(2)} A`}
                 </text>
               </>
             )}
 
-            {/* lamp on the left edge — brightness is the dissipated power */}
+            {/* Lamp: the standard circle-and-cross symbol. Brightness is the
+                power dissipated, but the geometry stays a symbol rather than
+                turning into a glowing orb. */}
             <motion.circle
               cx={64}
               cy={190}
               fill="url(#lab-lamp)"
               initial={false}
-              animate={{ r: 26 + glow * 22, opacity: 0.25 + glow * 0.75 }}
+              animate={{ r: 26 + glow * 22, opacity: 0.22 + glow * 0.7 }}
               transition={transition}
             />
-            <circle cx={64} cy={190} r={22} fill="none" strokeWidth={1.5} style={{ stroke: ink(0.5) }} />
-            <path d="M 50 176 L 78 204 M 78 176 L 50 204" strokeWidth={1.5} strokeLinecap="round" style={{ stroke: ink(0.9) }} />
+            <circle
+              cx={64}
+              cy={190}
+              r={20}
+              strokeWidth={1.6}
+              style={{ fill: plate(0.98), stroke: ink(0.75) }}
+            />
+            <path
+              d="M 54 180 L 74 200 M 74 180 L 54 200"
+              strokeWidth={1.6}
+              strokeLinecap="round"
+              style={{ stroke: ink(0.9) }}
+            />
+            <text x={64} y={226} fontSize={10.5} textAnchor="middle" style={{ fill: ink(0.7) }}>
+              lamp
+            </text>
 
             {/* two cells on the bottom edge — the second one can turn around */}
             <Cell x={272} value={cell1} label="cell 1" reversed={false} />
@@ -410,10 +516,74 @@ function CircuitsBench() {
           </g>
         </svg>
 
+        <div
+          className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3"
+          style={{ borderColor: "var(--lab-line)" }}
+        >
+          <span className="apple-lab-micro">Circuit symbols</span>
+          <SymbolKey kind="cell" label="cell" />
+          <SymbolKey kind="resistor" label="resistor" />
+          <SymbolKey kind="lamp" label="lamp" />
+          <SymbolKey kind="switch" label="switch" />
+        </div>
+
         <p className="apple-lab-note mt-4">{note}</p>
       </div>
 
       <div className="flex flex-col gap-4">
+        {/* The load first: it is the experiment. Topology, resistance and the
+            switch are all in one panel at the top, exactly where the hand goes
+            on the Dynamics bench. */}
+        <div className="apple-lab-panel apple-lab-glass">
+          <p className="apple-lab-micro">Circuit</p>
+          <div className="mt-3">
+            <Picker label="Topology" value={topology} options={TOPOLOGIES} onChange={setTopology} />
+          </div>
+          <div className="mt-4 flex flex-col gap-4">
+            <Range
+              label={topology === "single" ? "R₁" : "R₁ (main path)"}
+              value={r1}
+              min={5}
+              max={60}
+              step={1}
+              unit="Ω"
+              format={(v) => v.toFixed(0)}
+              onChange={setR1}
+            />
+            {topology !== "single" && (
+              <Range
+                label="R₂"
+                value={r2}
+                min={5}
+                max={60}
+                step={1}
+                unit="Ω"
+                format={(v) => v.toFixed(0)}
+                onChange={setR2}
+              />
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="apple-lab-micro mr-1">Switch</span>
+            <button
+              type="button"
+              onClick={() => setClosed(true)}
+              data-active={closed}
+              className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+            >
+              Closed
+            </button>
+            <button
+              type="button"
+              onClick={() => setClosed(false)}
+              data-active={!closed}
+              className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+            >
+              Open
+            </button>
+          </div>
+        </div>
+
         <div className="apple-lab-panel apple-lab-glass">
           <p className="apple-lab-micro">Supply</p>
           <div className="mt-3 flex flex-col gap-4">
@@ -445,66 +615,17 @@ function CircuitsBench() {
         </div>
 
         <div className="apple-lab-panel apple-lab-glass">
-          <p className="apple-lab-micro">Load</p>
-          <div className="mt-3">
-            <Picker label="Topology" value={topology} options={TOPOLOGIES} onChange={setTopology} />
+          <p className="apple-lab-micro">Measurements</p>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {readouts.map(([label, value]) => (
+              <Readout key={label} label={label} value={value} />
+            ))}
           </div>
-          <div className="mt-4 flex flex-col gap-4">
-            <Range
-              label={topology === "single" ? "R₁" : "R₁ (main path)"}
-              value={r1}
-              min={5}
-              max={60}
-              step={1}
-              unit="Ω"
-              format={(v) => v.toFixed(0)}
-              onChange={setR1}
-            />
-            {topology !== "single" && (
-              <Range label="R₂" value={r2} min={5} max={60} step={1} unit="Ω" format={(v) => v.toFixed(0)} onChange={setR2} />
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {readouts.map(([label, value]) => (
-            <Readout key={label} label={label} value={value} />
-          ))}
-        </div>
-
-        {/* Arranging logic cards: every card leans in at 1.02 on the spring. */}
-        <div className="grid grid-cols-2 gap-3">
-          <motion.button
-            type="button"
-            onClick={() => setClosed((open) => !open)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={transition}
-            className="apple-lab-card flex flex-col items-start gap-1 px-3 py-3 text-left"
-          >
-            <span className="apple-lab-micro">Switch</span>
-            <span className="apple-lab-value text-[13px] font-semibold">
-              {closed ? "Closed — tap to open" : "Open — tap to close"}
-            </span>
-          </motion.button>
-
-          <motion.button
-            type="button"
-            onClick={() => {
-              const index = TOPOLOGIES.findIndex((entry) => entry.id === topology);
-              const next = TOPOLOGIES[(index + 1) % TOPOLOGIES.length];
-              if (next) setTopology(next.id);
-            }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={transition}
-            className="apple-lab-card flex flex-col items-start gap-1 px-3 py-3 text-left"
-          >
-            <span className="apple-lab-micro">Topology</span>
-            <span className="apple-lab-value text-[13px] font-semibold">
-              {headline} — tap to cycle
-            </span>
-          </motion.button>
+          <p className="apple-lab-note mt-3">
+            Ohm's law for the whole loop: I = EMF / R. The cells are ideal, so
+            the terminal voltage is the EMF and every watt is dissipated in the
+            resistors and the lamp.
+          </p>
         </div>
       </div>
     </div>

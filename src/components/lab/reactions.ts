@@ -204,8 +204,8 @@ export const REACTIONS: Record<string, Reaction> = {
   "h2|n2": {
     eq: "N2 + 3 H2 -> 2 NH3",
     type: "Synthesis (Haber)",
-    note: "The Haber process: needs an iron catalyst, ~450 °C and high pressure to run at useful speed.",
-    energy: "endo",
+    note: "The Haber process: needs an iron catalyst, ~450 °C and high pressure to run at useful speed. The reaction itself releases heat.",
+    energy: "exo",
   },
   "cao|h2o": {
     eq: "CaO + H2O -> Ca(OH)2",
@@ -232,17 +232,12 @@ export const REACTIONS: Record<string, Reaction> = {
     energy: "exo",
   },
   "h2o2|kmno4": {
-    eq: "2 KMnO4 + 5 H2O2 + 3 H2SO4 -> 2 MnSO4 + K2SO4 + 8 H2O + 5 O2",
+    eq: "2 KMnO4 + 3 H2O2 -> 2 MnO2 + 3 O2 + 2 KOH + 2 H2O",
     type: "Redox (catalysed)",
-    note: "Purple permanganate is reduced to pale Mn²⁺ while peroxide is oxidised to oxygen — the 'purple → colourless' fade.",
-  },
-  "h2o2|h2o": {
-    eq: "2 H2O2 -> 2 H2O + O2",
-    type: "Disproportionation",
-    note: "Peroxide slowly self-decomposes; manganese dioxide or light speeds it up — the oxygen relights a glowing splint.",
+    note: "In neutral solution permanganate is reduced to brown manganese dioxide while peroxide is oxidised to oxygen — the purple colour fades and the liquid turns cloudy.",
   },
   "agno3|ki": {
-    eq: "2 AgNO3 + KI -> AgI + 2 KNO3",
+    eq: "AgNO3 + KI -> AgI + KNO3",
     type: "Double displacement",
     note: "Silver iodide precipitates as a bright yellow solid — the classic halide test.",
   },
