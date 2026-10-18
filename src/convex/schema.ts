@@ -151,6 +151,32 @@ const schema = defineSchema(
       requests: v.number(), // successful model calls
       updatedAt: v.number(),
     }).index("by_user_day", ["userId", "day"]),
+
+    // User and early-tester feedback on generated material.
+    //
+    // Only rows that are approved AND consented to publish are readable by the
+    // public (anon + authenticated). Signed-in users may insert their own rows
+    // and read their own rows; the owner approval path runs through Convex via
+    // the service role, which bypasses RLS.
+    testimonials: defineTable({
+      // Nullable: early testers (and the six seeded rows) do not have accounts.
+      userId: v.optional(v.id("users")),
+      rating: v.number(),
+      text: v.string(),
+      displayName: v.optional(v.string()),
+      classLabel: v.optional(v.string()),
+      consentToPublish: v.boolean(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("rejected"),
+      ),
+      source: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_status", ["status"])
+      .index("by_userId_status", ["userId", "status"])
+      .index("by_created", ["createdAt"]),
   },
   {
     schemaValidation: false,

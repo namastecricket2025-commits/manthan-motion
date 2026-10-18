@@ -75,7 +75,7 @@ export function TextGenerate({
               <Fragment key={wi}>
                 <span
                   className={cn(
-                    "tge-word inline-block whitespace-pre will-change-transform",
+                    "tge-word inline-block whitespace-pre will-change-transform motion-reduce:transform-none motion-reduce:opacity-100 motion-reduce:filter-none",
                     // Plain words take the Vercel-style white-to-grey display
                     // fade; an accent segment keeps its own gradient instead.
                     // The class must sit on the animated word span itself — a

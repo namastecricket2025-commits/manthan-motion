@@ -91,6 +91,12 @@ export default function Footer() {
             >
               Contact
             </a>
+            <a
+              href="mailto:owner@manthan.app?subject=Request removal of a review&body=Please describe the review you would like removed, including the reviewer name and any details that help us identify it."
+              className="transition-colors hover:text-foreground"
+            >
+              Request removal of a review
+            </a>
           </nav>
         </div>
 
