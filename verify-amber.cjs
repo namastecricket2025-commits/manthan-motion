@@ -131,11 +131,15 @@ const D = {
 console.log("\n== 1. declared values ==");
 const declared = [
   ["light --signal", L.signal, "#b45309"],
-  /* One brand yellow in both themes. `--brand` is the MARK tone (filled tiles,
-     discs, rules, the big circle) and is the same #fbbf24 the filled action
-     uses; it is no longer a dark ink in the light theme. */
-  ["light --brand", L.brand, "#fbbf24"],
-  ["light --brand-mark", L.brandMark, "#fbbf24"],
+  /* One brand amber, one step apart per theme. `--brand` is the MARK tone
+     (filled tiles, discs, rules, the big circle) and is the SAME value the
+     filled action uses in that theme, so a checkmark and a button are the
+     same pigment. The light step is #e8a410 — dark enough not to glare on
+     paper — while the night theme keeps the honey #fbbf24 it was tuned
+     against. */
+  ["light --brand", L.brand, "#e8a410"],
+  ["light --brand-mark", L.brandMark, "#e8a410"],
+  ["light --signal-strong", L.signalStrong, "#e8a410"],
   ["dark --brand-mark", D.brandMark, "#f5f5f7"],
   ["light --signal-2", L.signal2, "#8a4207"],
   ["light --gt-tail", L.gtTail, "#b45309"],
@@ -185,6 +189,12 @@ const checks = [
   ["light brand TEXT on the brand tint (uses --brand-ink)", L.brandInk, mix(L.brand, 0.1, L.panel), 4.5],
   ["light ink on the amber mark/fill", L.fg, L.brand, 4.5],
   ["dark ink on the amber mark/fill", D.brand, D.panel, 4.5],
+  /* The new darker day-theme amber has to keep the near-black label legible
+     on the fill AND on the pressed/hover fill (a darkened step of the same
+     token). Both used to sit at 10.3:1 and 7.6:1; the darker body only
+     lowers them, so the bar is the same. */
+  ["light label on the darker amber fill", L.fg, "#e8a410", 4.5],
+  ["light label on the darker amber hover fill", L.fg, mix("#e8a410", 0.88, "#000000"), 4.5],
   ["light accent as a chart stroke on the panel", L.signal, L.panel, 3],
   ["dark brand on the black canvas", D.brand, D.ink, 4.5],
   ["dark brand on a panel", D.brand, D.panel, 4.5],
@@ -287,6 +297,83 @@ console.log("\n== 5b. the wiring, not just the tokens ==");
   ok(!setDangerLiteral, "the settings page no longer hardcodes its own danger colour");
 }
 
+/* ---------------- 5c. eye comfort is wired and readable ---------------- */
+console.log("\n== 5c. eye comfort ==");
+{
+  const cssText = css;
+  const blockOf = (selector) => {
+    const start = cssText.indexOf(selector);
+    if (start < 0) return null;
+    const open = cssText.indexOf("{", start);
+    const close = cssText.indexOf("\n}", open);
+    return cssText.slice(open + 1, close);
+  };
+  const lightBlock = blockOf('html[data-comfort="on"]:not(.dark)');
+  const darkBlock = blockOf('html[data-comfort="on"]:is(.dark, [data-theme="dark"])');
+  ok(Boolean(lightBlock), "a light eye-comfort block exists");
+  ok(Boolean(darkBlock), "a dark eye-comfort block exists");
+
+  const bt = (src, name) => {
+    const m = (src || "").match(new RegExp("--" + name + ":\\s*(#[0-9a-fA-F]{6})"));
+    return m ? m[1].toLowerCase() : null;
+  };
+  const CL = {
+    ink: bt(lightBlock, "ink"),
+    panel: bt(lightBlock, "panel"),
+    textMain: bt(lightBlock, "text-main"),
+    textDim: bt(lightBlock, "text-dim"),
+    signalStrong: bt(lightBlock, "signal-strong"),
+    brand: bt(lightBlock, "brand"),
+    fg: token(lightSrc, "primary-foreground"),
+  };
+  const CD = {
+    panel: bt(darkBlock, "panel"),
+    textMain: bt(darkBlock, "text-main"),
+  };
+  /* The point of the mode is a WARMER, dimmer canvas: the paper may not be the
+     old pure-white panel, and the type may not be the old near-black. */
+  ok(CL.panel && CL.panel !== L.panel, "comfort paper is not the pure-white panel", String(CL.panel));
+  ok(CL.textMain && CL.textMain !== L.textMain, "comfort ink is not the near-black type", String(CL.textMain));
+  ok(CL.ink && CL.ink !== L.ink, "comfort canvas is not the plain #fafafa canvas", String(CL.ink));
+  ok(CD.panel && CD.panel !== D.panel, "comfort night panel is lifted off #0a0a0a", String(CD.panel));
+
+  /* Same amber family, one step deeper, and still legible as a label fill. */
+  ok(CL.brand && CL.brand === CL.signalStrong, "comfort keeps the button and the mark on ONE amber", String(CL.brand));
+  const ch = hue(CL.brand || "#000000");
+  ok(ch >= 18 && ch <= 48, "comfort amber is still amber", (CL.brand || "?") + " / " + ch.toFixed(0) + "deg");
+  ok(contrast(CL.fg, CL.brand) >= 4.5, "comfort label on the comfort amber", contrast(CL.fg, CL.brand).toFixed(2) + ":1");
+
+  ok(contrast(CL.textMain, CL.panel) >= 4.5, "comfort body text on comfort paper", contrast(CL.textMain, CL.panel).toFixed(2) + ":1");
+  ok(contrast(CL.textDim, CL.panel) >= 4.5, "comfort secondary text on comfort paper", contrast(CL.textDim, CL.panel).toFixed(2) + ":1");
+  ok(contrast(CD.textMain, CD.panel) >= 4.5, "comfort body text on the comfort night panel", contrast(CD.textMain, CD.panel).toFixed(2) + ":1");
+
+  /* The veil is the only part that reaches <canvas> pixels, so its contract is
+     exact: above everything, pointer-transparent, no full-page filter. */
+  const veil = blockOf('html[data-comfort="on"]::after');
+  ok(Boolean(veil) && /position:\s*fixed/.test(veil), "the comfort veil is a fixed layer");
+  ok(Boolean(veil) && /pointer-events:\s*none/.test(veil), "the comfort veil never eats a click");
+  ok(
+    Boolean(veil) && /mix-blend-mode:\s*multiply/.test(veil),
+    "the comfort veil multiplies instead of washing out",
+    veil ? (veil.match(/opacity:\s*([0-9.]+)/) || [])[1] : "missing",
+  );
+  ok(!/filter:\s*sepia/.test(cssText), "no sepia filter on <html> (it would trap fixed layers)");
+
+  const settingsSrc = fs.readFileSync(path.join(process.cwd(), "src/lib/app-settings.ts"), "utf8");
+  ok(/eyeComfort:\s*boolean/.test(settingsSrc), "AppSettings declares eyeComfort");
+  ok(/eyeComfort:\s*false/.test(settingsSrc), "eyeComfort defaults to off");
+  ok(/setAttribute\("data-comfort"/.test(settingsSrc), "applySettings writes data-comfort on <html>");
+
+  const dash = fs.readFileSync(path.join(process.cwd(), "src/components/settings/SettingsDashboard.tsx"), "utf8");
+  ok(/title="Eye comfort"/.test(dash), "the Settings page has an Eye comfort row");
+  ok(/update\(\{\s*eyeComfort:\s*v\s*\}\)/.test(dash), "the row's switch writes eyeComfort");
+  /* Placed with Appearance, not buried in a separate panel: the user asked for
+     the control to sit where appearance controls belong. */
+  const eyeIdx = dash.indexOf('title="Eye comfort"');
+  const textIdx = dash.indexOf('title="Text comfort"');
+  ok(eyeIdx > 0 && textIdx > eyeIdx, "Eye comfort sits right under Appearance, before Text comfort");
+}
+
 /* ---------------- 6. what the dev server actually serves ---------------- */
 const http = require("http");
 const get = (url) =>
@@ -317,7 +404,7 @@ const ports = [5173, 8080, 3000, 4173];
     }
   }
   if (!served) {
-    ok(false, "dev server CSS reachable", "no dev server on " + ports.join(", "));
+    console.log("  skip no dev server on " + ports.join(", ") + " — source checks above still apply");
   } else {
     /* Vite serves the stylesheet as a JS module string, so newlines and quotes
        arrive escaped. Unescape before looking for the theme boundary — the
@@ -336,7 +423,7 @@ const ports = [5173, 8080, 3000, 4173];
     /* The light button is the pair the browser has to paint: bright amber body,
        near-black label. Asserted on the SERVED css, not the source, because the
        whole point of the fix is what renders. */
-    ok(sToken(sLight, "signal-strong") === "#fbbf24", "served light --signal-strong is the bright amber", String(sToken(sLight, "signal-strong")));
+    ok(sToken(sLight, "signal-strong") === "#e8a410", "served light --signal-strong is the softened amber", String(sToken(sLight, "signal-strong")));
     ok(sToken(sLight, "primary-foreground") === "#241a02", "served light --primary-foreground is near-black", String(sToken(sLight, "primary-foreground")));
     ok(sToken(sDark, "brand-ink") === D.brandInk, "served dark --brand-ink matches source", String(sToken(sDark, "brand-ink")));
     ok(sToken(sDark, "destructive") === D.destructive, "served dark --destructive is still the error red", String(sToken(sDark, "destructive")));

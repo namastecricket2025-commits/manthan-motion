@@ -36,8 +36,8 @@ interface KitTab {
 /** The small citation chip every artifact carries. */
 function Cite({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)] px-2 py-1 text-[10px] text-text-dim">
-      <FileText className="h-3 w-3 shrink-0" />
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-2 py-1 text-[10px] text-[var(--brand-ink)]">
+      <FileText className="h-3 w-3 shrink-0 text-[var(--signal)]" />
       {children}
     </span>
   );

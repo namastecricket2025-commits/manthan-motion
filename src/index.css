@@ -128,47 +128,48 @@
        --signal       text, icons, hairlines, chart strokes — the amber as
                       INK, on paper. Caramel: 4.81:1 on this canvas and
                       5.02:1 on a white panel, so it passes AA at text size.
-                      The bright tone cannot do this job: #fbbf24 measures
-                      1.5:1 here.
-       --signal-strong  the FILLED action's body — and it is the bright tone
-                      (#fbbf24, the same amber the dark theme runs), carrying
-                      a near-black label at 10.3:1. This is the split that
-                      makes the light theme look like a highlighter instead
-                      of a brown button: deep amber for type, bright amber
-                      for fills. A caramel fill with a cream label (what this
-                      used to be) read as mud, and shrinking it to fix that
-                      only made the text fail AA on hover.
+                      The fill tone cannot do this job: #e8a410 measures 2.06:1
+                      here.
+       --signal-strong  the FILLED action's body — #e8a410, a step darker
+                      than the honey the night theme runs, carrying a
+                      near-black label at 8.0:1. Darker on purpose: the old
+                      #fbbf24 fill is the brightest thing a light UI can put
+                      on paper, and at button size it read as glare rather
+                      than as brand. This is the same amber, just pulled down
+                      far enough to look printed instead of lit.
        --signal-2     the darkest step: deep gradient ends and pressed states
                       that need to stay dark in both themes.
 
      The dark theme splits these tokens (see the .dark block): its filled
-     action is white with a near-black label, and `--brand` is the same
-     #fbbf24 the light theme marks with. */
+     action is white with a near-black label, and `--brand` is the honey
+     #fbbf24 it was tuned against. */
   --signal: #b45309;
-  --signal-strong: #fbbf24;
+  --signal-strong: #e8a410;
   --signal-2: #8a4207;
   /* ---- Brand chroma (light) ------------------------------------------
-     The one token that stays CHROMATIC in both themes, and it is now the SAME
-     value in both: the amber the filled action uses, #fbbf24. `--brand` is
-     the MARK colour — the fill of a tile, dot, rule, wedge or badge — and a
-     filled shape does not need text contrast to be seen, which is why this can
-     be the bright tone on paper while type stays on `--signal` / `--brand-ink`.
+     The one token that stays CHROMATIC in both themes. In the day theme it
+     is #e8a410 — the filled action's amber, one step darker than the honey
+     the night theme runs — so the circle, the checkmarks and the button are
+     literally the same pigment. `--brand` is the MARK colour: the fill of a
+     tile, dot, rule, wedge or badge, and a filled shape does not need text
+     contrast to be seen, which is why this can sit on paper while type stays
+     on `--signal` / `--brand-ink`.
 
      The rule that keeps this honest: `--brand` paints SHAPES. Anything that
      renders this amber as thin type, a 1px stroke or a chart line on paper
-     uses `--brand-ink` (6.0:1) or `--signal` (4.81:1) instead, because 1.5:1
+     uses `--brand-ink` (7.3:1) or `--signal` (4.81:1) instead, because 2.0:1
      type is not a design decision, it is a bug. */
-  --brand: #fbbf24;
-  --brand-soft: rgba(251, 191, 36, 0.18);
-  --brand-line: rgba(251, 191, 36, 0.55);
+  --brand: #e8a410;
+  --brand-soft: rgba(232, 164, 16, 0.18);
+  --brand-line: rgba(232, 164, 16, 0.55);
   /* The mark's own colour where it must read on its own: the hero circle. On
      paper it is the amber; at night it stays the theme's white light. */
-  --brand-mark: #fbbf24;
+  --brand-mark: #e8a410;
   /* The amber AS TEXT when it sits on `--brand-soft` rather than on paper.
-     The brand step measures 4.39:1 on its own 10% tint — a 10px pill label
+     The brand step measures 1.89:1 on its own 18% tint — a 10px pill label
      wants 4.5 — so text on a brand fill uses the deeper step (7.3:1 on the
-     panel, ~6.4:1 on the tint). Icons on the tint keep using `--brand`,
-     where 3:1 is the bar and 4.39:1 clears it. */
+     panel, 6.4:1 on the tint). Icons on the tint take `--signal` (4.4:1
+     there), where 3:1 is the bar. */
   --brand-ink: #8a4207;
   --text-main: #171717;
   --text-dim: #52525b;
@@ -627,6 +628,147 @@
   --panel-line-strong: rgba(255, 255, 255, 0.26);
 
 
+}
+
+/* ============================================================
+   Eye comfort — a low-glare rendering of whichever theme is on
+   ============================================================
+   This is not a third theme. It is a filter over the two themes, in the same
+   sense a reading lamp is: the layout, the accent and every component stay
+   exactly where they are, but the two things that make a backlit screen
+   tiring — pure-white paper and pure-black ink, plus the blue end of the
+   spectrum — are pulled in.
+
+   Three mechanisms, no JavaScript beyond the one `data-comfort` attribute
+   `applySettings` writes on <html>:
+
+     1. Warm surfaces. In the day theme every white surface becomes warm
+        off-white (#fbf7ee) and `--text-main` relaxes from near-black to
+        #322e27, so the page reads like paper rather than like a lamp.
+     2. Softer luminous steps in the night theme. #000 lifts to #0b0a09 and
+        the white type and primary fill drop to warm off-white, which removes
+        the hard edge a white glyph has against a black field.
+     3. A 11% amber veil (multiply) over the whole viewport. Tokens reach
+        every styled surface but not the pixels a <canvas> draws, so the veil
+        is what makes the 3D lab, the charts and the code blocks sit in the
+        same warm light as the chrome around them. It is pointer-transparent
+        and above everything, so nothing becomes unclickable.
+   ------------------------------------------------ */
+html[data-comfort="on"]:not(.dark) {
+  --ink: #f3eee2;
+  --panel: #fbf7ee;
+  --card: #fbf7ee;
+  --popover: #fbf7ee;
+  --menu-bg: #fbf7ee;
+  --menu-ink: #322e27;
+  --text-main: #322e27;
+  --text-dim: #5c564b;
+  --card-border: rgba(72, 58, 30, 0.14);
+  --panel-line: rgba(72, 58, 30, 0.12);
+  --panel-line-strong: rgba(72, 58, 30, 0.22);
+  --border: rgba(72, 58, 30, 0.14);
+  --input: rgba(72, 58, 30, 0.16);
+  --secondary: #efe7d7;
+  --secondary-foreground: #322e27;
+  --muted: #efe9dc;
+  --muted-foreground: #6b655a;
+  --accent: #efe9dc;
+  --accent-foreground: #322e27;
+  --sidebar: #f3eee2;
+  --sidebar-foreground: #322e27;
+  --sidebar-accent: #efe9dc;
+  --sidebar-accent-foreground: #322e27;
+  --sidebar-border: rgba(72, 58, 30, 0.12);
+  --bg-canvas-a: #ece5d6;
+  --bg-canvas-b: #f1ebde;
+  --bg-canvas-c: #f6f1e6;
+  --halo-near: rgba(255, 249, 234, 0.92);
+  --halo-far: rgba(90, 70, 30, 0.04);
+  --glass-fill-strong: rgba(60, 45, 20, 0.04);
+  /* The accent loses a touch of glare too: same amber, a shade deeper, so it
+     stays the single brand colour without being the one bright thing left. */
+  --signal-strong: #de9c0d;
+  --brand: #de9c0d;
+  --brand-soft: rgba(222, 156, 13, 0.18);
+  --brand-line: rgba(222, 156, 13, 0.55);
+  --brand-mark: #de9c0d;
+}
+
+html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
+  --ink: #0b0a09;
+  --panel: #141210;
+  --card: #121110;
+  --popover: #171512;
+  --menu-bg: #171512;
+  --menu-ink: rgba(255, 255, 255, 0.88);
+  --text-main: #ece5d8;
+  --text-dim: rgba(255, 250, 240, 0.82);
+  --card-border: rgba(255, 245, 230, 0.1);
+  --panel-line: rgba(255, 245, 230, 0.12);
+  --panel-line-strong: rgba(255, 245, 230, 0.22);
+  --border: rgba(255, 245, 230, 0.1);
+  --input: rgba(255, 245, 230, 0.12);
+  --secondary: #1a1815;
+  --secondary-foreground: #ece5d8;
+  --muted: #181613;
+  --muted-foreground: rgba(255, 250, 240, 0.78);
+  --accent: #211e1a;
+  --accent-foreground: #ece5d8;
+  --sidebar: #121110;
+  --sidebar-accent: #1a1815;
+  --sidebar-border: rgba(255, 245, 230, 0.09);
+  --bg-canvas-a: #0b0a09;
+  --bg-canvas-b: #070605;
+  --bg-canvas-c: #030202;
+  /* Warm light instead of white light: the halo and the filled action are
+     the brightest pixels in this theme, so they are the ones worth dialling
+     back rather than the greys. */
+  --signal: #ded7c9;
+  --signal-strong: #f2ece1;
+  --primary-foreground: #12100e;
+  --halo-near: rgba(255, 236, 205, 0.22);
+  --halo-mid: rgba(255, 236, 205, 0.07);
+  --halo-far: rgba(255, 236, 205, 0.05);
+  --brand: #e9ac33;
+  --brand-soft: rgba(233, 172, 51, 0.14);
+  --brand-line: rgba(233, 172, 51, 0.3);
+  --brand-ink: #e9ac33;
+}
+
+/* The veil: one pointer-transparent amber wash above every layer, including
+   the 3D canvases and dialogs. Multiply keeps blacks black and only pulls the
+   highlights toward candlelight, which is exactly the direction that removes
+   glare. */
+html[data-comfort="on"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  background: rgb(255, 176, 92);
+  opacity: 0.11;
+  mix-blend-mode: multiply;
+}
+
+/* Glow strength is pinned inline by `applySettings`; eye comfort is the one
+   case allowed to quiet it, so the aurora cannot out-shine the softened
+   surfaces it sits behind. */
+html[data-comfort="on"] {
+  --bg-glow-opacity: 0.55 !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-comfort="on"]::after {
+    animation: comfort-in 0.35s ease-out both;
+  }
+  @keyframes comfort-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 0.11;
+    }
+  }
 }
 
 /* ============================================================
@@ -1160,10 +1302,10 @@
   /* Touch feedback: press state for touch-first devices */
   @media (hover: none) {
     /* Touch has no hover, so the press IS the state change: one darkened step
-       off `--primary`, which keeps the label legible in both themes (light:
-       #dda820, dark: #e0e0e0). `--signal-2` was the old value here and it is
-       the DEEP caramel in the light theme, which would have put the
-       near-black label on a 1.9:1 fill. */
+       off `--primary` (a shade of the amber in the day theme, a shade of white
+       at night), which keeps the label legible in both themes. `--signal-2`
+       was the old value here and it is the DEEP caramel in the light theme,
+       which would have put the near-black label on a 1.9:1 fill. */
     .moving-border:active .cd-face {
       background: color-mix(in srgb, var(--primary) 88%, #000);
     }

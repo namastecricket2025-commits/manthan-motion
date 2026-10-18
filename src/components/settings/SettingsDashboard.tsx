@@ -612,6 +612,28 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                   </div>
                 </div>
 
+                {/* Eye comfort sits directly under Appearance because it is a
+                    property of the display, not of the text: it re-lights both
+                    themes at once, so it belongs with the theme picker rather
+                    than next to the type scale. */}
+                <ListRow
+                  title="Eye comfort"
+                  badge={settings.eyeComfort ? "On" : "Off"}
+                  hint="Warms the entire display — off-white paper, softer ink and a warm veil over every canvas — so long sessions read like paper instead of like a lamp. Works in both themes and applies instantly."
+                  note={
+                    settings.eyeComfort
+                      ? "Glare reduced. Everything else — layout, accent, controls — is unchanged."
+                      : undefined
+                  }
+                >
+                  <Switch
+                    className="set-switch"
+                    checked={settings.eyeComfort}
+                    aria-label="Eye comfort"
+                    onCheckedChange={(v) => update({ eyeComfort: v })}
+                  />
+                </ListRow>
+
                 <ListRow
                   title="Text comfort"
                   badge={COMFORT[comfortIndex]?.label}

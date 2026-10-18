@@ -24,6 +24,13 @@ export interface AppSettings {
   frameTarget: FrameTarget;
   themeMode: ThemeMode;
   textComfort: TextComfort;
+  /**
+   * Eye comfort: a low-glare rendering of whichever theme is active — warm
+   * off-white paper in the day theme, warm charcoal at night, plus a faint
+   * amber veil that takes the blue edge off every surface (including the 3D
+   * canvases, which tokens cannot reach).
+   */
+  eyeComfort: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -31,6 +38,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   frameTarget: "60",
   themeMode: "dark",
   textComfort: "medium",
+  eyeComfort: false,
 };
 
 /**
@@ -133,6 +141,10 @@ export function applySettings(settings: AppSettings) {
   root.setAttribute("data-theme", dark ? "dark" : "light");
   root.setAttribute("data-motion", settings.reduceMotion ? "reduced" : "full");
   root.setAttribute("data-text", settings.textComfort);
+  /* The whole eye-comfort treatment lives in index.css, keyed off this
+     attribute, so the overlay tint and the warm token overrides land in the
+     same paint as the theme switch. */
+  root.setAttribute("data-comfort", settings.eyeComfort ? "on" : "off");
   /* Glow strength is pinned, not scalable. These three properties plus the
      band attribute are still written so every existing rule that reads them
      (`var(--ambient)`, `var(--ambient-dur)`, `var(--ambient-blur)`,
