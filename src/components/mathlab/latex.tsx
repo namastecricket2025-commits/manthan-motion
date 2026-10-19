@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import katex from "katex";
+import { mathFieldError } from "@/convex/latexGuard";
 import "katex/dist/katex.min.css";
 
 /**
@@ -28,6 +29,13 @@ export function MathTex({
 }) {
   const html = useMemo(() => {
     if (!source) return null;
+    /* English never reaches KaTeX: a run of letters or an unknown command is
+       shown as the characters the student typed, with its spaces intact. */
+    const bad = mathFieldError(source);
+    if (bad) {
+      console.warn("[MathLab] refused to typeset a non-math field:", bad, JSON.stringify(source));
+      return null;
+    }
     try {
       return katex.renderToString(source, {
         displayMode: display,
@@ -37,6 +45,7 @@ export function MathTex({
         trust: false,
       });
     } catch {
+      console.warn("[MathLab] KaTeX rejected:", JSON.stringify(source));
       return null;
     }
   }, [source, display]);

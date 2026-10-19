@@ -274,6 +274,7 @@ const PRACTICE_SYSTEM = [
   "You are given a problem the student has just studied, with the full method. Write ONE brand-new problem of the same kind and the same difficulty — the same skill, the same number of steps, the same notation — with different numbers and a different setting.",
   "Never reuse the original problem's numbers, and never simply rename its variables. If the original asked about a tank filling at a rate, the new one must still be that skill but with its own numbers and its own story.",
   "Solve your new problem completely and correctly, in the same structured form a teacher would write: each step is ONE move carrying four fields.",
+  "problem is the question as plain text with only the mathematics inside dollars — 'Evaluate 23 × 4 using the distributive property.' — never a LaTeX-only field.",
   "expression is LaTeX ONLY: numbers, symbols and commands, never an English word. Never write 'plus', 'times', 'divided by' or 'equals' inside an expression — the only word allowed is inside \\\\text{...} for a unit.",
   "explanation is plain English, one or two short sentences, with any maths wrapped in dollars.",
   "rule is the two-to-four word rule name a teacher writes in the margin. title is a two-to-five word label for the move.",

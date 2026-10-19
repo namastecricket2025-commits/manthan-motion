@@ -18,13 +18,16 @@ import {
   tidy,
 } from "./ai";
 import {
+  DETAIL_STYLES,
   MAX_MATH_IMAGE,
   SOLVE_METHODS,
   cleanLatex,
   cleanProse,
   mathProblemSchema,
+  normalizeMathInput,
   type SolvedProblem,
 } from "./mathPrompts";
+import { mathFieldError } from "./latexGuard";
 
 /**
  * The Math Lab's equation engine.
@@ -84,20 +87,32 @@ export function finalizeProblem(
   const checkNote = cleanProse(verdict.note);
 
   return {
-    problem: cleanLatex(entry.problem),
+    // The question itself is prose with the mathematics inline, never a
+    // LaTeX-only field: "Evaluate 23 × 4 using the distributive property" has
+    // to keep its spaces instead of being set as italic letters.
+    problem: cleanProse(entry.problem),
     title: cleanProse(entry.title),
     given: entry.given.map(cleanProse),
     formulas: entry.formulas.map(cleanLatex),
-    steps: entry.steps.map((step) => ({
-      title: cleanProse(step.title),
-      explanation: cleanProse(step.explanation),
-      expression: cleanLatex(step.expression),
-      rule: cleanProse(step.rule),
-    })),
-    // When the checker disagreed, its value is the one the student sees.
-    finalAnswer: corrected
-      ? cleanLatex(verdict.verifiedLatex ?? "")
-      : cleanLatex(entry.finalAnswer),
+    steps: entry.steps.map((step) => {
+      const expression = cleanLatex(step.expression);
+      return {
+        title: cleanProse(step.title),
+        explanation: cleanProse(step.explanation),
+        // A field with English in it never reaches KaTeX; the explanation still
+        // carries the mathematics inline, so nothing is lost.
+        expression: mathFieldError(expression) ? "" : expression,
+        rule: cleanProse(step.rule),
+      };
+    }),
+    // When the checker disagreed, its value is the one the student sees. If the
+    // answer is not typeset-able it is shown as plain text instead of italics.
+    finalAnswer: (() => {
+      const answer = cleanLatex(
+        corrected ? (verdict.verifiedLatex ?? "") : entry.finalAnswer,
+      );
+      return mathFieldError(answer) ? cleanProse(entry.finalAnswer) : answer;
+    })(),
     verification:
       verdict.status === "unverifiable"
         ? cleanProse(entry.verification) || checkNote
@@ -130,6 +145,28 @@ function correctionLines(parsed: Parsed, checks: Verification[]): string {
     .join("\n");
 }
 
+/** Fields the model filled with prose instead of mathematics. */
+function invalidMathFields(parsed: Parsed): string[] {
+  const issues: string[] = [];
+  parsed.problems.forEach((problem, problemIndex) => {
+    problem.steps.forEach((step, stepIndex) => {
+      const reason = mathFieldError(cleanLatex(step.expression));
+      if (reason) {
+        issues.push(
+          `- problems[${problemIndex}].steps[${stepIndex}].expression: ${reason}`,
+        );
+      }
+    });
+    const answerReason = mathFieldError(cleanLatex(problem.finalAnswer));
+    if (answerReason) {
+      issues.push(
+        `- problems[${problemIndex}].finalAnswer: ${answerReason}`,
+      );
+    }
+  });
+  return issues;
+}
+
 /** How many answers the independent engine disagreed with. */
 function mismatches(checks: Verification[]): number {
   return checks.filter((check) => check.status === "mismatch").length;
@@ -154,6 +191,8 @@ export const mathSolve = action({
     method: v.optional(
       v.union(v.literal("standard"), v.literal("visual"), v.literal("analogy")),
     ),
+    /** Simple keeps the working short; detailed keeps the full proof. */
+    detail: v.optional(v.union(v.literal("simple"), v.literal("detailed"))),
     /** Follow-up conversation, oldest first. */
     history: v.optional(
       v.array(
@@ -177,6 +216,7 @@ export const mathSolve = action({
       chapterName,
       chapterFormulas,
       method,
+      detail,
       history,
     },
   ): Promise<{ headline: string; problems: SolvedProblem[]; model: string }> => {
@@ -216,6 +256,10 @@ export const mathSolve = action({
       }
     }
 
+    // `22x6` is 22 × 6: normalise the notation before the model sees it, so an
+    // x between two numbers can never be read as a variable.
+    const normalizedQuestion = normalizeMathInput(trimmedQuestion);
+
     // The question's own language decides the reply's language.
     const language = detectLanguage([fileText, trimmedQuestion].filter(Boolean));
     const transcript = (history ?? [])
@@ -230,7 +274,7 @@ export const mathSolve = action({
       fileText
         ? `ATTACHED EXTRACT${fileName ? ` (${fileName})` : ""}:\n${fileText}`
         : "",
-      trimmedQuestion ? `PROBLEM: ${trimmedQuestion}` : "",
+      normalizedQuestion ? `PROBLEM: ${normalizedQuestion}` : "",
       gradeLabel
         ? `Syllabus context: ${gradeLabel}${chapterName ? `, chapter ${chapterName}` : ""}.`
         : "",
@@ -241,6 +285,7 @@ export const mathSolve = action({
         ? `This is a follow-up turn. CONVERSATION SO FAR:\n${transcript}`
         : "",
       SOLVE_METHODS[method ?? "standard"],
+      DETAIL_STYLES[detail ?? "simple"],
       ...languageDirective(language),
       "Reply with the JSON object only.",
       languageLock(language),
@@ -256,6 +301,42 @@ export const mathSolve = action({
 
     let parsed: Parsed = modelSolutionSchema.parse(parseJsonLoose(first.text));
     let modelShown = first.model;
+
+    // Some models put a sentence in `expression` or `finalAnswer`. Ask once for
+    // a clean JSON pass; whatever is still not LaTeX is dropped in
+    // `finalizeProblem`, so the renderer never receives plain English.
+    const invalid = invalidMathFields(parsed);
+    if (invalid.length) {
+      // Diagnostic for the "times" class of bug: this prints the raw model JSON
+      // and the fields that failed the LaTeX check, so the source of a stray
+      // English word is visible in the Convex logs instead of guessed at.
+      console.warn(
+        "[mathLab] non-LaTeX fields from the model:",
+        invalid,
+        "raw:",
+        first.text.slice(0, 4000),
+      );
+      try {
+        const fixed = await callModel(
+          candidates,
+          MATH_SYSTEM,
+          [
+            prompt,
+            "CORRECTION: these fields are not LaTeX and cannot be typeset:",
+            invalid.join("\n"),
+            "Rewrite the WHOLE JSON object. Every expression and finalAnswer must contain only LaTeX symbols and commands — no English words, no sentences. Keep the same mathematics and the same answers. Problem statements are plain text with inline maths in dollars.",
+            "Reply with the JSON object only.",
+          ].join("\n\n"),
+          image,
+          0.1,
+        );
+        parsed = modelSolutionSchema.parse(parseJsonLoose(fixed.text));
+        modelShown = fixed.model;
+      } catch {
+        // Keep the first pass; `finalizeProblem` will strip the bad fields.
+      }
+    }
+
     let checks = parsed.problems.map((entry) =>
       verifyAnswer(entry.problem, entry.finalAnswer),
     );

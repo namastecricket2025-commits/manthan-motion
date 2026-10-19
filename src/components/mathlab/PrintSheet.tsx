@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MathTex } from "@/components/mathlab/latex";
+import { ProblemStatement } from "@/components/mathlab/parts";
 import type { EngineProblem } from "@/components/mathlab/solution";
 
 /**
@@ -54,7 +55,7 @@ export function PrintSheet({
             {problem.title}
           </h2>
           <div className="mathlab-print__question">
-            <MathTex source={problem.problem} fallback={problem.problem} display />
+            <ProblemStatement text={problem.problem} />
           </div>
           <ol className="mathlab-print__steps">
             {problem.steps.map((step, stepIndex) => (

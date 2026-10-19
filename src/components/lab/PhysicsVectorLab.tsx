@@ -1,5 +1,6 @@
 import { AMBER, CYAN, MINT, Picker, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
 import DynamicsBench from "@/components/lab/DynamicsBench";
+import { CircuitsBench } from "@/components/lab/CircuitDiagram";
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
@@ -233,7 +234,15 @@ function SymbolKey({
   );
 }
 
-function CircuitsBench() {
+/**
+ * The previous circuit drawing, kept until this file is next rewritten.
+ * `CircuitDiagram.tsx` owns the live bench now: standard symbols, the
+ * Textbook/IEC switch, in-symbol meters and a proper symbol key.
+ *
+ * @deprecated not rendered — remove with the rest of this block next time the
+ * file is touched.
+ */
+export function LegacyCircuitsBench() {
   const still = useStillMotion();
   const transition = useSpringTransition();
   const [closed, setClosed] = useState(true);

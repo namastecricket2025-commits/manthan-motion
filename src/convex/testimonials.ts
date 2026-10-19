@@ -1,6 +1,6 @@
 import { currentIdentity, requireAuthUserId } from "./identity";
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 
 /**
  * Reviews left by students.
@@ -18,6 +18,15 @@ import { internalMutation, mutation, query } from "./_generated/server";
  * `consentToPublish` and computes the count and average live from the rows it
  * actually read. Nothing on the marketing pages hardcodes 4.7 or a review
  * count: if a row is removed, both numbers move with it.
+ *
+ * Convex deployments are separate databases: the preview runs against the dev
+ * deployment, while the published site runs against the project's production
+ * deployment. A seed that is only run by hand leaves production empty, which
+ * is exactly what made the live carousel show its empty state. The seeding is
+ * therefore part of the deployment path in two ways, and both are idempotent:
+ * `crons.ts` re-checks it on a schedule, and `ensureEarlyTesters` is called by
+ * the marketing page when a deployment reports zero reviews (a fresh deploy
+ * heals on its first visit). Nothing else is ever written by either path.
  */
 
 const MAX_TEXT = 600;
@@ -303,82 +312,107 @@ const LEGACY_NAMES = [
  * In-app reviews (`source: "user"`) are never touched. Run with
  * `bunx convex run testimonials:seedEarlyTesters`.
  */
-export const seedEarlyTesters = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const rows = await ctx.db.query("testimonials").collect();
-    const keyOf = (row: { displayName?: string; classLabel?: string }) =>
-      `${row.displayName ?? ""}\u0000${row.classLabel ?? ""}`;
-    const canonical = new Map(
-      EARLY_TESTERS.map((tester, index) => [
-        `${tester.displayName}\u0000${tester.classLabel}`,
-        index,
-      ]),
+async function seedEarlyTestersInto(ctx: MutationCtx) {
+  const rows = await ctx.db.query("testimonials").collect();
+  const keyOf = (row: { displayName?: string; classLabel?: string }) =>
+    `${row.displayName ?? ""}\u0000${row.classLabel ?? ""}`;
+  const canonical = new Map(
+    EARLY_TESTERS.map((tester, index) => [
+      `${tester.displayName}\u0000${tester.classLabel}`,
+      index,
+    ]),
+  );
+
+  let removed = 0;
+  for (const row of rows) {
+    if (row.source !== "early_tester") continue;
+    const isLegacyName =
+      LEGACY_NAMES.includes(row.displayName as (typeof LEGACY_NAMES)[number]) ||
+      (row.displayName === "Dev" && row.classLabel === "Class 7");
+    if (isLegacyName || !canonical.has(keyOf(row))) {
+      await ctx.db.delete(row._id);
+      removed += 1;
+    }
+  }
+
+  // A fixed base keeps the quote sheet's order stable; the UI mixes the
+  // order for display without writing anything back to the database.
+  const base = Date.UTC(2026, 9, 1);
+  let inserted = 0;
+  let updated = 0;
+
+  for (const [index, tester] of EARLY_TESTERS.entries()) {
+    const existing = rows.find(
+      (row) =>
+        row.source === "early_tester" &&
+        row.displayName === tester.displayName &&
+        row.classLabel === tester.classLabel,
     );
 
-    let removed = 0;
-    for (const row of rows) {
-      if (row.source !== "early_tester") continue;
-      const isLegacyName =
-        LEGACY_NAMES.includes(row.displayName as (typeof LEGACY_NAMES)[number]) ||
-        (row.displayName === "Dev" && row.classLabel === "Class 7");
-      if (isLegacyName || !canonical.has(keyOf(row))) {
-        await ctx.db.delete(row._id);
-        removed += 1;
-      }
-    }
-
-    // A fixed base keeps the quote sheet's order stable; the UI mixes the
-    // order for display without writing anything back to the database.
-    const base = Date.UTC(2026, 9, 1);
-    let inserted = 0;
-    let updated = 0;
-
-    for (const [index, tester] of EARLY_TESTERS.entries()) {
-      const existing = rows.find(
-        (row) =>
-          row.source === "early_tester" &&
-          row.displayName === tester.displayName &&
-          row.classLabel === tester.classLabel,
-      );
-
-      if (existing) {
-        const fields = {
-          rating: tester.rating,
-          text: tester.text,
-          displayName: tester.displayName,
-          classLabel: tester.classLabel,
-          consentToPublish: true,
-          status: "approved" as const,
-          source: "early_tester" as const,
-          createdAt: base + index * 60_000,
-        };
-        const changed =
-          existing.rating !== fields.rating ||
-          existing.text !== fields.text ||
-          existing.consentToPublish !== fields.consentToPublish ||
-          existing.status !== fields.status ||
-          existing.createdAt !== fields.createdAt;
-        if (changed) {
-          await ctx.db.patch(existing._id, fields);
-          updated += 1;
-        }
-        continue;
-      }
-
-      await ctx.db.insert("testimonials", {
+    if (existing) {
+      const fields = {
         rating: tester.rating,
         text: tester.text,
         displayName: tester.displayName,
         classLabel: tester.classLabel,
         consentToPublish: true,
-        status: "approved",
-        source: "early_tester",
+        status: "approved" as const,
+        source: "early_tester" as const,
         createdAt: base + index * 60_000,
-      });
-      inserted += 1;
+      };
+      const changed =
+        existing.rating !== fields.rating ||
+        existing.text !== fields.text ||
+        existing.consentToPublish !== fields.consentToPublish ||
+        existing.status !== fields.status ||
+        existing.createdAt !== fields.createdAt;
+      if (changed) {
+        await ctx.db.patch(existing._id, fields);
+        updated += 1;
+      }
+      continue;
     }
 
-    return { inserted, updated, removed, total: EARLY_TESTERS.length };
-  },
+    await ctx.db.insert("testimonials", {
+      rating: tester.rating,
+      text: tester.text,
+      displayName: tester.displayName,
+      classLabel: tester.classLabel,
+      consentToPublish: true,
+      status: "approved",
+      source: "early_tester",
+      createdAt: base + index * 60_000,
+    });
+    inserted += 1;
+  }
+
+  return { inserted, updated, removed, total: EARLY_TESTERS.length };
+}
+
+/**
+ * The seed itself. Safe to run any number of times: rows that already match the
+ * quote sheet are left alone, and only missing canonical rows are inserted.
+ *
+ * Run by hand with `bunx convex run testimonials:seedEarlyTesters` (add
+ * `--prod` for the published deployment). The scheduled job in `crons.ts` and
+ * the bootstrap below both call the same function.
+ */
+export const seedEarlyTesters = internalMutation({
+  args: {},
+  handler: async (ctx) => seedEarlyTestersInto(ctx),
+});
+
+/**
+ * Deployment bootstrap for a database that has no approved reviews yet.
+ *
+ * The published site and the preview run on separate Convex deployments, so a
+ * fresh production database starts empty. The marketing pages call this once
+ * when `approved` reports zero rows; every deployment with data is unaffected
+ * because the query already returns early. The mutation takes no arguments and
+ * can only ever write the fixed quote sheet above, so it cannot be used to
+ * inject a review.
+ */
+export const ensureEarlyTesters = mutation({
+  args: {},
+  handler: async (ctx) => seedEarlyTestersInto(ctx),
 });

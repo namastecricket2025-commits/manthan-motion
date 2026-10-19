@@ -14,6 +14,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { MathTex } from "@/components/mathlab/latex";
+import { ProblemStatement } from "@/components/mathlab/parts";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
 import {
   solutionToLatex,
@@ -152,7 +153,7 @@ function HistoryRow({
                     {solution.problems.length > 1 ? `Problem ${index + 1} · ` : ""}
                     {problem.title}
                   </p>
-                  <MathTex source={problem.problem} fallback={problem.problem} display />
+                  <ProblemStatement text={problem.problem} />
                   <p className="mathlab-history__steps">
                     {problem.steps.length} steps · final answer{" "}
                     <MathTex source={problem.finalAnswer} fallback={problem.finalAnswer} />

@@ -270,3 +270,22 @@ When using convex, make sure:
 - This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
 - Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
 - NEVER have return type validators.
+
+## Testimonials seed (preview vs production)
+
+Convex deployments are separate databases. The preview runs against the dev
+deployment; the published site runs against the production deployment. The
+early-tester reviews are therefore part of the deployment path, not a one-off
+local script:
+
+- `src/convex/crons.ts` runs `testimonials:seedEarlyTesters` every 10 minutes on
+  every deployment the functions are pushed to. It is idempotent.
+- The landing page calls the public `testimonials:ensureEarlyTesters` once when
+  a deployment reports zero approved reviews, so a fresh production database
+  seeds on its first visit.
+- Manually: `bun run seed:testimonials` (dev) or
+  `bun run seed:testimonials:prod` (production).
+
+The public read is `testimonials:approved`, which filters on both `status =
+"approved"` and `consentToPublish = true`. Pending and rejected rows are never
+returned to a logged-out visitor; moderation queries require the owner.

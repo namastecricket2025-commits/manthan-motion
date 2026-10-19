@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { GRADES, type GradeSpec } from "@/components/mathlab/mathlab";
 import { PracticePanel } from "@/components/mathlab/PracticePanel";
+import type { EngineProblem } from "@/components/mathlab/solution";
 
 /**
  * Practice, as its own tab.
@@ -21,12 +22,15 @@ export function PracticeTab({
   onTrack,
   gradeId,
   chapterIndex,
+  seed,
   onSelect,
 }: {
   track: string;
   onTrack: (track: string) => void;
   gradeId: string;
   chapterIndex: number;
+  /** A problem carried over from Solve for "Another similar problem". */
+  seed?: EngineProblem | null;
   onSelect: (gradeId: string, chapterIndex: number) => void;
 }) {
   const grade = GRADES.find((entry) => entry.id === gradeId) ?? GRADES[0];
@@ -106,13 +110,14 @@ export function PracticeTab({
       </p>
 
       <PracticePanel
-        key={`${grade.id}-${chapterIndex}`}
-        problem={chapter.example}
-        steps={[]}
-        finalAnswer=""
+        key={`${grade.id}-${chapterIndex}-${seed?.problem ?? "chapter"}`}
+        problem={seed?.problem ?? chapter.example}
+        steps={seed?.steps ?? []}
+        finalAnswer={seed?.finalAnswer ?? ""}
         track={track}
         chapterName={chapter.name}
         chapterFormulas={chapter.formulas}
+        autoStart={Boolean(seed)}
       />
     </section>
   );

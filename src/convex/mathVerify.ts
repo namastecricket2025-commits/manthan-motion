@@ -94,8 +94,24 @@ function numericValue(expression: string): number | null {
  * through the exact engines above. A mismatch carries the value the checker
  * trusts so the caller can correct the answer it shows.
  */
+/**
+ * The mathematics inside a problem statement.
+ *
+ * Problem statements are prose now — "Evaluate 22 × 6 using the distributive
+ * property" — so handing the whole sentence to the exact engine would make
+ * every answer unverifiable. Inline maths is marked with dollars; when it is
+ * present, that is the question to recompute.
+ */
+function mathFromProblem(problem: string): string {
+  const inline = [...problem.matchAll(/\$([^$]+)\$/g)]
+    .map((match) => match[1] ?? "")
+    .join(" ")
+    .trim();
+  return inline || problem;
+}
+
 export function verifyAnswer(problem: string, answer: string): Verification {
-  const plain = latexToPlain(problem);
+  const plain = latexToPlain(mathFromProblem(problem));
   if (!plain) {
     return { status: "unverifiable", note: UNREADABLE };
   }

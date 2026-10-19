@@ -3,6 +3,7 @@
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action } from "./_generated/server";
+import { LATEX_COMMANDS } from "./latexGuard";
 import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
 import { v } from "convex/values";
 import { inflateRawSync } from "node:zlib";
@@ -321,26 +322,92 @@ export class QuotaError extends Error {
   }
 }
 
+/**
+ * The list matters because of an ambiguity JSON cannot see: `\times` starts
+ * with the valid JSON escape `\t`, so a model that writes single-backslash
+ * LaTeX inside a JSON string produces a tab followed by "imes" when the JSON
+ * is decoded. The student then sees "times6" set as italic letters. Before
+ * parsing, every backslash that introduces one of these commands is doubled,
+ * which is what the model should have written in the first place.
+ */
+
+/**
+ * Double the backslashes that introduce LaTeX commands, inside JSON strings
+ * only. Ordinary escapes (`"`, `\\`, `\n`) are left exactly as they are.
+ */
+function escapeLatexInJson(raw: string, aggressive: boolean): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < raw.length; index += 1) {
+    const char = raw[index]!;
+    if (!inString) {
+      out += char;
+      if (char === '"') inString = true;
+      continue;
+    }
+    if (char === '"' && !escaped) {
+      inString = false;
+      out += char;
+      continue;
+    }
+    if (char === "\\" && !escaped) {
+      const run = /^([A-Za-z]+)/.exec(raw.slice(index + 1))?.[1] ?? "";
+      const looksLatex = LATEX_COMMANDS.has(run);
+      // Aggressive mode only runs after a normal parse has already failed,
+      // so treating an unknown two-letter run as LaTeX is safe: the alternative
+      // is rejecting a valid solution over a command the list does not name.
+      if (looksLatex || (aggressive && run.length >= 2)) {
+        out += "\\\\";
+        continue;
+      }
+      out += char;
+      escaped = true;
+      continue;
+    }
+    out += char;
+    escaped = false;
+  }
+  return out;
+}
+
 export function parseJsonLoose(raw: string): unknown {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?/i, "")
     .replace(/```$/, "")
     .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const start = cleaned.search(/[[{]/);
-    const end = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
-    if (start >= 0 && end > start) {
+
+  /* The repaired form is tried FIRST. A JSON string containing `\times` parses
+     successfully as a tab + "imes", so trying the raw text first would silently
+     win and hand the corrupted value to the renderer. */
+  const candidates = [
+    escapeLatexInJson(cleaned, false),
+    cleaned,
+    escapeLatexInJson(cleaned, true),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      /* try the next repair */
+    }
+  }
+
+  const start = cleaned.search(/[[{]/);
+  const end = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+  if (start >= 0 && end > start) {
+    const slice = cleaned.slice(start, end + 1);
+    for (const candidate of [escapeLatexInJson(slice, false), slice, escapeLatexInJson(slice, true)]) {
       try {
-        return JSON.parse(cleaned.slice(start, end + 1));
+        return JSON.parse(candidate);
       } catch {
-        /* fall through */
+        /* try the next repair */
       }
     }
-    throw new Error("The model replied with something that was not valid JSON.");
   }
+  throw new Error("The model replied with something that was not valid JSON.");
 }
 
 /* ------------------------------------------------------------------ */
@@ -1230,12 +1297,14 @@ export const MATH_SYSTEM = [
   "rule is the short rule name a teacher writes in the margin, two to four words: 'LCM of denominators', 'Transpose rule', 'Quadratic formula'.",
   "title is a two-to-five word label for the move: 'Match the denominators'.",
   "Every expression must be exactly equivalent to the line above it, and the arithmetic is shown inside the expression — never only in prose.",
+  "Keep a calculation on ONE line. Never insert a line-break command between terms; the page wraps an expression only when it is wider than the screen.",
   "verification must genuinely check the result: substitute the answer back into the original relation, restate by sum/product or dimensional check, and say plainly whether both sides match.",
   "If the question is a follow-up about a previous solution, answer THAT question in a single problem entry — verify the working if asked whether it is true, correct any error you actually find (naming the step and why it is wrong), or explain the named step more slowly. Do not re-solve the whole problem from scratch unless the student restates it.",
+  "Read the student's notation the way a teacher would: x, X, * and · between numbers mean ×, and / or ÷ mean division. 22x6 is 22 × 6, not a variable.",
   "If the photograph or extract is unreadable, blurry or clearly not mathematics, say so plainly in headline and keep the problem entry short and honest. Never invent values or equations that are not visible.",
   "No emoji, no markdown, no asterisks, no bullet symbols.",
   'Reply with a single JSON object and nothing else: {"headline":string,"problems":[{"problem":string,"title":string,"given":string[],"formulas":string[],"steps":[{"title":string,"explanation":string,"expression":string,"rule":string}],"finalAnswer":string,"verification":string}]}.',
-  "headline is one short line naming the result. problem is the question typeset in LaTeX only. given lists the quantities and constraints read off the problem, in plain English with any maths in dollars. formulas lists the governing relations as LaTeX. finalAnswer is LaTeX ONLY — '\\frac{5}{6}' or 'x = \\frac{2}{3}' — with no sentence wrapped around it.",
+  "headline is one short line naming the result. problem is the question as plain text, with only the mathematics inside dollars — 'Evaluate 23 × 4 using the distributive property.' — never a LaTeX-only field. given lists the quantities and constraints read off the problem, in plain English with any maths in dollars. formulas lists the governing relations as LaTeX. finalAnswer is LaTeX ONLY — '\\frac{5}{6}' or 'x = \\frac{2}{3}' — with no sentence wrapped around it.",
 ].join(" ");
 
 

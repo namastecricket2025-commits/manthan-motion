@@ -2,7 +2,7 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useState, type CSSProperties } from "react";
-import { CornerDownLeft, HelpCircle, Loader2, Sparkles } from "lucide-react";
+import { CornerDownLeft, Loader2, Sparkles } from "lucide-react";
 import { Explanation, Expression } from "@/components/mathlab/parts";
 import type { EngineStep } from "@/components/mathlab/solution";
 
@@ -165,8 +165,7 @@ export function StepList({
                       if (!entry?.text) void ask(stepIndex);
                     }}
                   >
-                    <HelpCircle className="h-3.5 w-3.5" />
-                    {open ? "Hide the why" : "Why?"}
+                    {open ? "Hide why" : "Why?"}
                   </button>
 
                   <AnimatePresence initial={false}>
@@ -223,7 +222,6 @@ export function StepList({
                   </AnimatePresence>
                 </div>
               </div>
-              <span className="mathlab-walk__rule">{step.rule}</span>
             </motion.li>
           );
         })}

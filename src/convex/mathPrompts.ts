@@ -15,6 +15,27 @@ import { z } from "zod";
  * Same algebra, same answer — only the explanation changes, because a student
  * who has seen a proof three times still gets something from a number line.
  */
+/**
+ * How much working a student asked to see.
+ *
+ * Simple is the default: short sentences, one idea per step, and only as many
+ * steps as the arithmetic needs. Detailed keeps the full textbook proof for
+ * the students who want it, including the rule names and the formal lines.
+ */
+export const DETAIL_STYLES = {
+  simple: [
+    "Write for the student's own level as a tutor would speak: short sentences (20 words at most per step), one idea per step, plain verbs.",
+    "Use symbols rather than words: ×, +, −, ÷, =.",
+    "Match the number of steps to the difficulty. Simple arithmetic gets 2 to 4 steps; never pad a short problem with extra moves or analogies.",
+    "For each step put the whole instruction in explanation as one sentence, with any mathematics inline in dollars. Leave expression empty when explanation already contains the calculation.",
+    "Do not use a jargon title. Say 'Split 22 into 20 + 2', not 'Decompose the number'.",
+  ].join(" "),
+  detailed: [
+    "Show the full formal working: a title for every move, the rule that licenses it, and the expression on its own line.",
+    "Explanation may use two or three sentences where the move needs it, but keep it plain and free of jargon.",
+  ].join(" "),
+} as const;
+
 export const SOLVE_METHODS = {
   standard: [
     "Explain the working as a standard algebraic proof: state the identity or formula being used, substitute into it, and simplify symbolically until the answer is reached.",
@@ -95,6 +116,23 @@ export function cleanProse(value: string) {
 }
 
 /**
+ * Read the student's notation the way a teacher would.
+ *
+ * `22x6`, `22X6`, `22*6` and `22·6` all mean 22 × 6; `÷` means division. The
+ * substitution is deliberately narrow — an `x` followed by a space is a
+ * variable, not a multiplication sign — so `3x + 5` is left alone.
+ */
+export function normalizeMathInput(value: string) {
+  return value
+    .replace(/(\d)\s*[xX*·]\s*(?=\d)/g, "$1 \\times ")
+    .replace(/(\d)\s*[xX*·]\s*(?=[a-zA-Z])/g, "$1 \\times ")
+    .replace(/÷/g, " \\div ")
+    .replace(/\s+\/\s+/g, " \\div ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Any maths delimiters the model wrapped around a line, stripped off again.
  *
  * Words never belong in an expression. The prompt forbids them; this catches
@@ -103,7 +141,19 @@ export function cleanProse(value: string) {
  * legitimately lives there.
  */
 export function cleanLatex(value: string) {
-  let out = value.trim();
+  let out = value
+    /* JSON turns a single-backslash \times into a tab + "imes", \frac into a
+       form-feed + "rac", and so on. The parser now repairs the JSON first, but
+       a stored history row can still carry the damaged form; rebuild the
+       command from the control character so old solutions render too. This
+       runs before `trim`, or a leading form-feed would be stripped instead of
+       restored. */
+    .replace(/\t/g, "\\t")
+    .replace(/\f/g, "\\f")
+    .replaceAll(String.fromCharCode(8), "\\b")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .trim();
   if (out.length > 4 && out.startsWith("$$") && out.endsWith("$$")) {
     out = out.slice(2, -2);
   } else if (out.length > 2 && out.startsWith("$") && out.endsWith("$")) {
@@ -113,14 +163,16 @@ export function cleanLatex(value: string) {
     out = out.slice(2, -2);
   }
   if (!out.includes("\\text")) {
+    /* The lookarounds catch `times` even when the model glued it to a number
+       ("22times6"), while leaving the `times` inside a real `\\times` alone. */
     out = out
-      .replace(/\bequals?\b/gi, "=")
-      .replace(/\bplus\b/gi, "+")
-      .replace(/\bminus\b/gi, "-")
-      .replace(/\btimes\b/gi, "\\times")
-      .replace(/\bmultiplied by\b/gi, "\\times")
-      .replace(/\bdivided by\b/gi, "\\div")
-      .replace(/\bsquared\b/gi, "^{2}");
+      .replace(/(?<![a-zA-Z\\])equals?(?![a-zA-Z])/gi, " = ")
+      .replace(/(?<![a-zA-Z\\])plus(?![a-zA-Z])/gi, " + ")
+      .replace(/(?<![a-zA-Z\\])minus(?![a-zA-Z])/gi, " - ")
+      .replace(/(?<![a-zA-Z\\])times(?![a-zA-Z])/gi, " \\times ")
+      .replace(/(?<![a-zA-Z\\])multiplied\s+by(?![a-zA-Z])/gi, " \\times ")
+      .replace(/(?<![a-zA-Z\\])divided\s+by(?![a-zA-Z])/gi, " \\div ")
+      .replace(/(?<![a-zA-Z\\])squared(?![a-zA-Z])/gi, "^{2}");
   }
   return out.replace(/\s+/g, " ").trim();
 }

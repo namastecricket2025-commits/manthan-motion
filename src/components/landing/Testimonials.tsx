@@ -3,7 +3,7 @@ import { InitialAvatar } from "@/components/shared/InitialAvatar";
 import { useSpotlight } from "@/components/landing/use-spotlight";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -166,7 +166,29 @@ function useCardsPerView() {
 
 export default function Testimonials() {
   const data = useQuery(api.testimonials.approved);
+  const ensureEarlyTesters = useMutation(api.testimonials.ensureEarlyTesters);
+  const [seeding, setSeeding] = useState(false);
+  const repairTried = useRef(false);
   const sectionRef = useRef<HTMLElement | null>(null);
+
+  /* Production is a separate Convex deployment from the preview, and a fresh
+     one starts with an empty testimonials table — that is why the live site
+     showed the empty state while the preview showed eleven quotes. The deploy
+     path seeds it two ways; this is the immediate one: a deployment that
+     reports zero approved reviews gets the fixed quote sheet written once, on
+     its first visit. The mutation takes no arguments and can only write the
+     canonical eleven rows, so it is not a way to inject a review. An older
+     deployment without the function simply keeps the empty state. */
+  useEffect(() => {
+    if (!data || data.count > 0 || repairTried.current) return;
+    repairTried.current = true;
+    setSeeding(true);
+    void ensureEarlyTesters({})
+      .catch(() => {
+        /* Old deployment without the bootstrap: the scheduled seed covers it. */
+      })
+      .finally(() => setSeeding(false));
+  }, [data, ensureEarlyTesters]);
   useSpotlight(sectionRef);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const perView = useCardsPerView();
@@ -286,7 +308,7 @@ export default function Testimonials() {
         </div>
       </div>
 
-      {data === undefined ? (
+      {data === undefined || seeding ? (
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
           {[0, 1, 2].map((n) => (
             <div key={n} className="glass-panel card-surface h-64 animate-pulse" />

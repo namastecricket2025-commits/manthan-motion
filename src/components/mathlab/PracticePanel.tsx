@@ -1,9 +1,9 @@
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Eye, Loader2, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
-import { Expression, Explanation } from "@/components/mathlab/parts";
+import { Expression, Explanation, ProblemStatement } from "@/components/mathlab/parts";
 import { MathTex } from "@/components/mathlab/latex";
 import type { EngineProblem, EngineStep } from "@/components/mathlab/solution";
 
@@ -27,6 +27,7 @@ export function PracticePanel({
   track,
   chapterName,
   chapterFormulas,
+  autoStart = false,
 }: {
   problem: string;
   steps: EngineStep[];
@@ -34,6 +35,8 @@ export function PracticePanel({
   track: string;
   chapterName: string;
   chapterFormulas: string[];
+  /** Generate immediately when opened from "Another similar problem". */
+  autoStart?: boolean;
 }) {
   const practiceAction = useAction(api.mathTutor.practiceProblem);
   const gradeAction = useAction(api.mathTutor.gradeAnswer);
@@ -76,6 +79,14 @@ export function PracticePanel({
       setBusy(false);
     }
   }, [chapterFormulas, chapterName, finalAnswer, practiceAction, problem, steps, track]);
+
+  /* Carry-over from Solve: generate the similar problem once, automatically. */
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoRan.current) return;
+    autoRan.current = true;
+    void generate();
+  }, [autoStart, generate]);
 
   const checkAnswer = useCallback(async () => {
     if (!practice || checking) return;
@@ -136,7 +147,7 @@ export function PracticePanel({
           >
             <p className="mathlab-practice__label">Your problem</p>
             <div className="mathlab-practice__question">
-              <MathTex source={practice.problem} fallback={practice.problem} display />
+              <ProblemStatement text={practice.problem} />
             </div>
 
             <div className="mathlab-practice__answer">

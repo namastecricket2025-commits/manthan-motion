@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { MathTex } from "@/components/mathlab/latex";
+import { mathFieldError } from "@/convex/latexGuard";
 
 /**
  * The pieces the structured solution is drawn from.
@@ -31,6 +32,33 @@ export function InlineMath({ text }: { text: string }) {
         ),
       )}
     </>
+  );
+}
+
+/**
+ * The question itself.
+ *
+ * A problem statement is plain text with only its mathematics in dollars, so
+ * it keeps its spaces and reads as a sentence. A stored solution from before
+ * that rule may hold LaTeX only; that form is still typeset, because there is
+ * no prose in it to lose.
+ */
+export function ProblemStatement({ text }: { text: string }) {
+  const latexOnly =
+    !text.includes("$") &&
+    /\\[a-zA-Z]+/.test(text) &&
+    mathFieldError(text) === null;
+  if (latexOnly) {
+    return (
+      <div className="mathlab-problem__statement">
+        <MathTex source={text} fallback={text} display />
+      </div>
+    );
+  }
+  return (
+    <p className="mathlab-problem__statement mathlab-problem__statement--prose">
+      <InlineMath text={text} />
+    </p>
   );
 }
 
