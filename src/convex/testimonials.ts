@@ -9,7 +9,7 @@ import { internalMutation, mutation, query } from "./_generated/server";
  *
  *   `source: "user"`         — submitted in-app by a signed-in account. Starts
  *                              `pending`; only the owner can approve it.
- *   `source: "early_tester"` — the six students who tried Manthan before launch
+ *   `source: "early_tester"` — the students who tried Manthan before launch
  *                              and agreed to be quoted. They have no accounts,
  *                              so `userId` is empty; they are seeded already
  *                              approved and consented.
@@ -197,12 +197,14 @@ export const editText = mutation({
 });
 
 // ---------------------------------------------------------------------------
-// Seed: the six early testers
+// Seed: the early testers
 // ---------------------------------------------------------------------------
 
 /**
- * The quotes exactly as the testers wrote them. Text is never reworded here —
- * this array is the record, and the site renders it verbatim.
+ * The quotes exactly as the testers wrote them, emojis and all. Text is never
+ * reworded, capitalised or corrected here — this array is the record, and the
+ * site renders it verbatim. The column is a Convex string, so it stores and
+ * returns UTF-8 unchanged.
  */
 export const EARLY_TESTERS = [
   {
@@ -241,25 +243,129 @@ export const EARLY_TESTERS = [
     rating: 4,
     text: "I liked the idea of having quizzes, notes, and other study resources together. Manthan has the potential to save students time and help them prepare for exams in a more organised way.",
   },
+  {
+    displayName: "Anshul",
+    classLabel: "Class 10",
+    rating: 5,
+    text: "I tried the quiz feature and its actually pretty good 😭 makes revision a little less boring and helps me see what i still need to learn",
+  },
+  {
+    displayName: "Nidhi",
+    classLabel: "Class 9",
+    rating: 5,
+    text: "the website is really cool ngl, especially the summaries coz sometimes the textbook is just too much to read before a test 💀",
+  },
+  {
+    displayName: "Rishabh",
+    classLabel: "Class 8",
+    rating: 4,
+    text: "Manthan is actually a nice idea. I would probably use it more for science and maths. The STEM lab looks interesting, would be cool to explore more stuff on it.",
+  },
+  {
+    displayName: "Anavi",
+    classLabel: "Class 8",
+    rating: 5,
+    text: "wait this can make slides too?? 😭 thats actually helpful for school projects. having different study tools on one website is a pretty good idea",
+  },
+  {
+    displayName: "Dev",
+    classLabel: "Class 10",
+    rating: 5,
+    text: "I like how everything is in one place instead of searching different websites for everything. could be really useful during exams when you have like 10 chapters left lol",
+  },
 ] as const;
 
 /**
- * Insert the six approved early-tester rows. Idempotent: if any early-tester
- * rows already exist the seed is a no-op, so running it twice cannot duplicate
- * a quote. Run with `bunx convex run testimonials:seedEarlyTesters`.
+ * Names from an earlier review batch that was never part of the school quote
+ * sheet. `Dev` is special-cased by class because Class 10 Dev is canonical.
+ */
+const LEGACY_NAMES = [
+  "Aditya",
+  "Mehak",
+  "Rohan",
+  "Ishita",
+  "Arjun",
+  "Anushka",
+  "Pari",
+  "Myra",
+  "Kabir",
+] as const;
+
+/**
+ * Bring the early-tester rows in line with the quote sheet, idempotently.
+ *
+ * - removes the old test batch (and any other `early_tester` row that is not
+ *   one of the canonical eleven),
+ * - inserts the ones that are missing,
+ * - rewrites the canonical fields on rows that already exist, so the exact
+ *   spelling, rating, consent and approval state are guaranteed.
+ *
+ * In-app reviews (`source: "user"`) are never touched. Run with
+ * `bunx convex run testimonials:seedEarlyTesters`.
  */
 export const seedEarlyTesters = internalMutation({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("testimonials").collect();
-    const existing = rows.filter((row) => row.source === "early_tester");
-    if (existing.length > 0) {
-      return { inserted: 0, skipped: existing.length };
+    const keyOf = (row: { displayName?: string; classLabel?: string }) =>
+      `${row.displayName ?? ""}\u0000${row.classLabel ?? ""}`;
+    const canonical = new Map(
+      EARLY_TESTERS.map((tester, index) => [
+        `${tester.displayName}\u0000${tester.classLabel}`,
+        index,
+      ]),
+    );
+
+    let removed = 0;
+    for (const row of rows) {
+      if (row.source !== "early_tester") continue;
+      const isLegacyName =
+        LEGACY_NAMES.includes(row.displayName as (typeof LEGACY_NAMES)[number]) ||
+        (row.displayName === "Dev" && row.classLabel === "Class 7");
+      if (isLegacyName || !canonical.has(keyOf(row))) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
     }
 
-    // A fixed base keeps the quotes in the order they were collected.
+    // A fixed base keeps the quote sheet's order stable; the UI mixes the
+    // order for display without writing anything back to the database.
     const base = Date.UTC(2026, 9, 1);
+    let inserted = 0;
+    let updated = 0;
+
     for (const [index, tester] of EARLY_TESTERS.entries()) {
+      const existing = rows.find(
+        (row) =>
+          row.source === "early_tester" &&
+          row.displayName === tester.displayName &&
+          row.classLabel === tester.classLabel,
+      );
+
+      if (existing) {
+        const fields = {
+          rating: tester.rating,
+          text: tester.text,
+          displayName: tester.displayName,
+          classLabel: tester.classLabel,
+          consentToPublish: true,
+          status: "approved" as const,
+          source: "early_tester" as const,
+          createdAt: base + index * 60_000,
+        };
+        const changed =
+          existing.rating !== fields.rating ||
+          existing.text !== fields.text ||
+          existing.consentToPublish !== fields.consentToPublish ||
+          existing.status !== fields.status ||
+          existing.createdAt !== fields.createdAt;
+        if (changed) {
+          await ctx.db.patch(existing._id, fields);
+          updated += 1;
+        }
+        continue;
+      }
+
       await ctx.db.insert("testimonials", {
         rating: tester.rating,
         text: tester.text,
@@ -270,8 +376,9 @@ export const seedEarlyTesters = internalMutation({
         source: "early_tester",
         createdAt: base + index * 60_000,
       });
+      inserted += 1;
     }
 
-    return { inserted: EARLY_TESTERS.length, skipped: 0 };
+    return { inserted, updated, removed, total: EARLY_TESTERS.length };
   },
 });
