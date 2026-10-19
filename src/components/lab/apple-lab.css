@@ -367,6 +367,223 @@
   cursor: grabbing;
 }
 
+/* ---- Organ explorer -------------------------------------------------
+   A shared layer above the organ canvas: CSS2D labels, their leader lines,
+   and the view switcher. Everything stays pointer-transparent except the
+   real controls, so orbit/zoom/pan are never intercepted. */
+.organ-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.organ-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--lab-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+.organ-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.72rem;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--lab-ink-dim);
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.organ-seg button:hover {
+  color: var(--lab-ink);
+}
+.organ-seg button[data-active="true"] {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--lab-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.organ-viewhint {
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  color: var(--lab-ink-micro);
+}
+
+.organ-label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.organ-css2d {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.organ-anchor {
+  position: relative;
+  pointer-events: none;
+}
+.organ-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.42rem;
+  max-width: 190px;
+  padding: 0.4rem 0.52rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 10px;
+  background: rgba(8, 13, 24, 0.84);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transform: translate(0, 0);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.organ-label.is-focus {
+  border-color: rgba(255, 255, 255, 0.52);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 10px 28px rgba(0, 0, 0, 0.42);
+}
+.organ-label.is-pinned {
+  border-color: color-mix(in srgb, var(--signal) 62%, transparent);
+}
+.organ-label__dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  margin-top: 4px;
+  border-radius: 999px;
+  box-shadow: 0 0 8px currentColor;
+}
+.organ-label__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+.organ-label__name {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.organ-label__fn {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 164px;
+  font-size: 9.5px;
+  line-height: 1.3;
+  color: rgba(226, 232, 240, 0.7);
+}
+.organ-label.is-compact {
+  max-width: 132px;
+  padding: 0.3rem 0.45rem;
+}
+.organ-label.is-compact .organ-label__fn {
+  display: none;
+}
+.organ-leaders {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.organ-leader {
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  stroke-linecap: round;
+}
+.apple-lab-stage .apple-lab-chip {
+  position: relative;
+  z-index: 5;
+}
+
+.organ-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lab-line) transparent;
+}
+.organ-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.organ-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--lab-line);
+}
+.organ-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.42rem 0.48rem;
+  color: var(--lab-ink);
+  transition: background 160ms ease, border-color 160ms ease;
+  touch-action: manipulation;
+}
+.organ-row:hover,
+.organ-row:focus-visible {
+  border-color: var(--lab-line);
+  background: rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+.organ-row[data-active="true"] {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+}
+.organ-row__dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+.organ-row__pin {
+  flex: 0 0 auto;
+  font-size: 7px;
+  color: var(--signal);
+}
+
+.apple-lab [data-lab-theme="light"] .organ-seg {
+  background: rgba(255, 255, 255, 0.66);
+  border-color: rgba(16, 16, 16, 0.1);
+}
+.apple-lab [data-lab-theme="light"] .organ-seg button[data-active="true"] {
+  background: rgba(16, 16, 16, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.apple-lab [data-lab-theme="light"] .organ-label {
+  border-color: rgba(16, 16, 16, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0b0b;
+  box-shadow: 0 8px 20px rgba(16, 16, 16, 0.16);
+}
+.apple-lab [data-lab-theme="light"] .organ-label__fn {
+  color: rgba(16, 16, 16, 0.62);
+}
+.apple-lab [data-lab-theme="light"] .organ-label.is-focus {
+  border-color: rgba(16, 16, 16, 0.4);
+}
+.apple-lab [data-lab-theme="light"] .organ-row:hover,
+.apple-lab [data-lab-theme="light"] .organ-row:focus-visible {
+  background: rgba(16, 16, 16, 0.05);
+  border-color: rgba(16, 16, 16, 0.1);
+}
+.apple-lab [data-lab-theme="light"] .organ-row[data-active="true"] {
+  background: rgba(16, 16, 16, 0.08);
+  border-color: rgba(16, 16, 16, 0.18);
+}
+
 /* ---- Continuous orbits (Bohr shells, DNA core) --------------------- */
 .apple-lab-orbit {
   transform-box: view-box;

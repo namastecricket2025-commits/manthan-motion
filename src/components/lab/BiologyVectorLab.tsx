@@ -1379,13 +1379,12 @@ export function BiologyVectorLab() {
 
       <AnimatePresence mode="wait" initial={false}>
         {plate !== "cell" ? (
-          /* The three organ systems share one WebGL canvas: the key stays
-             constant across them, so moving Heart → Respiratory → Excretory
-             swaps the model inside the same renderer instead of remounting
-             it. Only leaving for the cell plate tears the stage down (and
-             disposes the model with it). */
+          /* The three organ systems share one engine and one dark-stage
+             presentation. Keying by plate resets the per-organ tools
+             (view, cut, labels, isolation) and lets the outgoing organ
+             dispose its geometries before the next one is built. */
           <motion.div
-            key="organ-stage"
+            key={`organ-stage-${plate}`}
             variants={viewVariants}
             initial="hidden"
             animate="visible"
