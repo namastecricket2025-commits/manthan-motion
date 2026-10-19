@@ -1,10 +1,13 @@
 import * as React from "react";
 import { Star } from "lucide-react";
-import { api } from "@/convex/_generated/api";import { useFeedbackPrompt } from "@/hooks/use-feedback-prompt";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { useMutation } from "convex/react";
 
 
 const STORAGE_KEY = "manthan-recent-kind";
+const HIDDEN_KEY = "manthan-feedback-hidden";
 
 /** Which in-app action most recently completed, if any. Used so the prompt can
  *  say "your summary / quiz / solved problem" once, then never again. */
@@ -23,6 +26,69 @@ export function setRecentKind(kind: string) {
   } catch {
     /* ignore */
   }
+  // A prompt already on the page reads the new value immediately rather than
+  // waiting for the next dashboard mount.
+  window.dispatchEvent(
+    new CustomEvent("manthan:recent-kind", { detail: { kind } }),
+  );
+}
+
+/**
+ * When the prompt may appear. The prompt is tied to a real event, not a timer:
+ * `setRecentKind` records what the student just generated, and it is shown at
+ * most once a session, only to a signed-in account (a review is stored against
+ * one), and never again after the form is sent or dismissed.
+ */
+function useFeedbackPrompt() {
+  const { isAuthenticated } = useAuth();
+  const [kind, setKind] = React.useState<string | null>(recentKind);
+  const [hidden, setHidden] = React.useState(() => {
+    try {
+      return window.sessionStorage.getItem(HIDDEN_KEY) !== null;
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    const onKind = (event: Event) => {
+      const next = (event as CustomEvent<{ kind?: string }>).detail?.kind;
+      if (!next) return;
+      setKind(next);
+      try {
+        if (window.sessionStorage.getItem(HIDDEN_KEY) === null) setHidden(false);
+      } catch {
+        setHidden(false);
+      }
+    };
+    window.addEventListener("manthan:recent-kind", onKind);
+    return () => window.removeEventListener("manthan:recent-kind", onKind);
+  }, []);
+
+  const dismiss = React.useCallback(() => {
+    setHidden(true);
+    try {
+      window.sessionStorage.setItem(HIDDEN_KEY, "1");
+    } catch {
+      /* private mode — hidden for this render only */
+    }
+  }, []);
+
+  const markSubmitted = React.useCallback(() => {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.sessionStorage.setItem(HIDDEN_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  return {
+    kind,
+    shouldShow: isAuthenticated && !hidden && !!kind,
+    dismissed: dismiss,
+    submitted: markSubmitted,
+  };
 }
 
 function StarField({
@@ -79,27 +145,16 @@ export function FeedbackPrompt({ className }: FeedbackPromptProps) {
   const [submitted, setSubmitted] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const submit = useMutation(api.testimonials.submitFeedback);
 
-  const kind = React.useMemo(recentKind, []);
-
-  React.useEffect(() => {
-    if (!prompt.shouldShow) {
-      setRating(0);
-      setText("");
-      setDisplayName("");
-      setClassLabel("");
-      setConsent(false);
-      setSubmitted(false);
-      setError(null);
-    }
-  }, [prompt.shouldShow]);
+  const { kind } = prompt;
 
   async function handleSubmit() {
     if (rating < 1 || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await api.testimonials.submitFeedback({
+      await submit({
         rating,
         text: text.trim(),
         displayName: displayName.trim() || undefined,
@@ -117,7 +172,7 @@ export function FeedbackPrompt({ className }: FeedbackPromptProps) {
     }
   }
 
-  if (!prompt.shouldShow) {
+  if (!prompt.shouldShow && !submitted) {
     return null;
   }
 

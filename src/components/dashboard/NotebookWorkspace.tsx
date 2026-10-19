@@ -13,6 +13,7 @@ import {
   type SummaryPayload,
 } from "@/components/dashboard/MaterialViews";
 import { CramMode } from "@/components/dashboard/CramMode";
+import { setRecentKind } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
@@ -270,6 +271,13 @@ export function NotebookWorkspace({
       const failed = results.filter((r) => !r.ok);
       const ok = results.length - failed.length;
       if (ok > 0) {
+        // The feedback prompt asks about what was just made, once.
+        const label =
+          kinds.length === 1
+            ? (KIND_META.find((meta) => meta.kind === kinds[0])?.label.toLowerCase() ??
+              "study material")
+            : "study kit";
+        setRecentKind(label);
         toast("Study material ready", {
           description: `Generated ${ok} of ${results.length} item${results.length === 1 ? "" : "s"} from your sources.`,
         });

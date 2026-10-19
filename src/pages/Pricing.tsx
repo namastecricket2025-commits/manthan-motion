@@ -1,5 +1,6 @@
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
+import { TestimonialStrip } from "@/components/landing/Testimonials";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { CheckoutModal } from "@/components/plans/CheckoutModal";
 import { usePlan } from "@/components/plans/PlanProvider";
@@ -243,6 +244,8 @@ export default function Pricing() {
               · currently on {planName(plan)}
             </span>
           </div>
+
+          <TestimonialStrip />
 
           <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-text-dim">
             Daily allowances count the tokens the AI reads from your sources and

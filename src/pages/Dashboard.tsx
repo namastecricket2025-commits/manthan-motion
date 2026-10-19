@@ -6,6 +6,7 @@ import {
 } from "@/components/dashboard/DashboardNav";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { NotebookWorkspace } from "@/components/dashboard/NotebookWorkspace";
+import { FeedbackPrompt } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { Logo } from "@/components/landing/Logo";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
@@ -603,6 +604,12 @@ export default function Dashboard() {
             </AnimatePresence>
           </div>
         </main>
+      </div>
+
+      {/* The review prompt appears only after a generation succeeded and only
+          once a session; its rows start `pending` and wait for owner approval. */}
+      <div className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center sm:inset-x-auto sm:right-6 sm:justify-end">
+        <FeedbackPrompt />
       </div>
     </div>
   );

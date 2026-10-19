@@ -9,6 +9,7 @@ import Navbar from "@/components/landing/Navbar";
 import OrbitMark from "@/components/landing/OrbitMark";
 import Pipeline from "@/components/landing/Pipeline";
 import Stats from "@/components/landing/Stats";
+import Testimonials from "@/components/landing/Testimonials";
 import { TextGenerate } from "@/components/landing/TextGenerate";
 import { useAuth } from "@/hooks/use-auth";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
@@ -384,6 +385,9 @@ export default function Landing() {
               steps were for, shown as four real artifacts. */}
           <KitShowcase />
           <Stats />
+          {/* Real quotes from the early testers, read live from the approved
+              rows — the count and the average move with the database. */}
+          <Testimonials />
           <Faq />
           <CtaSection />
         </main>

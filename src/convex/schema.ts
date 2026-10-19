@@ -154,10 +154,10 @@ const schema = defineSchema(
 
     // User and early-tester feedback on generated material.
     //
-    // Only rows that are approved AND consented to publish are readable by the
-    // public (anon + authenticated). Signed-in users may insert their own rows
-    // and read their own rows; the owner approval path runs through Convex via
-    // the service role, which bypasses RLS.
+    // Public reads go through `testimonials.approved`, which returns only rows
+    // that are approved AND consented to publish. Signed-in users submit their
+    // own rows as `pending`; the owner approves them through the mutations in
+    // `testimonials.ts`.
     testimonials: defineTable({
       // Nullable: early testers (and the six seeded rows) do not have accounts.
       userId: v.optional(v.id("users")),
@@ -171,6 +171,7 @@ const schema = defineSchema(
         v.literal("approved"),
         v.literal("rejected"),
       ),
+      // "user" for in-app submissions, "early_tester" for the seeded six.
       source: v.string(),
       createdAt: v.number(),
     })
