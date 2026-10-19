@@ -21,6 +21,7 @@ import { SPRING, syncViewport, useCanvasSize, useRaf, useViewport } from "../use
 import {
   ORGAN_MODELS,
   VIEW_COPY,
+  type HeartBeatRole,
   type OrganPart,
   type OrganSystem,
   type ParticleFlow,
@@ -42,10 +43,16 @@ interface PartRecord {
   mesh: THREE.Mesh;
   rim?: THREE.Mesh;
   inflate: boolean;
-  beat: boolean;
+  beat?: HeartBeatRole;
+  /** AV valves ride filling; semilunar valves ride ejection. */
+  valve?: "av" | "sl";
   basePos: THREE.Vector3;
   baseScale: THREE.Vector3;
   baseCenter: THREE.Vector3;
+  /** Local -y extreme of the geometry: the anchor a ventricle squeezes about. */
+  localBottom: number;
+  /** The part's own +y axis, in parent space — "toward the base" of a chamber. */
+  upDir: THREE.Vector3;
   dir: THREE.Vector3;
 }
 
@@ -103,18 +110,107 @@ function materialOf(mesh: THREE.Mesh) {
   return mesh.material as THREE.MeshPhysicalMaterial;
 }
 
+function smoothstep(a: number, b: number, x: number) {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+}
+
+/**
+ * One cardiac cycle, in phase units of a single beat.
+ *
+ * The atria squeeze first (early systole), the AV valves shut as the
+ * ventricles take over, the semilunar valves ride the ejection window in the
+ * middle, and everything relaxes together through the long diastole that
+ * fills the ventricles again.
+ */
+function cardiacCycle(phase: number) {
+  const atrial = Math.exp(-Math.pow((phase - 0.05) / 0.05, 2));
+  const sys = smoothstep(0.09, 0.15, phase) * (1 - smoothstep(0.4, 0.47, phase));
+  const eject = smoothstep(0.15, 0.21, phase) * (1 - smoothstep(0.34, 0.41, phase));
+  return {
+    atrial,
+    sys,
+    /** Tricuspid & mitral: open while the ventricles fill, shut as they contract. */
+    avOpen: 1 - sys,
+    /** Pulmonary & aortic: open only while the ventricles eject. */
+    slOpen: eject,
+  };
+}
+
+/** Apply one role's squeeze for this frame. */
+function applyBeat(record: PartRecord, cycle: ReturnType<typeof cardiacCycle>) {
+  const { mesh, basePos, baseScale } = record;
+  if (record.beat === "ventricle") {
+    /* Squeeze toward the apex: shorten along the long axis, bulge the wall,
+       and slide the base down so the apex point stays put. */
+    const sy = baseScale.y * (1 - 0.09 * cycle.sys);
+    const sxz = 1 + 0.02 * cycle.sys;
+    mesh.scale.set(baseScale.x * sxz, sy, baseScale.z * sxz);
+    mesh.position
+      .copy(basePos)
+      .addScaledVector(record.upDir, record.localBottom * baseScale.y * (1 - sy / baseScale.y));
+    return;
+  }
+  if (record.beat === "atrium") {
+    /* The atria empty first, so they contract a beat before the ventricles. */
+    const k = cycle.atrial;
+    mesh.scale.set(baseScale.x * (1 - 0.05 * k), baseScale.y * (1 - 0.08 * k), baseScale.z * (1 - 0.05 * k));
+    mesh.position.copy(basePos);
+    return;
+  }
+  if (record.beat === "papillary") {
+    /* Baked geometry: scale about the muscle's own centre so it shortens
+       toward its valve and pulls the chordae tight. */
+    const s = 1 + 0.14 * cycle.sys;
+    mesh.scale.set(baseScale.x * s, baseScale.y * s, baseScale.z * s);
+    mesh.position.copy(record.baseCenter).multiplyScalar(1 - s);
+    return;
+  }
+  mesh.scale.copy(baseScale);
+  mesh.position.copy(basePos);
+}
+
+/** Openness runs from 1 (leaflets flattened aside — hole open) to 0 (bulged
+    shut), so the ring keeps its seat either way. */
+function applyValve(record: PartRecord, openness: number) {
+  const { baseScale } = record;
+  record.mesh.scale.set(
+    baseScale.x * (0.97 + 0.09 * openness),
+    baseScale.y * (1.22 - 0.78 * openness),
+    baseScale.z * (0.97 + 0.09 * openness),
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* view / state sync                                                   */
 /* ------------------------------------------------------------------ */
 
 function applyMode(model: StageModel, mode: ViewMode) {
+  /* In X-ray the walls go ghostly so the valves, chordae and coronaries read
+     through them; the inner structures themselves keep their full colour. */
+  const keepOpaque = (part: OrganPart) =>
+    model.system === "heart" &&
+    (part.group === "Valves" ||
+      part.group === "Inner structures" ||
+      part.group === "Coronary arteries");
+
   for (const record of model.records) {
     const material = materialOf(record.mesh);
     if (record.rim) record.rim.visible = mode === "xray";
-    if (record.part.outer) {
-      const base = (material.userData.baseOpacity as number | undefined) ?? 0.3;
-      material.opacity = mode === "xray" ? 0.13 : base;
-      material.depthWrite = mode === "xray" ? false : base > 0.8;
+    const base = (material.userData.baseOpacity as number | undefined) ?? 1;
+    const opacity =
+      mode !== "xray"
+        ? base
+        : record.part.outer
+          ? 0.13
+          : keepOpaque(record.part)
+            ? base
+            : 0.2;
+    material.opacity = opacity;
+    material.depthWrite = opacity > 0.8;
+    if (material.transparent !== opacity < 0.999) {
+      material.transparent = opacity < 0.999;
+      material.needsUpdate = true;
     }
   }
 
@@ -558,13 +654,11 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
     const cutMaxZ = rawBox.max.z;
     const records: PartRecord[] = built.parts.map((entry) => {
       entry.mesh.updateMatrix();
+      entry.mesh.geometry.computeBoundingBox();
+      const bbox = entry.mesh.geometry.boundingBox;
       const center = entry.center
         ? entry.center.clone()
-        : (() => {
-            entry.mesh.geometry.computeBoundingBox();
-            const c = entry.mesh.geometry.boundingBox?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3();
-            return c.applyMatrix4(entry.mesh.matrix);
-          })();
+        : (bbox?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3()).applyMatrix4(entry.mesh.matrix);
       const dir = center.clone();
       if (dir.lengthSq() < 0.0001) dir.set(0, 0.8, 0.35);
       dir.normalize();
@@ -573,10 +667,13 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
         mesh: entry.mesh,
         rim: entry.rim,
         inflate: Boolean(entry.inflate),
-        beat: Boolean(entry.beat),
+        beat: entry.beat,
+        valve: entry.valve,
         basePos: entry.mesh.position.clone(),
         baseScale: entry.mesh.scale.clone(),
         baseCenter: center,
+        localBottom: bbox?.min.y ?? -1,
+        upDir: new THREE.Vector3(0, 1, 0).applyQuaternion(entry.mesh.quaternion).normalize(),
         dir,
       };
     });
@@ -806,8 +903,9 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
     const motion = animDt(dt);
 
     if (model) {
+      const cycle = cardiacCycle(((t * state.bpm) / 60) % 1);
       for (const record of model.records) {
-        if (!record.inflate && !record.beat) continue;
+        if (!record.inflate && !record.beat && !record.valve) continue;
         if (record.inflate) {
           const manual = 1 + (state.volume / 100) * 0.32;
           let breath = 1;
@@ -830,15 +928,10 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
           );
         }
         if (record.beat) {
-          const phase = ((t * state.bpm) / 60) % 1;
-          const systole = Math.exp(-Math.pow((phase - 0.12) / 0.075, 2));
-          const diastole = Math.exp(-Math.pow((phase - 0.44) / 0.085, 2));
-          const pulse = systole * 0.055 + diastole * 0.035;
-          record.mesh.scale.set(
-            record.baseScale.x * (1 + pulse * 0.8),
-            record.baseScale.y * (1 - pulse),
-            record.baseScale.z * (1 + pulse * 0.8),
-          );
+          applyBeat(record, cycle);
+        }
+        if (record.valve) {
+          applyValve(record, record.valve === "av" ? cycle.avOpen : cycle.slOpen);
         }
       }
 
