@@ -541,7 +541,9 @@
 }
 
 .mathlab-viewcard {
+  position: relative;
   width: 100%;
+  z-index: 0;
 }
 
 /* ================================================================== */
@@ -1250,6 +1252,9 @@
 }
 
 .mathlab-graphcalc__canvas {
+  position: relative;
+  z-index: 0;
+  height: 380px;
   overflow: hidden;
   border: 1px solid var(--glass-line);
   border-radius: 18px;
@@ -2427,39 +2432,14 @@ html[data-motion="reduced"] .mathlab-walk__index {
 }
 
 /* ================================================================== */
-/* The chapter's living plane + view motion                            */
+/* View motion                                                         */
 /* ================================================================== */
 
-/* The three.js sheet sits behind the whole workspace and fades out before the
-   working does, so it reads as depth and never as a background to read on.
-   Its brightness tracks Ambient Intensity through the app-wide --ambient. */
-.mathlab-field {
-  position: absolute;
-  inset: 0 0 auto 0;
-  /* A backdrop band, not half the screen: at 58vh this plane covered most of
-     the first viewport and read as the page's content. It is clipped to its
-     own box as well, so no camera or buffer change can ever spill the mesh
-     past it. */
-  height: clamp(240px, 44vh, 460px);
-  overflow: hidden;
-  contain: paint;
-  z-index: 0;
-  opacity: calc(0.5 + 0.5 * var(--ambient, 1));
-  -webkit-mask-image: radial-gradient(135% 118% at 50% 0%, #000 34%, rgba(0, 0, 0, 0.6) 68%, transparent 100%);
-  mask-image: radial-gradient(135% 118% at 50% 0%, #000 34%, rgba(0, 0, 0, 0.6) 68%, transparent 100%);
-  pointer-events: none;
-}
-
-.mathlab-field__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-/* Everything the lab itself draws sits above the field. */
 .mathlab-root {
   position: relative;
-  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .mathlab-viewbody {
@@ -2492,4 +2472,328 @@ html[data-motion="reduced"] .mathlab-walk__index {
 
 .mathlab-view__icon {
   display: inline-flex;
+}
+
+/* ================================================================== */
+/* The simplified solve page                                           */
+/* ================================================================== */
+
+.mathlab-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.mathlab-solvepage {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* The empty state is ONE centred card. The moment a solution exists the card
+   widens to the full column, because the paper — not the input — is the
+   content then. */
+.mathlab-solvecard {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  transition: max-width 320ms var(--ease-momentum);
+}
+
+.mathlab-solvecard.is-solved {
+  max-width: none;
+}
+
+.mathlab-solvecard__intro {
+  padding: 4px 2px 0;
+}
+
+.mathlab-solvecard__sub {
+  margin-top: 6px;
+  max-width: 54ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* A hero field: room around the editor so the first action on the page is
+   unmistakably the question box. */
+.mathlab-input--hero {
+  padding: 16px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+}
+
+.mathlab-input--hero .mathlab-inputfield {
+  padding: 2px 4px;
+}
+
+.mathlab-input--hero .mathlab-mathfield {
+  min-height: 64px;
+  padding: 10px 8px;
+  font-size: 20px;
+}
+
+.mathlab-input--hero .mathlab-input__field {
+  min-height: 64px;
+  font-size: 19px;
+}
+
+/* Examples: three real questions, one tap each. */
+.mathlab-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--glass-line);
+  padding-top: 13px;
+}
+
+.mathlab-examples__label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-examples__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mathlab-example {
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: border-color 180ms var(--ease-momentum), background 180ms var(--ease-momentum), color 180ms var(--ease-momentum);
+}
+
+.mathlab-example:hover {
+  border-color: color-mix(in srgb, var(--signal) 44%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+}
+
+.mathlab-example:active {
+  transform: scale(0.97);
+}
+
+/* Explain-it-as, inside the solved paper. */
+.mathlab-explain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--glass-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 5px 8px 5px 11px;
+}
+
+.mathlab-explain__label {
+  margin-right: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.mathlab-explain__tab {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  transition: color 180ms var(--ease-momentum), background 180ms var(--ease-momentum), border-color 180ms var(--ease-momentum);
+}
+
+.mathlab-explain__tab:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
+.mathlab-explain__tab.is-active {
+  color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+  border-color: color-mix(in srgb, var(--signal) 40%, transparent);
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+}
+
+.mathlab-explain__tab:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+/* The engine's confirmation, beside the answer rather than as a header badge. */
+.mathlab-verdict__value {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mathlab-verified {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, #57c99a 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, #57c99a 12%, transparent);
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, #57c99a 78%, var(--text-main));
+}
+
+/* Problems found in the box, one chip each. Plain text on purpose: an English
+   connective is never fed through the maths renderer. */
+.mathlab-detected {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--glass-line);
+  padding-top: 9px;
+}
+
+.mathlab-detected__label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-detected__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mathlab-detected__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 4px 10px 4px 5px;
+  font-size: 11.5px;
+  color: var(--text-main);
+}
+
+.mathlab-detected__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--signal) 16%, transparent);
+  font-size: 9px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--signal) 74%, var(--text-main));
+}
+
+.mathlab-detected__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================================================================== */
+/* Practice tab                                                        */
+/* ================================================================== */
+
+.mathlab-practice-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mathlab-practice-tab__sub {
+  margin-top: 6px;
+  max-width: 60ch;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-practice-tab__selectors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mathlab-picker {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mathlab-picker > span {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-picker .mathlab-select-wrap,
+.mathlab-picker .mathlab-select-wrap select {
+  width: 100%;
+}
+
+.mathlab-picker .mathlab-select-wrap select {
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.mathlab-practice-tab__chapter {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.mathlab-practice-tab__chapter strong {
+  color: var(--text-main);
+}
+
+@media (max-width: 720px) {
+  .mathlab-practice-tab__selectors {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mathlab-solvecard {
+    max-width: none;
+  }
+
+  .mathlab-explain__label {
+    width: 100%;
+  }
+
+  .mathlab-explain__tab {
+    flex: 1 1 0;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mathlab-solvecard,
+  .mathlab-example,
+  .mathlab-explain__tab {
+    transition: none;
+  }
 }

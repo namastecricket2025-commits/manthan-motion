@@ -194,7 +194,15 @@ export function GraphingCalculator() {
     });
     observer.observe(node);
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      // Leaving the Graph tab or the page tears the chart down with it: the
+      // SVG is removed, and the refs are cleared so a remount builds a fresh
+      // chart instead of drawing into a detached node.
+      if (node) node.innerHTML = "";
+      chartRef.current = null;
+      optionsRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

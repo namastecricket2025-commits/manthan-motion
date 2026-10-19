@@ -3,10 +3,12 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { Calculator, Keyboard, TextCursorInput, Trash2 } from "lucide-react";
+import { problemLabel, splitProblems, uprightWords } from "@/components/mathlab/problems";
 
 /**
  * The Math Lab's question field.
@@ -127,6 +129,9 @@ export const MathInput = forwardRef<
   const applyingRef = useRef(false);
   const latestValue = useRef(value);
   latestValue.current = value;
+  /** Several problems in one box are shown as one chip each, never as one
+   *  italic run of maths with an English word buried in it. */
+  const problems = useMemo(() => splitProblems(value), [value]);
 
   const toggleVirtualKeyboard = useCallback(() => {
     const board = (
@@ -162,11 +167,28 @@ export const MathInput = forwardRef<
         field.mathVirtualKeyboardPolicy = "manual";
         field.setAttribute("smart-fence", "on");
         field.setAttribute("virtual-keyboard-mode", "manual");
+        /* English connectives belong upright, in \\text{…}: a bare "and" in
+           math mode is three italic variables and runs into the next fraction.
+           Rewriting the value here means no word is ever rendered as maths. */
+        const uprightField = () => {
+          const raw = field.value;
+          const upright = uprightWords(raw);
+          if (upright === raw) return raw;
+          applyingRef.current = true;
+          field.value = upright;
+          applyingRef.current = false;
+          return upright;
+        };
         const handleInput = () => {
           if (applyingRef.current) return;
-          onChange(field.value);
+          onChange(uprightField());
+        };
+        const handleBlur = () => {
+          if (applyingRef.current) return;
+          onChange(uprightField());
         };
         field.addEventListener("input", handleInput);
+        field.addEventListener("blur", handleBlur);
         holder.innerHTML = "";
         holder.appendChild(field as unknown as Node);
         fieldRef.current = field;
@@ -195,9 +217,10 @@ export const MathInput = forwardRef<
   useEffect(() => {
     const field = fieldRef.current;
     if (!field || mode !== "math") return;
-    if (field.value === value) return;
+    const upright = uprightWords(value);
+    if (field.value === upright) return;
     applyingRef.current = true;
-    field.value = value;
+    field.value = upright;
     applyingRef.current = false;
   }, [value, mode, editorReady]);
 
@@ -311,6 +334,26 @@ export const MathInput = forwardRef<
           </button>
         ) : null}
       </div>
+
+      {problems.length > 1 ? (
+        <div className="mathlab-detected" aria-label="Problems found in the box">
+          <span className="mathlab-detected__label">
+            {problems.length} problems
+          </span>
+          <ol className="mathlab-detected__list">
+            {problems.map((problem, index) => (
+              <li key={`${index}-${problem}`} className="mathlab-detected__chip">
+                <span className="mathlab-detected__index" aria-hidden>
+                  {index + 1}
+                </span>
+                <span className="mathlab-detected__text">
+                  {problemLabel(problem)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
 
       {padOpen ? (
         <div className="mathlab-pad">

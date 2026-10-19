@@ -115,25 +115,15 @@ export default function MathLabPage() {
         {/* ---- Canvas ---- */}
         <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
-                  Mathematics
-                </p>
-                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                  Math Lab<span className="text-[var(--signal)]">.</span>
-                </h1>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
-                  Plot a chapter's models, shift a parameter and watch the curve
-                  settle, then let the engine break an equation into the four
-                  blocks you revise from.
-                </p>
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                Math Lab<span className="text-[var(--signal)]">.</span>
+              </h1>
               <Link
                 to="/pricing"
-                className="premium-chip transition-colors hover:border-[var(--signal)]"
+                className="premium-chip px-2.5 py-1 text-[11px] transition-colors hover:border-[var(--signal)]"
               >
-                {planName(plan)} plan · View plans
+                {planName(plan)}
               </Link>
             </div>
 

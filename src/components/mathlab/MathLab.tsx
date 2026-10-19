@@ -3,16 +3,10 @@ import { usePlan } from "@/components/plans/PlanProvider";
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
-  coreDefinitions,
-  coreFormulas,
   getGrade,
   GRADES,
-  modelById,
-  type CheatEntry,
   type GradeSpec,
-  type PlotModel,
 } from "@/components/mathlab/mathlab";
-import { GraphCanvas } from "@/components/mathlab/GraphCanvas";
 import { MathTex } from "@/components/mathlab/latex";
 import { MathInput, type MathInputHandle } from "@/components/mathlab/MathInput";
 import { StepList } from "@/components/mathlab/StepList";
@@ -23,7 +17,9 @@ import { ScientificCalculator } from "@/components/mathlab/ScientificCalculator"
 import { FormulaSheet } from "@/components/mathlab/FormulaSheet";
 import { MathHistory } from "@/components/mathlab/MathHistory";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
-import { DetailList, Fold, InlineFormula, InlineMath } from "@/components/mathlab/parts";
+import { PracticeTab } from "@/components/mathlab/PracticeTab";
+import { splitProblems, uprightWords } from "@/components/mathlab/problems";
+import { DetailList, Fold, InlineMath } from "@/components/mathlab/parts";
 import {
   plainProse,
   solutionToLatex,
@@ -42,13 +38,9 @@ import {
   Calculator,
   Camera,
   Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Code,
   Copy,
   CornerDownLeft,
-  Expand,
   Eye,
   EyeOff,
   FileDown,
@@ -58,7 +50,6 @@ import {
   Loader2,
   Lock,
   Mic,
-  Minimize,
   PenLine,
   Play,
   ShieldCheck,
@@ -67,57 +58,36 @@ import {
   Volume2,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { parse as parseMath } from "mathjs";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 
-/* The three.js backdrop is decoration: it loads after the lab is already usable
-   rather than making the notebook wait on a renderer. */
-const MathField3D = lazy(() =>
-  import("@/components/mathlab/MathField3D").then((module) => ({ default: module.MathField3D })),
-);
+type CurriculumTrack = "CBSE" | "NCERT" | "IB" | "IGCSE";
 
-const CURRICULUM_TRACKS = ["CBSE", "NCERT", "IB", "IGCSE"] as const;
-type CurriculumTrack = (typeof CURRICULUM_TRACKS)[number];
-
-const METHOD_OPTIONS: Array<{ id: SolveMethod; label: string; note: string }> = [
-  { id: "standard", label: "Standard Algebraic Proof", note: "Symbols, identities and exact manipulation" },
-  { id: "visual", label: "Visual Fraction Blocks / Number Lines", note: "See the quantities move on a bar or line" },
-  { id: "analogy", label: "Step-by-step Real World Analogy", note: "Map the problem to something familiar" },
+/* The three ways the same solution can be explained, as tabs INSIDE the
+   solved paper. The cards these replace used to sit above the input, so a
+   student had to choose a teaching style before typing a question. */
+const METHOD_OPTIONS: Array<{ id: SolveMethod; label: string }> = [
+  { id: "standard", label: "Steps" },
+  { id: "visual", label: "Visual" },
+  { id: "analogy", label: "Real-world" },
 ];
 
 const VIEW_TABS = [
-  { id: "solve", label: "Notebook", icon: PenLine },
-  { id: "graph", label: "Graphing", icon: LineChart },
-  { id: "tools", label: "Calculator & formulas", icon: Calculator },
+  { id: "solve", label: "Solve", icon: PenLine },
+  { id: "graph", label: "Graph", icon: LineChart },
+  { id: "tools", label: "Calculator & Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
+  { id: "practice", label: "Practice", icon: Sparkles },
 ] as const;
 type ViewId = (typeof VIEW_TABS)[number]["id"];
 
-function defaultsFor(model: PlotModel): Record<string, number> {
-  const values: Record<string, number> = {};
-  for (const param of model.params) values[param.key] = param.value;
-  return values;
-}
-
-/** MathJS is used only for a local shape check; the answer still comes from the exact backend checker. */
-function inspectStructure(input: string) {
-  const source = input.replace(/−|–|—/g, "-").replace(/÷/g, "/").replace(/×/g, "*");
-  const sides = source.split("=");
-  const expression = sides[0]?.trim() || source;
-  try {
-    const node = parseMath(expression);
-    const terms = String(node.toString());
-    const exponentCount = (terms.match(/\^/g) ?? []).length;
-    const variableCount = (terms.match(/\b[a-zA-Z]\b/g) ?? []).length;
-    if (exponentCount > 0) return "Quadratic or higher-power expression detected";
-    if (variableCount > 0) return "Linear expression detected";
-    return "Numeric expression detected";
-  } catch {
-    return "Word problem detected — the tutor will name the structure";
-  }
-}
+/** Three real entry points, one per kind of question the lab is good at. */
+const EXAMPLES: Array<{ label: string; value: string }> = [
+  { label: "2/3 + 1/6", value: "\\frac{2}{3} + \\frac{1}{6}" },
+  { label: "3x + 5 = 20", value: "3x + 5 = 20" },
+  { label: "x² − 5x + 6 = 0", value: "x^{2} - 5x + 6 = 0" },
+];
 
 /* ------------------------------------------------------------------ */
 /* A picture of the actual numbers                                     */
@@ -210,20 +180,15 @@ export function MathLab() {
   const grade: GradeSpec = useMemo(() => getGrade(gradeId as GradeSpec["id"]), [gradeId]);
   const [chapterIndex, setChapterIndex] = useState(0);
   const chapter = grade.chapters[chapterIndex] ?? grade.chapters[0];
-  const skillChapters = useMemo(
-    () => GRADES.flatMap((entry) => entry.chapters.map((item, index) => ({ grade: entry, chapter: item, index }))),
-    [],
-  );
-  const model = useMemo(() => modelById(chapter.plot, grade.models[0]), [chapter, grade]);
-  const params = useMemo(() => defaultsFor(model), [model]);
-  const [formula, setFormula] = useState(chapter.example);
+  /** Empty on purpose: the first screen asks the student for their problem,
+   *  it does not put a demo problem there for them. */
+  const [formula, setFormula] = useState("");
   const [solution, setSolution] = useState<EngineSolution | null>(null);
   const [method, setMethod] = useState<SolveMethod>("standard");
   const [solving, setSolving] = useState(false);
   const [engineError, setEngineError] = useState<string | null>(null);
   const [turns, setTurns] = useState<EngineTurn[]>([]);
   const [followUp, setFollowUp] = useState("");
-  const [fullScreen, setFullScreen] = useState(false);
   const [listening, setListening] = useState(false);
   const [speakingKey, setSpeakingKey] = useState<string | null>(null);
   const [walking, setWalking] = useState(false);
@@ -232,17 +197,13 @@ export function MathLab() {
   const [hintMode, setHintMode] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
-  /** Stamped on every Solve: the 3D plane behind the notebook ripples. */
-  const [fieldPulse, setFieldPulse] = useState(0);
   const [historyId, setHistoryId] = useState<Id<"mathSolutions"> | null>(null);
   const mathInputRef = useRef<MathInputHandle | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const skillPathRef = useRef<HTMLDivElement | null>(null);
   const copiedTimer = useRef<number | null>(null);
   const locked = !can("mathLabBasic");
-  const structure = useMemo(() => inspectStructure(formula), [formula]);
 
   const aviaVoice = useCallback((): SpeechSynthesisVoice | null => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
@@ -294,7 +255,6 @@ export function MathLab() {
     setEngineError(null);
     setOpenSteps({});
     setHistoryId(null);
-    setFormula(next.example);
   };
 
   const askEngine = useCallback(async (parts: { question?: string; file?: { storageId: Id<"_storage">; name: string; mime?: string }; followUp?: string; method?: SolveMethod }) => {
@@ -346,14 +306,16 @@ export function MathLab() {
   }, [chapter.formulas, chapter.name, method, recordSolution, solve, track, turns]);
 
   const onSubmit = useCallback(() => {
-    const input = formula.trim();
-    if (!input || solving) return;
+    // One box can hold several questions. Split them before asking, so each
+    // arrives as its own problem with its own answer card.
+    const parts = splitProblems(formula);
+    if (!parts.length || solving) return;
+    const question = parts.map((part) => uprightWords(part)).join("\n");
     hush();
     setSolution(null);
     setOpenSteps({});
-    setFieldPulse((value) => value + 1);
-    setTurns((current) => [...current, { role: "student", text: input }]);
-    void askEngine({ question: input });
+    setTurns((current) => [...current, { role: "student", text: question }]);
+    void askEngine({ question });
   }, [askEngine, formula, hush, solving]);
   const sendFollowUp = useCallback(() => {
     const text = followUp.trim();
@@ -369,7 +331,6 @@ export function MathLab() {
     setSolving(true);
     setEngineError(null);
     setSolution(null);
-    setFieldPulse((value) => value + 1);
     try {
       const url = await generateUploadUrl();
       const response = await fetch(url, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
@@ -466,14 +427,14 @@ export function MathLab() {
   const chooseMethod = (next: SolveMethod) => {
     setMethod(next);
     hush();
-    if (formula.trim()) void askEngine({ question: formula.trim(), method: next });
+    const parts = splitProblems(formula);
+    if (parts.length) {
+      void askEngine({
+        question: parts.map((part) => uprightWords(part)).join("\n"),
+        method: next,
+      });
+    }
   };
-  const scrollSkills = useCallback((direction: -1 | 1) => {
-    skillPathRef.current?.scrollBy({ left: direction * 240, behavior: "smooth" });
-  }, []);
-  const givens = useMemo(() => coreDefinitions(chapter), [chapter]);
-  const formulas = useMemo(() => coreFormulas(chapter), [chapter]);
-  const everyVerified = Boolean(solution && solution.problems.length > 0 && solution.problems.every((problem) => problem.verified));
   const stepTransition = useCallback(
     (index: number) => stepTransitionFor(index, reduceMotion),
     [reduceMotion],
@@ -489,51 +450,8 @@ export function MathLab() {
   }, [hush]);
 
   return (
-    <div className="relative">
-      {/* The plane of the current chapter, behind everything the lab draws. */}
-      <Suspense fallback={null}>
-        {/* `quiet` while gated: the plane must not flow at full strength behind
-            the blur/lock card — see the prop's note in MathField3D. */}
-        <MathField3D plotId={model.id} pulse={fieldPulse} quiet={locked} />
-      </Suspense>
+    <div className="mathlab-page">
       <div className={"mathlab-root" + (locked ? " pointer-events-none select-none blur-[7px]" : "")} aria-hidden={locked}>
-        <div className="mathlab-commandbar">
-          <div className="mathlab-track">
-            <span className="mathlab-commandbar__label">Curriculum Track</span>
-            <div className="mathlab-select-wrap">
-              <select value={track} onChange={(event) => selectTrack(event.target.value as CurriculumTrack)} aria-label="Curriculum Track">
-                {CURRICULUM_TRACKS.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-              <ChevronDown aria-hidden />
-            </div>
-          </div>
-          <div className="mathlab-commandbar__path">
-            <span>Skill path</span>
-            <span className="mathlab-commandbar__crumb">{chapter.focus}</span>
-            <span className="mathlab-commandbar__slash">/</span>
-            <span>{chapter.name}</span>
-          </div>
-          <div className="mathlab-focus-toggle">
-            <button type="button" className="mathlab-focus" onClick={() => setFullScreen((value) => !value)} aria-pressed={fullScreen}>
-              {fullScreen ? <Minimize className="h-3.5 w-3.5" /> : <Expand className="h-3.5 w-3.5" />}
-              {fullScreen ? "Exit Full Screen" : "Full Screen View"}
-            </button>
-          </div>
-        </div>
-
-        <div className="mathlab-skillpath-shell">
-          <button type="button" className="mathlab-skillpath-arrow mathlab-skillpath-arrow--left" onClick={() => scrollSkills(-1)} aria-label="Scroll chapters left"><ChevronLeft aria-hidden /></button>
-          <div ref={skillPathRef} className="mathlab-skillpath" aria-label="Unified mathematics skill path">
-            <div className="mathlab-skillpath__intro"><Sparkles className="h-3.5 w-3.5" /><span>One connected path</span></div>
-            {skillChapters.map((entry, index) => (
-              <button key={`${entry.grade.id}-${entry.chapter.name}`} type="button" className={"mathlab-skill" + (entry.grade.id === grade.id && entry.index === chapterIndex ? " is-active" : "")} onClick={() => selectSkill(entry.grade.id, entry.index)}>
-                <span className="mathlab-skill__node">{index + 1}</span><span>{entry.chapter.name}</span>
-              </button>
-            ))}
-          </div>
-          <button type="button" className="mathlab-skillpath-arrow mathlab-skillpath-arrow--right" onClick={() => scrollSkills(1)} aria-label="Scroll chapters right"><ChevronRight aria-hidden /></button>
-        </div>
-
         <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
           {VIEW_TABS.map((tab) => {
             const Icon = tab.icon;
@@ -592,44 +510,32 @@ export function MathLab() {
         >
 
         {view === "solve" ? (
-          <div className={"mathlab-split" + (fullScreen ? " is-fullscreen" : "") + (solution ? " is-solution" : "")}>
-            <AnimatePresence initial={false}>
-              {!fullScreen && !solution && !solving ? (
-                <motion.section key="mathlab-graph" className="mathlab-card mathlab-graph-card" initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}>
-                  <header className="mathlab-card__head"><div className="min-w-0"><p className="mathlab-card__kicker">{track} · {chapter.focus}</p><h2 className="mathlab-card__title">{model.label}</h2></div><span className="mathlab-card__formula">{model.formula}</span></header>
-                  <div className="mathlab-canvas-wrap"><GraphCanvas model={model} params={params} /></div>
-                  <p className="mathlab-caption">{model.note}</p>
-                </motion.section>
-              ) : null}
-            </AnimatePresence>
+          <div className="mathlab-solvepage">
+            <motion.section className={"mathlab-card mathlab-notebook mathlab-solvecard" + (solution ? " is-solved" : "")}>
+              {solution ? (
+                <header className="mathlab-notebook__head">
+                  <div>
+                    <p className="mathlab-card__kicker">Solution</p>
+                    <h2 className="mathlab-card__title">{solution.headline}</h2>
+                  </div>
+                </header>
+              ) : (
+                <header className="mathlab-solvecard__intro">
+                  <p className="mathlab-card__kicker">Solve</p>
+                  <h2 className="mathlab-card__title">What are we working through?</h2>
+                  <p className="mathlab-solvecard__sub">
+                    Ask in maths or in words — a fraction, an equation, or a
+                    question from a worksheet.
+                  </p>
+                </header>
+              )}
 
-            <motion.section className="mathlab-card mathlab-notebook">
-              <header className="mathlab-notebook__head">
-                <div>
-                  <p className="mathlab-card__kicker">Solution notebook</p>
-                  <h2 className="mathlab-card__title">{solution?.headline ?? "A calm place to work"}</h2>
-                  <p className="mathlab-structure">{structure}</p>
-                </div>
-                <span className="mathlab-exact-badge" data-state={everyVerified ? "verified" : "pending"}>
-                  <ShieldCheck className="h-3 w-3" />
-                  {solution ? (everyVerified ? "Recomputed and verified" : "Checked where possible") : "Exact arithmetic"}
-                </span>
-              </header>
-
-              <div className="mathlab-methods" role="tablist" aria-label="Solve method selector">
-                {METHOD_OPTIONS.map((option) => (
-                  <motion.button key={option.id} type="button" role="tab" aria-selected={method === option.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.2 }} className={"mathlab-method" + (method === option.id ? " is-active" : "")} onClick={() => chooseMethod(option.id)}>
-                    <span>{option.label}</span><small>{option.note}</small>
-                  </motion.button>
-                ))}
-              </div>
-
-              <form className="mathlab-input" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void readPhoto(event.dataTransfer.files?.[0]); }}>
+              <form className="mathlab-input mathlab-input--hero" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void readPhoto(event.dataTransfer.files?.[0]); }}>
                 <MathInput
                   ref={mathInputRef}
                   value={formula}
                   onChange={setFormula}
-                  placeholder={`e.g. ${chapter.example}`}
+                  placeholder="Type or snap a math problem"
                   ariaLabel="Your maths problem"
                 />
                 <div className="mathlab-input__row">
@@ -638,7 +544,7 @@ export function MathLab() {
                   <motion.button
                     type="submit"
                     className="mathlab-solve"
-                    disabled={solving || !formula.trim()}
+                    disabled={solving || splitProblems(formula).length === 0}
                     whileTap={reduceMotion ? undefined : { scale: 0.97 }}
                     whileHover={reduceMotion ? undefined : { scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 420, damping: 26 }}
@@ -649,6 +555,24 @@ export function MathLab() {
               </form>
               <input ref={fileInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => void readPhoto(event.target.files?.[0] ?? undefined)} />
               {engineError && <p className="mathlab-error">{engineError}</p>}
+
+              {!solution && !solving ? (
+                <div className="mathlab-examples">
+                  <span className="mathlab-examples__label">Try an example</span>
+                  <div className="mathlab-examples__list">
+                    {EXAMPLES.map((example) => (
+                      <button
+                        key={example.label}
+                        type="button"
+                        className="mathlab-example"
+                        onClick={() => setFormula(example.value)}
+                      >
+                        {example.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {solution ? (
                 <>
@@ -686,6 +610,26 @@ export function MathLab() {
                     </div>
                   </div>
 
+                  {/* The three ways of explaining the SAME answer, as tabs —
+                      they belong to the solved paper, not to the question. */}
+                  <div className="mathlab-explain" role="tablist" aria-label="Explain it as">
+                    <span className="mathlab-explain__label">Explain it as</span>
+                    {METHOD_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={method === option.id}
+                        className={"mathlab-explain__tab" + (method === option.id ? " is-active" : "")}
+                        onClick={() => chooseMethod(option.id)}
+                        disabled={solving}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                    {solving ? <Loader2 className="spin-micro h-3.5 w-3.5" aria-hidden /> : null}
+                  </div>
+
                   <div className="mathlab-solution">
                     {solution.problems.map((problem, problemIndex) => {
                       const expanded = openSteps[problemIndex] !== false;
@@ -717,6 +661,12 @@ export function MathLab() {
                               <span className="mathlab-verdict__label">Final answer</span>
                               <div className="mathlab-verdict__value">
                                 <MathTex source={problem.finalAnswer} fallback={problem.finalAnswer} display />
+                                {problem.verified ? (
+                                  <span className="mathlab-verified" title={problem.verification || "Recomputed by the maths engine"}>
+                                    <Check className="h-3.5 w-3.5" />
+                                    Verified
+                                  </span>
+                                ) : null}
                               </div>
                               {problem.verification || problem.checkNote ? (
                                 <p className="mathlab-verdict__note">
@@ -814,43 +764,14 @@ export function MathLab() {
                     })}
                   </div>
                 </>
-              ) : (
-                <p className="mathlab-hint">
-                  {solving ? "Reading the problem…" : `A ${chapter.name} question is already in the box. Press Solve, or speak and photograph your own.`}
-                </p>
-              )}
+              ) : null}
 
-              <Fold label={`${chapter.name} reference`}>
-                <div className="mathlab-fold__grid">
-                  <div>
-                    <p className="mathlab-fold__label">Given data</p>
-                    <ul className="mathlab-note-list">
-                      {givens.map((entry: CheatEntry) => (
-                        <li key={entry.title} className="mathlab-note-list__row">
-                          <span className="mathlab-note-list__name">{entry.title}</span>
-                          <InlineFormula source={entry.latex} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="mathlab-fold__label">Governing formulas</p>
-                    <ul className="mathlab-note-list">
-                      {formulas.map((entry: CheatEntry) => (
-                        <li key={entry.title} className="mathlab-note-list__row">
-                          <span className="mathlab-note-list__name">{entry.title}</span>
-                          <InlineFormula source={entry.latex} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              {solution ? (
+                <div className="mathlab-ask">
+                  <input value={followUp} onChange={(event) => setFollowUp(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); sendFollowUp(); } }} placeholder="Is this correct? Ask about any step…" disabled={solving} aria-label="Ask about this solution" className="mathlab-ask__field" />
+                  <button type="button" className="mathlab-ask__send" disabled={solving || !followUp.trim()} onClick={sendFollowUp} aria-label="Send"><CornerDownLeft className="h-3.5 w-3.5" /></button>
                 </div>
-              </Fold>
-
-              <div className="mathlab-ask">
-                <input value={followUp} onChange={(event) => setFollowUp(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); sendFollowUp(); } }} placeholder={solution ? "Is this correct? Ask about any step…" : "Solve something first, then ask here"} disabled={!solution || solving} aria-label="Ask about this solution" className="mathlab-ask__field" />
-                <button type="button" className="mathlab-ask__send" disabled={!solution || solving || !followUp.trim()} onClick={sendFollowUp} aria-label="Send"><CornerDownLeft className="h-3.5 w-3.5" /></button>
-              </div>
+              ) : null}
             </motion.section>
           </div>
         ) : view === "graph" ? (
@@ -861,6 +782,14 @@ export function MathLab() {
           <section className="mathlab-card mathlab-viewcard">
             <FormulaSheet />
           </section>
+        ) : view === "practice" ? (
+          <PracticeTab
+            track={track}
+            onTrack={(next) => selectTrack(next as CurriculumTrack)}
+            gradeId={grade.id}
+            chapterIndex={chapterIndex}
+            onSelect={(nextGradeId, nextIndex) => selectSkill(nextGradeId, nextIndex)}
+          />
         ) : (
           <section className="mathlab-card mathlab-viewcard">
             <MathHistory onOpen={openStored} />
