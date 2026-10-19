@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { action, mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
@@ -25,6 +25,14 @@ function ownerSubject(): string {
   }
   return sub;
 }
+
+// ---------------------------------------------------------------------------
+// In-app submission
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// In-app submission
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // In-app submission
@@ -54,6 +62,35 @@ export const submitFeedback = mutation({
       text: args.text ?? "",
       displayName: args.displayName ?? undefined,
       classLabel: args.classLabel ?? undefined,
+      consentToPublish: args.consentToPublish,
+      status: "pending",
+      source: "user",
+      createdAt: Date.now(),
+    });
+  },
+});
+
+  args: {
+    rating: v.number(),
+    text: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    classLabel: v.optional(v.string()),
+    consentToPublish: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Sign in to leave feedback.");
+    }
+
+    if (!(args.rating >= 1 && args.rating <= 5)) {
+      throw new Error("Rating must be between 1 and 5.");
+    }    await ctx.db.insert("testimonials", {
+      userId: identity.subject,
+      rating: args.rating,
+      text: args.text ?? "",
+      displayName: args.displayName,
+      classLabel: args.classLabel,
       consentToPublish: args.consentToPublish,
       status: "pending",
       source: "user",
@@ -112,9 +149,36 @@ export const listPending = action({
   },
 });
 
+interface TestimonialRow {
+  _id: Id<"testimonials">;
+  userId: Id<"users"> | undefined;
+  rating: number;
+  text: string;
+  displayName: string | undefined;
+  classLabel: string | undefined;
+  consentToPublish: boolean;
+  status: "pending" | "approved" | "rejected";
+  source: string;
+  createdAt: number;
+}
+
+
 // ---------------------------------------------------------------------------
 // Owner-only: approve / reject / edit-for-typos
 // ---------------------------------------------------------------------------
+
+interface TestimonialRow {
+  _id: Id<"testimonials">;
+  userId: Id<"users"> | undefined;
+  rating: number;
+  text: string;
+  displayName: string | undefined;
+  classLabel: string | undefined;
+  consentToPublish: boolean;
+  status: "pending" | "approved" | "rejected";
+  source: string;
+  createdAt: number;
+}
 
 export const approve = action({
   args: { id: v.id("testimonials") },
@@ -219,6 +283,19 @@ export const approvedList = action({
       }));
   },
 });
+
+interface TestimonialRow {
+  _id: Id<"testimonials">;
+  userId: Id<"users"> | undefined;
+  rating: number;
+  text: string;
+  displayName: string | undefined;
+  classLabel: string | undefined;
+  consentToPublish: boolean;
+  status: "pending" | "approved" | "rejected";
+  source: string;
+  createdAt: number;
+}
 
 export const approvedStats = action({
   args: {},

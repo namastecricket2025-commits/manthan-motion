@@ -31,6 +31,7 @@ const LINKS: { label: string; to: string }[] = [
   { label: "Math Lab", to: "/math-lab" },
   { label: "STEM Lab", to: "/lab" },
   { label: "Plans", to: "/pricing" },
+  { label: "Feedback", to: "/feedback" },
   { label: "About", to: "/about" },
 ];
 
