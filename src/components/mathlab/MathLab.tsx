@@ -67,8 +67,7 @@ type CurriculumTrack = "CBSE" | "ICSE" | "IB" | "IGCSE";
    full proof, including the rule names. The engine writes both from the same
    mathematics, so switching never changes the answer. */
 const DETAIL_OPTIONS = [
-  { id: "simple" as const, label: "Simple" },
-  { id: "detailed" as const, label: "Detailed" },
+  { id: "simple" as const, label: "Simple" },  { id: "detailed" as const, label: "Detailed" },
 ];
 
 const VIEW_TABS = [
@@ -76,15 +75,14 @@ const VIEW_TABS = [
   { id: "graph", label: "Graph", icon: LineChart },
   { id: "tools", label: "Calculator & Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
-  { id: "practice", label: "Practice", icon: Sparkles },
-] as const;
+  { id: "practice", label: "Practice", icon: Sparkles },] as const;
 type ViewId = (typeof VIEW_TABS)[number]["id"];
 
 /** Three real entry points, one per kind of question the lab is good at. */
 const EXAMPLES: Array<{ label: string; value: string }> = [
   { label: "2/3 + 1/6", value: "\\frac{2}{3} + \\frac{1}{6}" },
   { label: "3x + 5 = 20", value: "3x + 5 = 20" },
-  { label:    "x² − 5x + 6 = 0", value: "x^{2} - 5x + 6 = 0" },
+  { label: "x² − 5x + 6 = 0", value: "x^{2} - 5x + 6 = 0" },
 ];
 
 /**
