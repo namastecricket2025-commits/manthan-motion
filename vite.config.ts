@@ -71,10 +71,11 @@ export default defineConfig({
       'react-dom',
       'react-dom/client',
       'react-router',
-      // Keep framer-motion in the optimizer cache; the fan renders it many
-      // times across MathLab and the dashboard and that repeat bundling is
-      // more expensive than the cache cost in this sandbox.
       'framer-motion',
+      // mathlive FOUC-fixes run an eager stylesheet transform at module
+      // evaluation time, so prebundle it rather than let Vite discover it
+      // late from the lazy MathLab chunk.
+      'mathlive',
     ],
   },
   server: {
