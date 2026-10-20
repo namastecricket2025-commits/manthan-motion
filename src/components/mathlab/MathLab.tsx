@@ -912,12 +912,7 @@ export function MathLab() {
                             >
                               <Sparkles className="h-3.5 w-3.5" />
                               Another similar problem
-                            </button>
-                            <SearchWithGoogle
-                              compact
-                              label="Search this question"
-                              topic={problem.problem.replace(/\$([^$]+)\$/g, "$1")}
-                            />
+                            </button>                            
                             <button
                               type="button"
                               className="mathlab-tab-action"
@@ -1059,6 +1054,6 @@ export function MathLab() {
   );
 }
 
-eexport default MathLab;
+export default MathLab;
 
 
