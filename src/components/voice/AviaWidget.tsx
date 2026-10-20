@@ -79,7 +79,6 @@ export function AviaWidget() {
   const [draft, setDraft] = useState("");
   const [handsFree, setHandsFree] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const [voiceLabel, setVoiceLabel] = useState("device voice");
   const [greeting, setGreeting] = useState(() => pickGreeting());
   // The transcript opens on the same line she speaks when the panel opens, so
   // the first bubble is never a different greeting from the one she says.
@@ -121,11 +120,10 @@ export function AviaWidget() {
     const synth = window.speechSynthesis;
 
     const load = () => {
-      const picked = pickAviaVoice(synth.getVoices());
-      voiceRef.current = picked;
       // Named naturals first, then "premium"/"enhanced"/"neural" entries, then
-      // any English voice the device offers.
-      setVoiceLabel(picked ? picked.name.replace(/^(Microsoft|Google)\s+/i, "") : "device voice");
+      // any English voice the device offers. The chosen voice is kept in the
+      // ref only: the panel names Avia, not the browser's synthesiser.
+      voiceRef.current = pickAviaVoice(synth.getVoices());
     };
 
     load();
@@ -471,9 +469,6 @@ export function AviaWidget() {
               <span className={"avia-dot" + (listening || speaking ? " is-live" : "")} />
               <div className="min-w-0 flex-1">
                 <p className="avia-name">Avia</p>
-                <p className="avia-sub truncate">
-                  {voiceLabel} · pitch 1.0 · rate 1.05
-                </p>
               </div>
               <button
                 type="button"
