@@ -12,31 +12,27 @@ import { supabase } from "./lib/supabase";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
-// user-preference hooks (theme, motion, ambient, text comfort) — imported
-// globally so a toggle in the settings dashboard lands on every route
 import "./components/settings/settings.css";
-// NOTE: `installCdEngine()` used to be called here to drive the spinning-disc
-// primary buttons (a permanent rAF loop writing --cd-angle / --cd-angle-r on
-// every registered button). The buttons are flat fills now — there is no disc
-// to rotate and no sheen wedge to sweep — so the loop would run forever on
-// every page writing two custom properties that nothing consumes. Leaving it
-// uninstalled is the fix; every call site already guards on the engine
-// existing, so an absent engine is a no-op.
 
-// Lazy load route components for better code splitting
+// Lazy load route components. MathLab and Lab are the two heaviest pages
+// (three + chem/physics benches, mathlive, three.js previews), so they stay
+// behind dynamic imports — they are never bundled into the initial shell.
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const MathLab = lazy(() => import("./pages/MathLab.tsx"));
 const Lab = lazy(() => import("./pages/Lab.tsx"));
 const Settings = lazy(() => import("./pages/Settings.tsx"));
-const About = lazy(() => import("./pages/About.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const Terms = lazy(() => import("./pages/Terms.tsx"));
-const Privacy = lazy(() => import("./pages/Privacy.tsx"));
-const Honor = lazy(() => import("./pages/Honor.tsx"));
-const Pricing = lazy(() => import("./pages/Pricing.tsx"));
-const Feedback = lazy(() => import("./pages/Feedback.tsx"));
+
+// The legal and utility pages are tiny; keep them eager so the strings ship
+// in the shell and there is no separate round-trip on the rare deep link.
+import About from "./pages/About.tsx";
+import NotFound from "./pages/NotFound.tsx";
+import Terms from "./pages/Terms.tsx";
+import Privacy from "./pages/Privacy.tsx";
+import Honor from "./pages/Honor.tsx";
+import Pricing from "./pages/Pricing.tsx";
+import Feedback from "./pages/Feedback.tsx";
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
