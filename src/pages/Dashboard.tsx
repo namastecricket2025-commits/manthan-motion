@@ -2,8 +2,10 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   DashboardNav,
+  SidebarCollapseButton,
   type DashboardSection,
 } from "@/components/dashboard/DashboardNav";
+import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { NotebookWorkspace } from "@/components/dashboard/NotebookWorkspace";
 import { FeedbackPrompt } from "@/components/shared/TestimonialsFeedbackPrompt";
@@ -39,13 +41,11 @@ import {
   LogOut,
   Menu,
   NotebookPen,
-  PanelLeftClose,
-  PanelLeftOpen,
   Pencil,
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -124,22 +124,8 @@ export default function Dashboard() {
   const openNotebook = notebooks?.find((n) => n.id === notebookParam);
 
   const [sheetOpen, setSheetOpen] = useState(false);
-  /* The desktop rail collapses to icons. The choice is remembered, because a
-     student who wants the width back wants it back on every visit. */
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return window.localStorage.getItem("manthan-sidebar") === "collapsed";
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    try {
-      window.localStorage.setItem("manthan-sidebar", collapsed ? "collapsed" : "open");
-    } catch {
-      /* private mode */
-    }
-  }, [collapsed]);
+  /* The desktop rail collapses to icons, everywhere in the app. */
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -228,6 +214,13 @@ export default function Dashboard() {
       collapsed={collapsed}
     />
   );
+  /* The phone drawer always shows full labels, whatever the desktop rail is. */
+  const mobileNav = (
+    <DashboardNav
+      active={view === "notebooks" ? "notebooks" : "dashboard"}
+      onSelect={selectSection}
+    />
+  );
 
   const hasNotebooks = (notebooks?.length ?? 0) > 0;
 
@@ -245,20 +238,10 @@ export default function Dashboard() {
           <div className="flex min-w-0 flex-col gap-7">
             <div className={collapsed ? "flex justify-center" : "flex items-center justify-between gap-2"}>
               {!collapsed && <Logo />}
-              <button
-                type="button"
-                onClick={() => setCollapsed((value) => !value)}
-                aria-label={collapsed ? "Expand the sidebar" : "Collapse the sidebar"}
-                aria-expanded={!collapsed}
-                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                className="glass-chip inline-flex h-8 w-8 shrink-0 items-center justify-center text-text-dim transition-colors hover:text-foreground"
-              >
-                {collapsed ? (
-                  <PanelLeftOpen className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
-              </button>
+              <SidebarCollapseButton
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((value) => !value)}
+              />
             </div>
             {nav}
           </div>
@@ -319,7 +302,7 @@ export default function Dashboard() {
                     <Logo />
                   </SheetTitle>
                 </SheetHeader>
-                <div className="px-2">{nav}</div>
+                <div className="px-2">{mobileNav}</div>
                 <div className="mt-auto px-4 pb-8">
                   <Button
                     variant="outline"
@@ -338,7 +321,7 @@ export default function Dashboard() {
         {/* ---- Main ---- */}
         <main
           className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
-          style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as React.CSSProperties}
+          style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
           <div className="mx-auto flex max-w-5xl flex-col gap-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -663,6 +646,7 @@ export default function Dashboard() {
                         onCreateNotebook={() =>
                           navigate("/dashboard?view=notebooks")
                         }
+                        onOpenMathLab={() => selectSection("mathlab")}
                       />
                     )}
                   </>

@@ -3,7 +3,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import {
   FlashcardsView,
   type FlashcardsPayload,
-  MindmapView,
   type MindmapPayload,
   QuizView,
   type QuizPayload,
@@ -13,6 +12,10 @@ import {
   type SummaryPayload,
 } from "@/components/dashboard/MaterialViews";
 import { CramMode } from "@/components/dashboard/CramMode";
+import { MindmapView } from "@/components/dashboard/MindmapView";
+import { NotebookChat } from "@/components/dashboard/NotebookChat";
+import { AudioOverview } from "@/components/dashboard/AudioOverview";
+import { WatchNext } from "@/components/dashboard/WatchNext";
 import { setRecentKind } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -127,7 +130,7 @@ export function NotebookWorkspace({
    */
   useEffect(() => {
     const target = window.location.hash.slice(1);
-    if (target !== "sources" && target !== "materials") return;
+    if (target !== "sources" && target !== "materials" && target !== "studio") return;
     const reduced =
       document.documentElement.dataset.motion === "reduced" ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -369,9 +372,24 @@ export function NotebookWorkspace({
             {!can("cramMode") && <Lock className="h-3 w-3 opacity-70" />}
           </button>
         </div>
-        <span className="hidden text-[11px] text-text-dim sm:inline">
-          Advanced study tools for this notebook
-        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              document.getElementById("studio")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              })
+            }
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[12.5px] font-semibold text-text-dim transition-colors hover:text-[var(--signal)] sm:min-h-0 sm:px-0"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Ask this notebook
+          </button>
+          <span className="hidden text-[11px] text-text-dim lg:inline">
+            Advanced study tools for this notebook
+          </span>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -383,6 +401,27 @@ export function NotebookWorkspace({
           />
         )}
       </AnimatePresence>
+
+      {/* ------------------------- studio -------------------------
+          Chat, audio and video sit above the artefacts: talking to the sources
+          is the work; the summary and decks are what falls out of it. */}
+      <section
+        id="studio"
+        className="glass-panel scroll-mt-6 p-5 sm:p-6"
+        aria-label="Notebook studio"
+      >
+        <div className="grid grid-cols-1 gap-5 min-[980px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <NotebookChat
+            notebookId={notebookId}
+            notebookName={notebookName}
+            readyCount={readyCount}
+          />
+          <div className="flex min-w-0 flex-col gap-3">
+            <AudioOverview notebookId={notebookId} readyCount={readyCount} />
+            <WatchNext notebookName={notebookName} />
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         {/* ------------------------- sources ------------------------- */}

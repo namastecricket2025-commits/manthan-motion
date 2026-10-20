@@ -88,8 +88,9 @@ export default function Pricing() {
               </p>
               <p className="mt-1 text-xs leading-relaxed text-text-dim">
                 60,000 tokens per day · unlimited notebooks and sources ·
-                summaries, flashcards, quizzes, mind maps and slides · full STEM
-                Lab
+                summaries, flashcards, quizzes, mind maps and slides · AI
+                notebook chat, audio overviews and Hindi one-shot lecture picks
+                · full STEM Lab
               </p>
             </div>
             <p className="text-xs font-medium text-text-dim">
@@ -105,6 +106,22 @@ export default function Pricing() {
                 : tier.price;
               const savings = tier.flexible ? durationSavings(tier, duration) : 0;
               const isCurrent = plan === tier.id;
+              /* The daily figure is the hook that actually lands: a student can
+                 compare ₹7 a day with a bus fare; ₹349 a month is abstract. */
+              const perDay = Math.max(
+                1,
+                Math.round(
+                  tier.flexible
+                    ? total / (duration.months * 30)
+                    : tier.price / 7,
+                ),
+              );
+              const hook =
+                tier.id === "sprint"
+                  ? `About ${formatINR(perDay)} a day for one revision week.`
+                  : tier.id === "eduvantage"
+                    ? `About ${formatINR(perDay)} a day — less than one photocopied test.`
+                    : `About ${formatINR(perDay)} a day for every workspace, unlocked.`;
 
               return (
                 <section
@@ -185,6 +202,9 @@ export default function Pricing() {
                         : `Billed every ${duration.months} months · saves ${formatINR(savings)}`
                       : `One 7-day pass · ${tier.allowance}`}
                   </p>
+                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-dim">
+                    {hook}
+                  </p>
 
                   {/* The action sits directly under the price on every card, at
                       the same offset, so the three buttons line up across the
@@ -244,6 +264,44 @@ export default function Pricing() {
               · currently on {planName(plan)}
             </span>
           </div>
+
+          {/* What the price is for, stated in outcomes rather than adjectives. */}
+          <section data-reveal className="mt-14">
+            <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+              What the money actually buys
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
+              The free account is not a demo. Paid tiers raise how much you can
+              make and which workbenches open — never which chapters you can
+              read.
+            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  title: "The same engine on every plan",
+                  body: "A free account already churns sources into summaries, flashcards, quizzes, mind maps and slides. Paying buys more tokens and the advanced workspaces, not a better answer.",
+                },
+                {
+                  title: "Priced around an exam, not a feature list",
+                  body: "Sprint is one revision week. EduVantage is a month of assignments. Prime is the full Math Lab and the voice tutor, for the term you are actually in.",
+                },
+                {
+                  title: "Your notes are never held hostage",
+                  body: "Every notebook, source and generated item can be exported from Settings. Deleting an account removes the material with it, not just the login.",
+                },
+              ].map((card) => (
+                <div
+                  key={card.title}
+                  className="rounded-2xl border border-[var(--panel-line)] p-5"
+                >
+                  <p className="text-sm font-semibold tracking-tight">{card.title}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-text-dim">
+                    {card.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <TestimonialStrip />
 

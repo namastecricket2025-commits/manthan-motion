@@ -7,6 +7,8 @@ import {
   Info,
   LayoutDashboard,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Settings2,
   Sigma,
@@ -79,6 +81,32 @@ function NotebookRow({
         {sourceCount}
       </span>
     </motion.button>
+  );
+}
+
+/** The one control that folds the rail to icons, and back. */
+export function SidebarCollapseButton({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={collapsed ? "Expand the sidebar" : "Collapse the sidebar"}
+      aria-expanded={!collapsed}
+      title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      className="glass-chip inline-flex h-8 w-8 shrink-0 items-center justify-center text-text-dim transition-colors hover:text-foreground"
+    >
+      {collapsed ? (
+        <PanelLeftOpen className="h-4 w-4" />
+      ) : (
+        <PanelLeftClose className="h-4 w-4" />
+      )}
+    </button>
   );
 }
 

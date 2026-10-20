@@ -1,6 +1,11 @@
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
-import { DashboardNav, type DashboardSection } from "@/components/dashboard/DashboardNav";
+import {
+  DashboardNav,
+  SidebarCollapseButton,
+  type DashboardSection,
+} from "@/components/dashboard/DashboardNav";
+import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar";
 import { usePlan } from "@/components/plans/PlanProvider";
 import SettingsDashboard from "@/components/settings/SettingsDashboard";
 import { Button } from "@/components/ui/button";
@@ -13,7 +18,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { LogOut, Menu } from "lucide-react";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router";
 
 /**
@@ -27,6 +32,7 @@ export default function Settings() {
   const { requireAccess } = usePlan();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
 
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
@@ -44,28 +50,72 @@ export default function Settings() {
     navigate("/");
   };
 
-  const nav = <DashboardNav active="settings" onSelect={selectSection} />;
+  const nav = (
+    <DashboardNav
+      active="settings"
+      onSelect={selectSection}
+      collapsed={collapsed}
+    />
+  );
+  const mobileNav = <DashboardNav active="settings" onSelect={selectSection} />;
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="relative z-10">
         {/* ---- Sidebar (desktop) ---- */}
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between border-r border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-5 backdrop-blur-xl min-[760px]:flex">
-          <div className="flex flex-col gap-8">
-            <Logo />
+        <aside
+          className="fixed inset-y-0 left-0 z-30 hidden flex-col justify-between overflow-y-auto overflow-x-hidden border-r border-[var(--card-border)] bg-[var(--panel-bg)] py-5 backdrop-blur-xl transition-[width,padding] duration-300 ease-out min-[760px]:flex"
+          style={{
+            width: collapsed ? 76 : 240,
+            paddingLeft: collapsed ? 10 : 16,
+            paddingRight: collapsed ? 10 : 16,
+          }}
+        >
+          <div className="flex min-w-0 flex-col gap-7">
+            <div
+              className={
+                collapsed
+                  ? "flex justify-center"
+                  : "flex items-center justify-between gap-2"
+              }
+            >
+              {!collapsed && <Logo />}
+              <SidebarCollapseButton
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((value) => !value)}
+              />
+            </div>
             {nav}
           </div>
-          <div className="flex items-center justify-between">
+          <div
+            className={
+              collapsed
+                ? "flex flex-col items-center gap-3 pt-6"
+                : "flex items-center justify-between pt-6"
+            }
+          >
             <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 border-[var(--card-border)] bg-transparent"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </Button>
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                title="Sign out"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] text-text-dim transition-colors hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-[var(--card-border)] bg-transparent"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </Button>
+            )}
           </div>
         </aside>
 
@@ -93,7 +143,7 @@ export default function Settings() {
                     <Logo />
                   </SheetTitle>
                 </SheetHeader>
-                <div className="px-2">{nav}</div>
+                <div className="px-2">{mobileNav}</div>
                 <div className="mt-auto px-4 pb-8">
                   <Button
                     variant="outline"
@@ -110,7 +160,10 @@ export default function Settings() {
         </header>
 
         {/* ---- Settings canvas ---- */}
-        <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
+        <main
+          className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
+        >
           <div className="mx-auto max-w-5xl">
             <SettingsDashboard bare />
           </div>

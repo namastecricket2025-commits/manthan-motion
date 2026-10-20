@@ -17,8 +17,10 @@ import {
   ArrowUpRight,
   BookOpen,
   ChevronRight,
+  Check,
   Clock,
   FileText,
+  Flame,
   Gauge,
   Layers,
   ListChecks,
@@ -27,6 +29,7 @@ import {
   Play,
   Presentation,
   Sparkles,
+  Target,
   Upload,
 } from "lucide-react";
 import { AnimatePresence, motion, type Transition } from "motion/react";
@@ -1640,6 +1643,237 @@ function RecentActivity({
 }
 
 /* ------------------------------------------------------------------ */
+/* Momentum                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Today's progress, as a streak and two checkable actions.
+ *
+ * The streak is computed from the same heatmap cells the calendar below
+ * draws — consecutive days with at least one real row — so it cannot claim a
+ * day the database has nothing for. The two steps are the only actions that
+ * count: a source added today and one study item generated today. It exists to
+ * make the next small action obvious, not to invent a reward.
+ */
+function MomentumCard({
+  summary,
+  onAddSource,
+  onGenerate,
+  onResume,
+}: {
+  summary: DashboardSummary;
+  onAddSource: () => void;
+  onGenerate: () => void;
+  onResume: () => void;
+}) {
+  const transition = useSpringTransition();
+  const cells = summary.heatmap;
+  const todayIndex = cells.length - 1;
+  const todaySources = summary.byDay?.[todayIndex]?.count ?? 0;
+  const todayMaterials = (() => {
+    const day = summary.materialsByDay[todayIndex];
+    if (!day) return 0;
+    return day.summary + day.flashcards + day.quiz + day.mindmap + day.slides;
+  })();
+
+  let streak = 0;
+  let i = todayIndex;
+  // Today only breaks a streak once it is over; an unfinished day is not a
+  // missed day, so the walk starts at yesterday when today is still empty.
+  if (i >= 0 && cells[i].count === 0) i -= 1;
+  while (i >= 0 && cells[i].count > 0) {
+    streak += 1;
+    i -= 1;
+  }
+
+  const steps = [
+    { label: "Add a source today", done: todaySources > 0 },
+    { label: "Generate one study item", done: todayMaterials > 0 },
+  ];
+  const doneCount = steps.filter((step) => step.done).length;
+  const complete = doneCount === steps.length;
+  const next = todaySources === 0 ? "source" : todayMaterials === 0 ? "generate" : "resume";
+
+  return (
+    <motion.section
+      variants={revealVariants}
+      initial="hidden"
+      animate="visible"
+      transition={transition}
+      aria-label="Today's momentum"
+      className="dashboard-bento flex flex-col gap-4 p-5 sm:p-6"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="dashboard-kicker">
+            <Target className="h-3.5 w-3.5" />
+            Today
+          </p>
+          <p className="mt-2 flex items-baseline gap-2">
+            <Flame
+              className="h-5 w-5 shrink-0 text-[var(--signal)]"
+              aria-hidden
+            />
+            <span className="font-display text-2xl font-bold tracking-tight">
+              {streak > 0 ? `${streak}-day streak` : "Start a streak today"}
+            </span>
+          </p>
+          <p className="mt-1.5 max-w-md text-[12px] leading-relaxed text-text-dim">
+            {complete
+              ? "Today is done. Anything else from here is a bonus."
+              : streak > 0
+                ? "Today is not counted yet — one small action keeps the chain alive."
+                : "One source or one generated item is all a day needs to count."}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={
+            next === "source" ? onAddSource : next === "generate" ? onGenerate : onResume
+          }
+          className="dash-action dash-action--primary shrink-0"
+        >
+          <span className="relative z-10 inline-flex items-center gap-2">
+            {next === "resume" ? (
+              <ArrowRight className="h-4 w-4" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {next === "source"
+              ? "Add today's source"
+              : next === "generate"
+                ? "Generate one item"
+                : "Open notebook"}
+          </span>
+        </button>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {steps.map((step) => (
+          <div
+            key={step.label}
+            className={
+              "flex items-center gap-2.5 rounded-xl border px-3 py-2 text-[12px] " +
+              (step.done
+                ? "border-[color-mix(in_srgb,var(--signal)_38%,transparent)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)] text-foreground"
+                : "border-[var(--card-border)] text-text-dim")
+            }
+          >
+            <span
+              className={
+                "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border " +
+                (step.done
+                  ? "border-[var(--signal)] text-[var(--signal)]"
+                  : "border-[var(--card-border)]")
+              }
+            >
+              {step.done ? <Check className="h-3 w-3" /> : null}
+            </span>
+            {step.label}
+          </div>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Weak spots                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The mistakes Check My Work has actually logged, grouped by the move that
+ * went wrong.
+ *
+ * Every row here comes from `mathHistory.mistakes`, so the panel can only
+ * point at a slip the student really made — the count is how many times that
+ * exact move was marked wrong, not an estimate. It exists to close the loop:
+ * the dashboard says what to revise, and the button opens the bench where it
+ * gets practised.
+ */
+function WeakSpots({ onOpenMathLab }: { onOpenMathLab: () => void }) {
+  const transition = useSpringTransition();
+  const summary = useQuery(api.mathHistory.mistakes);
+  const entries = (summary?.entries ?? []).slice(0, 3);
+
+  return (
+    <motion.section
+      variants={revealVariants}
+      initial="hidden"
+      animate="visible"
+      transition={transition}
+      aria-label="Your weak spots"
+      className="dashboard-bento flex flex-col gap-4 p-5 sm:p-6"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="dashboard-kicker">
+            <ListChecks className="h-3.5 w-3.5" />
+            Weak spots
+          </p>
+          <p className="mt-2 font-display text-base font-semibold tracking-tight sm:text-lg">
+            {entries.length > 0
+              ? "The slips that keep costing marks"
+              : summary && summary.total > 0
+                ? "Your checked work is clean"
+                : "Nothing to fix yet"}
+          </p>
+          <p className="mt-1.5 max-w-md text-[12px] leading-relaxed text-text-dim">
+            {entries.length > 0
+              ? "Every row below was marked wrong by Check My Work — most frequent first."
+              : summary && summary.total > 0
+                ? `${summary.attempts} checked ${summary.attempts === 1 ? "problem" : "problems"}, no recurring slip. Keep the bar high.`
+                : "Run one problem through Check My Work and the moves you keep missing surface here."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenMathLab}
+          className="dash-action dash-action--secondary shrink-0"
+        >
+          <span className="relative z-10 inline-flex items-center gap-2">
+            {entries.length > 0 ? "Practise these" : "Try Check My Work"}
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </button>
+      </div>
+
+      {entries.length > 0 ? (
+        <ul className="flex flex-col divide-y divide-[var(--card-border)]">
+          {entries.map((entry) => (
+            <li key={`${entry.stepTitle}-${entry.rule}`}>
+              <button
+                type="button"
+                onClick={onOpenMathLab}
+                className="flex w-full items-center justify-between gap-3 py-2.5 text-left transition-colors hover:text-foreground"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-[12.5px] font-medium">
+                    {entry.stepTitle}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] leading-relaxed text-text-dim">
+                    {entry.rule || entry.note}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[10.5px] tabular-nums text-text-dim">
+                  ×{entry.count}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="rounded-xl border border-dashed border-[var(--card-border)] px-3 py-3 text-[11.5px] leading-relaxed text-text-dim">
+          Solve, then paste your working into Check My Work in the Math Lab. Each
+          slip the checker flags lands here, and repeats climb the list.
+        </div>
+      )}
+    </motion.section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Overview                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -1649,6 +1883,7 @@ export function DashboardOverview({
   onOpenNotebook,
   onOpenNotebooks,
   onCreateNotebook,
+  onOpenMathLab,
 }: {
   summary: DashboardSummary | undefined;
   notebooks: DashboardNotebook[];
@@ -1656,6 +1891,8 @@ export function DashboardOverview({
   onOpenNotebook: (notebookId: string, target?: WorkspaceTarget) => void;
   onOpenNotebooks: () => void;
   onCreateNotebook: () => void;
+  /** Open the Math Lab, where weak-spot practice lives. */
+  onOpenMathLab: () => void;
 }) {
   const transition = useSpringTransition();
 
@@ -1763,7 +2000,18 @@ export function DashboardOverview({
         />
       )}
 
-      {/* 2. Real counts, as controls. */}
+      {/* 2. Today's momentum — the small daily loop that brings students back. */}
+      <MomentumCard
+        summary={summary}
+        onAddSource={() => openWorkspace({ focus: "sources" })}
+        onGenerate={() => openWorkspace({ tab: "quiz", focus: "materials" })}
+        onResume={() => openWorkspace()}
+      />
+
+      {/* 3. What the checker says keeps going wrong — the return loop. */}
+      <WeakSpots onOpenMathLab={onOpenMathLab} />
+
+      {/* 4. Real counts, as controls. */}
       <section
         aria-label="Workspace summary"
         className="grid grid-cols-2 gap-4 lg:grid-cols-4"
@@ -1821,16 +2069,16 @@ export function DashboardOverview({
         />
       </section>
 
-      {/* 3. Used out of total, in absolute numbers. */}
+      {/* 5. Used out of total, in absolute numbers. */}
       <AllowanceLine />
 
-      {/* 4. Seven days, as bars. */}
+      {/* 6. Seven days, as bars. */}
       <ActivityBars data={activity} />
 
-      {/* 5. Twelve weeks, as a calendar. */}
+      {/* 7. Twelve weeks, as a calendar. */}
       <ActivityHeatmap cells={summary.heatmap} />
 
-      {/* 6. What the material is made of, and what just happened. */}
+      {/* 8. What the material is made of, and what just happened. */}
       <div
         className={
           summary.recent.length > 0 ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"
