@@ -592,13 +592,7 @@ export function MathLab() {
                 {tab.label}
               </button>
             );
-          })}
-        </nav>
-          <SearchWithGoogle
-            compact
-            label="Search this topic on Google"
-            topic={formula.trim() || `${track} ${chapter.name} maths`}
-          />
+          })}         </nav>
         </div>
 
         <AnimatePresence mode="wait" initial={false}>
@@ -1066,4 +1060,6 @@ export function MathLab() {
   );
 }
 
-export default MathLab;
+eexport default MathLab;
+
+
