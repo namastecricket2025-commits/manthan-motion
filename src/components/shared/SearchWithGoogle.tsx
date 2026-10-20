@@ -136,10 +136,10 @@ export function SearchWithGoogle({
           <span className="gs-trigger__text">Search on</span>
           <img
             className="gs-trigger__logo"
-            src="/google-logo.png"
+            src="/google-g.png"
             alt="Google"
-            width={54}
-            height={18}
+            width={17}
+            height={17}
             draggable={false}
           />
         </button>
@@ -148,7 +148,16 @@ export function SearchWithGoogle({
       <DialogContent className="gs-panel rounded-[22px]">
         <DialogHeader>
           <p className="gs-kicker">
-            <Search className="h-3 w-3" aria-hidden /> Search the web
+            <img
+              className="gs-kicker__mark"
+              src="/google-g.png"
+              alt=""
+              aria-hidden
+              width={13}
+              height={13}
+              draggable={false}
+            />
+            Search the web
           </p>
           <DialogTitle className="gs-title">
             Look it up without leaving Manthan

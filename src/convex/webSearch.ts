@@ -15,12 +15,13 @@ import { v } from "convex/values";
  *
  * Two back ends, tried in this order:
  *
- *   1. The Custom Search JSON API, when a Programmable Search Engine id is
- *      configured (`GOOGLE_SEARCH_ENGINE_ID`) — this is a plain Google search
- *      with a key and a `cx`.
- *   2. Gemini's Google Search grounding, which needs only a Gemini key. The
- *      model answers from live search and hands back the pages it used, so a
- *      key the student already has for the tutor also powers the search.
+ *   1. Serper (`SERPER_API_KEY`) — a Google search API that returns the
+ *      organic results as JSON, with the answer box when there is one. This
+ *      is the configured path for Manthan.
+ *   2. The Custom Search JSON API, when a Programmable Search Engine id is
+ *      configured (`GOOGLE_SEARCH_ENGINE_ID`).
+ *   3. Gemini's Google Search grounding, which needs only a Gemini key, so a
+ *      key the student already has for the tutor can still power the search.
  *
  * Whatever runs is metered against the same plan allowance as generation, so
  * the dashboard meter, the plan card and the server keep agreeing. A missing
@@ -48,6 +49,7 @@ function envKey(...names: string[]): string | undefined {
   return undefined;
 }
 
+const SERPER_KEY_NAMES = ["SERPER_API_KEY", "SERPER_KEY", "SERPER"];
 const CSE_KEY_NAMES = ["GOOGLE_SEARCH_API_KEY", "SEARCH_API_KEY"];
 const CSE_ID_NAMES = [
   "GOOGLE_SEARCH_ENGINE_ID",
@@ -70,7 +72,7 @@ const GEMINI_MODELS = [
 ];
 
 const NO_KEY =
-  "Web search is not configured yet. Add SEARCH_API_KEY in the Keys tab, or use the Google link below.";
+  "Web search is not configured yet. Add SERPER_API_KEY in the Keys tab, or use the Google link below.";
 const TOOL_OFF =
   "This key does not have Google Search enabled for it. Turn on the Google Search tool for the API key (or add GOOGLE_SEARCH_ENGINE_ID for a Programmable Search Engine) in the Keys tab.";
 
@@ -109,8 +111,69 @@ function estimateTokens(prompt: string, reply: string) {
 interface SearchReply {
   answer?: string;
   results: Hit[];
-  provider: "custom-search" | "gemini-grounded";
+  provider: "serper" | "custom-search" | "gemini-grounded";
   tokens: number;
+}
+
+/**
+ * Serper: Google's results as JSON.
+ *
+ * `gl: "in"` pins the country to India, so a search from the Math Lab or the
+ * STEM Lab returns the Indian web — the NCERT notes, the CBSE marking
+ * schemes, the Hindi channels — rather than whatever the nearest data centre
+ * thinks is generic.
+ */
+async function runSerper(query: string, key: string): Promise<SearchReply> {
+  const response = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: {
+      "X-API-KEY": key,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ q: query, num: MAX_RESULTS, gl: "in", hl: "en" }),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(
+      "The search key was rejected. Check SERPER_API_KEY in the Keys tab.",
+    );
+  }
+  if (response.status === 429) {
+    throw new Error(
+      "Google search is rate-limited right now. Try again in a moment.",
+    );
+  }
+  if (!response.ok) {
+    throw new Error(`Google search failed (${response.status}).`);
+  }
+
+  const data = (await response.json()) as {
+    answerBox?: { title?: string; snippet?: string; answer?: string };
+    organic?: Array<{ title?: string; link?: string; snippet?: string }>;
+  };
+
+  const box = data.answerBox;
+  const answer = [box?.answer, box?.snippet]
+    .map((part) => (typeof part === "string" ? part.replace(/\s+/g, " ").trim() : ""))
+    .filter(Boolean)
+    .join(" — ")
+    .trim();
+
+  const results = dedupe(
+    (data.organic ?? []).map((item) => ({
+      title: stripTags(item.title),
+      url: typeof item.link === "string" ? item.link : "",
+      snippet: stripTags(item.snippet),
+    })),
+  );
+
+  return {
+    answer: answer || undefined,
+    results,
+    provider: "serper",
+    tokens: estimateTokens(query, JSON.stringify({ answer, results })),
+  };
 }
 
 async function runCustomSearch(
@@ -306,12 +369,15 @@ export const search = action({
     }
 
     try {
+      const serperKey = envKey(...SERPER_KEY_NAMES);
       const cx = envKey(...CSE_ID_NAMES);
       const cseKey = cx ? envKey(...CSE_KEY_NAMES) : undefined;
       const geminiKey = envKey(...GEMINI_KEY_NAMES);
 
       let reply: SearchReply;
-      if (cx && cseKey) {
+      if (serperKey) {
+        reply = await runSerper(query, serperKey);
+      } else if (cx && cseKey) {
         reply = await runCustomSearch(query, cseKey, cx);
       } else if (geminiKey) {
         reply = await runGeminiGrounded(query, geminiKey);

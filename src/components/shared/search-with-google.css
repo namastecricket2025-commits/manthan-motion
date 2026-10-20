@@ -27,7 +27,10 @@
   border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
+/* Soft corners, and the same pill shape on both host toolbars. */
 .gs-trigger {
+  border-radius: 999px !important;
+  padding: 8px 15px !important;
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 }
@@ -51,13 +54,17 @@
 .gs-trigger__logo {
   display: block;
   width: auto;
-  height: 16px;
+  height: 17px;
   user-select: none;
 }
 
 /* ------------------------------- the panel ------------------------------- */
 
 .gs-panel {
+  /* Soft-cornered rectangle: wider than the shadcn default so a result list
+     reads as a page, not as a card. Unlayered, so it wins over the utility
+     classes the dialog carries. */
+  border-radius: 22px;
   max-width: min(560px, calc(100vw - 32px));
   gap: 14px;
   border-color: var(--card-border, rgba(127, 127, 127, 0.2));
@@ -67,12 +74,20 @@
 .gs-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-dim, #8b8b8b);
+}
+
+.gs-kicker__mark {
+  display: block;
+  width: auto;
+  height: 13px;
+  opacity: 0.92;
+  user-select: none;
 }
 
 .gs-title {
