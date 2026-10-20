@@ -39,11 +39,13 @@ import {
   LogOut,
   Menu,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
@@ -122,6 +124,22 @@ export default function Dashboard() {
   const openNotebook = notebooks?.find((n) => n.id === notebookParam);
 
   const [sheetOpen, setSheetOpen] = useState(false);
+  /* The desktop rail collapses to icons. The choice is remembered, because a
+     student who wants the width back wants it back on every visit. */
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("manthan-sidebar") === "collapsed";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("manthan-sidebar", collapsed ? "collapsed" : "open");
+    } catch {
+      /* private mode */
+    }
+  }, [collapsed]);
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -207,6 +225,7 @@ export default function Dashboard() {
     <DashboardNav
       active={view === "notebooks" ? "notebooks" : "dashboard"}
       onSelect={selectSection}
+      collapsed={collapsed}
     />
   );
 
@@ -217,23 +236,62 @@ export default function Dashboard() {
       <div className="relative z-10">
         {/* Page-top aura — ambient light spilling in from above, dark mode only. */}
         <div className="glow-aura" aria-hidden="true" />
-        {/* ---- Sidebar (desktop) ---- */}
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col justify-between overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-5 backdrop-blur-xl min-[760px]:flex">
-          <div className="flex flex-col gap-8">
-            <Logo />
+        {/* ---- Sidebar (desktop, collapsible) ---- */}
+        <aside
+          className="fixed inset-y-0 left-0 z-30 hidden flex-col justify-between overflow-y-auto overflow-x-hidden border-r border-[var(--card-border)] bg-[var(--panel-bg)] py-5 backdrop-blur-xl transition-[width,padding] duration-300 ease-out min-[760px]:flex"
+          style={{ width: collapsed ? 76 : 240, paddingLeft: collapsed ? 10 : 16, paddingRight: collapsed ? 10 : 16 }}
+          data-collapsed={collapsed}
+        >
+          <div className="flex min-w-0 flex-col gap-7">
+            <div className={collapsed ? "flex justify-center" : "flex items-center justify-between gap-2"}>
+              {!collapsed && <Logo />}
+              <button
+                type="button"
+                onClick={() => setCollapsed((value) => !value)}
+                aria-label={collapsed ? "Expand the sidebar" : "Collapse the sidebar"}
+                aria-expanded={!collapsed}
+                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className="glass-chip inline-flex h-8 w-8 shrink-0 items-center justify-center text-text-dim transition-colors hover:text-foreground"
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </button>
+            </div>
             {nav}
           </div>
-          <div className="flex items-center justify-between pt-6">
+
+          <div
+            className={
+              collapsed
+                ? "flex flex-col items-center gap-3 pt-6"
+                : "flex items-center justify-between pt-6"
+            }
+          >
             <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 border-[var(--card-border)] bg-transparent"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </Button>
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                title="Sign out"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] text-text-dim transition-colors hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-[var(--card-border)] bg-transparent"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </Button>
+            )}
           </div>
         </aside>
 
@@ -278,7 +336,10 @@ export default function Dashboard() {
         </header>
 
         {/* ---- Main ---- */}
-        <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
+        <main
+          className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as React.CSSProperties}
+        >
           <div className="mx-auto flex max-w-5xl flex-col gap-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-0">

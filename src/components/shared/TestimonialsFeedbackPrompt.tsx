@@ -324,7 +324,7 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
               onChange={(e) =>
                 setDisplayName(e.target.value.slice(0, 40))
               }
-              placeholder="Aarav"
+              placeholder="Luv"
               className="mt-1 w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
             />
           </div>

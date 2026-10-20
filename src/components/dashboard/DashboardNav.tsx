@@ -101,9 +101,12 @@ function NotebookRow({
 export function DashboardNav({
   active,
   onSelect,
+  collapsed = false,
 }: {
   active: DashboardSection;
   onSelect: (key: DashboardSection) => void;
+  /** Icon rail: labels and the notebook list fold away, the icons stay. */
+  collapsed?: boolean;
 }) {
   const notebooks = useQuery(api.notebooks.list);
   const createNotebook = useMutation(api.notebooks.create);
@@ -138,7 +141,7 @@ export function DashboardNav({
   }
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className={collapsed ? "flex flex-col gap-1.5" : "flex flex-col gap-1"}>
       {ITEMS.map((item) => {
         const isActive =
           item.key === "notebooks" ? notebooksActive : item.key === active;
@@ -147,12 +150,17 @@ export function DashboardNav({
             <motion.button
               type="button"
               aria-current={isActive ? "page" : undefined}
+              aria-label={item.label}
+              title={collapsed ? item.label : undefined}
               onClick={() => onSelect(item.key)}
-              whileHover={{ x: 4 }}
+              whileHover={collapsed ? { scale: 1.06 } : { x: 4 }}
               whileTap={{ scale: 0.98 }}
               transition={transition}
               className={
-                "relative flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm font-medium transition-colors " +
+                "relative flex w-full items-center rounded-xl border text-left text-sm font-medium transition-colors " +
+                (collapsed
+                  ? "justify-center px-0 py-2.5 "
+                  : "gap-3 px-3.5 py-2.5 ") +
                 (isActive
                   ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_12%,transparent)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                   : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)] hover:text-foreground")
@@ -174,11 +182,11 @@ export function DashboardNav({
                   (isActive ? "text-[var(--signal)]" : "")
                 }
               />
-              {item.label}
+              {collapsed ? null : item.label}
             </motion.button>
 
             {/* The notebooks themselves, nested under the section entry. */}
-            {item.key === "notebooks" && (
+            {item.key === "notebooks" && !collapsed && (
               <div className="ml-4 flex flex-col gap-0.5 border-l border-[var(--card-border)] pl-3">
                 {notebooks === undefined && (
                   <span className="px-2.5 py-1.5 text-xs text-text-dim">

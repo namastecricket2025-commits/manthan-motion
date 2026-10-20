@@ -351,7 +351,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 value={nameValue}
                 autoFocus
                 onChange={(e) => setNameValue(e.target.value)}
-                placeholder="e.g. Aarav"
+                placeholder="e.g. Luv"
                 required
               />
               <PrimaryButton disabled={!nameValue.trim() || busy}>
@@ -382,7 +382,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     label="Your name"
                     name="name"
                     autoComplete="name"
-                    placeholder="e.g. Aarav"
+                    placeholder="e.g. Luv"
                     required
                     disabled={submitting}
                   />

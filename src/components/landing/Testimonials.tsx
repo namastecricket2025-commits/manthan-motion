@@ -37,7 +37,7 @@ const REMOVAL_MAILTO =
 
 /** Canonical mix for the current quote sheet; unknown names follow in order. */
 const DISPLAY_ORDER = [
-  "Aarav",
+  "Luv",
   "Nidhi",
   "Reyansh",
   "Anavi",
