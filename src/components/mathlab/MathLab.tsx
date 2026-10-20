@@ -670,11 +670,6 @@ export function MathLab() {
                 <div className="mathlab-input__row">
                   <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
                   <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
-                  <SearchWithGoogle
-                    compact
-                    label="Google"
-                    topic={formula.trim() || `${track} ${chapter.name} maths`}
-                  />
                   <motion.button
                     type="submit"
                     className="mathlab-solve"
