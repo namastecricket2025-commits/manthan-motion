@@ -84,7 +84,7 @@ type ViewId = (typeof VIEW_TABS)[number]["id"];
 const EXAMPLES: Array<{ label: string; value: string }> = [
   { label: "2/3 + 1/6", value: "\\frac{2}{3} + \\frac{1}{6}" },
   { label: "3x + 5 = 20", value: "3x + 5 = 20" },
-  { label: "x² − 5x + 6 = 0", value: "x^{2} - 5x + 6 = 0" },
+  { label:    "x² − 5x + 6 = 0", value: "x^{2} - 5x + 6 = 0" },
 ];
 
 /**
@@ -567,31 +567,39 @@ export function MathLab() {
             than in the page header — this is where the question lives, and it
             is the same row on every tab. */}
         <div className="mathlab-viewbar">
-        <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
-          {VIEW_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = view === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={"mathlab-view" + (active ? " is-active" : "")}
-                onClick={() => {
-                  // A carried-over practice seed belongs to the visit that
-                  // created it; returning to Practice later starts fresh.
-                  if (tab.id !== "practice") setPracticeSeed(null);
-                  setView(tab.id);
-                }}
-              >
-                <span className="mathlab-view__icon" aria-hidden>
-                  <Icon className="h-3.5 w-3.5" />
-                </span>
-                {tab.label}
-              </button>
-            );
-          })}         </nav>
+          <div className="mathlab-viewbar__row">
+            <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
+              {VIEW_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const active = view === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className={"mathlab-view" + (active ? " is-active" : "")}
+                    onClick={() => {
+                      // A carried-over practice seed belongs to the visit that
+                      // created it; returning to Practice later starts fresh.
+                      if (tab.id !== "practice") setPracticeSeed(null);
+                      setView(tab.id);
+                    }}
+                  >
+                    <span className="mathlab-view__icon" aria-hidden>
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+            <SearchWithGoogle
+              topic={formula.trim() || "Maths problem — NCERT CBSE explained"}
+              label="Search ideas on the web"
+              compact
+            />
+          </div>
         </div>
 
         <AnimatePresence mode="wait" initial={false}>

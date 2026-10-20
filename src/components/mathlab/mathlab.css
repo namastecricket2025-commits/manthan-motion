@@ -14,6 +14,68 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Top bar: view tabs plus the panel's own search                       */
+/* ------------------------------------------------------------------ */
+
+.mathlab-viewbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 14px;
+}
+
+.mathlab-viewbar__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+
+.mathlab-views {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mathlab-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 8px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition: color 200ms var(--ease-momentum), background 200ms var(--ease-momentum), border-color 200ms var(--ease-momentum);
+}
+
+.mathlab-view:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-color: var(--glass-line);
+}
+
+.mathlab-view.is-active {
+  color: var(--signal);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 32%, transparent);
+}
+
+.mathlab-view__icon {
+  display: inline-flex;
+}
+
+/* Used on the Solve tab so the incoming text can be searched in place
+   without stealing the toolbar's keyboard focus from the math input. */
+.mathlab-viewbar .gs-trigger {
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------------ */
 /* Toolbar                                                             */
 /* ------------------------------------------------------------------ */
 
