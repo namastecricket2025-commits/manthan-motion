@@ -77,7 +77,27 @@ export const mathProblemSchema = z.object({
   steps: z.array(mathStepSchema).catch([]),
   finalAnswer: z.string().min(1),
   verification: z.string().catch(""),
+  /** Where the question comes from, e.g. "CBSE 2024 · 3 marks". Empty for a
+   *  question written from scratch. */
+  source: z.string().catch(""),
 });
+
+/**
+ * Reading a photographed question, character by character.
+ *
+ * Reciprocal pairs are the single most common transcription error: a printed
+ * `cos` read as `csc` turns a provable identity into a false one, and every step
+ * after it is then built on the wrong problem. The prompt names the pairs and
+ * asks the model to re-read the page before solving, rather than trusting a
+ * first glance.
+ */
+export const PHOTO_READING_RULES = [
+  "Transcribe the question EXACTLY as printed before solving it. Do not 'fix' the notation to a form that looks more familiar.",
+  "Read every function name letter by letter and keep reciprocals apart: cos is not csc, sin is not sec, tan is not cot. A reciprocal pair changes the whole problem.",
+  "Also distinguish + from −, x from ×, a superscript 2 from a coefficient, and the fraction bar's extent (what is actually in the numerator).",
+  "If a symbol is genuinely illegible, choose the reading that makes the printed statement mathematically true, and keep that same reading in `problem` and in every step.",
+  "`problem` must be the transcription of the printed question, not a rewritten version of it.",
+].join(" ");
 
 /** Rough ceiling on the base64 payload — about 4 MB of image. */
 export const MAX_MATH_IMAGE = 5_500_000;
@@ -102,6 +122,8 @@ export interface SolvedProblem {
   }[];
   finalAnswer: string;
   verification: string;
+  /** Board paper / year tag shown on the question card, when known. */
+  source?: string;
   /** True when an independent engine confirmed or corrected the answer. */
   verified: boolean;
   /** True when the checker's value replaced the model's own. */

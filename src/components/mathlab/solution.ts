@@ -32,6 +32,8 @@ export interface EngineProblem {
   steps: EngineStep[];
   finalAnswer: string;
   verification: string;
+  /** Board-paper tag for a practice question, e.g. "CBSE 2024 · 3 marks". */
+  source?: string;
   /** True when an independent engine confirmed or corrected this answer. */
   verified: boolean;
   /** True when the checker's own value replaced the engine's. */

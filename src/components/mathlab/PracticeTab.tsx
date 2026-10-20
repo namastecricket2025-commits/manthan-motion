@@ -1,5 +1,6 @@
 import { GRADES, type GradeSpec } from "@/components/mathlab/mathlab";
 import { PracticePanel } from "@/components/mathlab/PracticePanel";
+import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import type { EngineProblem } from "@/components/mathlab/solution";
 import {
   Select,
@@ -51,12 +52,18 @@ export function PracticeTab({
     <section className="mathlab-card mathlab-viewcard mathlab-practice-tab">
       <header className="mathlab-practice-tab__head">
         <div>
-          <h2 className="mathlab-card__title">Try one on your own</h2>
+          <h2 className="mathlab-card__title">Practice set</h2>
           <p className="mathlab-practice-tab__sub">
-            Pick the class and chapter you are revising, then check your answer
-            against the worked solution.
+            Choose the class and chapter, how many questions you want, and how
+            hard they should be — including board-paper questions tagged with
+            the year they follow.
           </p>
         </div>
+        <SearchWithGoogle
+          compact
+          label="Search this chapter"
+          topic={`${track} ${grade.id} ${chapter.name} ${chapter.focus} explained`}
+        />
       </header>
 
       <div className="mathlab-practice-tab__selectors">

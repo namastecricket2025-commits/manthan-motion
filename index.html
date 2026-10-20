@@ -3,8 +3,14 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <link rel="manifest" href="/manifest.webmanifest" />
+  <!-- Versioned URLs: browsers cache favicons far longer than they cache the
+       page, so a new mark at the old path keeps showing the old icon after a
+       deploy. Bump `?v=` whenever the artwork changes. -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" sizes="any" />
+  <link rel="shortcut icon" href="/favicon.svg?v=3" />
+  <link rel="apple-touch-icon" href="/favicon.svg?v=3" />
+  <link rel="mask-icon" href="/favicon.svg?v=3" color="#de9c0d" />
+  <link rel="manifest" href="/manifest.webmanifest?v=3" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Manthan churns your notes, files and links into ready-to-study material — summaries, flashcards and question banks, in five guided steps." />
   <meta name="theme-color" content="#0a0a0b" />

@@ -5,6 +5,7 @@ import {
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { MathLab } from "@/components/mathlab/MathLab";
+import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -112,10 +113,15 @@ export default function MathLabPage() {
         {/* ---- Canvas ---- */}
         <main className="px-4 py-6 sm:px-6 min-[760px]:ml-60 md:py-10">
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
                 Math Lab<span className="text-[var(--signal)]">.</span>
               </h1>
+              <SearchWithGoogle
+                compact
+                label="Search with Google"
+                topic="CBSE maths concept explained step by step"
+              />
             </div>
 
             <MathLab />

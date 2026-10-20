@@ -2293,63 +2293,12 @@
   }
 }
 
-/* Each step of the working arrives with a flash along its own edge, staggered
-   top to bottom: the rail fills in the order the method has to be read. */
+/* Steps are a numbered list, not a diagram. The moving rail, the per-step
+   pulse and the arrow glyphs that used to sit on every row are gone: a number
+   and a hairline already carry the reading order, and decoration on all seven
+   steps at once competes with the mathematics itself. */
 .mathlab-walk__step {
   position: relative;
-}
-
-.mathlab-walk__step::after {
-  content: "";
-  position: absolute;
-  left: 15px;
-  right: 15px;
-  top: -1px;
-  height: 1px;
-  border-radius: 999px;
-  transform-origin: 0% 50%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--signal) 80%, transparent),
-    transparent
-  );
-  opacity: 0;
-  animation: mathlab-step-flash 1.2s var(--ease-momentum) both;
-  animation-delay: min(calc(var(--step-i, 0) * 90ms), 360ms);
-  pointer-events: none;
-}
-
-/* A hairline drawn across the top of the step it belongs to — the rail fills
-   in the order the method has to be read, over the text, never on it. */
-@keyframes mathlab-step-flash {
-  0% {
-    opacity: 1;
-    transform: scaleX(0.24);
-  }
-  55% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: scaleX(1);
-  }
-}
-
-.mathlab-walk__index {
-  animation: mathlab-step-node 640ms var(--ease-momentum) both;
-  animation-delay: min(calc(var(--step-i, 0) * 90ms), 360ms);
-}
-
-@keyframes mathlab-step-node {
-  0% {
-    transform: scale(0.82);
-    box-shadow: 0 0 0 7px color-mix(in srgb, var(--signal) 13%, transparent);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 transparent;
-  }
 }
 
 /* ================================================================== */
@@ -2396,18 +2345,14 @@
   /* A halo and a spark ring that never stop turning are exactly what this
      preference exists to silence. */
   .mathlab-calc-fab__halo,
-  .mathlab-calc-fab__ring,
-  .mathlab-walk__step::after,
-  .mathlab-walk__index {
+  .mathlab-calc-fab__ring {
     animation: none;
   }
 }
 
 /* The app's own Motionless Mode, which is a preference and not a media query. */
 html[data-motion="reduced"] .mathlab-calc-fab__halo,
-html[data-motion="reduced"] .mathlab-calc-fab__ring,
-html[data-motion="reduced"] .mathlab-walk__step::after,
-html[data-motion="reduced"] .mathlab-walk__index {
+html[data-motion="reduced"] .mathlab-calc-fab__ring {
   animation: none;
 }
 
@@ -2444,10 +2389,59 @@ html[data-motion="reduced"] .mathlab-walk__index {
 
 .mathlab-page {
   position: relative;
+  /* Its own stacking context: the dotted plate and glows are painted at -1,
+     which without `isolation` can fall behind the page background and vanish. */
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+}
+
+/* The lab's page texture: a quiet dot grid that fades out at the edges, plus
+   two soft corner glows in the brand amber and a cool graphite. Both are
+   painted behind the notebook and never intercept a click, so the empty right
+   side of a solved page reads as a desk rather than as a missing panel. */
+.mathlab-page::before,
+.mathlab-page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mathlab-page::before {
+  inset: -28px -22px -40px -22px;
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--text-main) 14%, transparent) 1px,
+    transparent 1.2px
+  );
+  background-size: 22px 22px;
+  opacity: 0.55;
+  -webkit-mask-image: radial-gradient(ellipse 82% 72% at 50% 26%, #000 18%, transparent 78%);
+  mask-image: radial-gradient(ellipse 82% 72% at 50% 26%, #000 18%, transparent 78%);
+}
+
+.mathlab-page::after {
+  inset: -60px -40px auto -40px;
+  height: 520px;
+  background:
+    radial-gradient(440px 280px at 8% -2%, color-mix(in srgb, var(--signal) 13%, transparent), transparent 70%),
+    radial-gradient(520px 320px at 96% 0%, color-mix(in srgb, #7dd3fc 9%, transparent), transparent 72%);
+  opacity: calc(0.5 + 0.5 * var(--ambient, 1));
+}
+
+html[data-comfort="on"] .mathlab-page::after {
+  background:
+    radial-gradient(440px 280px at 8% -2%, rgba(255, 214, 150, 0.16), transparent 70%),
+    radial-gradient(520px 320px at 96% 0%, rgba(255, 198, 140, 0.1), transparent 72%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mathlab-page::after {
+    opacity: 0.6;
+  }
 }
 
 .mathlab-solvepage {
@@ -2850,7 +2844,9 @@ html[data-motion="reduced"] .mathlab-walk__index {
   background: none;
   padding: 0;
   text-align: left;
-  font-size: 1.2rem;
+  /* A question reads as a question: the same size as the prose around it,
+     slightly heavier, and never a display-sized headline. */
+  font-size: 0.98rem;
   font-weight: 500;
   line-height: 1.6;
   color: var(--text-main);
@@ -2884,14 +2880,14 @@ html[data-motion="reduced"] .mathlab-walk__index {
   flex-wrap: wrap;
   align-items: center;
   gap: 14px;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   color: var(--text-main);
 }
 
 .mathlab-answer__value .mathlab-tex--display {
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 .mathlab-answer__note {
@@ -3197,7 +3193,7 @@ html[data-motion="reduced"] .mathlab-walk__index {
 @media (max-width: 640px) {
   .mathlab-answer__value,
   .mathlab-answer__value .mathlab-tex--display {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
   }
 
   .mathlab-sheet__actions {
@@ -3206,5 +3202,248 @@ html[data-motion="reduced"] .mathlab-walk__index {
 
   .mathlab-player__label {
     flex-basis: 100%;
+  }
+}
+
+/* ================================================================== */
+/* Practice — the set builder and its question cards                   */
+/* ================================================================== */
+
+/* The practice header had no rule at all: the title, blurb and the Google
+   control collapsed into a single unwrapped line on desktop. */
+.mathlab-practice-tab__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
+.mathlab-practice-tab__sub {
+  max-width: 62ch;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.mathlab-practice {
+  gap: 14px;
+}
+
+.mathlab-practice__setup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  padding: 13px 14px;
+}
+
+.mathlab-practice__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 12px;
+}
+
+.mathlab-practice__label {
+  min-width: 68px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-practice__levels,
+.mathlab-practice__counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.mathlab-practice__levels button,
+.mathlab-practice__counts button {
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition: background 180ms var(--ease-momentum), color 180ms var(--ease-momentum);
+}
+
+.mathlab-practice__counts button {
+  min-width: 30px;
+  padding: 5px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mathlab-practice__levels button:hover,
+.mathlab-practice__counts button:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
+.mathlab-practice__levels button[data-active="true"],
+.mathlab-practice__counts button[data-active="true"] {
+  background: color-mix(in srgb, var(--signal) 16%, transparent);
+  color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 38%, transparent);
+}
+
+.mathlab-practice__select {
+  appearance: none;
+  border: 1px solid var(--glass-line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 6px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  outline: none;
+  cursor: pointer;
+}
+
+.mathlab-practice__select:focus {
+  border-color: color-mix(in srgb, var(--signal) 48%, transparent);
+}
+
+.mathlab-practice__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.mathlab-practice__check input {
+  accent-color: var(--signal);
+}
+
+.mathlab-practice__go {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--glass-line);
+  padding-top: 11px;
+}
+
+.mathlab-practice__meta {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.mathlab-practice__sheet {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--glass-line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--card) 42%, transparent);
+  padding: 4px 16px 12px;
+}
+
+.mathlab-practice__sheethead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--glass-line);
+  padding: 12px 0 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-practice__score {
+  color: color-mix(in srgb, var(--signal) 68%, var(--text-main));
+}
+
+.mathlab-qcard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--glass-line);
+  padding: 16px 2px 14px;
+}
+
+.mathlab-qcard:last-of-type {
+  border-bottom: 0;
+}
+
+.mathlab-qcard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mathlab-qcard__no {
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.mathlab-qcard__tag {
+  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  padding: 2px 9px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--signal) 64%, var(--text-main));
+  white-space: nowrap;
+}
+
+/* The question itself: ordinary reading size, left aligned, with the number
+   and tag doing the framing instead of a display-size statement. */
+.mathlab-qcard__question .mathlab-problem__statement {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 72ch;
+}
+
+.mathlab-qcard__answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mathlab-qcard__answer .mathlab-practice__field {
+  flex: 1 1 200px;
+  padding: 8px 13px;
+  font-size: 13px;
+}
+
+.mathlab-practice__sheetfoot {
+  display: flex;
+  justify-content: flex-start;
+  border-top: 1px solid var(--glass-line);
+  padding-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .mathlab-practice__label {
+    min-width: 100%;
+  }
+  .mathlab-practice__sheet {
+    padding: 4px 12px 10px;
   }
 }

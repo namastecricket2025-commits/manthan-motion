@@ -1,0 +1,116 @@
+/* The Search-with-Google panel. Neutral tokens only, so it sits correctly on
+   the marketing paper, the math notebook and the black lab. */
+
+.gs-panel {
+  max-width: min(480px, calc(100vw - 32px));
+  gap: 14px;
+  border-color: var(--card-border, rgba(255, 255, 255, 0.12));
+}
+
+.gs-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-title {
+  font-family: var(--font-display, inherit);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-main, inherit);
+}
+
+.gs-desc {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.14));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
+  padding: 10px 12px;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-field:focus-within {
+  border-color: color-mix(in srgb, var(--signal, #de9c0d) 52%, transparent);
+}
+
+.gs-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 13.5px;
+  color: var(--text-main, inherit);
+}
+
+.gs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gs-go,
+.gs-ai {
+  display: inline-flex;
+  flex: 1 1 180px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 11px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 180ms ease, border-color 180ms ease, transform 160ms ease;
+}
+
+.gs-go {
+  background: var(--text-main, #111);
+  color: var(--ink, #fff);
+}
+
+html.dark .gs-go {
+  background: var(--signal, #de9c0d);
+  color: #17120a;
+}
+
+.gs-go:hover {
+  transform: translateY(-1px);
+}
+
+.gs-ai {
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, 0.14));
+  color: var(--text-main, inherit);
+  background: transparent;
+}
+
+.gs-ai:hover {
+  border-color: color-mix(in srgb, var(--signal, #de9c0d) 40%, transparent);
+  background: color-mix(in srgb, var(--signal, #de9c0d) 8%, transparent);
+}
+
+.gs-note {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-dim, #8b8b8b);
+}
+
+/* Inside the lab the trigger is an apple-lab button; keep its icon aligned. */
+.gs-trigger {
+  white-space: nowrap;
+}

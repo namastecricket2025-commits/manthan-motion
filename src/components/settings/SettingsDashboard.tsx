@@ -189,16 +189,19 @@ function ListRow({
   hint,
   badge,
   note,
+  stack = false,
   children,
 }: {
   title: string;
   hint: string;
   badge?: string;
   note?: string;
+  /** Let the control take the full row, for controls wider than 300px. */
+  stack?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="set-lrow">
+    <div className={"set-lrow" + (stack ? " set-lrow--stack" : "")}>
       <div className="set-lrow__text">
         <div className="set-lrow__title">
           <span>{title}</span>
@@ -285,11 +288,26 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const onSaveProfile = async () => {
     setSavingProfile(true);
     try {
-      await saveProfileMutation({ name: name.trim(), email: email.trim().toLowerCase() });
+      const nextEmail = email.trim().toLowerCase();
+      const emailChanged = nextEmail !== (account?.email ?? "").toLowerCase();
+
+      // The sign-in email lives in Supabase Auth, not in the Convex profile
+      // row. Saving it only to Convex used to leave the two out of step: the
+      // page said "email saved" while sign-in still used the old address.
+      if (emailChanged) {
+        const { error } = await supabase.auth.updateUser({ email: nextEmail });
+        if (error) throw new Error(error.message);
+      }
+
+      await saveProfileMutation({ name: name.trim(), email: nextEmail });
       // Keep the Supabase account metadata in step so the greeting elsewhere
       // and the next sign-in use the same name.
       await supabase.auth.updateUser({ data: { name: name.trim() } });
-      toast.success("Profile updated", { description: "Your display name and email are saved." });
+      toast.success("Profile updated", {
+        description: emailChanged
+          ? "Your name is saved. Check your inbox to confirm the new email address."
+          : "Your display name is saved.",
+      });
     } catch (err) {
       toast.error("Could not save profile", {
         description: err instanceof Error ? err.message : "Please try again.",
@@ -324,6 +342,30 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
       });
       return;
     }
+    // A password change must prove the current password. `updateUser` alone
+    // will happily replace it for anyone holding an open session, which makes
+    // the "Current Password" field decorative — and an unlocked laptop is
+    // exactly the case that field exists for.
+    const signInEmail = account?.email ?? user?.email ?? "";
+    if (pw.current.trim().length > 0) {
+      if (!signInEmail) {
+        toast.error("Cannot verify the current password", {
+          description: "Reach this page from the email you signed in with, then try again.",
+        });
+        return;
+      }
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: signInEmail,
+        password: pw.current,
+      });
+      if (verifyError) {
+        toast.error("Current password is not correct", {
+          description: "Enter the password you use now, or sign in again.",
+        });
+        return;
+      }
+    }
+
     const { error } = await supabase.auth.updateUser({ password: pw.next });
     if (error) {
       toast.error("Could not update password", { description: error.message });
@@ -551,6 +593,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                 </ListRow>
 
                 <ListRow
+                  stack
                   title="Text comfort"
                   badge={COMFORT[comfortIndex]?.label}
                   hint="Scales dashboard typography, and switches the whole interface to a spaced, dyslexia-friendly letterform when you need it."
@@ -582,6 +625,19 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       ))}
                     </div>
                   </div>
+                </ListRow>
+
+                <ListRow
+                  title="Motionless mode"
+                  badge={settings.reduceMotion ? "On" : "Off"}
+                  hint="Stops every idle orbit, drifting mesh and simulation loop. Content stays complete and readable — it simply stops moving. The operating system's own reduced-motion preference is honoured as well."
+                >
+                  <Switch
+                    className="set-switch"
+                    checked={settings.reduceMotion}
+                    aria-label="Motionless mode"
+                    onCheckedChange={(value) => update({ reduceMotion: value })}
+                  />
                 </ListRow>
 
                 <div className="set-preview" aria-live="polite">

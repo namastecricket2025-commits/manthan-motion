@@ -1185,6 +1185,13 @@ function TitrationTab() {
             <clipPath id="titration-flask">
               <path d={FLASK_D} />
             </clipPath>
+            {/* The drop itself: a bright bead with a wet highlight, so it is
+                visible against the grey glass it falls in front of. */}
+            <radialGradient id="titration-drop" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stopColor="#f4fbff" />
+              <stop offset="45%" stopColor="#b9dcf2" />
+              <stop offset="100%" stopColor="#6f8ba6" />
+            </radialGradient>
           </defs>
 
           {/* Stand and clamp */}
@@ -1262,32 +1269,63 @@ function TitrationTab() {
           <ellipse cx="186" cy="272" rx="14" ry="3.4" fill="none" stroke="rgba(148,163,184,0.55)" strokeWidth="1.4" />
           <ellipse cx="186" cy={surface} rx="28" ry="2.2" fill="#ffffff" opacity="0.3" />
 
-          {/* Drops fall from the tip to the liquid surface, never through it. */}
+          {/* Drops fall from the tip to the liquid surface, never through it.
+
+              Three staggered beads rather than one, each starting at the
+              stopcock tip and landing on the surface as it rises. The bead at
+              the tip and the rings on the surface are what make the fall read
+              as a drip: without them a 6px dot crossing 110 units of glass in
+              under a second is easy to miss entirely. */}
           {running && !still && !atMax ? (
             <>
-              {[0, 1].map((drop) => (
+              <motion.circle
+                cx="186"
+                cy="266"
+                fill="#d9efff"
+                animate={{ r: [2.1, 3.3, 2.1], opacity: [0.4, 0.95, 0.4] }}
+                transition={{ duration: dropDuration, repeat: Infinity, ease: "easeInOut" }}
+              />
+              {[0, 1, 2].map((drop) => (
                 <motion.circle
                   key={drop}
                   cx="186"
-                  r={drop === 0 ? 3 : 2.5}
-                  fill="#7d8fa8"
-                  initial={{ cy: 266, opacity: 0 }}
-                  animate={{ cy: [266, surface - 2], opacity: [0, 1, 1, 0] }}
+                  fill="url(#titration-drop)"
+                  initial={{ cy: 268, opacity: 0, r: 2.6 }}
+                  animate={{
+                    // Four keyframes for every channel: `times` below has four
+                    // entries and Motion requires them to line up.
+                    cy: [268, 274, Math.max(276, surface - 7), surface - 3],
+                    opacity: [0, 1, 1, 0],
+                    r: [2.6, 3.5, 3.5, 2.8],
+                  }}
                   transition={{
-                    duration: dropDuration,
+                    duration: Math.max(0.45, dropDuration),
                     repeat: Infinity,
-                    delay: drop * dropDuration * 0.5,
-                    ease: "easeIn",
+                    repeatDelay: 0,
+                    delay: (drop * Math.max(0.45, dropDuration)) / 3,
+                    ease: [0.45, 0, 0.9, 0.55],
+                    times: [0, 0.12, 0.9, 1],
+                  }}
+                  style={{ filter: "drop-shadow(0 0 4px rgba(190, 228, 255, 0.6))" }}
+                />
+              ))}
+              {[0, 1].map((ring) => (
+                <motion.ellipse
+                  key={`ring-${ring}`}
+                  cx="186"
+                  ry="2.6"
+                  fill="none"
+                  stroke={look.color}
+                  strokeWidth="1.4"
+                  animate={{ cy: surface, rx: [3, 17], opacity: [0.65, 0] }}
+                  transition={{
+                    duration: Math.max(0.45, dropDuration),
+                    repeat: Infinity,
+                    delay: Math.max(0.45, dropDuration) * (0.42 + ring * 0.5),
+                    ease: "easeOut",
                   }}
                 />
               ))}
-              <motion.ellipse
-                cx="186"
-                ry="1.8"
-                fill={look.color}
-                animate={{ cy: surface, rx: [4, 15], opacity: [0.45, 0] }}
-                transition={{ duration: dropDuration, repeat: Infinity, ease: "easeOut" }}
-              />
             </>
           ) : null}
         </svg>

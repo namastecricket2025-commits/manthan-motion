@@ -20,6 +20,7 @@ import { MathHistory } from "@/components/mathlab/MathHistory";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
 import { PracticeTab } from "@/components/mathlab/PracticeTab";
 import { splitProblems, uprightWords } from "@/components/mathlab/problems";
+import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { DetailList, Fold, InlineMath, ProblemStatement } from "@/components/mathlab/parts";
 import {
   plainProse,
@@ -353,12 +354,21 @@ export function MathLab() {
     setHistoryId(null);
   };
 
-  const askEngine = useCallback(async (parts: { question?: string; file?: { storageId: Id<"_storage">; name: string; mime?: string }; followUp?: string; detail?: "simple" | "detailed" }) => {
+  const askEngine = useCallback(async (parts: {
+    question?: string;
+    file?: { storageId: Id<"_storage">; name: string; mime?: string };
+    /** A photo sent straight to the solver, so it can see the page itself. */
+    image?: { base64: string; mimeType: string; name: string };
+    followUp?: string;
+    detail?: "simple" | "detailed";
+  }) => {
     setSolving(true);
     setEngineError(null);
     try {
       const result = await solve({
         question: parts.question,
+        imageBase64: parts.image?.base64,
+        mimeType: parts.image?.mimeType,
         storageId: parts.file?.storageId,
         name: parts.file?.name,
         mime: parts.file?.mime,
@@ -378,7 +388,10 @@ export function MathLab() {
       if (!parts.followUp) {
         setHistoryId(null);
         void recordSolution({
-          question: parts.question ?? (parts.file ? parts.file.name : "A photographed question"),
+          question:
+            parts.question ??
+            parts.image?.name ??
+            (parts.file ? parts.file.name : "A photographed question"),
           headline: result.headline,
           track,
           chapterName: chapter.name,
@@ -428,6 +441,31 @@ export function MathLab() {
     setEngineError(null);
     setSolution(null);
     try {
+      /* A photograph goes to the solver as an image, not as text extracted by
+         a separate pass. The old upload path transcribed it first, so the model
+         that solved the question never saw the printed page — and a `cos` the
+         transcription read as `csc` was then solved as a different problem.
+         With the image in hand, the reading rules in the system prompt have
+         something to apply to. */
+      if (file.type.startsWith("image/") && file.size <= 3_600_000) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = typeof reader.result === "string" ? reader.result : "";
+            const comma = result.indexOf(",");
+            resolve(comma >= 0 ? result.slice(comma + 1) : "");
+          };
+          reader.onerror = () => reject(new Error("That photo could not be read. Try another one."));
+          reader.readAsDataURL(file);
+        });
+        if (base64) {
+          await askEngine({
+            image: { base64, mimeType: file.type, name: file.name },
+          });
+          return;
+        }
+      }
+
       // Upload URLs from Convex are one-shot POST endpoints; a PUT is rejected
       // before the bytes are stored, which is what used to make every photo
       // fail with "did not reach the engine".
@@ -621,6 +659,11 @@ export function MathLab() {
                 <div className="mathlab-input__row">
                   <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
                   <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
+                  <SearchWithGoogle
+                    compact
+                    label="Google"
+                    topic={formula.trim() || `${track} ${chapter.name} maths`}
+                  />
                   <motion.button
                     type="submit"
                     className="mathlab-solve"
@@ -870,6 +913,35 @@ export function MathLab() {
                             >
                               <Sparkles className="h-3.5 w-3.5" />
                               Another similar problem
+                            </button>
+                            <SearchWithGoogle
+                              compact
+                              label="Search this question"
+                              topic={problem.problem.replace(/\$([^$]+)\$/g, "$1")}
+                            />
+                            <button
+                              type="button"
+                              className="mathlab-tab-action"
+                              onClick={() => {
+                                // Photographs are read by a model; a reciprocal
+                                // pair (cos / csc) is the classic misread. This
+                                // hands the transcription back to the student
+                                // for a one-word correction instead of making
+                                // them retake the picture. Only the maths is
+                                // carried into the editor — prose would be set
+                                // as a run of italic letters.
+                                const maths = [...problem.problem.matchAll(/\$([^$]+)\$/g)].map(
+                                  (match) => match[1],
+                                );
+                                setFormula(maths.length ? maths.join(" ") : problem.problem);
+                                hush();
+                                setSolution(null);
+                                setTurns([]);
+                                setEngineError(null);
+                              }}
+                            >
+                              <PenLine className="h-3.5 w-3.5" />
+                              Edit this question
                             </button>
                             <button type="button" className="mathlab-tab-action" onClick={() => setShowWorked((value) => !value)}>
                               {showWorked ? "Hide the worked solution" : "Show the worked solution"}

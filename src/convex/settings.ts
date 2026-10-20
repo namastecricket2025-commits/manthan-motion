@@ -131,6 +131,28 @@ export const deleteAccount = mutation({
       .collect();
     for (const notebook of notebooks) await ctx.db.delete(notebook._id);
 
+    // The Math Lab keeps its own rows, and the export/download copy shown in
+    // Settings promises that deletion is complete. Leaving these behind meant
+    // "permanently erased" was not true for a student's solved questions or
+    // their mistake history.
+    const solutions = await ctx.db
+      .query("mathSolutions")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const row of solutions) await ctx.db.delete(row._id);
+
+    const mistakes = await ctx.db
+      .query("mathMistakes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const row of mistakes) await ctx.db.delete(row._id);
+
+    const feedback = await ctx.db
+      .query("testimonials")
+      .withIndex("by_userId_status", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of feedback) await ctx.db.delete(row._id);
+
     const usage = await ctx.db
       .query("usage")
       .withIndex("by_user_day", (q) => q.eq("userId", userId))

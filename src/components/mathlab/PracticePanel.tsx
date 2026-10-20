@@ -2,23 +2,49 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Eye, Loader2, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  Eye,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
+  TriangleAlert,
+} from "lucide-react";
 import { Expression, Explanation, ProblemStatement } from "@/components/mathlab/parts";
 import { MathTex } from "@/components/mathlab/latex";
+import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import type { EngineProblem, EngineStep } from "@/components/mathlab/solution";
 
 /**
  * Practice.
  *
- * Asks the tutor for one more problem of the same kind and difficulty and drops
- * it right under the one the student just finished — then keeps the answer
- * hidden behind a check field, because a problem you can see the answer to is
- * not practice.
+ * A set, not a single question: the student chooses how many, how hard, and
+ * whether the set should read like a board paper. Each question arrives with its
+ * own answer field, its own worked solution and — for a board set — the paper
+ * tag in the corner, so a question can be recognised as exam material without
+ * being told so in the middle of the sentence.
  *
- * The practice problem is verified by the same independent arithmetic engine as
- * a real solve, so "correct" here means the answer was recomputed and agreed
- * with, not merely that a model said so.
+ * The answer is checked by the same independent arithmetic engine as a live
+ * solve, so "correct" is a recomputation, not a model's opinion.
  */
+
+type Level = "easy" | "medium" | "hard" | "board";
+
+const LEVELS: Array<{ id: Level; label: string; hint: string }> = [
+  { id: "easy", label: "Easy", hint: "One idea, friendly numbers" },
+  { id: "medium", label: "Medium", hint: "Two or three moves" },
+  { id: "hard", label: "Hard", hint: "HOTS — plan before you compute" },
+  { id: "board", label: "Board paper", hint: "CBSE style, with marks" },
+];
+
+const COUNTS = [1, 3, 5];
+
+const BOARDS = ["CBSE 2025", "CBSE 2024", "CBSE (mixed)"];
+
+interface Verdict {
+  correct: boolean;
+  note: string;
+}
 
 export function PracticePanel({
   problem,
@@ -38,200 +64,354 @@ export function PracticePanel({
   /** Generate immediately when opened from "Another similar problem". */
   autoStart?: boolean;
 }) {
-  const practiceAction = useAction(api.mathTutor.practiceProblem);
+  const setAction = useAction(api.mathTutor.practiceSet);
   const gradeAction = useAction(api.mathTutor.gradeAnswer);
+
+  const [level, setLevel] = useState<Level>("medium");
+  const [count, setCount] = useState(3);
+  const [boardYear, setBoardYear] = useState(BOARDS[0]);
+  const [realWorld, setRealWorld] = useState(true);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [practice, setPractice] = useState<EngineProblem | null>(null);
-  const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<{ correct: boolean; note: string } | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [showWorking, setShowWorking] = useState(false);
+  const [questions, setQuestions] = useState<EngineProblem[]>([]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [feedback, setFeedback] = useState<Record<number, Verdict>>({});
+  const [checking, setChecking] = useState<Record<number, boolean>>({});
+  const [openWorking, setOpenWorking] = useState<Record<number, boolean>>({});
 
-  const generate = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const reply = await practiceAction({
-        problem,
-        steps: steps.map((step) => ({
-          title: step.title,
-          expression: step.expression,
-          rule: step.rule,
-        })),
-        finalAnswer,
-        track,
-        chapterName,
-        chapterFormulas,
-      });
-      setPractice(reply.problem);
-      setAnswer("");
-      setFeedback(null);
-      setShowWorking(false);
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message
-          ? err.message
-          : "The tutor could not write a new problem just now. Try again in a moment.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, [chapterFormulas, chapterName, finalAnswer, practiceAction, problem, steps, track]);
+  const generate = useCallback(
+    async (overrideCount?: number) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const reply = await setAction({
+          problem,
+          steps: steps.map((step) => ({
+            title: step.title,
+            expression: step.expression,
+            rule: step.rule,
+          })),
+          finalAnswer,
+          track,
+          chapterName,
+          chapterFormulas,
+          count: overrideCount ?? count,
+          level,
+          boardYear: level === "board" ? boardYear : undefined,
+          realWorld,
+        });
+        setQuestions(reply.problems);
+        setAnswers({});
+        setFeedback({});
+        setOpenWorking({});
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "The tutor could not write a new set just now. Try again in a moment.",
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [boardYear, chapterFormulas, chapterName, count, finalAnswer, level, problem, realWorld, setAction, steps, track],
+  );
 
-  /* Carry-over from Solve: generate the similar problem once, automatically. */
+  /* Carry-over from Solve: one genuinely similar question, once. */
   const autoRan = useRef(false);
   useEffect(() => {
     if (!autoStart || autoRan.current) return;
     autoRan.current = true;
-    void generate();
+    void generate(1);
   }, [autoStart, generate]);
 
-  const checkAnswer = useCallback(async () => {
-    if (!practice || checking) return;
-    setChecking(true);
-    setFeedback(null);
-    try {
-      const verdict = await gradeAction({
-        problem: practice.problem,
-        expectedAnswer: practice.finalAnswer,
-        given: answer,
+  const checkAnswer = useCallback(
+    async (index: number) => {
+      const question = questions[index];
+      const given = answers[index] ?? "";
+      if (!question || checking[index]) return;
+      setChecking((current) => ({ ...current, [index]: true }));
+      setFeedback((current) => {
+        const next = { ...current };
+        delete next[index];
+        return next;
       });
-      setFeedback({ correct: verdict.correct, note: verdict.note });
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message
-          ? err.message
-          : "That answer could not be marked just now. Try again in a moment.",
-      );
-    } finally {
-      setChecking(false);
-    }
-  }, [answer, checking, gradeAction, practice]);
+      try {
+        const verdict = await gradeAction({
+          problem: question.problem,
+          expectedAnswer: question.finalAnswer,
+          given,
+        });
+        setFeedback((current) => ({
+          ...current,
+          [index]: { correct: verdict.correct, note: verdict.note },
+        }));
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "That answer could not be marked just now. Try again in a moment.",
+        );
+      } finally {
+        setChecking((current) => ({ ...current, [index]: false }));
+      }
+    },
+    [answers, checking, gradeAction, questions],
+  );
+
+  const answered = questions.filter((_, index) => feedback[index]?.correct).length;
 
   return (
     <div className="mathlab-practice">
-      <div className="mathlab-practice__bar">
-        <button
-          type="button"
-          className="mathlab-tab-action"
-          onClick={() => void generate()}
-          disabled={busy}
-        >
-          {busy ? <Loader2 className="spin-micro h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {practice ? "Another similar problem" : "Practice similar problem"}
-        </button>
-        {practice ? (
+      <div className="mathlab-practice__setup">
+        <div className="mathlab-practice__row">
+          <span className="mathlab-practice__label">Difficulty</span>
+          <div className="mathlab-practice__levels" role="radiogroup" aria-label="Difficulty">
+            {LEVELS.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                role="radio"
+                aria-checked={level === entry.id}
+                data-active={level === entry.id}
+                title={entry.hint}
+                onClick={() => setLevel(entry.id)}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mathlab-practice__row">
+          <span className="mathlab-practice__label">Questions</span>
+          <div className="mathlab-practice__counts" role="radiogroup" aria-label="How many questions">
+            {COUNTS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                role="radio"
+                aria-checked={count === n}
+                data-active={count === n}
+                onClick={() => setCount(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mathlab-practice__row">
+          <span className="mathlab-practice__label">Board</span>
+          <select
+            className="mathlab-practice__select"
+            value={boardYear}
+            onChange={(event) => {
+              setBoardYear(event.target.value);
+              setLevel("board");
+            }}
+            aria-label="Board paper year"
+          >
+            {BOARDS.map((entry) => (
+              <option key={entry} value={entry}>
+                {entry}
+              </option>
+            ))}
+          </select>
+          <label className="mathlab-practice__check">
+            <input
+              type="checkbox"
+              checked={realWorld}
+              onChange={(event) => setRealWorld(event.target.checked)}
+            />
+            Real-world framing
+          </label>
+        </div>
+
+        <div className="mathlab-practice__go">
           <button
             type="button"
-            className="mathlab-tab-action"
-            onClick={() => setShowWorking((value) => !value)}
+            className="mathlab-solve mathlab-solve--small"
+            onClick={() => void generate()}
+            disabled={busy}
           >
-            <Eye className="h-3.5 w-3.5" />
-            {showWorking ? "Hide the worked solution" : "Show the worked solution"}
+            {busy ? <Loader2 className="spin-micro h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+            {questions.length ? "New set" : "Generate set"}
           </button>
-        ) : null}
+          <span className="mathlab-practice__meta">
+            {level === "board"
+              ? `${boardYear} pattern · tagged with its source`
+              : LEVELS.find((entry) => entry.id === level)?.hint}
+          </span>
+        </div>
       </div>
 
       {error ? <p className="mathlab-error">{error}</p> : null}
 
-      <AnimatePresence initial={false}>
-        {practice ? (
-          <motion.div
-            className="mathlab-practice__card"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
-          >
-            <p className="mathlab-practice__label">Your problem</p>
-            <div className="mathlab-practice__question">
-              <ProblemStatement text={practice.problem} />
-            </div>
+      {questions.length ? (
+        <div className="mathlab-practice__sheet">
+          <header className="mathlab-practice__sheethead">
+            <span>
+              {questions.length} question{questions.length === 1 ? "" : "s"} ·{" "}
+              {LEVELS.find((entry) => entry.id === level)?.label}
+            </span>
+            <span className="mathlab-practice__score">
+              {answered}/{questions.length} correct
+            </span>
+          </header>
 
-            <div className="mathlab-practice__answer">
-              <input
-                value={answer}
-                onChange={(event) => {
-                  setAnswer(event.target.value);
-                  setFeedback(null);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void checkAnswer();
-                  }
-                }}
-                placeholder="Your answer"
-                aria-label="Your answer to the practice problem"
-                className="mathlab-practice__field"
-              />
-              <button
-                type="button"
-                className="mathlab-solve mathlab-solve--small"
-                onClick={() => void checkAnswer()}
-                disabled={checking || !answer.trim()}
-              >
-                {checking ? <Loader2 className="spin-micro h-4 w-4" /> : null}
-                Check answer
-              </button>
-            </div>
-
-            {feedback ? (
-              <p
-                className={"mathlab-practice__feedback" + (feedback.correct ? " is-right" : " is-wrong")}
-                aria-live="polite"
-              >
-                {feedback.correct ? (
-                  <Check className="h-3.5 w-3.5 shrink-0" />
-                ) : (
-                  <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
-                )}
-                <span>
-                  <Explanation text={feedback.note} />
-                </span>
-              </p>
-            ) : null}
-
-            <AnimatePresence initial={false}>
-              {showWorking ? (
-                <motion.div
-                  className="mathlab-practice__working"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
+          <AnimatePresence initial={false}>
+            {questions.map((question, index) => {
+              const verdict = feedback[index];
+              const isChecking = Boolean(checking[index]);
+              return (
+                <motion.article
+                  key={`${index}-${question.problem}`}
+                  className="mathlab-qcard"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: index * 0.04, ease: "easeOut" }}
                 >
-                  <ol className="mathlab-walk">
-                    {practice.steps.map((step, index) => (
-                      <li key={`${index}-${step.expression || step.title}`} className="mathlab-walk__step">
-                        <span className="mathlab-walk__index" aria-hidden>
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <div className="mathlab-walk__body">
-                          <p className="mathlab-walk__title">{step.title}</p>
-                          <Explanation text={step.explanation} />
-                          <Expression source={step.expression} />
-                        </div>
-                        <span className="mathlab-walk__rule">{step.rule}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <div className="mathlab-practice__final">
-                    <span>Final answer</span>
-                    <MathTex source={practice.finalAnswer} fallback={practice.finalAnswer} display />
-                    <p className="mathlab-practice__check">
-                      <ShieldCheck className="h-3 w-3 shrink-0" />
-                      <span>{practice.verification || practice.checkNote}</span>
-                    </p>
+                  <div className="mathlab-qcard__head">
+                    <span className="mathlab-qcard__no">Q{index + 1}</span>
+                    {question.source ? (
+                      <span className="mathlab-qcard__tag" title="Where this question comes from">
+                        {question.source}
+                      </span>
+                    ) : null}
                   </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+
+                  <div className="mathlab-qcard__question">
+                    <ProblemStatement text={question.problem} />
+                  </div>
+
+                  <div className="mathlab-qcard__answer">
+                    <input
+                      value={answers[index] ?? ""}
+                      onChange={(event) => {
+                        setAnswers((current) => ({ ...current, [index]: event.target.value }));
+                        setFeedback((current) => {
+                          if (!current[index]) return current;
+                          const next = { ...current };
+                          delete next[index];
+                          return next;
+                        });
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter") return;
+                        event.preventDefault();
+                        void checkAnswer(index);
+                      }}
+                      placeholder="Your answer"
+                      aria-label={`Your answer to question ${index + 1}`}
+                      className="mathlab-practice__field"
+                    />
+                    <button
+                      type="button"
+                      className="mathlab-solve mathlab-solve--small"
+                      onClick={() => void checkAnswer(index)}
+                      disabled={isChecking || !(answers[index] ?? "").trim()}
+                    >
+                      {isChecking ? <Loader2 className="spin-micro h-4 w-4" /> : null}
+                      Check
+                    </button>
+                    <button
+                      type="button"
+                      className="mathlab-tab-action"
+                      onClick={() =>
+                        setOpenWorking((current) => ({ ...current, [index]: !current[index] }))
+                      }
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      {openWorking[index] ? "Hide solution" : "Solution"}
+                    </button>
+                    <SearchWithGoogle
+                      compact
+                      label="Google"
+                      topic={`${question.problem} ${track} ${chapterName}`}
+                    />
+                  </div>
+
+                  {verdict ? (
+                    <p
+                      className={
+                        "mathlab-practice__feedback" + (verdict.correct ? " is-right" : " is-wrong")
+                      }
+                      aria-live="polite"
+                    >
+                      {verdict.correct ? (
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                      ) : (
+                        <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span>
+                        <Explanation text={verdict.note} />
+                      </span>
+                    </p>
+                  ) : null}
+
+                  <AnimatePresence initial={false}>
+                    {openWorking[index] ? (
+                      <motion.div
+                        className="mathlab-practice__working"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.26, ease: "easeOut" }}
+                      >
+                        <ol className="mathlab-walk">
+                          {question.steps.map((step, stepIndex) => (
+                            <li
+                              key={`${stepIndex}-${step.expression || step.title}`}
+                              className="mathlab-walk__step"
+                            >
+                              <span className="mathlab-walk__index" aria-hidden>
+                                {String(stepIndex + 1).padStart(2, "0")}
+                              </span>
+                              <div className="mathlab-walk__body">
+                                <p className="mathlab-walk__title">{step.title}</p>
+                                <Explanation text={step.explanation} />
+                                <Expression source={step.expression} />
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                        <div className="mathlab-practice__final">
+                          <span>Final answer</span>
+                          <MathTex
+                            source={question.finalAnswer}
+                            fallback={question.finalAnswer}
+                            display
+                          />
+                          {question.verification || question.checkNote ? (
+                            <p className="mathlab-practice__check">
+                              <ShieldCheck className="h-3 w-3 shrink-0" />
+                              <span>{question.verification || question.checkNote}</span>
+                            </p>
+                          ) : null}
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </motion.article>
+              );
+            })}
+          </AnimatePresence>
+
+          <div className="mathlab-practice__sheetfoot">
+            <button
+              type="button"
+              className="mathlab-tab-action"
+              onClick={() => void generate()}
+              disabled={busy}
+            >
+              {busy ? <Loader2 className="spin-micro h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Generate another set
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

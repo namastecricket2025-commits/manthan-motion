@@ -58,6 +58,54 @@
   color: var(--lab-ink);
 }
 
+/* ---- Background art --------------------------------------------------
+   The room is not a flat black rectangle. A dot grid fades in from the top and
+   disappears before it reaches the benches, and two wide corner glows sit
+   behind the meshes. Every layer is pointer-transparent and sits under the
+   content (which is z-10), so nothing about the lab's interaction changes. */
+.apple-lab::before,
+.apple-lab::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.apple-lab::before {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.12) 1px,
+    transparent 1.2px
+  );
+  background-size: 26px 26px;
+  opacity: 0.55;
+  -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 4%, #000 6%, transparent 74%);
+  mask-image: radial-gradient(ellipse 78% 62% at 50% 4%, #000 6%, transparent 74%);
+}
+
+.apple-lab::after {
+  background:
+    radial-gradient(620px 360px at 4% -6%, rgba(255, 255, 255, 0.07), transparent 70%),
+    radial-gradient(620px 380px at 98% -4%, rgba(125, 211, 252, 0.06), transparent 72%),
+    radial-gradient(700px 420px at 50% 108%, rgba(255, 255, 255, 0.035), transparent 70%);
+}
+
+html[data-comfort="on"] .apple-lab::before {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 238, 214, 0.14) 1px,
+    transparent 1.2px
+  );
+}
+
+html[data-comfort="on"] .apple-lab::after {
+  background:
+    radial-gradient(620px 360px at 4% -6%, rgba(255, 206, 148, 0.09), transparent 70%),
+    radial-gradient(620px 380px at 98% -4%, rgba(255, 190, 130, 0.06), transparent 72%),
+    radial-gradient(700px 420px at 50% 108%, rgba(255, 214, 160, 0.05), transparent 70%);
+}
+
 /* ---- The only background art: two organic meshes, 4% opacity ---------- */
 .apple-lab__mesh {
   position: fixed;
@@ -772,6 +820,73 @@ html[data-motion="reduced"] .apple-lab-drop {
   }
 }
 
+
+/* ============================================================
+   Eye comfort inside the lab
+
+   Eye comfort works by warming the tokens and laying an amber multiply
+   veil over the viewport. Multiply keeps black black, and the room's
+   canvas is #050505 — so the veil had nothing to warm and the lab looked
+   exactly the same with the preference on. The room therefore carries its
+   own low-glare values here: a warm charcoal plate instead of a cold black
+   one, warm ink instead of pure white, and warmer meshes. The light bench
+   gets the matching paper values.
+   ============================================================ */
+
+html[data-comfort="on"] .apple-lab {
+  --lab-canvas: #0d0b09;
+  --lab-ink: rgba(250, 240, 226, 0.92);
+  --lab-ink-dim: rgba(250, 240, 226, 0.7);
+  --lab-ink-micro: rgba(250, 240, 226, 0.6);
+  --lab-line: rgba(255, 240, 220, 0.1);
+  --lab-line-soft: rgba(255, 240, 220, 0.06);
+  --lab-fill: rgba(255, 240, 220, 0.032);
+  --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9);
+  --lab-violet: #f4ead8;
+  --lab-cyan: #a9d7e8;
+  --lab-diagram-ink: 250, 240, 226;
+  --lab-diagram-plate: 13, 11, 9;
+  --lab-diagram-violet: #f4ead8;
+  --lab-diagram-lilac: #d8cfc0;
+}
+
+html[data-comfort="on"] .apple-lab .apple-lab__mesh {
+  opacity: 0.05;
+  background: radial-gradient(circle at 40% 40%, #ffd7a1, transparent 68%);
+}
+
+html[data-comfort="on"] .apple-lab-glass {
+  background: linear-gradient(
+    160deg,
+    rgba(255, 238, 214, 0.06),
+    rgba(255, 238, 214, 0.02) 55%,
+    rgba(255, 238, 214, 0.04)
+  );
+}
+
+html[data-comfort="on"] .apple-lab-card {
+  background: rgba(255, 238, 214, 0.026);
+}
+
+html[data-comfort="on"] .apple-lab [data-lab-theme="light"] {
+  --lab-canvas: #f6f1e6;
+  --lab-ink: rgba(50, 46, 39, 0.94);
+  --lab-ink-dim: rgba(70, 62, 50, 0.72);
+  --lab-ink-micro: rgba(80, 70, 56, 0.6);
+  --lab-line: rgba(72, 58, 30, 0.14);
+  --lab-line-soft: rgba(72, 58, 30, 0.08);
+  --lab-diagram-ink: 50, 46, 39;
+  --lab-diagram-plate: 246, 241, 230;
+}
+
+html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
+  background: linear-gradient(
+    160deg,
+    rgba(255, 251, 242, 0.9),
+    rgba(251, 245, 233, 0.68) 55%,
+    rgba(255, 249, 238, 0.84)
+  );
+}
 
 /* ============================================================
    Bench light mode — the lab's own daylight values, per bench.

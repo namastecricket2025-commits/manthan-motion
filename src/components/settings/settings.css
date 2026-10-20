@@ -1172,6 +1172,17 @@ html:not(.dark) .set-root.set-root--bare {
   .set-lrow__ctl {
     justify-content: flex-end;
   }
+
+  /* A stacked row keeps the full width even at desktop: the text-comfort
+     slider needs the whole line for four labelled steps, and squeezing it
+     into the 300px control column is what clipped "Dyslexic-Friendly". */
+  .set-lrow.set-lrow--stack {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .set-lrow.set-lrow--stack .set-lrow__ctl {
+    justify-content: flex-start;
+  }
 }
 
 /* Inside a group the nested cards/lists lose their own frame so the group

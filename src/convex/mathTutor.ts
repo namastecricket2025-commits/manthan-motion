@@ -277,6 +277,7 @@ const PRACTICE_SYSTEM = [
   "problem is the question as plain text with only the mathematics inside dollars — 'Evaluate 23 × 4 using the distributive property.' — never a LaTeX-only field.",
   "expression is LaTeX ONLY: numbers, symbols and commands, never an English word. Never write 'plus', 'times', 'divided by' or 'equals' inside an expression — the only word allowed is inside \\\\text{...} for a unit.",
   "explanation is plain English, one or two short sentences, with any maths wrapped in dollars.",
+  "finalAnswer is LaTeX ONLY — the value or expression the student must write, with no sentence around it. Write x = 40 or 616\\text{ cm}^2, never 'The area is 616 cm²'.",
   "rule is the two-to-four word rule name a teacher writes in the margin. title is a two-to-five word label for the move.",
   "Every expression must be exactly equivalent to the line above it, and verification must genuinely substitute the answer back into the original relation and say whether both sides match.",
   "Keep the numbers exact. Never round a fraction into a decimal.",
@@ -330,12 +331,174 @@ export const practiceProblem = action({
 
     const candidates = await resolveCandidates();
     const reply = await callModel(candidates, PRACTICE_SYSTEM, prompt, undefined, 0.4);
-    const parsed = practiceReplySchema.parse(parseJsonLoose(reply.text));
+    let parsed: z.infer<typeof practiceReplySchema>;
+    try {
+      parsed = practiceReplySchema.parse(parseJsonLoose(reply.text));
+    } catch {
+      const retry = await callModel(
+        candidates,
+        PRACTICE_SYSTEM,
+        [prompt, "CORRECTION: the last reply was not a valid JSON object. Reply with the JSON object only — no prose, no Markdown fence."].join("\n\n"),
+        undefined,
+        0.2,
+      );
+      parsed = practiceReplySchema.parse(parseJsonLoose(retry.text));
+    }
 
     // The practice problem is checked by the same independent engine as a real
     // solve, so the answer behind the check field is one the app can defend.
     const check = verifyAnswer(parsed.problem.problem, parsed.problem.finalAnswer);
     return { problem: finalizeProblem(parsed.problem, check), model: reply.model };
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* A set of practice questions                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The four rungs a student can ask for.
+ *
+ * `board` is not just "harder": it asks for the shape of a CBSE board paper —
+ * a multi-part question, a stated mark value and a real previous-year tag when
+ * the model can reproduce one honestly.
+ */
+const PRACTICE_LEVELS = {
+  easy: [
+    "FOUNDATION level: one concept, one or two moves, friendly numbers.",
+    "A student who has just met the idea should be able to finish it.",
+  ].join(" "),
+  medium: [
+    "STANDARD level: two or three linked moves, the kind of question set in a class test.",
+    "Numbers should need a little care but no trick.",
+  ].join(" "),
+  hard: [
+    "CHALLENGING level: a HOTS question that combines two ideas from the chapter, with a non-obvious first move.",
+    "The numbers should be awkward enough that a student has to plan before calculating. Still solvable exactly.",
+  ].join(" "),
+  board: [
+    "BOARD-PAPER level: write it the way CBSE sets it — a complete question stem, any sub-parts, and a mark value.",
+    "Use the language of an Indian board paper (prove that, find, construct, case-study based) and keep the working to what earns full marks.",
+    "If this is a question you can reproduce faithfully from a CBSE previous-year paper, set source to the exact paper and year (for example \"CBSE 2024 · 3 marks\").",
+    "If you cannot reproduce a real one verbatim, write an original question in that pattern and set source to the year plus the word pattern, for example \"CBSE 2025 pattern · 3 marks\". Never invent a citation you are not sure of.",
+  ].join(" "),
+} as const;
+
+const practiceLevelValidator = v.union(
+  v.literal("easy"),
+  v.literal("medium"),
+  v.literal("hard"),
+  v.literal("board"),
+);
+
+/** A whole practice set: several questions from one topic, one level. */
+export const practiceSet = action({
+  args: {
+    problem: v.string(),
+    steps: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          expression: v.string(),
+          rule: v.string(),
+        }),
+      ),
+    ),
+    finalAnswer: v.optional(v.string()),
+    track: v.optional(v.string()),
+    chapterName: v.optional(v.string()),
+    chapterFormulas: v.optional(v.array(v.string())),
+    /** 1 to 6 questions; the UI caps it and so does this handler. */
+    count: v.number(),
+    level: practiceLevelValidator,
+    /** "CBSE 2024", "CBSE 2025" or empty for whichever fits. */
+    boardYear: v.optional(v.string()),
+    /** Put the question in a real situation the student recognises. */
+    realWorld: v.optional(v.boolean()),
+  },
+  handler: async (
+    ctx,
+    { problem, steps, finalAnswer, track, chapterName, chapterFormulas, count, level, boardYear, realWorld },
+  ): Promise<{ problems: SolvedProblem[]; model: string }> => {
+    const total = Math.max(1, Math.min(6, Math.round(count)));
+    const language = detectLanguage([problem]);
+    const method = (steps ?? [])
+      .map((step, index) => `${index + 1}. ${step.rule ? `[${step.rule}] ` : ""}${step.expression || step.title}`)
+      .join("\n");
+    const requestedBoard = (boardYear ?? "CBSE").trim() || "CBSE";
+    // "CBSE (mixed)" is the student asking for either year, not a paper name.
+    const board = /mixed/i.test(requestedBoard) ? "CBSE" : requestedBoard;
+    const boardBrief = /mixed/i.test(requestedBoard)
+      ? "CBSE — pick EITHER the 2024 or the 2025 paper and put that year in the source tag (for example \"CBSE 2024 pattern · 3 marks\")"
+      : requestedBoard;
+
+    const problems: SolvedProblem[] = [];
+    let lastModel = "";
+
+    for (let index = 0; index < total; index += 1) {
+      const already = problems.map((entry) => `- ${entry.problem}`).join("\n");
+      const prompt = [
+        `THE PROBLEM THE STUDENT JUST STUDIED: ${problem}`,
+        method ? `THE METHOD THEY WERE SHOWN:\n${method}` : "",
+        finalAnswer ? `ITS ANSWER (do not reuse this value): ${finalAnswer}` : "",
+        track ? `Syllabus context: ${track}${chapterName ? `, chapter ${chapterName}` : ""}.` : "",
+        chapterFormulas && chapterFormulas.length
+          ? `Formulas this chapter is examined on:\n- ${chapterFormulas.join("\n- ")}`
+          : "",
+        `This is question ${index + 1} of ${total} in one set.`,
+        already ? `Do NOT repeat or lightly reword any of these already-written questions:\n${already}` : "",
+        PRACTICE_LEVELS[level],
+        level === "board" ? `Board paper to aim at: ${boardBrief}.` : "",
+        realWorld
+          ? "Real-world framing is ON: build the question around a situation a student has actually met — a market bill, a water tank, a cricket score, a mobile plan, a school trip — and keep the mathematics exactly the same skill. Do not name a real person or company."
+          : "",
+        "Write the new problem and solve it in full, in the same structured form.",
+        "Set `source` to a short tag for the question card: the board/year tag for a board question, or the level and topic otherwise. Leave it empty only when there is nothing honest to say.",
+        ...languageDirective(language),
+        "Reply with the JSON object only.",
+        languageLock(language),
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const candidates = await resolveCandidates();
+      const first = await callModel(candidates, PRACTICE_SYSTEM, prompt, undefined, level === "hard" || level === "board" ? 0.55 : 0.35);
+      let parsed: z.infer<typeof practiceReplySchema>;
+      let model = first.model;
+      try {
+        parsed = practiceReplySchema.parse(parseJsonLoose(first.text));
+      } catch {
+        // One stricter pass. The error message a student sees must never be
+        // "the model wrote prose" — a retry usually lands a clean object.
+        const retry = await callModel(
+          candidates,
+          PRACTICE_SYSTEM,
+          [prompt, "CORRECTION: the last reply was not a valid JSON object. Reply with the JSON object only — no prose before or after it, no Markdown fence."].join("\n\n"),
+          undefined,
+          0.2,
+        );
+        parsed = practiceReplySchema.parse(parseJsonLoose(retry.text));
+        model = retry.model;
+      }
+      const check = verifyAnswer(parsed.problem.problem, parsed.problem.finalAnswer);
+      const finalized = finalizeProblem(parsed.problem, check);
+
+      // A board question always carries its paper tag, even if the model left
+      // `source` blank. `pattern` is the honest default: it says the question
+      // follows that paper without claiming it appeared in it.
+      if (level === "board" && !finalized.source) {
+        finalized.source = /mixed/i.test(requestedBoard)
+          ? "CBSE 2024/2025 pattern · 3 marks"
+          : `${board} pattern · 3 marks`;
+      } else if (!finalized.source) {
+        finalized.source = `${level === "easy" ? "Foundation" : level === "medium" ? "Standard" : "Challenge"} · ${chapterName ?? "practice"}`;
+      }
+
+      problems.push(finalized);
+      lastModel = model;
+    }
+
+    return { problems, model: lastModel };
   },
 });
 

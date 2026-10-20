@@ -17,9 +17,9 @@ import {
   readUpload,
   tidy,
 } from "./ai";
-import {
-  DETAIL_STYLES,
-  MAX_MATH_IMAGE,
+import {    DETAIL_STYLES,
+    MAX_MATH_IMAGE,
+    PHOTO_READING_RULES,
   SOLVE_METHODS,
   cleanLatex,
   cleanProse,
@@ -106,17 +106,27 @@ export function finalizeProblem(
       };
     }),
     // When the checker disagreed, its value is the one the student sees. If the
-    // answer is not typeset-able it is shown as plain text instead of italics.
+    // answer is not typeset-able, the value is recovered from inside the prose:
+    // a model that writes "The area of the window is $616\\text{ cm}^2$" has
+    // still told us the answer, and that span is what belongs in the card.
     finalAnswer: (() => {
       const answer = cleanLatex(
         corrected ? (verdict.verifiedLatex ?? "") : entry.finalAnswer,
       );
-      return mathFieldError(answer) ? cleanProse(entry.finalAnswer) : answer;
+      if (!mathFieldError(answer)) return answer;
+
+      const spans = [...entry.finalAnswer.matchAll(/\$([^$]+)\$/g)]
+        .map((match) => cleanLatex(match[1]))
+        .filter((piece) => piece.length > 0 && !mathFieldError(piece));
+      if (spans.length) return spans[spans.length - 1];
+
+      return cleanProse(entry.finalAnswer);
     })(),
     verification:
       verdict.status === "unverifiable"
         ? cleanProse(entry.verification) || checkNote
         : checkNote,
+    source: cleanProse(entry.source ?? ""),
     verified: verdict.status === "match" || corrected,
     corrected,
     checkNote,
@@ -271,6 +281,7 @@ export const mathSolve = action({
       imageBase64
         ? "Solve the mathematics problem shown in the attached photograph."
         : "Solve the mathematics problem below.",
+      imageBase64 ? PHOTO_READING_RULES : "",
       fileText
         ? `ATTACHED EXTRACT${fileName ? ` (${fileName})` : ""}:\n${fileText}`
         : "",
