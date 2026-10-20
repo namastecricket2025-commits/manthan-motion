@@ -4,7 +4,6 @@ import { api } from "@/convex/_generated/api";
 import {
   AlertCircle,
   ArrowUpRight,
-  ExternalLink,
   Loader2,
   Search,
   Sparkles,
@@ -77,8 +76,6 @@ export function SearchWithGoogle({
 
   const sent = (query.trim() || topic.trim()).slice(0, 240);
   const googleUrl = googleUrlFor(sent);
-  const aiUrl = `${googleUrl}&udm=50`;
-
   const run = async (text: string) => {
     const value = text.trim().replace(/\s+/g, " ").slice(0, 240);
     if (!value || busy) return;
@@ -132,14 +129,13 @@ export function SearchWithGoogle({
           }
           aria-label={`${label} — ${topic}`}
         >
-          <Search className="h-3.5 w-3.5" aria-hidden />
-          <span className="gs-trigger__text">Search on</span>
+          <span className="gs-trigger__text">Search</span>
           <img
             className="gs-trigger__logo"
             src="/google-g.png"
             alt="Google"
-            width={17}
-            height={17}
+            width={18}
+            height={18}
             draggable={false}
           />
         </button>
@@ -153,8 +149,8 @@ export function SearchWithGoogle({
               src="/google-g.png"
               alt=""
               aria-hidden
-              width={13}
-              height={13}
+              width={15}
+              height={15}
               draggable={false}
             />
             Search the web
@@ -182,12 +178,19 @@ export function SearchWithGoogle({
             placeholder="What do you want to look up?"
             aria-label="Search query"
             autoFocus
-          />
-          <button type="submit" className="gs-submit" disabled={busy || !query.trim()}>
+          />            <button type="submit" className="gs-submit" disabled={busy || !query.trim()}>
             {busy ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
             ) : (
-              <Search className="h-3.5 w-3.5" aria-hidden />
+              <img
+                className="gs-submit__mark"
+                src="/google-g.png"
+                alt=""
+                aria-hidden
+                width={15}
+                height={15}
+                draggable={false}
+              />
             )}
             Search
           </button>
@@ -243,26 +246,28 @@ export function SearchWithGoogle({
           </p>
         ) : null}
 
-        <div className="gs-foot">
-          <a
-            className="gs-open"
-            href={googleUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            Open full results on Google
-            <ArrowUpRight className="h-3 w-3" aria-hidden />
-          </a>
-          <a className="gs-ai" href={aiUrl} target="_blank" rel="noreferrer">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Ask Google AI
-          </a>
-        </div>
+        <div className="gs-foot">            <a
+              className="gs-open"
+              href={googleUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                className="gs-open__mark"
+                src="/google-g.png"
+                alt="Google"
+                width={14}
+                height={14}
+                draggable={false}
+              />
+              Open full results on Google
+              <ArrowUpRight className="h-3 w-3" aria-hidden />
+            </a>
+          </div>
 
-        <p className="gs-note">
-          Nothing on this page changes. Results stay in this panel.
-        </p>
+          <p className="gs-note">
+            Results stay in this panel.
+          </p>
       </DialogContent>
     </Dialog>
   );

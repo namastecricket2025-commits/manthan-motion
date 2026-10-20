@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { Expression, Explanation, ProblemStatement } from "@/components/mathlab/parts";
 import { MathTex } from "@/components/mathlab/latex";
-import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import type { EngineProblem, EngineStep } from "@/components/mathlab/solution";
 
 /**
@@ -326,11 +325,7 @@ export function PracticePanel({
                       <Eye className="h-3.5 w-3.5" />
                       {openWorking[index] ? "Hide solution" : "Solution"}
                     </button>
-                    <SearchWithGoogle
-                      compact
-                      label="Google"
-                      topic={`${question.problem} ${track} ${chapterName}`}
-                    />
+
                   </div>
 
                   {verdict ? (

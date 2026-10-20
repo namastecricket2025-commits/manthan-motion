@@ -1,6 +1,5 @@
 import { GRADES, type GradeSpec } from "@/components/mathlab/mathlab";
 import { PracticePanel } from "@/components/mathlab/PracticePanel";
-import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import type { EngineProblem } from "@/components/mathlab/solution";
 import {
   Select,
@@ -59,11 +58,7 @@ export function PracticeTab({
             the year they follow.
           </p>
         </div>
-        <SearchWithGoogle
-          compact
-          label="Search this chapter"
-          topic={`${track} ${grade.id} ${chapter.name} ${chapter.focus} explained`}
-        />
+
       </header>
 
       <div className="mathlab-practice-tab__selectors">

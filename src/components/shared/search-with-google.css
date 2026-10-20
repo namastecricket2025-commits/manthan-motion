@@ -2,22 +2,14 @@
    the marketing paper, the math notebook and the black lab.
 
    Two parts:
-     - .gs-trigger  the white button, carrying Google's own wordmark;
-     - .gs-panel    the soft-cornered page the results come back into.
+     - .gs-trigger   the white button carrying Google's own wordmark;
+     - .gs-panel     the soft-cornered page the results come back into.
 
    The trigger deliberately wins over whatever chrome class it is paired with
    (`.apple-lab-btn` in the lab, `.mathlab-tab-action` in a toolbar): a white
    button has to stay white on both, and those two stylesheets load in an order
-   the component cannot predict, so the four values that make it white are
+   the component cannot predict, so the few values that make it white are
    pinned. Everything else — size, radius behaviour, hover — follows the host. */
-
-.gs-trigger {
-  white-space: nowrap;
-  transition:
-    transform 160ms var(--ease-momentum, ease),
-    box-shadow 160ms var(--ease-momentum, ease),
-    filter 160ms var(--ease-momentum, ease);
-}
 
 .gs-trigger,
 .gs-trigger:hover,
@@ -27,18 +19,19 @@
   border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
-/* Soft corners, and the same pill shape on both host toolbars. */
 .gs-trigger {
-  border-radius: 999px !important;
-  padding: 8px 15px !important;
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  border-radius: 999px !important;
+  padding: 8px 15px !important;
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .gs-trigger:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
-  filter: none;
 }
 
 .gs-trigger:active {
@@ -48,13 +41,12 @@
 
 .gs-trigger__text {
   font-weight: 600;
-  letter-spacing: -0.005em;
 }
 
 .gs-trigger__logo {
   display: block;
   width: auto;
-  height: 17px;
+  height: 18px;
   user-select: none;
 }
 
@@ -65,10 +57,10 @@
      reads as a page, not as a card. Unlayered, so it wins over the utility
      classes the dialog carries. */
   border-radius: 22px;
-  max-width: min(560px, calc(100vw - 32px));
-  gap: 14px;
+  max-width: min(540px, calc(100vw - 28px));
+  gap: 13px;
   border-color: var(--card-border, rgba(127, 127, 127, 0.2));
-  box-shadow: 0 40px 90px -50px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 34px 84px -48px rgba(0, 0, 0, 0.82);
 }
 
 .gs-kicker {
@@ -85,7 +77,7 @@
 .gs-kicker__mark {
   display: block;
   width: auto;
-  height: 13px;
+  height: 15px;
   opacity: 0.92;
   user-select: none;
 }
@@ -112,7 +104,7 @@
   border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
   border-radius: 14px;
   background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
-  padding: 7px 7px 7px 12px;
+  padding: 7px 7px 7px 13px;
   color: var(--text-dim, #8b8b8b);
   transition: border-color 180ms var(--ease-momentum, ease);
 }
@@ -139,11 +131,11 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
-  border-radius: 10px;
+  gap: 7px;
+  border-radius: 999px;
   background: var(--signal-strong, #111);
   color: var(--primary-foreground, #fff);
-  padding: 8px 13px;
+  padding: 8px 15px;
   font-size: 12px;
   font-weight: 700;
   transition: opacity 160ms ease, transform 160ms ease;
@@ -155,6 +147,13 @@
 
 .gs-submit:not(:disabled):active {
   transform: scale(0.97);
+}
+
+.gs-submit__mark {
+  display: block;
+  width: auto;
+  height: 15px;
+  user-select: none;
 }
 
 .gs-status {
@@ -208,11 +207,11 @@
 .gs-results {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: min(46vh, 340px);
+  gap: 3px;
+  max-height: min(42vh, 300px);
   overflow-y: auto;
   margin: 0;
-  padding: 2px;
+  padding: 3px;
   list-style: none;
 }
 
@@ -221,28 +220,35 @@
   flex-direction: column;
   gap: 3px;
   border: 1px solid transparent;
-  border-radius: 13px;
-  padding: 9px 11px;
+  border-radius: 12px;
+  padding: 10px 12px;
   text-decoration: none;
-  transition: background 160ms ease, border-color 160ms ease;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .gs-hit:hover {
   border-color: var(--glass-line, rgba(127, 127, 127, 0.25));
-  background: color-mix(in srgb, var(--text-main, currentColor) 5%, transparent);
+  background: color-mix(in srgb, var(--text-main, currentColor) 6%, transparent);
+  color: var(--text-main, inherit);
 }
 
 .gs-hit__host {
-  font-size: 10px;
+  font-size: 10.5px;
   letter-spacing: 0.02em;
   color: var(--text-dim, #8b8b8b);
 }
 
 .gs-hit__title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
-  color: color-mix(in srgb, var(--signal, #1a73e8) 78%, var(--text-main));
+  color: var(--text-main, inherit);
+  transition: color 160ms ease;
+}
+
+.gs-hit:hover .gs-hit__title {
+  color: var(--text-main);
 }
 
 .gs-hit__snip {
@@ -254,22 +260,22 @@
 .gs-foot {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 9px;
 }
 
 .gs-open,
 .gs-ai {
   display: inline-flex;
-  flex: 1 1 190px;
+  flex: 1 1 200px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  border-radius: 11px;
-  padding: 9px 13px;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 9px 15px;
   font-size: 11.5px;
   font-weight: 700;
   text-decoration: none;
-  transition: background 180ms ease, border-color 180ms ease, transform 160ms ease;
+  transition: background 180ms ease, border-color 180ms ease, color 160ms ease;
 }
 
 .gs-open {
@@ -279,22 +285,35 @@
 }
 
 .gs-open:hover {
+  color: var(--text-main);
   border-color: color-mix(in srgb, var(--signal, #de9c0d) 40%, transparent);
-  background: color-mix(in srgb, var(--signal, #de9c0d) 8%, transparent);
+  background: color-mix(in srgb, var(--signal, #de9c0d) 9%, transparent);
+}
+
+.gs-open__mark {
+  display: block;
+  width: auto;
+  height: 14px;
+  user-select: none;
 }
 
 .gs-ai {
   border: 1px solid transparent;
-  color: var(--text-dim, #8b8b8b);
-  background: transparent;
+  background: var(--signal-strong, #111);
+  color: var(--primary-foreground, #fff);
 }
 
 .gs-ai:hover {
-  color: var(--text-main, inherit);
+  opacity: 0.85;
 }
 
 .gs-note {
   font-size: 10.5px;
   line-height: 1.5;
   color: var(--text-dim, #8b8b8b);
+  padding: 0 2px;
+}
+
+.gs-note:last-child {
+  margin-top: 2px;
 }
