@@ -93,11 +93,40 @@ export function SearchWithGoogle({
         setError(reply.error ?? "That search did not go through.");
       }
     } catch (err) {
-      setError(
+      const message =
         err instanceof Error && err.message
           ? err.message
-          : "That search did not go through. Use the Google link below instead.",
-      );
+          : "That search did not go through. Use the Google link below instead.";
+      // Never surface a rotating Gemini model id as the cause. On the deployed
+      // build the panel has been blaming a fresh model id on every render even
+      // when the real fault is the configured search key/scopes, because the
+      // server retries ids and the client shows whatever the last attempt said.
+      // That harms trust in this panel: students read the word after “gemini-…"
+      // as “the problem is that model”, when it is not.
+      //
+      // Strip any sentence of the form “<model-id> is not available on this
+      // key.” back to the stable real cause. If the backend did not give us a
+      // clearer upstream message after that, fall back to the usual generic
+      // line.
+      const blamedModelLine =
+        message.match(/^[\s\S]*?gemini-[\w.-]+ is not available on this key\.$/)?.[0];
+      if (blamedModelLine) {
+        if (
+          message === blamedModelLine ||
+          message.endsWith(blamedModelLine)
+        ) {
+          // The whole message is the rotating blame line itself — replace it.
+          setError(
+            "Google Search returned an error for this key. Open the full results on Google below, or try again in a moment.",
+          );
+        } else {
+          // There is a real upstream message around it — drop only the blame
+          // line so the useful part survives.
+          setError(message.replace(blamedModelLine, "").trim());
+        }
+      } else {
+        setError(message);
+      }
     } finally {
       setBusy(false);
     }
