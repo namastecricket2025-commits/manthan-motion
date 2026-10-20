@@ -14,13 +14,15 @@ import { MathTex } from "@/components/mathlab/latex";
  *
  * The track chips are not decoration. Each one lists the class levels it
  * covers, and the sheet only ever shows the chapters of those classes; Class 11
- * chapters appear under CBSE and NCERT, and not under the tracks whose Class 11
- * lies outside what this workspace holds.
+ * chapters appear under CBSE, and not under the tracks whose Class 11 lies
+ * outside what this workspace holds.
+ *
+ * NCERT is not a track: it publishes the textbooks CBSE prescribes, so listing
+ * both asked the student to choose between a board and its own book list.
  */
 
 const TRACKS: Array<{ id: string; label: string; covers: GradeId[]; note: string }> = [
-  { id: "CBSE", label: "CBSE", covers: ["8", "9", "10", "11"], note: "Classes 8 to 11, as examined in the board papers." },
-  { id: "NCERT", label: "NCERT", covers: ["8", "9", "10", "11"], note: "Classes 8 to 11, following the NCERT textbooks." },
+  { id: "CBSE", label: "CBSE", covers: ["8", "9", "10", "11"], note: "Classes 8 to 11, as examined in the board papers. NCERT books follow the same sequence." },
   { id: "IB", label: "IB", covers: ["8", "9", "10"], note: "MYP years through Class 10; the Class 11 chapters follow the CBSE sequence." },
   { id: "IGCSE", label: "IGCSE", covers: ["8", "9", "10"], note: "Lower Secondary through IGCSE across Classes 8 to 10." },
 ];

@@ -506,7 +506,10 @@
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  /* The rail scrolls sideways on narrow screens, which would otherwise clip
+     the focus ring and the 1px hover border on the top and bottom edge. */
+  padding: 3px 2px;
+  margin: -3px -2px;
   scrollbar-width: none;
 }
 
@@ -531,7 +534,7 @@
 
 .mathlab-view:hover {
   color: var(--text-main);
-  border-color: color-mix(in srgb, var(--signal) 36%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 18%, transparent);
 }
 
 .mathlab-view.is-active {
@@ -2290,29 +2293,6 @@
   }
 }
 
-/* The Solve button carries a soft sheen instead of a spinner-only loading
-   state — one light sweep on hover, nothing moving at rest. */
-.mathlab-solve {
-  position: relative;
-  overflow: hidden;
-}
-
-.mathlab-solve::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(105deg, transparent 32%, rgba(255, 255, 255, 0.3) 50%, transparent 68%);
-  transform: translateX(-130%);
-  transition: transform 720ms var(--ease-momentum);
-  pointer-events: none;
-}
-
-.mathlab-solve:not(:disabled):hover::after,
-.mathlab-solve:not(:disabled):focus-visible::after {
-  transform: translateX(130%);
-}
-
 /* Each step of the working arrives with a flash along its own edge, staggered
    top to bottom: the rail fills in the order the method has to be read. */
 .mathlab-walk__step {
@@ -2449,25 +2429,9 @@ html[data-motion="reduced"] .mathlab-walk__index {
   gap: 18px;
 }
 
-/* The one pill that travels between view tabs. The button keeps its own ink
-   and the pill draws the active surface, so the tint never doubles up. */
+/* View tabs keep a fixed size on hover; only the ink and the border shift. */
 .mathlab-view {
   position: relative;
-  isolation: isolate;
-}
-
-.mathlab-view.is-active {
-  border-color: transparent;
-  background: transparent;
-}
-
-.mathlab-view__pill {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border: 1px solid color-mix(in srgb, var(--signal) 44%, transparent);
-  border-radius: inherit;
-  background: color-mix(in srgb, var(--signal) 12%, transparent);
 }
 
 .mathlab-view__icon {
@@ -2754,6 +2718,45 @@ html[data-motion="reduced"] .mathlab-walk__index {
 .mathlab-picker .mathlab-select-wrap,
 .mathlab-picker .mathlab-select-wrap select {
   width: 100%;
+}
+
+/* The pickers are the app's own listbox, not a native select: the OS draws a
+   native menu with its own blue highlight, which is the one surface a theme
+   cannot reach. */
+.mathlab-picker__trigger {
+  height: auto;
+  width: 100%;
+  border-radius: 11px;
+  border: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  box-shadow: none;
+  transition: border-color 180ms var(--ease-momentum), background 180ms var(--ease-momentum);
+}
+.mathlab-picker__trigger:hover,
+.mathlab-picker__trigger[data-state="open"] {
+  border-color: color-mix(in srgb, var(--text-main) 22%, transparent);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+}
+.mathlab-picker__trigger:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
+}
+.mathlab-picker__trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mathlab-picker__menu {
+  border-radius: 12px;
+  border: 1px solid var(--glass-line);
+  background: var(--menu-bg);
+  color: var(--menu-ink);
+  padding: 4px;
 }
 
 .mathlab-picker .mathlab-select-wrap select {

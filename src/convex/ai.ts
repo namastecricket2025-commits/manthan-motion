@@ -1035,8 +1035,8 @@ export const generate = action({
  * student can see the gaps instead of trusting a confidence score.
  */
 const CRAM_SYSTEM = [
-  "You are Cram Mode inside Manthan, a study app for Indian school students in Classes 8 to 12 (CBSE and ICSE).",
-  "You are given the text of a textbook chapter, a school PDF or a student's notes. Compress it into exam-ready revision notes, and rank how far it covers the syllabus benchmarks of its subject.",
+  "You are Cram Mode inside Manthan, a study app for Indian school students in Classes 8 to 12 (CBSE and ICSE).",      "You are given the text of a textbook chapter, a school PDF or a student's notes. Compress it into exam-ready revision notes, and rank how far it covers the syllabus benchmarks of its subject.",
+      "The benchmarks are the board syllabus for the subject the text is about — not whatever the document happens to discuss. A chapter about cell division is benchmarked against Biology topics (cell cycle, mitosis, meiosis, tissues), never against file formats, software, printing or document layout. Only if the text genuinely is a chapter on that subject may those be its topics.",
   "Work ONLY from the supplied text. Never add facts, formulas, dates, examples or citations that are not in it, and keep the student's own terminology.",
   "The user message carries a LANGUAGE directive — always follow it: every student-facing string is written in that language only, with no mixing.",
   "No emoji, no markdown, no asterisks, no bullet symbols. Plain sentences in every string.",
@@ -1124,6 +1124,16 @@ export const cramAnalyze = action({
     if (corpus.length < 40) {
       throw new Error(
         "No readable text was found in that file — if it is a scan or images, paste the text instead.",
+      );
+    }
+    // A large PDF that yields a few hundred characters is almost always a
+    // scan: the pages are pictures of text, not text. Compressing the stray
+    // caption that did extract would produce notes about the captions, so say
+    // so plainly and point at the path that works (photos, which are read by
+    // the image reader).
+    if (corpus.length < 600 && buffer.length > 120_000) {
+      throw new Error(
+        "This file is mostly pictures, so almost no text could be read. Photograph the pages and add those instead, or paste the chapter text.",
       );
     }
 
@@ -1289,7 +1299,7 @@ export const aviaReply = action({
  */
 export const MATH_SYSTEM = [
   "You are the equation engine inside Manthan's Math Lab, a connected school mathematics workspace.",
-  "Solve the mathematics problem you are given the way a careful teacher would: state the question, name the rule that carries each move, then work the solution step by step. Adapt the notation to the selected curriculum track (CBSE, NCERT, IB or IGCSE).",
+  "Solve the mathematics problem you are given the way a careful teacher would: state the question, name the rule that carries each move, then work the solution step by step. Adapt the notation to the selected curriculum track (CBSE, ICSE, IB or IGCSE).",
   "If the input holds more than one question — '2/3 + 1/6, and 3/4 ÷ 9/10' is TWO — return one entry in problems for EACH question, in the order asked. Never merge two questions into one entry, and never interleave their steps.",
   "Each step is ONE move and carries four fields.",
   "expression is LaTeX ONLY: numbers, symbols and commands, never an English word. Write 2 + 3 = 5, \\frac{2}{3}, \\sqrt{5}, x^{2}, \\times, \\div, \\pm, \\le. Never write 'plus', 'times', 'divided by', 'equals', 'therefore' or 'the answer is' inside an expression. The only way a word may appear in an expression is inside \\text{...}, and only for a unit.",

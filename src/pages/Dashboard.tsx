@@ -306,15 +306,21 @@ export default function Dashboard() {
                   {openNotebook ? openNotebook.name : (user?.name ?? "Welcome")}
                   <span className="text-[var(--signal)]">.</span>
                 </motion.h1>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
-                  {openNotebook
-                    ? "Add your sources, then churn them into study material."
-                    : view === "notebooks"
-                      ? "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."
-                      : hasNotebooks
-                        ? "Your study dashboard."
-                        : "Create your first notebook to get started."}
-                </p>
+                {/* The dashboard face already says whose it is; a line explaining
+                    that it is a study dashboard underneath the greeting was
+                    filler. The other faces keep their one useful sentence. */}
+                {!openNotebook && view !== "notebooks" && !hasNotebooks ? (
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
+                    Create your first notebook to get started.
+                  </p>
+                ) : null}
+                {openNotebook || view === "notebooks" ? (
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
+                    {openNotebook
+                      ? "Add your sources, then churn them into study material."
+                      : "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."}
+                  </p>
+                ) : null}
               </div>
               {openNotebook && (
                 <MovingBorderButton

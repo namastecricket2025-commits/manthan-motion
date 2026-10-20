@@ -412,9 +412,6 @@ function ActionButton({
           transition={transition}
         />
       ) : null}
-      <span aria-hidden className="dash-action__shine">
-        <span className="dash-action__shine-bar" />
-      </span>
       <span className="relative z-10 inline-flex items-center gap-2">
         {icon}
         {children}
@@ -1038,7 +1035,7 @@ function ActivityBars({ data }: { data: ActivityPoint[] }) {
           room the bars have, so a chart that fits never shows a scrollbar and
           a narrow one scrolls instead of crushing the columns. */}
       <div className="dashboard-chart-panel dashboard-chart mt-5 p-3 sm:p-4">
-        <div ref={wrapRef} className="overflow-x-auto">
+        <div ref={wrapRef} className="dashboard-chart-scroll">
         <div className="relative" style={{ width: chartWidth }}>
           <svg
             width={chartWidth}
@@ -1240,7 +1237,7 @@ function ActivityBars({ data }: { data: ActivityPoint[] }) {
                 transition={still ? STILL : TIP}
                 className="pointer-events-none absolute z-10"
                 style={{
-                  left: Math.max(76, Math.min(chartWidth - 76, activeCenter)),
+                  left: Math.max(84, Math.min(chartWidth - 84, activeCenter)),
                   top: 0,
                 }}
               >

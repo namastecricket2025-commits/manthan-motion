@@ -370,6 +370,428 @@ export function modelById(id: string, fallback: PlotModel): PlotModel {
 /* Grade tracks                                                        */
 /* ------------------------------------------------------------------ */
 
+/**
+ * A chapter written from the board's own formula list.
+ *
+ * The CBSE list is long, and every entry needs the same seven fields. Writing
+ * them out by hand invites the sheet and the chapter drifting apart, so the
+ * cheat sheet is built from the same LaTeX the formulas come from: one source,
+ * two renderings.
+ */
+function boardChapter(spec: {
+  name: string;
+  focus: string;
+  formulas: string[];
+  latex: [string, string][];
+  method: [string, string];
+  example: string;
+  plot: string;
+  rule: string;
+}): Chapter {
+  return {
+    name: spec.name,
+    focus: spec.focus,
+    formulas: spec.formulas,
+    method: [...spec.method],
+    example: spec.example,
+    plot: spec.plot,
+    rule: spec.rule,
+    cheat: [
+      ...spec.latex.map(([title, latex]) => ({ kind: "formula" as const, title, latex })),
+      { kind: "definition", title: "What this chapter is really asking", latex: spec.latex[0][1], note: spec.focus },
+    ],
+  };
+}
+
+/** The rest of the CBSE Class 9 syllabus, in the board's order. */
+const CBSE_9: Chapter[] = [
+  boardChapter({
+    name: "Introduction to Euclid's Geometry",
+    focus: "Axioms, postulates and what counts as a proof.",
+    formulas: [
+      "Things equal to the same thing are equal to one another",
+      "The whole is greater than the part",
+      "Through two distinct points there is exactly one line",
+    ],
+    latex: [
+      ["Axiom 1", String.raw`a = c,\ b = c \;\Rightarrow\; a = b`],
+      ["Axiom 5", String.raw`\text{whole} > \text{part}`],
+      ["Unique line", String.raw`A \neq B \;\Rightarrow\; \overleftrightarrow{AB}\ \text{is unique}`],
+    ],
+    method: [
+      "Name the axiom or postulate you are using before you use it.",
+      "Keep every statement in the two-column form: claim, then reason.",
+    ],
+    example: "Show that two distinct lines cannot have more than one point in common",
+    plot: "linear",
+    rule: "Euclid's Axioms",
+  }),
+  boardChapter({
+    name: "Lines and Angles",
+    focus: "Angle pairs on a transversal and the angle sum of a triangle.",
+    formulas: [
+      "Linear pair: a + b = 180°",
+      "Vertically opposite angles are equal",
+      "Angle sum of a triangle = 180°",
+    ],
+    latex: [
+      ["Linear pair", String.raw`\angle a + \angle b = 180^\circ`],
+      ["Vertically opposite", String.raw`\angle 1 = \angle 3`],
+      ["Angle sum", String.raw`\angle A + \angle B + \angle C = 180^\circ`],
+      ["Exterior angle", String.raw`\angle ACD = \angle A + \angle B`],
+    ],
+    method: [
+      "Mark the parallel pair and the transversal first; every relation follows from those two.",
+      "State which pair you used — alternate, corresponding or co-interior — so the reason is visible.",
+    ],
+    example: "Two parallel lines cut by a transversal: one angle is 65°, find the rest",
+    plot: "linear",
+    rule: "Parallel Line Theorems",
+  }),
+  boardChapter({
+    name: "Triangles",
+    focus: "Congruence rules and the inequalities a triangle must obey.",
+    formulas: [
+      "SAS, ASA, SSS and RHS congruence",
+      "Angles opposite equal sides are equal",
+      "Sum of any two sides > the third side",
+    ],
+    latex: [
+      ["Congruence", String.raw`\triangle ABC \cong \triangle PQR`],
+      ["Isosceles base angles", String.raw`AB = AC \;\Rightarrow\; \angle B = \angle C`],
+      ["Triangle inequality", String.raw`AB + BC > AC`],
+    ],
+    method: [
+      "Write the correspondence in the right order — the letters carry the proof.",
+      "Quote the rule (SAS, ASA, SSS, RHS) after the three facts, never before.",
+    ],
+    example: "In triangles ABC and PQR, AB = PQ, BC = QR and ∠B = ∠Q — prove congruence",
+    plot: "linear",
+    rule: "Congruence Criteria",
+  }),
+  boardChapter({
+    name: "Quadrilaterals",
+    focus: "Parallelogram properties and the midpoint theorem.",
+    formulas: [
+      "Sum of interior angles of a quadrilateral = 360°",
+      "Diagonals of a parallelogram bisect each other",
+      "Midpoint theorem: the segment joining midpoints is parallel to the third side and half of it",
+    ],
+    latex: [
+      ["Angle sum", String.raw`\angle A + \angle B + \angle C + \angle D = 360^\circ`],
+      ["Parallelogram", String.raw`\text{diagonals bisect each other}`],
+      ["Midpoint theorem", String.raw`DE \parallel BC,\quad DE = \tfrac{1}{2}BC`],
+    ],
+    method: [
+      "Draw the diagonal: it turns every quadrilateral problem into two triangles.",
+      "Mark the given equal sides first, then chase the angles they force.",
+    ],
+    example: "Prove that the diagonals of a rectangle are equal",
+    plot: "linear",
+    rule: "Parallelogram Properties",
+  }),
+  boardChapter({
+    name: "Circles",
+    focus: "Chords, arcs, cyclic quadrilaterals and the angle in a semicircle.",
+    formulas: [
+      "Angle at the centre = 2 × angle at the circumference",
+      "Angle in a semicircle = 90°",
+      "Opposite angles of a cyclic quadrilateral add to 180°",
+    ],
+    latex: [
+      ["Angle at the centre", String.raw`\angle AOB = 2\angle ACB`],
+      ["Semicircle", String.raw`\angle APB = 90^\circ`],
+      ["Cyclic quadrilateral", String.raw`\angle A + \angle C = 180^\circ`],
+      ["Perpendicular from centre", String.raw`OM \perp AB \;\Rightarrow\; AM = MB`],
+    ],
+    method: [
+      "Join the centre to the points you were given — the radius is the only free construction.",
+      "Look for a diameter before anything else; it hands you a right angle.",
+    ],
+    example: "A chord of length 16 cm is 6 cm from the centre — find the radius",
+    plot: "circle",
+    rule: "Circle Theorems",
+  }),
+  boardChapter({
+    name: "Heron's Formula",
+    focus: "Area of any triangle from its three sides, and the quadrilateral split.",
+    formulas: [
+      "s = (a + b + c) / 2",
+      "Area = √(s(s − a)(s − b)(s − c))",
+      "Quadrilateral area = sum of the two triangles on its diagonal",
+    ],
+    latex: [
+      ["Semi-perimeter", String.raw`s = \frac{a + b + c}{2}`],
+      ["Heron's formula", String.raw`A = \sqrt{s(s-a)(s-b)(s-c)}`],
+      ["Equilateral triangle", String.raw`A = \frac{\sqrt{3}}{4}a^2`],
+    ],
+    method: [
+      "Compute the semi-perimeter first and keep it exact — rounding early changes the area.",
+      "For a quadrilateral, draw a diagonal and add the two triangle areas.",
+    ],
+    example: "Find the area of a triangle with sides 13 cm, 14 cm and 15 cm",
+    plot: "sqrt",
+    rule: "Heron's Formula",
+  }),
+  boardChapter({
+    name: "Surface Areas and Volumes",
+    focus: "Right circular cones, spheres and cylinders, and combinations of them.",
+    formulas: [
+      "CSA of a cone = π r l, where l = √(r² + h²)",
+      "Volume of a sphere = (4/3) π r³",
+      "Volume of a cylinder = π r² h",
+    ],
+    latex: [
+      ["Cone slant height", String.raw`l = \sqrt{r^2 + h^2}`],
+      ["Cone CSA", String.raw`\text{CSA} = \pi r l`],
+      ["Sphere volume", String.raw`V = \frac{4}{3}\pi r^3`],
+      ["Hemisphere TSA", String.raw`\text{TSA} = 3\pi r^2`],
+    ],
+    method: [
+      "Decide which surfaces are actually exposed before adding any area.",
+      "Keep π symbolic until the last line, then substitute 22/7 or 3.14 as the question says.",
+    ],
+    example: "A cone has radius 7 cm and height 24 cm — find its slant height and CSA",
+    plot: "circle",
+    rule: "Mensuration Formulas",
+  }),
+  boardChapter({
+    name: "Statistics",
+    focus: "Reading data, and the mean, median and mode of grouped data.",
+    formulas: [
+      "Mean = Σ fᵢxᵢ / Σ fᵢ",
+      "Median class = the class where the cumulative frequency passes n/2",
+      "Mode = the value with the highest frequency",
+    ],
+    latex: [
+      ["Mean", String.raw`\bar{x} = \frac{\sum f_i x_i}{\sum f_i}`],
+      ["Median", String.raw`M = l + \frac{\frac{n}{2} - cf}{f} \times h`],
+      ["Mode", String.raw`Z = l + \frac{f_1 - f_0}{2f_1 - f_0 - f_2} \times h`],
+    ],
+    method: [
+      "Build the frequency table with class marks and cumulative frequency before any formula.",
+      "Check which measure the question asks for; mean, median and mode are not interchangeable.",
+    ],
+    example: "Find the mean of the classes 0-10, 10-20, 20-30 with frequencies 4, 6, 10",
+    plot: "sequence",
+    rule: "Measures of Central Tendency",
+  }),
+];
+
+/** The rest of the CBSE Class 10 syllabus, in the board's order. */
+const CBSE_10: Chapter[] = [
+  boardChapter({
+    name: "Real Numbers",
+    focus: "Euclid's lemma, the fundamental theorem of arithmetic and irrationality.",
+    formulas: [
+      "HCF × LCM = product of the two numbers",
+      "Every composite number is a unique product of primes",
+      "√2, √3, √5 are irrational",
+    ],
+    latex: [
+      ["HCF and LCM", String.raw`\text{HCF}(a,b) \times \text{LCM}(a,b) = a \times b`],
+      ["Prime factorisation", String.raw`n = p_1^{a_1} p_2^{a_2} \cdots p_k^{a_k}`],
+      ["Terminating decimal", String.raw`\frac{p}{q}\ \text{terminates} \iff q = 2^m 5^n`],
+    ],
+    method: [
+      "Factorise into primes first; HCF is the smallest power of each shared prime.",
+      "For irrationality, assume the opposite and reach a contradiction about divisibility.",
+    ],
+    example: "Find the HCF and LCM of 96 and 404",
+    plot: "sqrt",
+    rule: "Fundamental Theorem of Arithmetic",
+  }),
+  boardChapter({
+    name: "Polynomials",
+    focus: "Zeroes and the coefficients that produce them.",
+    formulas: [
+      "Sum of zeroes = −b/a",
+      "Product of zeroes = c/a",
+      "A quadratic with given zeroes: k(x² − (sum)x + product)",
+    ],
+    latex: [
+      ["Sum of zeroes", String.raw`\alpha + \beta = -\frac{b}{a}`],
+      ["Product of zeroes", String.raw`\alpha\beta = \frac{c}{a}`],
+      ["Cubic relations", String.raw`\alpha + \beta + \gamma = -\frac{b}{a},\quad \alpha\beta\gamma = -\frac{d}{a}`],
+    ],
+    method: [
+      "Read a, b, c off the polynomial only after writing it in standard form.",
+      "Use the sum and product to build the polynomial instead of solving for each zero.",
+    ],
+    example: "Find a quadratic polynomial whose zeroes are 3 and −2",
+    plot: "quadratic",
+    rule: "Relationship Between Zeroes and Coefficients",
+  }),
+  boardChapter({
+    name: "Pair of Linear Equations in Two Variables",
+    focus: "Consistency, and solving by substitution, elimination or cross-multiplication.",
+    formulas: [
+      "Unique solution: a₁/a₂ ≠ b₁/b₂",
+      "Infinitely many: a₁/a₂ = b₁/b₂ = c₁/c₂",
+      "No solution: a₁/a₂ = b₁/b₂ ≠ c₁/c₂",
+    ],
+    latex: [
+      ["Unique solution", String.raw`\frac{a_1}{a_2} \neq \frac{b_1}{b_2}`],
+      ["Infinite solutions", String.raw`\frac{a_1}{a_2} = \frac{b_1}{b_2} = \frac{c_1}{c_2}`],
+      ["No solution", String.raw`\frac{a_1}{a_2} = \frac{b_1}{b_2} \neq \frac{c_1}{c_2}`],
+    ],
+    method: [
+      "Compare the ratios before solving — the question often only asks which case it is.",
+      "In word problems, define both variables in one line and write two equations from the two facts.",
+    ],
+    example: "2x + 3y = 11 and 2x − 4y = −24 — solve by elimination",
+    plot: "linear",
+    rule: "Consistency Conditions",
+  }),
+  boardChapter({
+    name: "Triangles",
+    focus: "Similarity criteria and the basic proportionality theorem.",
+    formulas: [
+      "Basic proportionality: DE ∥ BC ⇒ AD/DB = AE/EC",
+      "AAA, SSS and SAS similarity",
+      "Areas of similar triangles are in the ratio of the squares of corresponding sides",
+    ],
+    latex: [
+      ["Basic proportionality", String.raw`\frac{AD}{DB} = \frac{AE}{EC}`],
+      ["Area ratio", String.raw`\frac{\triangle ABC}{\triangle PQR} = \left(\frac{AB}{PQ}\right)^2`],
+      ["Pythagoras", String.raw`AC^2 = AB^2 + BC^2`],
+    ],
+    method: [
+      "Mark the equal angles before writing the similarity; the correspondence decides every ratio.",
+      "Write the similarity statement in matching order, then take ratios from it.",
+    ],
+    example: "In triangle ABC, DE ∥ BC with AD = 3 cm, DB = 5 cm and AE = 4.5 cm — find EC",
+    plot: "linear",
+    rule: "Similarity Criteria",
+  }),
+  boardChapter({
+    name: "Some Applications of Trigonometry",
+    focus: "Heights and distances: angle of elevation and depression.",
+    formulas: [
+      "tan θ = opposite / adjacent",
+      "Angle of elevation is measured upward from the horizontal",
+      "Angle of depression is measured downward from the horizontal",
+    ],
+    latex: [
+      ["Tangent", String.raw`\tan\theta = \frac{\text{opposite}}{\text{adjacent}}`],
+      ["Height from shadow", String.raw`h = d\tan\theta`],
+      ["Two-angle tower", String.raw`h = \frac{d}{\cot\alpha - \cot\beta}`],
+    ],
+    method: [
+      "Draw the horizontal, the vertical and the line of sight; label the known angle at the observer.",
+      "Pick tan whenever the unknown is a height or a distance and no hypotenuse is involved.",
+    ],
+    example: "A tower casts a 30 m shadow when the sun's elevation is 30° — find its height",
+    plot: "trig",
+    rule: "Heights and Distances",
+  }),
+  boardChapter({
+    name: "Circles",
+    focus: "Tangents, the radius-tangent angle and equal tangent lengths.",
+    formulas: [
+      "A tangent is perpendicular to the radius at the point of contact",
+      "Tangents from an external point are equal in length",
+      "The angle between two tangents = 180° − angle at the centre",
+    ],
+    latex: [
+      ["Radius and tangent", String.raw`OP \perp AB`],
+      ["Equal tangents", String.raw`PA = PB`],
+      ["Angle between tangents", String.raw`\angle APB = 180^\circ - \angle AOB`],
+    ],
+    method: [
+      "Draw the radius to the point of contact first — it creates the right angle the proof needs.",
+      "For two tangents, join the external point to the centre to get two congruent triangles.",
+    ],
+    example: "A tangent PQ at Q to a circle of radius 5 cm meets a line through O at P with OP = 13 cm — find PQ",
+    plot: "circle",
+    rule: "Tangent Theorems",
+  }),
+  boardChapter({
+    name: "Areas Related to Circles",
+    focus: "Sectors, segments and the length of an arc.",
+    formulas: [
+      "Area of a sector = (θ/360) π r²",
+      "Length of an arc = (θ/360) 2π r",
+      "Area of a segment = sector − triangle",
+    ],
+    latex: [
+      ["Sector area", String.raw`A = \frac{\theta}{360^\circ}\pi r^2`],
+      ["Arc length", String.raw`l = \frac{\theta}{360^\circ} 2\pi r`],
+      ["Segment area", String.raw`A = \frac{\theta}{360^\circ}\pi r^2 - \frac{1}{2}r^2\sin\theta`],
+    ],
+    method: [
+      "Decide whether the answer is a sector (pie slice) or a segment (slice minus triangle).",
+      "Convert the angle to a fraction of 360° before multiplying; it keeps the units honest.",
+    ],
+    example: "Find the area of a sector of radius 6 cm with a 60° angle",
+    plot: "circle",
+    rule: "Sector and Segment Formulas",
+  }),
+  boardChapter({
+    name: "Surface Areas and Volumes",
+    focus: "Combinations of solids: cylinders, cones, spheres and frustums.",
+    formulas: [
+      "Frustum volume = (1/3) π h (r₁² + r₁r₂ + r₂²)",
+      "Sphere volume = (4/3) π r³",
+      "Total surface area counts only the surfaces you can touch",
+    ],
+    latex: [
+      ["Frustum volume", String.raw`V = \frac{1}{3}\pi h (r_1^2 + r_1 r_2 + r_2^2)`],
+      ["Frustum slant", String.raw`l = \sqrt{h^2 + (r_1 - r_2)^2}`],
+      ["Sphere", String.raw`V = \frac{4}{3}\pi r^3,\quad A = 4\pi r^2`],
+    ],
+    method: [
+      "Split the object into the solids it is made of and add only the exposed surfaces.",
+      "Watch for a hollow: subtract the inner volume, not the inner area.",
+    ],
+    example: "A cylindrical vessel of radius 7 cm holds a hemisphere — find the total volume",
+    plot: "circle",
+    rule: "Combination of Solids",
+  }),
+  boardChapter({
+    name: "Statistics",
+    focus: "Mean, median and mode of grouped data, and the cumulative curve.",
+    formulas: [
+      "Mean = Σ fᵢxᵢ / Σ fᵢ",
+      "Median = l + ((n/2 − cf)/f) h",
+      "Mode = l + ((f₁ − f₀)/(2f₁ − f₀ − f₂)) h",
+    ],
+    latex: [
+      ["Mean", String.raw`\bar{x} = \frac{\sum f_i x_i}{\sum f_i}`],
+      ["Median", String.raw`M = l + \frac{\frac{n}{2} - cf}{f}h`],
+      ["Mode", String.raw`Z = l + \frac{f_1 - f_0}{2f_1 - f_0 - f_2}h`],
+    ],
+    method: [
+      "Write the table with class marks and cumulative frequency before choosing a formula.",
+      "Identify the modal class by frequency, the median class by n/2 — they are often different.",
+    ],
+    example: "Find the median of the classes 0-10 to 40-50 with frequencies 5, 8, 15, 12, 10",
+    plot: "sequence",
+    rule: "Grouped Data Formulas",
+  }),
+  boardChapter({
+    name: "Probability",
+    focus: "Theoretical probability, complementary events and dice-and-card questions.",
+    formulas: [
+      "P(E) = favourable outcomes / total outcomes",
+      "P(E) + P(not E) = 1",
+      "0 ≤ P(E) ≤ 1",
+    ],
+    latex: [
+      ["Probability", String.raw`P(E) = \frac{n(E)}{n(S)}`],
+      ["Complement", String.raw`P(\bar{E}) = 1 - P(E)`],
+      ["Impossible and certain", String.raw`P(\varnothing) = 0,\quad P(S) = 1`],
+    ],
+    method: [
+      "List the sample space once, completely, before counting anything.",
+      "If the question says 'at least one', count the complement and subtract from 1.",
+    ],
+    example: "Two dice are thrown — find the probability that the sum is 8",
+    plot: "sequence",
+    rule: "Theoretical Probability",
+  }),
+];
+
 export const GRADES: GradeSpec[] = [
   {
     id: "8",
@@ -569,8 +991,9 @@ export const GRADES: GradeSpec[] = [
           { kind: "theorem", title: "Section formula", latex: String.raw`P = \left(\frac{mx_2 + nx_1}{m+n},\ \frac{my_2 + ny_1}{m+n}\right)`, note: "Divides the segment joining (x₁,y₁) and (x₂,y₂) in the ratio m : n." },
         ],
       },
+      ...CBSE_9,
     ],
-    models: [quadraticModel, linearModel, circleModel, sqrtModel],
+    models: [quadraticModel, linearModel, circleModel, sqrtModel, sequenceModel],
   },
   {
     id: "10",
@@ -668,8 +1091,9 @@ export const GRADES: GradeSpec[] = [
           { kind: "definition", title: "Collinear points", latex: String.raw`\Delta = 0`, note: "Three points lie on one straight line exactly when the determinant of their coordinates is zero." },
         ],
       },
+      ...CBSE_10,
     ],
-    models: [quadraticModel, sequenceModel, trigModel, circleModel],
+    models: [quadraticModel, sequenceModel, trigModel, circleModel, sqrtModel],
   },
   {
     id: "11",

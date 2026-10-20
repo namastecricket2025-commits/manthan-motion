@@ -1,7 +1,13 @@
-import { ChevronDown } from "lucide-react";
 import { GRADES, type GradeSpec } from "@/components/mathlab/mathlab";
 import { PracticePanel } from "@/components/mathlab/PracticePanel";
 import type { EngineProblem } from "@/components/mathlab/solution";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
  * Practice, as its own tab.
@@ -15,7 +21,12 @@ import type { EngineProblem } from "@/components/mathlab/solution";
  * answer is checked by the same independent engine as a real solve.
  */
 
-const TRACKS = ["CBSE", "NCERT", "IB", "IGCSE"] as const;
+/**
+ * Boards the lab is written for. NCERT is deliberately absent: it publishes the
+ * textbooks CBSE prescribes rather than being a separate syllabus, so listing
+ * both as tracks asked students to make a choice that does not exist.
+ */
+const TRACKS = ["CBSE", "ICSE", "IB", "IGCSE"] as const;
 
 export function PracticeTab({
   track,
@@ -40,7 +51,6 @@ export function PracticeTab({
     <section className="mathlab-card mathlab-viewcard mathlab-practice-tab">
       <header className="mathlab-practice-tab__head">
         <div>
-          <p className="mathlab-card__kicker">Practice</p>
           <h2 className="mathlab-card__title">Try one on your own</h2>
           <p className="mathlab-practice-tab__sub">
             Pick the class and chapter you are revising, then check your answer
@@ -50,59 +60,56 @@ export function PracticeTab({
       </header>
 
       <div className="mathlab-practice-tab__selectors">
-        <label className="mathlab-picker">
+        <div className="mathlab-picker">
           <span>Curriculum</span>
-          <div className="mathlab-select-wrap">
-            <select
-              value={track}
-              onChange={(event) => onTrack(event.target.value)}
-              aria-label="Curriculum track"
-            >
+          <Select value={track} onValueChange={onTrack}>
+            <SelectTrigger className="mathlab-picker__trigger w-full" aria-label="Curriculum track">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="mathlab-picker__menu bg-[var(--menu-bg)] text-[var(--menu-ink)]">
               {TRACKS.map((option) => (
-                <option key={option} value={option}>
+                <SelectItem key={option} value={option}>
                   {option}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <ChevronDown aria-hidden />
-          </div>
-        </label>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <label className="mathlab-picker">
+        <div className="mathlab-picker">
           <span>Class</span>
-          <div className="mathlab-select-wrap">
-            <select
-              value={grade.id}
-              onChange={(event) => onSelect(event.target.value, 0)}
-              aria-label="Class"
-            >
+          <Select value={grade.id} onValueChange={(next) => onSelect(next, 0)}>
+            <SelectTrigger className="mathlab-picker__trigger w-full" aria-label="Class">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="mathlab-picker__menu bg-[var(--menu-bg)] text-[var(--menu-ink)]">
               {GRADES.map((entry: GradeSpec) => (
-                <option key={entry.id} value={entry.id}>
+                <SelectItem key={entry.id} value={entry.id}>
                   Class {entry.id}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <ChevronDown aria-hidden />
-          </div>
-        </label>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <label className="mathlab-picker mathlab-picker--wide">
+        <div className="mathlab-picker mathlab-picker--wide">
           <span>Chapter</span>
-          <div className="mathlab-select-wrap">
-            <select
-              value={String(chapterIndex)}
-              onChange={(event) => onSelect(grade.id, Number(event.target.value))}
-              aria-label="Chapter"
-            >
+          <Select
+            value={String(chapterIndex)}
+            onValueChange={(next) => onSelect(grade.id, Number(next))}
+          >
+            <SelectTrigger className="mathlab-picker__trigger w-full" aria-label="Chapter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="mathlab-picker__menu bg-[var(--menu-bg)] text-[var(--menu-ink)]">
               {grade.chapters.map((entry, index) => (
-                <option key={entry.name} value={index}>
+                <SelectItem key={entry.name} value={String(index)}>
                   {entry.name}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <ChevronDown aria-hidden />
-          </div>
-        </label>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <p className="mathlab-practice-tab__chapter">

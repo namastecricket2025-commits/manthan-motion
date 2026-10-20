@@ -27,6 +27,27 @@ function resolveRedirectAfterAuth(
   return fallback;
 }
 
+/**
+ * The few dots in the field that breathe. Positions are percentages of the
+ * viewport and deliberately keep to the margins, so the movement reads at the
+ * edge of vision and never under the form. Timing is staggered by hand: a
+ * shared pulse would look like a loading state.
+ */
+const DOT_SPARKS: { left: number; top: number; delay: number; duration: number }[] = [
+  { left: 6, top: 14, delay: 0.4, duration: 9 },
+  { left: 15, top: 43, delay: 3.1, duration: 11 },
+  { left: 8, top: 73, delay: 5.6, duration: 10 },
+  { left: 23, top: 88, delay: 1.8, duration: 12 },
+  { left: 38, top: 8, delay: 6.4, duration: 9.5 },
+  { left: 63, top: 9, delay: 2.2, duration: 10.5 },
+  { left: 79, top: 17, delay: 7.4, duration: 11.5 },
+  { left: 92, top: 37, delay: 4.3, duration: 9 },
+  { left: 94, top: 65, delay: 0.9, duration: 12 },
+  { left: 83, top: 85, delay: 5.1, duration: 10 },
+  { left: 66, top: 93, delay: 3.7, duration: 9.5 },
+  { left: 34, top: 95, delay: 6.9, duration: 11 },
+];
+
 const GoogleMark = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
     <path
@@ -213,8 +234,20 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
   return (
     <div className="relative min-h-[100svh] overflow-x-clip bg-background text-foreground">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(720px_420px_at_50%_-8%,color-mix(in_srgb,var(--signal)_16%,transparent),transparent_70%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="auth-dot-field" />
+        {DOT_SPARKS.map((dot) => (
+          <span
+            key={`${dot.left}-${dot.top}`}
+            className="auth-dot-spark"
+            style={{
+              left: `${dot.left}%`,
+              top: `${dot.top}%`,
+              animationDelay: `${dot.delay}s`,
+              animationDuration: `${dot.duration}s`,
+            }}
+          />
+        ))}
       </div>
 
       <main className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-md flex-col items-center justify-center px-4 py-10">

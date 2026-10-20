@@ -61,7 +61,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 
-type CurriculumTrack = "CBSE" | "NCERT" | "IB" | "IGCSE";
+type CurriculumTrack = "CBSE" | "ICSE" | "IB" | "IGCSE";
 
 /* How much working the sheet shows. Simple is the default; Detailed keeps the
    full proof, including the rule names. The engine writes both from the same
@@ -428,13 +428,24 @@ export function MathLab() {
     setEngineError(null);
     setSolution(null);
     try {
+      // Upload URLs from Convex are one-shot POST endpoints; a PUT is rejected
+      // before the bytes are stored, which is what used to make every photo
+      // fail with "did not reach the engine".
       const url = await generateUploadUrl();
-      const response = await fetch(url, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
-      if (!response.ok) throw new Error("upload rejected");
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
       const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
       await askEngine({ file: { storageId, name: file.name, mime: file.type } });
-    } catch {
-      setEngineError("That photo did not reach the engine. Check your connection, or type the problem instead.");
+    } catch (err) {
+      setEngineError(
+        err instanceof Error && err.message
+          ? err.message
+          : "That photo did not reach the engine. Check your connection, or type the problem instead.",
+      );
       setSolving(false);
     }
   }, [askEngine, generateUploadUrl, hush]);
@@ -519,7 +530,7 @@ export function MathLab() {
             const Icon = tab.icon;
             const active = view === tab.id;
             return (
-              <motion.button
+              <button
                 key={tab.id}
                 type="button"
                 role="tab"
@@ -531,30 +542,12 @@ export function MathLab() {
                   if (tab.id !== "practice") setPracticeSeed(null);
                   setView(tab.id);
                 }}
-                whileHover={reduceMotion ? undefined : { y: -1.5 }}
-                whileTap={reduceMotion ? undefined : { scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 420, damping: 30 }}
               >
-                {/* One pill travels between the tabs, so switching views reads
-                    as moving the same object rather than lighting a new one. */}
-                {active ? (
-                  <motion.span
-                    layoutId="mathlab-view-pill"
-                    className="mathlab-view__pill"
-                    aria-hidden
-                    transition={{ type: "spring", stiffness: 400, damping: 34 }}
-                  />
-                ) : null}
-                <motion.span
-                  className="mathlab-view__icon"
-                  aria-hidden
-                  animate={reduceMotion ? undefined : { rotate: active ? -8 : 0, scale: active ? 1.08 : 1 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 18 }}
-                >
+                <span className="mathlab-view__icon" aria-hidden>
                   <Icon className="h-3.5 w-3.5" />
-                </motion.span>
+                </span>
                 {tab.label}
-              </motion.button>
+              </button>
             );
           })}
         </nav>
@@ -588,7 +581,6 @@ export function MathLab() {
                 </header>
               ) : (
                 <header className="mathlab-solvecard__intro">
-                  <p className="mathlab-card__kicker">Solve</p>
                   <h2 className="mathlab-card__title">What are we working through?</h2>
                   <p className="mathlab-solvecard__sub">
                     Ask in maths or in words — a fraction, an equation, or a
@@ -597,7 +589,28 @@ export function MathLab() {
                 </header>
               )}
 
-              <form className="mathlab-input mathlab-input--hero" onSubmit={(event) => { event.preventDefault(); onSubmit(); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void readPhoto(event.dataTransfer.files?.[0]); }}>
+              <form
+                className="mathlab-input mathlab-input--hero"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onSubmit();
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void readPhoto(event.dataTransfer.files?.[0]);
+                }}
+                onPaste={(event) => {
+                  // A screenshot is usually copied, not saved first. Reading it
+                  // straight off the clipboard is the shortest path there is.
+                  const image = Array.from(event.clipboardData.files).find((file) =>
+                    file.type.startsWith("image/"),
+                  );
+                  if (!image) return;
+                  event.preventDefault();
+                  void readPhoto(image);
+                }}
+              >
                 <MathInput
                   ref={mathInputRef}
                   value={formula}
@@ -620,7 +633,18 @@ export function MathLab() {
                   </motion.button>
                 </div>
               </form>
-              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => void readPhoto(event.target.files?.[0] ?? undefined)} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  // Clear the value so picking the same photo again still fires.
+                  event.target.value = "";
+                  void readPhoto(file ?? undefined);
+                }}
+              />
               {engineError && <p className="mathlab-error">{engineError}</p>}
 
               {!solution && !solving ? (

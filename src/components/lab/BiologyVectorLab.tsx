@@ -1,5 +1,6 @@
 import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
 import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
+import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
 import { useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion, useAnimationFrame } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
@@ -1286,7 +1287,7 @@ export function BiologyVectorLab() {
     {
       id: "heart",
       label: "Heart System",
-      blurb: "A beating model with live red and blue blood-flow paths",
+      blurb: "A scanned heart you can turn, label and read",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <path
@@ -1391,12 +1392,16 @@ export function BiologyVectorLab() {
             exit="exit"
             transition={transition}
           >
-            <OrganStage
-              system={plate}
-              label={active.label}
-              blurb={active.blurb}
-              theme={theme}
-            />
+            {plate === "heart" ? (
+              <HeartModelViewer label={active.label} blurb={active.blurb} theme={theme} />
+            ) : (
+              <OrganStage
+                system={plate}
+                label={active.label}
+                blurb={active.blurb}
+                theme={theme}
+              />
+            )}
           </motion.div>
         ) : (
           <motion.div

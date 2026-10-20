@@ -17,12 +17,10 @@ import {
   RotateCcw,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Sun,
   SunMoon,
   Trash2,
   UserCog,
-  Waves,
 } from "lucide-react";
 
 import {
@@ -40,23 +38,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-/** Ultra-smooth spring for this surface: softer and better damped than the
- *  lab's default so accordion cards and selection pills settle without any
- *  visible overshoot wobble. */
-const SET_SPRING = { type: "spring", stiffness: 200, damping: 24 } as const;
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
-import type { FrameTarget, TextComfort, ThemeMode } from "@/lib/app-settings";
+import type { TextComfort, ThemeMode } from "@/lib/app-settings";
 import { useSettings } from "./SettingsProvider";
 
 /* ------------------------------------------------------------------ */
@@ -76,23 +63,19 @@ const COMFORT: { key: TextComfort; label: string; scale: string }[] = [
   { key: "dyslexic", label: "Dyslexic-Friendly", scale: "spaced" },
 ];
 
-const FRAME_OPTIONS: { value: FrameTarget; label: string; hint: string }[] = [
-  { value: "30", label: "30 FPS", hint: "Battery saver" },
-  { value: "60", label: "60 FPS", hint: "Balanced" },
-  { value: "uncapped", label: "Uncapped", hint: "Maximum smoothness" },
-];
+/** The three accordion panels, addressable as `/settings#<key>`. */
+const PANEL_KEYS = ["appearance", "account", "data"] as const;
 
-/** The four accordion panels, addressable as `/settings#<key>`. */
-const PANEL_KEYS = ["experience", "appearance", "account", "data"] as const;
+/** One spring for the panels that do animate; Motionless Mode zeroes it. */
+const PANEL_SPRING = { type: "spring", stiffness: 300, damping: 32 } as const;
 type PanelKey = (typeof PANEL_KEYS)[number];
 
 /** Which panel a location hash should reveal. */
 function panelsFromHash(hash: string): PanelKey[] {
   const key = hash.replace(/^#/, "").toLowerCase();
   const alias: Record<string, PanelKey> = {
-    motion: "experience",
-    accessibility: "experience",
     theme: "appearance",
+    accessibility: "appearance",
     security: "account",
     privacy: "data",
   };
@@ -183,7 +166,7 @@ function PanelTitle({
   title,
   blurb,
 }: {
-  icon: typeof Waves;
+  icon: typeof Sun;
   title: string;
   blurb: string;
 }) {
@@ -270,8 +253,8 @@ function FloatField({
 /* ------------------------------------------------------------------ */
 
 export default function SettingsDashboard({ bare = false }: { bare?: boolean } = {}) {
-  const { settings, update, reset, systemReducedMotion } = useSettings();
-  const spring = settings.reduceMotion ? { duration: 0 } : SET_SPRING;
+  const { settings, update, reset } = useSettings();
+  const spring = settings.reduceMotion ? { duration: 0 } : PANEL_SPRING;
 
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -446,7 +429,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
   /* ---- panel state (deep-linkable) ---- */
   const [openPanels, setOpenPanels] = useState<string[]>([
-    "experience",
     "appearance",
     ...panelsFromHash(typeof window === "undefined" ? "" : window.location.hash),
   ]);
@@ -476,16 +458,11 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
       <div className="set-shell">
         <header className="set-hero">
           <div className="set-hero__meta">
-            <span className="set-kicker">
-              <Sparkles className="h-3 w-3" />
-              Preferences
-            </span>
             <h2 id="settings-heading" className="set-hero__title">
               Settings
             </h2>
             <p className="set-hero__sub">
-              Motion, appearance, security and your data. Every change applies the moment you make
-              it, and is remembered on this device.
+              Appearance, your account and your data. Every change applies the moment you make it.
             </p>
           </div>
           <button type="button" className="set-btn set-btn--ghost" onClick={reset}>
@@ -500,61 +477,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
           onValueChange={setOpenPanels}
           className="set-acc"
         >
-          {/* ============ 1. MOTION ============ */}
-          <AccordionItem id="set-panel-experience" value="experience" className="set-item">
-            <AccordionTrigger className="set-trigger">
-              <PanelTitle
-                icon={Waves}
-                title="Motion"
-                blurb="How much the interface moves and animates"
-              />
-            </AccordionTrigger>
-            <AccordionContent className="set-content">
-              <div className="set-group">
-                <ListRow
-                  title="Motionless mode"
-                  badge={settings.reduceMotion ? "On" : "Off"}
-                  hint="Stops every continuous loop, floating particle and orbiting 3D model, holding each instrument in a clean fixed state. Dragging and zooming keep working for close inspection."
-                  note={
-                    systemReducedMotion && !settings.reduceMotion
-                      ? "Your device is already asking for reduced motion."
-                      : undefined
-                  }
-                >
-                  <Switch
-                    className="set-switch"
-                    checked={settings.reduceMotion}
-                    aria-label="Motionless mode"
-                    onCheckedChange={(v) => update({ reduceMotion: v })}
-                  />
-                </ListRow>
-
-                <ListRow
-                  title="Simulation frame rate"
-                  badge={FRAME_OPTIONS.find((o) => o.value === settings.frameTarget)?.label}
-                  hint="Caps the render loop of every 3D simulation, trading smoothness for battery life. It takes effect the moment you choose."
-                >
-                  <Select
-                    value={settings.frameTarget}
-                    onValueChange={(v) => update({ frameTarget: v as FrameTarget })}
-                  >
-                    <SelectTrigger className="set-select" aria-label="Simulation frame rate">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="set-select-content">
-                      {FRAME_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label} — {o.hint}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </ListRow>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* ============ 2. APPEARANCE & READING ============ */}
+          {/* ============ 1. APPEARANCE & READING ============ */}
           <AccordionItem id="set-panel-appearance" value="appearance" className="set-item">
             <AccordionTrigger className="set-trigger">
               <PanelTitle
@@ -588,13 +511,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                           onClick={() => update({ themeMode: t.key })}
                           className={`set-theme${selected ? " set-theme--on" : ""}`}
                         >
-                          {selected && (
-                            <motion.span
-                              layoutId="set-theme-pill"
-                              className="set-theme__pill"
-                              transition={spring}
-                            />
-                          )}
                           <span className={`set-theme__preview set-theme__preview--${t.key}`}>
                             <span className="set-theme__bar" />
                             <span className="set-theme__bar set-theme__bar--short" />

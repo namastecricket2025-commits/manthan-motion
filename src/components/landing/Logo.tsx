@@ -1,22 +1,15 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Manthan mark — exact shapes from the reference files:
- * a red circle connected by a thin line to a smaller light-colored circle,
- * no background tile.
+ * Manthan mark: one large circle joined by a short bar to a smaller circle,
+ * all in one solid colour that follows the theme (white on dark, dark on light).
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" className={cn("h-7 w-7", className)} aria-hidden="true">
-      <circle cx="20" cy="20" r="9" fill="var(--signal)" />
-      <circle cx="33" cy="20" r="3" fill="var(--text-main)" />
-      <line
-        x1="20"
-        y1="20"
-        x2="33"
-        y2="20"
-        stroke="var(--text-dim)"
-        strokeWidth="1.4"
+    <svg viewBox="60 190 904 640" className={cn("h-6 w-auto", className)} aria-hidden="true">
+      <path
+        fill="var(--text-main)"
+        d="M372 195a312 312 0 1 0 0 625a312 312 0 1 0 0-625zM693 492h73v48h-73zM860 420a96 96 0 1 0 0 193a96 96 0 1 0 0-193z"
       />
     </svg>
   );

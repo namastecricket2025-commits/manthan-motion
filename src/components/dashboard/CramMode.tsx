@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Check, FileText, Loader2, Sparkles, Upload, X } from "lucide-react";
+import { Check, FileText, Loader2, Upload, X } from "lucide-react";
 import { useMutation, useAction } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useRef, useState } from "react";
@@ -55,6 +55,14 @@ const MAX_UPLOAD = 20 * 1024 * 1024;
 function readableSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** Characters, honest about small counts — `Math.round(500 / 1000)` printed
+ *  "0k chars", which read as "nothing was read" even when a short page had
+ *  been read in full. */
+function formatChars(count: number) {
+  if (count < 1000) return `${count} characters`;
+  return `${(count / 1000).toFixed(count < 10_000 ? 1 : 0)}k characters`;
 }
 
 export function CramMode({
@@ -140,10 +148,7 @@ export function CramMode({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
-            Sprint Pass workspace
-          </p>
-          <h2 className="mt-1 font-display text-xl font-bold tracking-tight">
+          <h2 className="font-display text-xl font-bold tracking-tight">
             Cram Mode
           </h2>
           <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-text-dim">
@@ -185,7 +190,12 @@ export function CramMode({
             type="file"
             className="hidden"
             accept=".pdf,.docx,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp"
-            onChange={(event) => void accept(event.target.files)}
+            onChange={(event) => {
+              const files = event.target.files;
+              // Clearing lets the same book be re-run after a failure.
+              event.target.value = "";
+              void accept(files);
+            }}
           />
         </label>
       )}
@@ -256,17 +266,15 @@ export function CramMode({
                 <h3 className="font-display text-sm font-bold tracking-tight">
                   Compressed notes
                 </h3>
-                <span className="premium-chip">
-                  <Sparkles className="h-3 w-3" />
-                  {analysis.subject}
-                </span>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-text-dim">
-                <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
-                <span className="min-w-0 flex-1 truncate">{analysis.name}</span>
-                <span className="shrink-0">
-                  {analysis.size} · {Math.round(analysis.characters / 1000)}k chars read
-                </span>
+              <div className="mt-2 flex items-start gap-2 text-[11px] text-text-dim">
+                <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-foreground/80">{analysis.name}</p>
+                  <p className="mt-0.5 truncate">
+                    {analysis.subject} · {analysis.size} · {formatChars(analysis.characters)} read
+                  </p>
+                </div>
               </div>
               <div className="mt-3 flex flex-col gap-3">
                 {analysis.notes.map((note) => (
@@ -294,10 +302,6 @@ export function CramMode({
                 <h3 className="font-display text-sm font-bold tracking-tight">
                   Syllabus benchmarks
                 </h3>
-                <span className="premium-chip">
-                  <Sparkles className="h-3 w-3" />
-                  {analysis.subject}
-                </span>
               </div>
               <ul className="mt-3 space-y-2.5">
                 {analysis.benchmarks.map((benchmark) => (

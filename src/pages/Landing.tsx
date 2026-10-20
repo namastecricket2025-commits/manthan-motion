@@ -91,7 +91,6 @@ const FORMAT_NOTE = "Photos of handwritten notes are read with OCR.";
  */
 function Hero() {
   const ref = useRef<HTMLDivElement | null>(null);
-  const lightRef = useRef<HTMLDivElement | null>(null);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -133,61 +132,6 @@ function Hero() {
     return () => ctx.revert();
   }, []);
 
-  useEffect(() => {
-    // The light trails the pointer — Vercel's own hero behaviour (their scene
-    // renderer gives the pointer a light and a 165px glow radius, and the
-    // light lags the cursor). Ours is the same idea in CSS: the gradient
-    // behind the mark eases toward wherever the pointer is in the hero,
-    // clamped to ±24px so it reads as light shifting, not as the logo sliding
-    // around. Hovering a row in the rail therefore moves the light right,
-    // which is exactly what the reference does on a capability-row hover.
-    //
-    // Gated on a real pointer and on motion: a touch device has nothing to
-    // trail, and this is decoration, so Motionless Mode drops it entirely.
-    const root = ref.current;
-    const light = lightRef.current;
-    if (!root || !light) return;
-    if (prefersReducedMotion()) return;
-    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-
-    const xTo = gsap.quickTo(light, "x", { duration: 0.7, ease: "power3.out" });
-    const yTo = gsap.quickTo(light, "y", { duration: 0.7, ease: "power3.out" });
-    const clamp = gsap.utils.clamp;
-
-    let pointerX = 0;
-    let pointerY = 0;
-    let frame = 0;
-
-    // One rAF per move at most: the browser coalesces them, so a fast drag
-    // still sets the target twice a frame at worst, and never on scroll.
-    const paint = () => {
-      frame = 0;
-      const box = root.getBoundingClientRect();
-      if (!box.width) return;
-      xTo(clamp(-24, 24, (pointerX - (box.left + box.width / 2)) * 0.06));
-      yTo(clamp(-16, 16, (pointerY - (box.top + box.height / 2)) * 0.05));
-    };
-    const onMove = (event: PointerEvent) => {
-      pointerX = event.clientX;
-      pointerY = event.clientY;
-      if (!frame) frame = requestAnimationFrame(paint);
-    };
-    const recentre = () => {
-      xTo(0);
-      yTo(0);
-    };
-
-    root.addEventListener("pointermove", onMove, { passive: true });
-    root.addEventListener("pointerleave", recentre);
-    return () => {
-      cancelAnimationFrame(frame);
-      root.removeEventListener("pointermove", onMove);
-      root.removeEventListener("pointerleave", recentre);
-      gsap.killTweensOf(light);
-      gsap.set(light, { x: 0, y: 0 });
-    };
-  }, []);
-
   const ctaTarget = isAuthenticated ? "/dashboard" : AUTH_URL;
 
   return (
@@ -222,15 +166,14 @@ function Hero() {
                 layer behind the copy.
 
                 `.mark-halo` sits it in white backlight (see index.css). The
-                halo is painted by a wrapper GSAP can move with the pointer,
-                rather than by the halo element itself — the halo keeps its
-                own `translate: -50% -50%`, and the two never have to share a
-                transform. */}
+                halo is anchored to the mark and never chases the pointer: a
+                light that moves under the cursor reads as a toy, not as a
+                lit object. */}
             <div
               data-hero-fade
               className="relative h-[clamp(180px,26vw,340px)] w-[clamp(180px,26vw,340px)] xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2"
             >
-              <div ref={lightRef} aria-hidden="true" className="absolute inset-0">
+              <div aria-hidden="true" className="absolute inset-0">
                 <div className="mark-halo" />
               </div>
               <OrbitMark

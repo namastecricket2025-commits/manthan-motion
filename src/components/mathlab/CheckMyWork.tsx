@@ -86,11 +86,11 @@ export function CheckMyWork({
       try {
         const url = await generateUploadUrl();
         const response = await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
+          method: "POST",
+          headers: { "content-type": file.type || "application/octet-stream" },
           body: file,
         });
-        if (!response.ok) throw new Error("upload rejected");
+        if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
         const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
         setPendingPhoto({ storageId, name: file.name, mime: file.type });
         setPhotoName(file.name);

@@ -162,9 +162,10 @@
   --brand: #e8a410;
   --brand-soft: rgba(232, 164, 16, 0.18);
   --brand-line: rgba(232, 164, 16, 0.55);
-  /* The mark's own colour where it must read on its own: the hero circle. On
-     paper it is the amber; at night it stays the theme's white light. */
-  --brand-mark: #e8a410;
+  /* The mark reads in the theme's own ink: espresso on paper, warm white at
+     night. It is a single-colour wordmark (see LogoMark), and the hero circle
+     must not be the one place where the brand turns amber. */
+  --brand-mark: var(--text-main);
   /* The amber AS TEXT when it sits on `--brand-soft` rather than on paper.
      The brand step measures 1.89:1 on its own 18% tint — a 10px pill label
      wants 4.5 — so text on a brand fill uses the deeper step (7.3:1 on the
@@ -400,7 +401,7 @@
      At night the hero circle itself stays white — the theme's "light is the
      accent" — so this token is the one place the two themes deliberately
      differ. */
-  --brand-mark: #f5f5f7;
+  --brand-mark: var(--text-main);
   /* Amber as text on `--brand-soft`. On this canvas the brand step already
      measures 9.3:1 on its own tint, so the "ink" case and the brand are the
      same colour; the token exists so the two themes answer the same question
@@ -599,7 +600,7 @@
      Each use site still multiplies its opacity by `--bg-glow-opacity` (the
      Ambient Intensity slider), so turning Ambient down quiets the whole
      scene instead of leaving these behind at full strength. */
-  --halo-near: rgba(255, 255, 255, 0.26);
+  --halo-near: rgba(255, 255, 255, 0.22);
   /* The halo's mid stop, as its own token rather than a `color-mix()` of
      `--halo-near`. A color-mix here gets downlevelled by the CSS pipeline
      into a `@supports` branch with a FALLBACK that holds the peak alpha all
@@ -607,7 +608,7 @@
      therefore without the nesting the downlevelled rule needs) renders the
      opaque disc this pass removed. A third token removes the branch, so the
      gradient is byte-identical in every browser. */
-  --halo-mid: rgba(255, 255, 255, 0.09);
+  --halo-mid: rgba(255, 255, 255, 0.065);
   --halo-far: rgba(255, 255, 255, 0.06);
 
   /* The pointer light on a card (see the light-theme note). White at 8% on
@@ -691,7 +692,7 @@ html[data-comfort="on"]:not(.dark) {
   --brand: #de9c0d;
   --brand-soft: rgba(222, 156, 13, 0.18);
   --brand-line: rgba(222, 156, 13, 0.55);
-  --brand-mark: #de9c0d;
+  --brand-mark: var(--text-main);
 }
 
 html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
@@ -992,8 +993,8 @@ html[data-comfort="on"] {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: calc(100% + var(--halo-spread, 96px));
-    height: calc(100% + var(--halo-spread, 96px));
+    width: calc(100% + var(--halo-spread, 56px));
+    height: calc(100% + var(--halo-spread, 56px));
     translate: -50% -50%;
     z-index: -1;
     pointer-events: none;
@@ -1010,8 +1011,8 @@ html[data-comfort="on"] {
     background: radial-gradient(
       closest-side,
       var(--halo-near),
-      var(--halo-mid) 42%,
-      transparent 80%
+      var(--halo-mid) 32%,
+      transparent 68%
     );
   }
   html:not(.dark) .mark-halo {
@@ -1667,32 +1668,6 @@ html[data-comfort="on"] {
     background: color-mix(in srgb, var(--text-main) 6%, transparent);
   }
 
-  /* A `clip-path` on the wrapper clips its child, so the sweep is cut to the
-     pill without `overflow: hidden` on the button. */
-  .dash-action__shine {
-    position: absolute;
-    inset: 0;
-    border-radius: 999px;
-    clip-path: inset(0 round 999px);
-    pointer-events: none;
-  }
-  .dash-action__shine-bar {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      rgba(255, 255, 255, 0.34) 50%,
-      transparent 60%
-    );
-    transform: translateX(-130%);
-    transition: transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .dash-action:hover .dash-action__shine-bar,
-  .dash-action:focus-visible .dash-action__shine-bar {
-    transform: translateX(130%);
-  }
-
   /* The single highlight pill the quick-action row slides between items. */
   .dash-quick {
     position: absolute;
@@ -1764,23 +1739,20 @@ html[data-comfort="on"] {
   }
 
   html[data-motion="reduced"] .dash-tile__glow,
-  html[data-motion="reduced"] .dash-action__shine,
   html[data-motion="reduced"] .dash-heatmap .dash-heatmap__cell {
     /* Motionless Mode: the tile still lights on hover via its border, and the
        calendar is simply already there. */
     transform: none;
     opacity: 1;
   }
-  html[data-motion="reduced"] .dash-tile__glow,
-  html[data-motion="reduced"] .dash-action__shine {
+  html[data-motion="reduced"] .dash-tile__glow {
     display: none;
   }
   html[data-motion="reduced"] .dash-heatmap .dash-heatmap__cell {
     transition: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    .dash-tile__glow,
-    .dash-action__shine {
+    .dash-tile__glow {
       display: none;
     }
     .dash-heatmap .dash-heatmap__cell {
@@ -2086,4 +2058,86 @@ html {
   display: grid;
   gap: 1px;
   background: var(--panel-line);
+}
+
+/* ------------------------------------------------
+   Seven-day chart scroller.
+
+   The chart is sized to the room it has, so it only scrolls when the window is
+   genuinely narrower than seven readable columns. Its scrollbar is never shown:
+   hovering the last day used to overflow the scroller by a few pixels and paint
+   a grey trough under the card for as long as the tooltip was open.
+   ------------------------------------------------ */
+.dashboard-chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.dashboard-chart-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ------------------------------------------------
+   Sign-in — the dotted field.
+
+   One dot grid across the whole page, drawn as a repeating radial gradient
+   rather than 10,000 elements. Its ink is mixed from `--text-main`, so it is
+   faded black on paper and faded white on ink without a second rule. A radial
+   mask clears the middle of the screen, where the card sits, so the pattern
+   recedes under the form instead of running through it.
+   ------------------------------------------------ */
+.auth-dot-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text-main) 15%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  background-position: 11px 11px;
+  -webkit-mask-image: radial-gradient(
+    closest-side at 50% 48%,
+    transparent 0%,
+    transparent 46%,
+    #000 88%
+  );
+  mask-image: radial-gradient(
+    closest-side at 50% 48%,
+    transparent 0%,
+    transparent 46%,
+    #000 88%
+  );
+}
+
+/* A handful of dots breathe, very slowly and one at a time. They are pixels,
+   not orbs: brightness only, no scale, so the field stays quiet. */
+.auth-dot-spark {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 55%, transparent);
+  animation: auth-dot-breathe 8s ease-in-out infinite;
+}
+
+@keyframes auth-dot-breathe {
+  0%,
+  100% {
+    opacity: 0.08;
+  }
+  45% {
+    opacity: 0.72;
+  }
+  70% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-dot-spark {
+    animation: none;
+    opacity: 0.3;
+  }
 }

@@ -37,7 +37,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Which classes and syllabi is it for?",
-    a: "Classes 8 to 12. Math Lab works in CBSE, NCERT, IB and IGCSE notation, and the photo question solver is written for CBSE and ICSE question sheets and hand-written working.",
+    a: "Classes 8 to 12. Math Lab works in CBSE, ICSE, IB and IGCSE notation, and the photo question solver is written for CBSE and ICSE question sheets and hand-written working.",
   },
   {
     q: "Can I keep more than one subject in there?",

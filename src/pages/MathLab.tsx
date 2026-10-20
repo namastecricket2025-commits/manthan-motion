@@ -5,8 +5,6 @@ import {
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { MathLab } from "@/components/mathlab/MathLab";
-import { planName } from "@/lib/plans";
-import { usePlan } from "@/components/plans/PlanProvider";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +16,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Menu, LogOut } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 
 /**
  * /math-lab — the mathematics workspace (Classes 8 to 11).
@@ -29,7 +27,6 @@ export default function MathLabPage() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { plan } = usePlan();
 
   const selectSection = (key: DashboardSection) => {
     setSheetOpen(false);
@@ -119,12 +116,6 @@ export default function MathLabPage() {
               <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
                 Math Lab<span className="text-[var(--signal)]">.</span>
               </h1>
-              <Link
-                to="/pricing"
-                className="premium-chip px-2.5 py-1 text-[11px] transition-colors hover:border-[var(--signal)]"
-              >
-                {planName(plan)}
-              </Link>
             </div>
 
             <MathLab />

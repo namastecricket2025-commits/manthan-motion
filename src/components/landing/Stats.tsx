@@ -52,12 +52,6 @@ const STATS: {
     label: "Free tokens a day",
     body: "The free plan's daily allowance, with the whole notebook workspace open on it and no card.",
   },
-  {
-    value: 24,
-    suffix: "/7",
-    label: "Awake when you are",
-    body: "The pipeline has no office hours, which is what a 1am revision session actually needs.",
-  },
 ];
 
 export default function Stats() {

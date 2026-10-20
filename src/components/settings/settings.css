@@ -566,21 +566,15 @@ html:not(.dark) .set-root.set-root--bare {
     box-shadow 0.5s var(--set-ease);
 }
 .set-theme:hover {
-  transform: translateY(-2px);
   background: var(--set-glass-strong);
 }
-.set-theme--on {
+/* The chosen card simply states itself: a hairline in the accent, a faint
+   accent wash and its tick. No travelling pill — a selection this small does
+   not need an object moving between the three options. */
+.set-theme--on,
+.set-theme--on:hover {
+  border-color: color-mix(in srgb, var(--signal) 38%, transparent);
   background: color-mix(in srgb, var(--signal) 6%, transparent);
-}
-/* the animated selection pill carries the glow so the ring springs between
-   the three cards instead of blinking on and off */
-.set-theme__pill {
-  position: absolute;
-  inset: 0;
-  border-radius: 15px;
-  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--signal) 14%, transparent), color-mix(in srgb, var(--signal) 3%, transparent));
-  box-shadow: var(--set-ring);
 }
 .set-theme__preview {
   position: relative;
