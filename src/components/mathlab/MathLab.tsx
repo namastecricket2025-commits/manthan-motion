@@ -60,6 +60,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
+import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 
 type CurriculumTrack = "CBSE" | "ICSE" | "IB" | "IGCSE";
 
@@ -67,7 +68,8 @@ type CurriculumTrack = "CBSE" | "ICSE" | "IB" | "IGCSE";
    full proof, including the rule names. The engine writes both from the same
    mathematics, so switching never changes the answer. */
 const DETAIL_OPTIONS = [
-  { id: "simple" as const, label: "Simple" },  { id: "detailed" as const, label: "Detailed" },
+  { id: "simple" as const, label: "Simple" },
+  { id: "detailed" as const, label: "Detailed" },
 ];
 
 const VIEW_TABS = [
@@ -75,7 +77,8 @@ const VIEW_TABS = [
   { id: "graph", label: "Graph", icon: LineChart },
   { id: "tools", label: "Calculator & Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
-  { id: "practice", label: "Practice", icon: Sparkles },] as const;
+  { id: "practice", label: "Practice", icon: Sparkles },
+] as const;
 type ViewId = (typeof VIEW_TABS)[number]["id"];
 
 /** Three real entry points, one per kind of question the lab is good at. */
@@ -589,8 +592,7 @@ export function MathLab() {
                     </span>
                     {tab.label}
                   </button>
-                );
-              })}
+                );                    })}
             </nav>
             <SearchWithGoogle
               topic={formula.trim() || "Maths problem — NCERT CBSE explained"}
