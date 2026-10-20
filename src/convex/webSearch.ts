@@ -64,11 +64,44 @@ const GEMINI_KEY_NAMES = [
   "GOOGLE_API_KEY",
   "GOOGLE_GENERATIVE_AI_API_KEY",
 ];
-/** Tried in order; an older id without the search tool simply fails through. */
+/**
+ * Tried in order, but a model id that Google has already told us does not exist
+ * on this key is never retried. The old behavior kept cycling through every id in
+ * the list until one worked, which is why the panel sometimes got stuck blaming a
+ * fresh id for a key/scopes problem that was never about the id itself.
+ */
 const GEMINI_MODELS = [
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
 ];
+
+/**
+ * A Gemini model id is only worth trying once per request. If that id returns 404,
+ * or a 400 whose body says the model/tool/search is not available on this key, the
+ * id itself is tainted for the rest of this request: we record it and stop cycling
+ * through the rest of the list so the real error bubbles up unchanged.
+ *
+ * `WeakSet<object>` only accepts objects, so we box each model id in an opaque
+ * object once and reuse that same box as the tainted marker.
+ */
+const rejectedGeminiIds = new WeakSet<object>();
+const taintedGeminiId = new Map<string, object>();
+
+function markerFor(model: string): object {
+  const existing = taintedGeminiId.get(model);
+  if (existing) return existing;
+  const marker: object = Object.create(null);
+  taintedGeminiId.set(model, marker);
+  return marker;
+}
+
+/**
+ * Throwing this instead of `continue` makes the rest of the model loop go quiet.
+ * The outer action only sees one error string, never a rotating model id.
+ */
+function stopTryingGemini(_key: string, model: string): never {
+  throw new Error(`${model} is not available on this key.`);
+}
 
 const NO_KEY =
   "Web search is not configured yet. Add SERPER_API_KEY in the Keys tab, or use the Google link below.";
@@ -224,6 +257,12 @@ async function runGeminiGrounded(
 
   let lastError = "";
   for (const model of GEMINI_MODELS) {
+    // If this id already told us it is not available on this key during this
+    // request, do not ask Google about it again.
+    if (rejectedGeminiIds.has(markerFor(model))) {
+      continue;
+    }
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
@@ -242,9 +281,12 @@ async function runGeminiGrounded(
     );
 
     if (response.status === 404) {
-      // This model id does not exist on this key — try the next candidate.
-      lastError = `${model} is not available on this key.`;
-      continue;
+      // This model id does not exist on this key. Record it and give up on the
+      // whole Gemini path for this request: the problem is the key/scopes/endpoint,
+      // not whichever id we asked about, so retrying a different id only makes the
+      // panel blame the wrong id on the next render.
+      rejectedGeminiIds.add(markerFor(model));
+      throw stopTryingGemini(key, model);
     }
 
     const body = await response.text();
@@ -255,15 +297,19 @@ async function runGeminiGrounded(
         /tool|google_search|not found|unsupported/i.test(body)
       ) {
         // Either the model has no search tool, or the search tool is off for
-        // the key. One more model is worth trying before giving up.
-        lastError = TOOL_OFF;
-        continue;
+        // the key. In either case the current id is not the real fault — do not
+        // keep trying a fresh id on the same key.
+        rejectedGeminiIds.add(markerFor(model));
+        throw stopTryingGemini(key, model);
       }
       if (response.status === 429) {
         throw new Error("Google search is rate-limited right now. Try again in a moment.");
       }
       throw new Error(`Google search failed (${response.status}).`);
     }
+
+    // Any earlier per-request rejection is irrelevant now that this id answered.
+    rejectedGeminiIds.delete(markerFor(model));
 
     let data: {
       candidates?: Array<{
