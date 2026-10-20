@@ -4,7 +4,6 @@ export default function Terms() {
   return (
     <LegalPage
       title="Terms of Service"
-      updated="September 2026"
       intro="These terms govern your use of Manthan — the service that churns your notes, files and links into ready-to-study material. By creating an account or using the service, you agree to them."
       sections={[
         {

@@ -36,6 +36,7 @@ const Terms = lazy(() => import("./pages/Terms.tsx"));
 const Privacy = lazy(() => import("./pages/Privacy.tsx"));
 const Honor = lazy(() => import("./pages/Honor.tsx"));
 const Pricing = lazy(() => import("./pages/Pricing.tsx"));
+const Feedback = lazy(() => import("./pages/Feedback.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -267,6 +268,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/honor" element={<Honor />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/feedback" element={<Feedback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

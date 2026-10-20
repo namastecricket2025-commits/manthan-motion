@@ -162,10 +162,9 @@
   --brand: #e8a410;
   --brand-soft: rgba(232, 164, 16, 0.18);
   --brand-line: rgba(232, 164, 16, 0.55);
-  /* The mark reads in the theme's own ink: espresso on paper, warm white at
-     night. It is a single-colour wordmark (see LogoMark), and the hero circle
-     must not be the one place where the brand turns amber. */
-  --brand-mark: var(--text-main);
+  /* The mark's core: amber on paper, warm white at night. The satellite dot
+     and bar stay in the theme ink, so the two-colour mark needs no tile. */
+  --brand-mark: var(--brand);
   /* The amber AS TEXT when it sits on `--brand-soft` rather than on paper.
      The brand step measures 1.89:1 on its own 18% tint — a 10px pill label
      wants 4.5 — so text on a brand fill uses the deeper step (7.3:1 on the
@@ -692,7 +691,7 @@ html[data-comfort="on"]:not(.dark) {
   --brand: #de9c0d;
   --brand-soft: rgba(222, 156, 13, 0.18);
   --brand-line: rgba(222, 156, 13, 0.55);
-  --brand-mark: var(--text-main);
+  --brand-mark: var(--brand);
 }
 
 html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
@@ -1468,7 +1467,7 @@ html[data-comfort="on"] {
     fill: var(--text-main);
   }
   .logo-svg .connector {
-    stroke: var(--text-dim);
+    stroke: color-mix(in srgb, var(--text-main) 70%, transparent);
     stroke-width: 2px;
   }
   .logo-svg .orbit-group {
@@ -2111,33 +2110,3 @@ html {
   );
 }
 
-/* A handful of dots breathe, very slowly and one at a time. They are pixels,
-   not orbs: brightness only, no scale, so the field stays quiet. */
-.auth-dot-spark {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-main) 55%, transparent);
-  animation: auth-dot-breathe 8s ease-in-out infinite;
-}
-
-@keyframes auth-dot-breathe {
-  0%,
-  100% {
-    opacity: 0.08;
-  }
-  45% {
-    opacity: 0.72;
-  }
-  70% {
-    opacity: 0.2;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .auth-dot-spark {
-    animation: none;
-    opacity: 0.3;
-  }
-}

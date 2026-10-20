@@ -324,15 +324,23 @@ async function seedEarlyTestersInto(ctx: MutationCtx) {
   );
 
   let removed = 0;
+  // One row per canonical tester. An earlier run could leave a second copy of
+  // the same name and class, which the carousel then showed twice; the first
+  // copy is kept and the extras are removed here rather than in the UI alone.
+  const kept = new Set<string>();
   for (const row of rows) {
     if (row.source !== "early_tester") continue;
     const isLegacyName =
       LEGACY_NAMES.includes(row.displayName as (typeof LEGACY_NAMES)[number]) ||
       (row.displayName === "Dev" && row.classLabel === "Class 7");
-    if (isLegacyName || !canonical.has(keyOf(row))) {
+    const key = keyOf(row);
+    const duplicate = kept.has(key);
+    if (isLegacyName || !canonical.has(key) || duplicate) {
       await ctx.db.delete(row._id);
       removed += 1;
+      continue;
     }
+    kept.add(key);
   }
 
   // A fixed base keeps the quote sheet's order stable; the UI mixes the

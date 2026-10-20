@@ -1,16 +1,19 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Manthan mark: one large circle joined by a short bar to a smaller circle,
- * all in one solid colour that follows the theme (white on dark, dark on light).
+ * Manthan mark: one large circle joined by a short bar to a smaller circle.
+ *
+ * The core carries `--brand-mark` — amber on paper, warm white at night — and
+ * the satellite plus the bar stay in the theme's ink, which is what makes the
+ * mark read on both surfaces without a tile behind it. Geometry is the
+ * supplied artwork, 1:1.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="60 190 904 640" className={cn("h-6 w-auto", className)} aria-hidden="true">
-      <path
-        fill="var(--text-main)"
-        d="M372 195a312 312 0 1 0 0 625a312 312 0 1 0 0-625zM693 492h73v48h-73zM860 420a96 96 0 1 0 0 193a96 96 0 1 0 0-193z"
-      />
+      <circle cx="372" cy="507.5" r="312" fill="var(--brand-mark)" />
+      <rect x="693" y="492" width="73" height="48" fill="var(--text-main)" />
+      <circle cx="860" cy="516.5" r="96.5" fill="var(--text-main)" />
     </svg>
   );
 }

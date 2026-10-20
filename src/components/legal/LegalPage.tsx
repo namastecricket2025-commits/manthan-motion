@@ -8,12 +8,10 @@ import { Logo } from "@/components/landing/Logo";
  */
 export default function LegalPage({
   title,
-  updated,
   intro,
   sections,
 }: {
   title: string;
-  updated: string;
   intro: string;
   sections: { heading: string; body: string[] }[];
 }) {
@@ -36,9 +34,6 @@ export default function LegalPage({
           <h1 className="mt-6 font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
             {title}
           </h1>
-          <p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-text-dim">
-            Last updated · {updated}
-          </p>
           <p className="mt-6 text-base leading-relaxed text-text-dim">{intro}</p>
         </header>
 

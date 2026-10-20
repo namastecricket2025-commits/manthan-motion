@@ -8,43 +8,67 @@ import { useMutation } from "convex/react";
 
 const STORAGE_KEY = "manthan-recent-kind";
 const HIDDEN_KEY = "manthan-feedback-hidden";
+const ASKED_KEY = "manthan-feedback-asked-at";
+/** One prompt a month, at most. A review asked for after every flashcard is
+ *  not a review, it is a toll booth. */
+const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Which in-app action most recently completed, if any. Used so the prompt can
- *  say "your summary / quiz / solved problem" once, then never again. */
-function recentKind(): string | null {
+type Recent = { kind: string; at: number };
+
+/** Which in-app action most recently completed, if any. The timestamp is what
+ *  keeps an old generation from resurfacing the prompt on a later visit. */
+function recentKind(): Recent | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw && raw.length > 0 ? raw : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Recent>;
+    if (typeof parsed?.kind !== "string" || !parsed.kind) return null;
+    return { kind: parsed.kind, at: typeof parsed.at === "number" ? parsed.at : 0 };
   } catch {
     return null;
   }
 }
 
 export function setRecentKind(kind: string) {
+  const entry: Recent = { kind, at: Date.now() };
   try {
-    window.localStorage.setItem(STORAGE_KEY, kind);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entry));
   } catch {
     /* ignore */
   }
   // A prompt already on the page reads the new value immediately rather than
   // waiting for the next dashboard mount.
   window.dispatchEvent(
-    new CustomEvent("manthan:recent-kind", { detail: { kind } }),
+    new CustomEvent("manthan:recent-kind", { detail: entry }),
   );
 }
 
 /**
- * When the prompt may appear. The prompt is tied to a real event, not a timer:
- * `setRecentKind` records what the student just generated, and it is shown at
- * most once a session, only to a signed-in account (a review is stored against
- * one), and never again after the form is sent or dismissed.
+ * When the prompt may appear.
+ *
+ * Tied to a real generation, never to a timer, and deliberately scarce:
+ * at most once every 30 days, only to a signed-in account, and never again
+ * after it has been dismissed or answered. The last occurrence is stored in
+ * localStorage, not sessionStorage — the session version reset with the tab,
+ * which is why reopening the site re-asked about a flashcard from last visit.
  */
-function useFeedbackPrompt() {
+function readAsked(): number {
+  try {
+    return Number(window.localStorage.getItem(ASKED_KEY) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function useFeedbackPrompt(forceVisible = false) {
   const { isAuthenticated } = useAuth();
-  const [kind, setKind] = React.useState<string | null>(recentKind);
+  // The kind is only the *label* for a prompt raised in this visit; on its own
+  // it never opens one. A stored kind from last week must not resurface.
+  const [recent, setRecent] = React.useState<Recent | null>(recentKind);
+  const [visible, setVisible] = React.useState(false);
   const [hidden, setHidden] = React.useState(() => {
     try {
-      return window.sessionStorage.getItem(HIDDEN_KEY) !== null;
+      return window.localStorage.getItem(HIDDEN_KEY) !== null;
     } catch {
       return false;
     }
@@ -52,23 +76,31 @@ function useFeedbackPrompt() {
 
   React.useEffect(() => {
     const onKind = (event: Event) => {
-      const next = (event as CustomEvent<{ kind?: string }>).detail?.kind;
-      if (!next) return;
-      setKind(next);
+      const next = (event as CustomEvent<Partial<Recent>>).detail;
+      if (!next?.kind) return;
+      setRecent({ kind: next.kind, at: typeof next.at === "number" ? next.at : Date.now() });
+      // Decide on the event itself. The occurrence is stamped the moment the
+      // prompt is raised, so closing the tab unanswered ends the ask too.
+      if (hidden || !isAuthenticated) return;
+      if (Date.now() - readAsked() < COOLDOWN_MS) return;
       try {
-        if (window.sessionStorage.getItem(HIDDEN_KEY) === null) setHidden(false);
+        window.localStorage.setItem(ASKED_KEY, String(Date.now()));
+        window.localStorage.removeItem(STORAGE_KEY);
       } catch {
-        setHidden(false);
+        /* private mode: this visit still owns the prompt */
       }
+      setVisible(true);
     };
     window.addEventListener("manthan:recent-kind", onKind);
     return () => window.removeEventListener("manthan:recent-kind", onKind);
-  }, []);
+  }, [hidden, isAuthenticated]);
 
   const dismiss = React.useCallback(() => {
+    setVisible(false);
     setHidden(true);
     try {
-      window.sessionStorage.setItem(HIDDEN_KEY, "1");
+      window.localStorage.setItem(HIDDEN_KEY, "1");
+      window.localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* private mode — hidden for this render only */
     }
@@ -77,15 +109,15 @@ function useFeedbackPrompt() {
   const markSubmitted = React.useCallback(() => {
     try {
       window.localStorage.removeItem(STORAGE_KEY);
-      window.sessionStorage.setItem(HIDDEN_KEY, "1");
+      window.localStorage.setItem(HIDDEN_KEY, "1");
     } catch {
       /* ignore */
     }
   }, []);
 
   return {
-    kind,
-    shouldShow: isAuthenticated && !hidden && !!kind,
+    kind: recent?.kind ?? null,
+    shouldShow: forceVisible || (isAuthenticated && !hidden && visible && !!recent),
     dismissed: dismiss,
     submitted: markSubmitted,
   };
@@ -132,10 +164,12 @@ function StarField({
 
 export interface FeedbackPromptProps {
   className?: string;
+  /** The /feedback page asks directly; the in-app prompt earns its moment. */
+  forceVisible?: boolean;
 }
 
-export function FeedbackPrompt({ className }: FeedbackPromptProps) {
-  const prompt = useFeedbackPrompt();
+export function FeedbackPrompt({ className, forceVisible = false }: FeedbackPromptProps) {
+  const prompt = useFeedbackPrompt(forceVisible);
 
   const [rating, setRating] = React.useState(0);
   const [text, setText] = React.useState("");
@@ -217,7 +251,9 @@ export function FeedbackPrompt({ className }: FeedbackPromptProps) {
       role="dialog"
       aria-label="Was this helpful?"
     >
-      {/* Dismissible once per visit. */}
+      {/* Dismissible once per visit — but on /feedback the form is the page,
+          so there is nothing to dismiss it back to. */}
+      {forceVisible ? null : (
       <button
         type="button"
         onClick={prompt.dismissed}
@@ -237,6 +273,7 @@ export function FeedbackPrompt({ className }: FeedbackPromptProps) {
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
+      )}
 
       <p className="text-sm font-semibold">Was this helpful?</p>
       {kind ? (
@@ -314,13 +351,15 @@ export function FeedbackPrompt({ className }: FeedbackPromptProps) {
       </div>
 
       <div className="mt-4 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={prompt.dismissed}
-          className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium text-text-dim transition-colors hover:text-foreground"
-        >
-          Skip
-        </button>
+        {forceVisible ? null : (
+          <button
+            type="button"
+            onClick={prompt.dismissed}
+            className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium text-text-dim transition-colors hover:text-foreground"
+          >
+            Skip
+          </button>
+        )}
         <button
           type="button"
           onClick={handleSubmit}

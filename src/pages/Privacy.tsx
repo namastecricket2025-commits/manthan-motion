@@ -4,7 +4,6 @@ export default function Privacy() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="September 2026"
       intro="This policy explains what Manthan collects, why, and what happens to your study material. Short version: we collect the minimum needed to run the pipeline, and your notes stay yours."
       sections={[
         {

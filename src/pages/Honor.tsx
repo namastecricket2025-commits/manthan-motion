@@ -4,7 +4,6 @@ export default function Honor() {
   return (
     <LegalPage
       title="Academic Honor & Fair Use Policy"
-      updated="September 2026"
       intro="Manthan exists to build genuine understanding. This policy draws the line between studying with the labs and letting them think for you."
       sections={[
         {

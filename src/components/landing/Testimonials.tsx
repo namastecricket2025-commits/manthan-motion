@@ -60,7 +60,18 @@ type Review = {
 
 function orderReviews(reviews: Review[]): Review[] {
   const rank = new Map(DISPLAY_ORDER.map((name, index) => [name, index]));
-  return [...reviews].sort((a, b) => {
+  // One row can be written twice — an earlier seed ran over a table that
+  // already had the sheet. Two identical quotes under the same name read as a
+  // carousel bug, so the exact duplicate is dropped here; a genuinely
+  // different review from the same person is kept.
+  const seen = new Set<string>();
+  const unique = reviews.filter((review) => {
+    const key = `${(review.displayName ?? "").trim().toLowerCase()}|${review.text.trim()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return unique.sort((a, b) => {
     const aRank = rank.get((a.displayName ?? "").trim());
     const bRank = rank.get((b.displayName ?? "").trim());
     if (aRank === undefined && bRank === undefined) return 0;
@@ -197,6 +208,12 @@ export default function Testimonials() {
   const ordered = useMemo(() => orderReviews(data?.reviews ?? []), [data?.reviews]);
   const colors = useMemo(() => assignAvatarColors(ordered), [ordered]);
   const pages = Math.max(1, Math.ceil(ordered.length / perView));
+  /** The heading counts what the carousel actually draws, not the table. */
+  const reviewCount = ordered.length;
+  const averageRating =
+    reviewCount > 0
+      ? ordered.reduce((sum, review) => sum + review.rating, 0) / reviewCount
+      : 0;
 
   /** Width of one card plus the track gap. */
   const stepWidth = useCallback(() => {
@@ -272,15 +289,15 @@ export default function Testimonials() {
             wrote it, with only their first name and class.
           </p>
 
-          {data && data.count > 0 ? (
+          {reviewCount > 0 ? (
             <p className="mt-5 flex flex-wrap items-center gap-2.5 text-sm text-text-dim">
-              <Stars rating={data.averageRating} size={15} />
+              <Stars rating={averageRating} size={15} />
               <span className="font-medium text-foreground">
-                {data.averageRating.toFixed(1)}
+                {averageRating.toFixed(1)}
               </span>
               <span aria-hidden="true">·</span>
               <span>
-                {data.count} {data.count === 1 ? "review" : "reviews"}
+                {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
               </span>
             </p>
           ) : null}
