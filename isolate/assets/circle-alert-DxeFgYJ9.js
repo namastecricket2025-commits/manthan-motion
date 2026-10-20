@@ -1,1 +1,0 @@
-import{c as e}from"./index-B0uE9y0Z.js";const c=[["path",{d:"M7 7h10v10",key:"1tivn9"}],["path",{d:"M7 17 17 7",key:"1vkiza"}]],t=e("arrow-up-right",c);const r=[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["line",{x1:"12",x2:"12",y1:"8",y2:"12",key:"1pkeuh"}],["line",{x1:"12",x2:"12.01",y1:"16",y2:"16",key:"4dfq90"}]],i=e("circle-alert",r);export{t as A,i as C};
