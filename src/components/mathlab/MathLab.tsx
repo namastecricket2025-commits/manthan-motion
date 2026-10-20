@@ -20,7 +20,6 @@ import { MathHistory } from "@/components/mathlab/MathHistory";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
 import { PracticeTab } from "@/components/mathlab/PracticeTab";
 import { splitProblems, uprightWords } from "@/components/mathlab/problems";
-import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { DetailList, Fold, InlineMath, ProblemStatement } from "@/components/mathlab/parts";
 import {
   plainProse,
