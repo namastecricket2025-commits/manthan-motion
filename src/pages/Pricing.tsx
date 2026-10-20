@@ -239,6 +239,9 @@ export default function Pricing() {
 
                   <div className="premium-divider my-6" />
 
+                  <p className="mb-3 text-[11.5px] text-text-dim">
+                    Everything in Free, plus:
+                  </p>
                   <ul className="flex-1 space-y-3">
                     {tier.features.map((feature) => (
                       <li key={feature} className="flex gap-2.5 text-sm">

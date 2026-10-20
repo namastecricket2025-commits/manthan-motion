@@ -250,15 +250,16 @@ function useChartInk() {
  */
 function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
   const ref = useRef<T | null>(null);
-  const [seen, setSeen] = useState(false);
+  // A browser without IntersectionObserver cannot wait for the element, so
+  // the content starts visible instead of animating in from a state it can
+  // never leave.
+  const [seen, setSeen] = useState(
+    () => typeof IntersectionObserver === "undefined",
+  );
 
   useEffect(() => {
     const element = ref.current;
     if (!element || seen) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setSeen(true);
-      return;
-    }
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -282,33 +283,31 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
  * nobody asked for.
  */
 function useCountUp(target: number, active: boolean, still: boolean) {
-  const [value, setValue] = useState(0);
-  const [done, setDone] = useState(false);
+  // "Instant" values (reduced motion, or a zero target) are read straight from
+  // the prop instead of being copied into state by an effect.
+  const instant = still || target === 0;
+  const [animated, setAnimated] = useState(0);
+  const [finished, setFinished] = useState(false);
   const fired = useRef(false);
 
   useEffect(() => {
-    if (!active || fired.current) return;
+    if (!active || fired.current || instant) return;
     fired.current = true;
-    if (still || target === 0) {
-      setValue(target);
-      setDone(true);
-      return;
-    }
     let frame = 0;
     const started = performance.now();
     const duration = 900;
     const step = (now: number) => {
       const progress = Math.min(1, (now - started) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(target * eased));
+      setAnimated(Math.round(target * eased));
       if (progress < 1) frame = requestAnimationFrame(step);
-      else setDone(true);
+      else setFinished(true);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [active, target, still]);
+  }, [active, instant, target]);
 
-  return { value, done };
+  return { value: instant ? target : animated, done: instant || finished };
 }
 
 /** Container width in pixels, so SVG marks are drawn at true scale. */
