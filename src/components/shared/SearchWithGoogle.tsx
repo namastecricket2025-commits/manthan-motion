@@ -1,5 +1,14 @@
-import { useMemo, useState } from "react";
-import { ArrowUpRight, Search, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import {
+  AlertCircle,
+  ArrowUpRight,
+  ExternalLink,
+  Loader2,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +20,37 @@ import {
 import "./search-with-google.css";
 
 /**
- * "Search with Google" — a small in-app panel, not a redirect.
+ * "Search on Google" — an in-app panel, never a redirect.
  *
- * Google refuses to be framed, so the search opens in a sized pop-up window
- * while the lab stays exactly where it is. The query is prefilled from whatever
- * the student is looking at (a step, a chapter, a bench) and is editable before
- * it is sent, so a bad auto-query costs a keystroke rather than a lost page.
+ * The student's working stays exactly where it is: pressing the button opens
+ * this soft-cornered page, the query runs through a Convex action (so no API
+ * key ever reaches the browser) and the results, plus Google's short answer,
+ * are drawn inside the panel. Each result opens in a new tab only when it is
+ * clicked.
+ *
+ * The trigger is deliberately a white button carrying the Google wordmark —
+ * the one place a third party's identity is shown, so it is shown as their
+ * mark rather than as somebody's spelling of it.
  */
+
+interface Hit {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function googleUrlFor(query: string) {
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
 export function SearchWithGoogle({
   topic,
   label = "Search on Google",
@@ -26,52 +59,69 @@ export function SearchWithGoogle({
 }: {
   /** What to search for — usually the question, chapter or bench name. */
   topic: string;
+  /** Accessible name for the trigger; the visible label is always the same. */
   label?: string;
+  /** Compact styling for toolbars; otherwise it is a lab-chrome button. */
   compact?: boolean;
   className?: string;
 }) {
+  const runSearch = useAction(api.webSearch.search);
+
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(topic);
-  const [blocked, setBlocked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [results, setResults] = useState<Hit[]>([]);
 
-  const sent = query.trim() || topic.trim();
-  const url = useMemo(
-    () => `https://www.google.com/search?q=${encodeURIComponent(sent)}`,
-    [sent],
-  );
-  const aiUrl = useMemo(
-    () => `https://www.google.com/search?q=${encodeURIComponent(sent)}&udm=50`,
-    [sent],
-  );
+  const sent = (query.trim() || topic.trim()).slice(0, 240);
+  const googleUrl = googleUrlFor(sent);
+  const aiUrl = `${googleUrl}&udm=50`;
 
-  const popup = (target: string) => {
-    const width = 560;
-    const height = 740;
-    const left = Math.max(0, window.outerWidth / 2 - width / 2 + window.screenX);
-    const top = Math.max(0, window.outerHeight / 2 - height / 2 + window.screenY);
-    const win = window.open(
-      target,
-      "manthan-google",
-      `popup=yes,width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)}`,
-    );
-    if (!win) {
-      setBlocked(true);
-      return false;
-    }
-    // `noopener` in the feature string makes window.open return null in some
-    // browsers, which would look like a blocked pop-up. Sever the opener on the
-    // returned handle instead.
+  const run = async (text: string) => {
+    const value = text.trim().replace(/\s+/g, " ").slice(0, 240);
+    if (!value || busy) return;
+    setBusy(true);
+    setSearched(true);
+    setError(null);
+    setAnswer(null);
+    setResults([]);
     try {
-      win.opener = null;
-    } catch {
-      /* cross-origin window — it is already detached enough */
+      const reply = await runSearch({ q: value });
+      if (reply.ok) {
+        setResults(reply.results);
+        setAnswer(reply.answer ?? null);
+      } else {
+        setError(reply.error ?? "That search did not go through.");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "That search did not go through. Use the Google link below instead.",
+      );
+    } finally {
+      setBusy(false);
     }
-    win.focus?.();
-    return true;
+  };
+
+  /* Opening the panel starts the search for the topic in front of the
+     student — a click on the button already said what they wanted. */
+  const handleOpen = (next: boolean) => {
+    setOpen(next);
+    if (!next) return;
+    const initial = topic.trim().replace(/\s+/g, " ").slice(0, 240);
+    setQuery(initial);
+    setSearched(false);
+    setError(null);
+    setAnswer(null);
+    setResults([]);
+    if (initial) void run(initial);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
         <button
           type="button"
@@ -81,82 +131,129 @@ export function SearchWithGoogle({
             (className ?? "")
           }
           aria-label={`${label} — ${topic}`}
-          // A new question means a new query: reset on open instead of in an
-          // effect, so reopening never searches the previous topic.
-          onClick={() => setQuery(topic)}
         >
-          <Search className="h-3.5 w-3.5" />
-          {label}
+          <Search className="h-3.5 w-3.5" aria-hidden />
+          <span className="gs-trigger__text">Search on</span>
+          <img
+            className="gs-trigger__logo"
+            src="/google-logo.png"
+            alt="Google"
+            width={54}
+            height={18}
+            draggable={false}
+          />
         </button>
       </DialogTrigger>
-      <DialogContent className="gs-panel">
+
+      <DialogContent className="gs-panel rounded-[22px]">
         <DialogHeader>
           <p className="gs-kicker">
-            <Search className="h-3 w-3" /> Search the web
+            <Search className="h-3 w-3" aria-hidden /> Search the web
           </p>
-          <DialogTitle className="gs-title">Look this up on Google</DialogTitle>
+          <DialogTitle className="gs-title">
+            Look it up without leaving Manthan
+          </DialogTitle>
           <DialogDescription className="gs-desc">
-            Edit the query, then send it to Google. It opens in a small window so
-            this page — and your working — stays exactly where it is.
+            Results come back into this panel, so your problem and your working
+            never move.
           </DialogDescription>
         </DialogHeader>
 
-        <label className="gs-field">
+        <form
+          className="gs-field"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void run(query);
+          }}
+        >
           <Search className="h-4 w-4 shrink-0" aria-hidden />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              if (popup(url)) setOpen(false);
-            }}
             placeholder="What do you want to look up?"
-            aria-label="Google search query"
+            aria-label="Search query"
             autoFocus
           />
-        </label>
+          <button type="submit" className="gs-submit" disabled={busy || !query.trim()}>
+            {busy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <Search className="h-3.5 w-3.5" aria-hidden />
+            )}
+            Search
+          </button>
+        </form>
 
-        <div className="gs-actions">
+        {busy ? (
+          <p className="gs-status" aria-live="polite">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            Searching the web…
+          </p>
+        ) : null}
+
+        {!busy && error ? (
+          <p className="gs-error">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>{error}</span>
+          </p>
+        ) : null}
+
+        {!busy && !error && answer ? (
+          <div className="gs-answer">
+            <p className="gs-answer__label">
+              <Sparkles className="h-3 w-3" aria-hidden /> From Google
+            </p>
+            <p className="gs-answer__text">{answer}</p>
+          </div>
+        ) : null}
+
+        {!busy && !error && results.length > 0 ? (
+          <ul className="gs-results">
+            {results.map((result) => (
+              <li key={result.url}>
+                <a
+                  className="gs-hit"
+                  href={result.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span className="gs-hit__host">{hostOf(result.url)}</span>
+                  <span className="gs-hit__title">{result.title}</span>
+                  {result.snippet ? (
+                    <span className="gs-hit__snip">{result.snippet}</span>
+                  ) : null}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {!busy && !error && searched && results.length === 0 && !answer ? (
+          <p className="gs-note">
+            Nothing came back for that. Try fewer words, or open Google below.
+          </p>
+        ) : null}
+
+        <div className="gs-foot">
           <a
-            className="gs-go"
-            href={url}
+            className="gs-open"
+            href={googleUrl}
             target="_blank"
             rel="noreferrer"
-            onClick={(event) => {
-              if (popup(url)) event.preventDefault();
-              setOpen(false);
-            }}
           >
-            <Search className="h-4 w-4" />
-            Search on Google
-            <ArrowUpRight className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            Open full results on Google
+            <ArrowUpRight className="h-3 w-3" aria-hidden />
           </a>
-          <a
-            className="gs-ai"
-            href={aiUrl}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(event) => {
-              if (popup(aiUrl)) event.preventDefault();
-              setOpen(false);
-            }}
-          >
-            <Sparkles className="h-4 w-4" />
+          <a className="gs-ai" href={aiUrl} target="_blank" rel="noreferrer">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Ask Google AI
           </a>
         </div>
 
-        {blocked ? (
-          <p className="gs-note">
-            The browser blocked the small window. Allow pop-ups for this site, or
-            use the link above — it opens in a new tab instead.
-          </p>
-        ) : (
-          <p className="gs-note">
-            Nothing on this page changes. Google opens beside it.
-          </p>
-        )}
+        <p className="gs-note">
+          Nothing on this page changes. Results stay in this panel.
+        </p>
       </DialogContent>
     </Dialog>
   );

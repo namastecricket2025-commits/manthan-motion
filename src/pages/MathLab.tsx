@@ -7,7 +7,6 @@ import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar";
 import { Logo } from "@/components/landing/Logo";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { MathLab } from "@/components/mathlab/MathLab";
-import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -163,15 +162,20 @@ export default function MathLabPage() {
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                Math Lab<span className="text-[var(--signal)]">.</span>
-              </h1>
-              <SearchWithGoogle
-                compact
-                label="Search with Google"
-                topic="CBSE maths concept explained step by step"
-              />
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
+                  Workspace · Classes 8 to 11
+                </p>
+                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                  Math Lab<span className="text-[var(--signal)]">.</span>
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
+                  Ask a question in maths or in words, read the working, graph
+                  it, then practise the same skill until it sticks. The search
+                  sits inside the lab, next to the work it is for.
+                </p>
+              </div>
             </div>
 
             <MathLab />

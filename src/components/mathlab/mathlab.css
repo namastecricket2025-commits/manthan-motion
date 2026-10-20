@@ -502,14 +502,28 @@
 /* Views — notebook, graphing, tools and history                       */
 /* ================================================================== */
 
+/* One bar across the top: the tabs, then the search for whatever is in front
+   of the student. The rail sits in a quiet capsule so the row reads as a
+   single toolbar rather than as loose pills. */
+.mathlab-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .mathlab-views {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   overflow-x: auto;
   /* The rail scrolls sideways on narrow screens, which would otherwise clip
      the focus ring and the 1px hover border on the top and bottom edge. */
-  padding: 3px 2px;
-  margin: -3px -2px;
+  padding: 5px;
+  margin: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 58%, transparent);
   scrollbar-width: none;
 }
 
@@ -522,7 +536,9 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 7px;
-  border: 1px solid var(--glass-line);
+  /* Transparent by default: the capsule around the rail is the border now,
+     and a hairline on every tab inside it would read as a double edge. */
+  border: 1px solid transparent;
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 11px;
@@ -534,7 +550,7 @@
 
 .mathlab-view:hover {
   color: var(--text-main);
-  border-color: color-mix(in srgb, var(--text-main) 18%, transparent);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
 }
 
 .mathlab-view.is-active {
@@ -706,6 +722,7 @@
 
 .mathlab-input__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
@@ -2414,11 +2431,11 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   inset: -28px -22px -40px -22px;
   background-image: radial-gradient(
     circle at center,
-    color-mix(in srgb, var(--text-main) 14%, transparent) 1px,
+    color-mix(in srgb, var(--text-main) 9%, transparent) 1px,
     transparent 1.2px
   );
   background-size: 22px 22px;
-  opacity: 0.55;
+  opacity: 0.4;
   -webkit-mask-image: radial-gradient(ellipse 82% 72% at 50% 26%, #000 18%, transparent 78%);
   mask-image: radial-gradient(ellipse 82% 72% at 50% 26%, #000 18%, transparent 78%);
 }
@@ -2467,6 +2484,38 @@ html[data-comfort="on"] .mathlab-page::after {
 
 .mathlab-solvecard__intro {
   padding: 4px 2px 0;
+}
+
+/* The first screen of the lab is the question box, so its heading is set as
+   a display line rather than as a card title — the eye lands on the prompt
+   before anything else on the page. */
+.mathlab-solvecard__intro .mathlab-card__title {
+  font-size: clamp(1.35rem, 2.4vw, 1.65rem);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* The hero field is the one box with an amber edge, so the workspace has a
+   single obvious starting point; the focus ring keeps the edge and adds its
+   own halo instead of replacing it. */
+.mathlab-input.mathlab-input--hero {
+  border-color: color-mix(in srgb, var(--signal) 22%, var(--glass-line));
+  box-shadow: 0 34px 70px -55px rgba(0, 0, 0, 0.9);
+}
+
+.mathlab-input.mathlab-input--hero:focus-within {
+  border-color: color-mix(in srgb, var(--signal) 58%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--signal) 13%, transparent),
+    0 34px 70px -55px rgba(0, 0, 0, 0.9);
+}
+
+/* Solve is the answer to the box above it: the largest, brightest control in
+   the row, and it keeps its size whether it is loading or idle. */
+.mathlab-input--hero .mathlab-solve {
+  padding: 12px 24px;
+  font-size: 13.5px;
+  box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--signal) 85%, transparent);
 }
 
 .mathlab-solvecard__sub {

@@ -2,10 +2,9 @@ import BiologyVectorLab from "@/components/lab/BiologyVectorLab";
 import ChemistryGlassLab from "@/components/lab/ChemistryGlassLab";
 import PhysicsVectorLab from "@/components/lab/PhysicsVectorLab";
 import { useSpringTransition, viewVariants } from "@/lib/motion";
-import { useSettings } from "@/components/settings/SettingsProvider";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Atom, Beaker, Dna, Eye, FlaskConical } from "lucide-react";
+import { ArrowLeft, Atom, Beaker, Dna, FlaskConical } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import "@/components/lab/apple-lab.css";
@@ -54,7 +53,6 @@ export default function Lab() {
   const [subject, setSubject] = useState<Subject>("physics");
   const transition = useSpringTransition();
   const active = SUBJECTS.find((entry) => entry.id === subject) ?? SUBJECTS[0];
-  const { settings, update } = useSettings();
 
   return (
     <div className="apple-lab">
@@ -95,24 +93,14 @@ export default function Lab() {
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* Eye comfort is a site-wide preference owned by Settings; it
+                used to have a second switch in this header, which meant two
+                controls for one flag. The search below opens in-app. */}
             <SearchWithGoogle
               topic={`${active.label} practical experiment — NCERT CBSE explained`}
-              label="Search with Google"
+              label="Search"
               compact={false}
             />
-            <button
-              type="button"
-              className="apple-lab-btn !px-3 !py-2 !text-[12px]"
-              data-active={settings.eyeComfort}
-              aria-pressed={settings.eyeComfort}
-              onClick={() => update({ eyeComfort: !settings.eyeComfort })}
-              title="Eye comfort: warm, low-glare light across the whole app"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">
-                Eye comfort {settings.eyeComfort ? "on" : "off"}
-              </span>
-            </button>
             <span className="apple-lab-chip">
               <span
                 className="inline-block h-1.5 w-1.5 rounded-full"

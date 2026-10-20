@@ -563,6 +563,11 @@ export function MathLab() {
   return (
     <div className="mathlab-page">
       <div className={"mathlab-root" + (locked ? " pointer-events-none select-none blur-[7px]" : "")} aria-hidden={locked}>
+        {/* One bar: the lab's own tabs, and the search for whatever is
+            currently in front of the student. The button belongs here rather
+            than in the page header — this is where the question lives, and it
+            is the same row on every tab. */}
+        <div className="mathlab-viewbar">
         <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
           {VIEW_TABS.map((tab) => {
             const Icon = tab.icon;
@@ -589,6 +594,12 @@ export function MathLab() {
             );
           })}
         </nav>
+          <SearchWithGoogle
+            compact
+            label="Search this topic on Google"
+            topic={formula.trim() || `${track} ${chapter.name} maths`}
+          />
+        </div>
 
         <AnimatePresence mode="wait" initial={false}>
         <motion.div
