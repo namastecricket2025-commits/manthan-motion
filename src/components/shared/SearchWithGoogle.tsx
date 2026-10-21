@@ -80,6 +80,9 @@ export function SearchWithGoogle({
   const [question, setQuestion] = useState("");
   const [followBusy, setFollowBusy] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
+  /* The question is rendered the instant Send is pressed, so the panel never
+     looks stuck while the model is thinking. */
+  const [pending, setPending] = useState<string | null>(null);
   const threadEnd = useRef<HTMLDivElement | null>(null);
 
   const sent = (query.trim() || topic.trim()).slice(0, 240);
@@ -125,6 +128,7 @@ export function SearchWithGoogle({
     setThread([]);
     setQuestion("");
     setFollowError(null);
+    setPending(null);
     if (initial) void run(initial);
   };
 
@@ -133,16 +137,17 @@ export function SearchWithGoogle({
     if (!value || followBusy || !answer) return;
     setFollowBusy(true);
     setFollowError(null);
+    setPending(value);
     try {
       const reply = await askFollowUp({
         query: sent,
         answer: answer.text,
-        sources: results.slice(0, 6).map((hit) => ({
+        sources: results.slice(0, 4).map((hit) => ({
           title: hit.title,
           url: hit.url,
           snippet: hit.snippet,
         })),
-        history: thread.slice(-3),
+        history: thread.slice(-2),
         question: value,
       });
       if (reply.ok && reply.text) {
@@ -158,6 +163,7 @@ export function SearchWithGoogle({
       setFollowError("That question did not go through. Try again.");
     } finally {
       setFollowBusy(false);
+      setPending(null);
     }
   };
 
@@ -283,11 +289,14 @@ export function SearchWithGoogle({
                 <p className="gs-turn__a">{turn.answer}</p>
               </div>
             ))}
-            {followBusy ? (
-              <p className="gs-turn__pending">
-                <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-                Thinking it through…
-              </p>
+            {pending ? (
+              <div className="gs-turn">
+                <p className="gs-turn__q">{pending}</p>
+                <p className="gs-turn__pending">
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                  Thinking it through…
+                </p>
+              </div>
             ) : null}
             {!followBusy && followError ? (
               <p className="gs-turn__error" role="status">

@@ -3,7 +3,12 @@
 import { action } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
+import {
+  callModel,
+  ProviderUnavailable,
+  resolveCandidates,
+  type Candidate,
+} from "./providers";
 import { v } from "convex/values";
 
 /**
@@ -265,6 +270,36 @@ interface FollowUpTurn {
   answer: string;
 }
 
+/**
+ * The models that answer a short turn quickly, in the order measured on this
+ * deployment. Everything else follows in its configured order.
+ *
+ * This is latency policy, not a capability claim: the big flash models still
+ * write study material. A follow-up is two or three sentences, and on a free
+ * key the difference between the first and third candidate was measured at
+ * roughly a minute — long enough that students read the empty panel as frozen.
+ */
+const PREFERRED_FOLLOW_UP_MODELS = [
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+];
+
+export function fastestFirst(candidates: Candidate[]): Candidate[] {
+  const rank = (model: string) => {
+    const preferred = PREFERRED_FOLLOW_UP_MODELS.indexOf(model);
+    if (preferred !== -1) return preferred;
+    if (/lite|mini|nano/i.test(model)) return 10;
+    if (/flash|haiku/i.test(model)) return 11;
+    return 12;
+  };
+  return candidates
+    .map((candidate, index) => ({ candidate, index }))
+    .sort((a, b) => rank(a.candidate.model) - rank(b.candidate.model) || a.index - b.index)
+    .map((entry) => entry.candidate)
+    .slice(0, 5);
+}
+
 function readFollowUp(raw: string): string | null {
   const body = raw
     .trim()
@@ -334,13 +369,15 @@ export const followUp = action({
     const context = [
       `Search: ${args.query.slice(0, MAX_QUERY)}`,
       args.answer ? `Google's answer above the results: ${args.answer.slice(0, 900)}` : "",
-      ...args.sources.slice(0, 6).map(
+      // Just enough context to answer well: more sources meant more prompt
+      // tokens and a slower first byte, without a better answer.
+      ...args.sources.slice(0, 4).map(
         (source) =>
-          `- ${source.title} (${source.url}): ${source.snippet.slice(0, 320)}`,
+          `- ${source.title} (${source.url}): ${source.snippet.slice(0, 220)}`,
       ),
       ...(args.history ?? [])
-        .slice(-3)
-        .map((turn) => `Earlier — student: ${turn.question.slice(0, 300)}\nYou: ${turn.answer.slice(0, 700)}`),
+        .slice(-2)
+        .map((turn) => `Earlier — student: ${turn.question.slice(0, 240)}\nYou: ${turn.answer.slice(0, 500)}`),
       `Student's follow-up: ${question}`,
     ]
       .filter(Boolean)
@@ -348,11 +385,14 @@ export const followUp = action({
 
     try {
       const reply = await callModel(
-        await resolveCandidates(),
+        fastestFirst(await resolveCandidates()),
         FOLLOW_UP_SYSTEM,
         context,
         undefined,
         0.4,
+        // 8s per attempt. A model that has not answered by then is not going
+        // to make this feel fast, and the next candidate might.
+        8_000,
       );
       const text = readFollowUp(reply.text);
       if (!text) {

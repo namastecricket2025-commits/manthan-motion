@@ -334,6 +334,7 @@ async function geminiAttempt(
   prompt: string,
   image: ModelImage | undefined,
   temperature: number,
+  timeoutMs: number,
 ): Promise<AttemptResult> {
   try {
     const response = await fetch(
@@ -344,6 +345,11 @@ async function geminiAttempt(
           "content-type": "application/json",
           "x-goog-api-key": candidate.apiKey,
         },
+        // A provider that accepts the connection and then says nothing used to
+        // hold the whole action open until Convex's own limit. A timeout here
+        // turns that into a normal "this one did not answer" the chain can step
+        // past.
+        signal: AbortSignal.timeout(timeoutMs),
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [
@@ -415,6 +421,7 @@ async function openAiCompatibleAttempt(
   prompt: string,
   image: ModelImage | undefined,
   temperature: number,
+  timeoutMs: number,
 ): Promise<AttemptResult> {
   try {
     const response = await fetch(`${candidate.endpoint}/chat/completions`, {
@@ -423,6 +430,7 @@ async function openAiCompatibleAttempt(
         "content-type": "application/json",
         authorization: `Bearer ${candidate.apiKey}`,
       },
+      signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
         model: candidate.model,
         temperature,
@@ -599,6 +607,9 @@ export async function callModel(
    * phrasing, which is exactly the "she keeps saying the same line" problem.
    */
   temperature = 0.3,
+  /** Per-request budget. Generation may legitimately run long; a short
+   *  follow-up must not wait that long on a provider that never replies. */
+  timeoutMs = 90_000,
 ): Promise<{
   text: string;
   model: string;
@@ -614,8 +625,8 @@ export async function callModel(
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const result =
         candidate.provider === "gemini"
-          ? await geminiAttempt(candidate, system, prompt, image, temperature)
-          : await openAiCompatibleAttempt(candidate, system, prompt, image, temperature);
+          ? await geminiAttempt(candidate, system, prompt, image, temperature, timeoutMs)
+          : await openAiCompatibleAttempt(candidate, system, prompt, image, temperature, timeoutMs);
 
       if (result.ok) {
         if (result.text.trim()) {
@@ -660,11 +671,16 @@ export async function callModel(
       }
 
       // Busy or briefly broken: one more go on this candidate, then move on.
+      // A request that burned the whole timeout is the exception: repeating it
+      // spends the same budget again while the student waits, and the next
+      // candidate can answer far sooner.
+      const timedOut = /abort|timeout|timed out/i.test(result.message);
       const worthRetrying =
-        result.kind === "minute" ||
-        result.status >= 500 ||
-        result.status === 0 ||
-        OVERLOADED.test(result.message);
+        !timedOut &&
+        (result.kind === "minute" ||
+          result.status >= 500 ||
+          result.status === 0 ||
+          OVERLOADED.test(result.message));
       if (attempt === 0 && worthRetrying) {
         await sleep(600);
         continue;
