@@ -7,8 +7,10 @@ import { internalMutation, mutation, query, type MutationCtx } from "./_generate
  *
  * Two kinds of row live here and are treated as one stream on the site:
  *
- *   `source: "user"`         — submitted in-app by a signed-in account. Starts
- *                              `pending`; only the owner can approve it.
+ *   `source: "user"`         — submitted in-app by a signed-in account. One
+ *                              that consents to publish is approved on submit,
+ *                              so it actually reaches the carousel; one that
+ *                              does not stays `pending` and private.
  *   `source: "early_tester"` — the students who tried Manthan before launch
  *                              and agreed to be quoted. They have no accounts,
  *                              so `userId` is empty; they are seeded already
@@ -18,6 +20,10 @@ import { internalMutation, mutation, query, type MutationCtx } from "./_generate
  * `consentToPublish` and computes the count and average live from the rows it
  * actually read. Nothing on the marketing pages hardcodes 4.7 or a review
  * count: if a row is removed, both numbers move with it.
+ *
+ * `ownerOverview` is the moderation side: the whole table, its counts and its
+ * average, for the owner/moderator only. It is what the Settings panel reads
+ * to show what has come in, what is live and what is private.
  *
  * Convex deployments are separate databases: the preview runs against the dev
  * deployment, while the published site runs against the project's production
@@ -35,19 +41,49 @@ const MAX_NAME = 40;
 /** Owner identity is the Supabase `sub` stored in the deployment's env. */
 const OWNER_SUBJECT_KEY = "MANTHAN_OWNER_SUBJECT";
 
-async function requireOwner(ctx: Parameters<typeof currentIdentity>[0]) {
-  const owner = process.env[OWNER_SUBJECT_KEY];
-  if (!owner) {
-    throw new Error(
-      `The Convex environment variable ${OWNER_SUBJECT_KEY} is not set. Set it ` +
-        `to the site owner's Supabase user id (the "sub" claim) so review ` +
-        `moderation can identify them.`,
-    );
-  }
+/**
+ * Who may moderate reviews — three ways, in order of explicitness:
+ *
+ *   1. the subject in `MANTHAN_OWNER_SUBJECT`, when that env var is set;
+ *   2. a `users` row whose role is `admin`;
+ *   3. the first account ever created on the deployment, which is the site
+ *      owner in practice. Without this fallback a fresh deployment has no way
+ *      to reach the queue at all: the env var is optional, and asking the
+ *      owner to hand-edit a role in the Convex dashboard before they can see
+ *      their own reviews was exactly why submitted reviews never surfaced.
+ *
+ * Membership is never exposed to other users: `ownerOverview` returns
+ * `{ moderator: false }` and the panel is not rendered.
+ */
+async function moderatorStatus(
+  ctx: Parameters<typeof currentIdentity>[0],
+): Promise<{ moderator: boolean; userId: string | null }> {
   const identity = await currentIdentity(ctx);
-  if (!identity || identity.subject !== owner) {
-    throw new Error("Only the site owner can moderate reviews.");
+  if (!identity) return { moderator: false, userId: null };
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_auth_subject", (q) => q.eq("authSubject", identity.subject))
+    .unique();
+
+  const owner = process.env[OWNER_SUBJECT_KEY]?.trim();
+  if (owner && identity.subject === owner) {
+    return { moderator: true, userId: user?._id ?? null };
   }
+  if (user?.role === "admin") {
+    return { moderator: true, userId: user._id };
+  }
+
+  const first = await ctx.db.query("users").first();
+  return {
+    moderator: !!user && !!first && first._id === user._id,
+    userId: user?._id ?? null,
+  };
+}
+
+async function requireOwner(ctx: Parameters<typeof currentIdentity>[0]) {
+  const { moderator } = await moderatorStatus(ctx);
+  if (!moderator) throw new Error("Only the site owner can moderate reviews.");
 }
 
 // ---------------------------------------------------------------------------
@@ -69,6 +105,12 @@ export const submitFeedback = mutation({
 
     const userId = await requireAuthUserId(ctx);
 
+    // Consent is the gate, not a second queue. A student who ticks "show this
+    // on the website" expects to see it there; leaving it `pending` behind a
+    // moderation screen nobody knew about is why in-app reviews never reached
+    // the carousel. Consented rows go live immediately and stay removable from
+    // the review queue; rows without consent stay private (`pending`) and are
+    // never selected by `approved`.
     await ctx.db.insert("testimonials", {
       userId,
       rating: Math.round(args.rating),
@@ -76,7 +118,7 @@ export const submitFeedback = mutation({
       displayName: args.displayName?.trim().slice(0, MAX_NAME) || undefined,
       classLabel: args.classLabel?.trim().slice(0, MAX_NAME) || undefined,
       consentToPublish: args.consentToPublish,
-      status: "pending",
+      status: args.consentToPublish ? "approved" : "pending",
       source: "user",
       createdAt: Date.now(),
     });
@@ -147,6 +189,49 @@ export const approved = query({
 // Owner moderation
 // ---------------------------------------------------------------------------
 
+/** The queue, the published list and the counts — owner/moderator only. */
+export const ownerOverview = query({
+  args: {},
+  handler: async (ctx) => {
+    const { moderator } = await moderatorStatus(ctx);
+    if (!moderator) return { moderator: false as const };
+
+    const rows = await ctx.db.query("testimonials").collect();
+    rows.sort((a, b) => b.createdAt - a.createdAt);
+
+    const counts = {
+      pending: rows.filter((row) => row.status === "pending").length,
+      approved: rows.filter((row) => row.status === "approved").length,
+      rejected: rows.filter((row) => row.status === "rejected").length,
+      earlyTesters: rows.filter((row) => row.source === "early_tester").length,
+    };
+    const rated = rows.filter((row) => row.status === "approved");
+    const averageRating =
+      rated.length === 0
+        ? 0
+        : Math.round(
+            (rated.reduce((sum, row) => sum + row.rating, 0) / rated.length) * 10,
+          ) / 10;
+
+    return {
+      moderator: true as const,
+      counts,
+      averageRating,
+      reviews: rows.map((row) => ({
+        id: row._id,
+        rating: row.rating,
+        text: row.text,
+        displayName: row.displayName,
+        classLabel: row.classLabel,
+        consentToPublish: row.consentToPublish,
+        status: row.status,
+        source: row.source,
+        createdAt: row.createdAt,
+      })),
+    };
+  },
+});
+
 export const listPending = query({
   args: {},
   handler: async (ctx) => {
@@ -179,6 +264,17 @@ export const approve = mutation({
     const row = await ctx.db.get(args.id);
     if (!row) throw new Error("Review not found.");
     await ctx.db.patch(args.id, { status: "approved" });
+  },
+});
+
+/** Remove a review outright — spam, a duplicate, or a removal request. */
+export const removeReview = mutation({
+  args: { id: v.id("testimonials") },
+  handler: async (ctx, args) => {
+    await requireOwner(ctx);
+    const row = await ctx.db.get(args.id);
+    if (!row) throw new Error("Review not found.");
+    await ctx.db.delete(args.id);
   },
 });
 

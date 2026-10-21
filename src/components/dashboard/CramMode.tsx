@@ -116,13 +116,22 @@ export function CramMode({
           mime: file.type || undefined,
         });
 
+        if (!result.ok) {
+          // A sentence the student can act on — the action no longer throws,
+          // because Convex replaces a thrown message with "Server Error".
+          setError(result.error);
+          toast.error(result.error);
+          return;
+        }
+
+        const { ok: _ok, ...analysis } = result;
         setAnalyses((current) => [
           ...current,
           {
             id: idRef.current++,
             name: file.name,
             size: readableSize(file.size),
-            ...result,
+            ...analysis,
           },
         ]);
       } catch (thrown) {

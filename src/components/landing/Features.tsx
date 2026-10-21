@@ -267,9 +267,28 @@ function SearchArt() {
     },
   ];
   return (
-    <Art>
-      <div className="flex items-center gap-2.5">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-[var(--panel-line)] bg-[var(--panel)] px-2.5 py-2">
+    <Art className="p-0">
+      {/* The panel's own header: Google's mark, the word Search and the one
+          fact that matters — it opens here, not in another tab. */}
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--panel-line)] px-3 py-2">
+        <span className="flex items-center gap-2 text-[11.5px] font-semibold text-foreground">
+          <img
+            src="/google-g.png"
+            alt=""
+            width={14}
+            height={14}
+            className="shrink-0"
+            aria-hidden
+          />
+          Search
+        </span>
+        <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-ink)]">
+          In-app
+        </span>
+      </div>
+
+      <div className="p-3">
+        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-[var(--panel-line)] bg-[var(--panel)] px-2.5 py-2">
           <Search className="h-3.5 w-3.5 shrink-0 text-text-dim" />
           <span className="min-w-0 flex-1 truncate text-[12px] text-foreground">
             why is the sky blue — Class 10
@@ -278,31 +297,48 @@ function SearchArt() {
             Search
           </span>
         </div>
-        <img
-          src="/google-g.png"
-          alt=""
-          width={16}
-          height={16}
-          className="shrink-0 opacity-90"
-          aria-hidden
-        />
+
+        <div className="mt-2 rounded-lg border border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] p-2.5">
+          <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-text-dim">
+            <img
+              src="/google-g.png"
+              alt=""
+              width={11}
+              height={11}
+              className="shrink-0"
+              aria-hidden
+            />
+            Answer
+          </p>
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-foreground">
+            Sunlight is a mix of colours. Air molecules scatter the shorter blue
+            wavelengths far more than the red ones — Rayleigh scattering — so
+            blue reaches your eye from every direction and the sky looks blue.
+          </p>
+        </div>
+
+        <p className="mt-2.5 text-[9px] font-bold uppercase tracking-[0.15em] text-text-dim">
+          Sources
+        </p>
+        <ul className="mt-1">
+          {hits.map((hit, index) => (
+            <li
+              key={hit.host}
+              className="flex items-start gap-2 border-t border-[var(--panel-line)] py-1.5 first:border-0"
+            >
+              <span className="w-3 shrink-0 pt-px text-[9.5px] tabular-nums text-text-dim">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[9.5px] text-text-dim">{hit.host}</span>
+                <span className="block truncate text-[11.5px] font-medium text-foreground">
+                  {hit.title}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul className="mt-2.5">
-        {hits.map((hit) => (
-          <li
-            key={hit.host}
-            className="border-t border-[var(--panel-line)] py-1.5 first:border-0 first:pt-0 last:pb-0"
-          >
-            <span className="block text-[10px] text-text-dim">{hit.host}</span>
-            <span className="block truncate text-[12px] font-medium text-foreground">
-              {hit.title}
-            </span>
-            <span className="mt-0.5 block truncate text-[11px] text-text-dim">
-              {hit.snippet}
-            </span>
-          </li>
-        ))}
-      </ul>
     </Art>
   );
 }

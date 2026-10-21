@@ -157,6 +157,56 @@
   outline-offset: 2px;
 }
 
+/* Google's own answer, above the sources — the part that makes the panel an
+   answer instead of a list. Google's mark sits on the label, and the source
+   line is a link, so nothing here reads as wording Manthan wrote. */
+.gs-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
+  padding: 11px 13px;
+}
+
+.gs-answer__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-answer__label img {
+  display: block;
+  width: auto;
+  height: 13px;
+  user-select: none;
+}
+
+.gs-answer__text {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-main, inherit);
+}
+
+.gs-answer__source {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--text-dim, #8b8b8b);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.gs-answer__source:hover {
+  color: var(--text-main, inherit);
+}
+
 .gs-error {
   display: flex;
   align-items: flex-start;
@@ -170,11 +220,20 @@
   color: var(--destructive, #e5484d);
 }
 
+.gs-results__label {
+  padding: 0 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim, #8b8b8b);
+}
+
 .gs-results {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: min(52vh, 380px);
+  max-height: min(46vh, 340px);
   overflow-y: auto;
   scrollbar-width: thin;
   margin: 0;
@@ -184,14 +243,30 @@
 
 .gs-hit {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: flex-start;
+  gap: 10px;
   border: 1px solid transparent;
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   text-decoration: none;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.gs-hit__index {
+  flex: 0 0 auto;
+  width: 16px;
+  padding-top: 1px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-hit__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .gs-hit:hover {

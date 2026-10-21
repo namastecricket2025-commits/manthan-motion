@@ -2,7 +2,7 @@
 
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action } from "./_generated/server";
+import { action, type ActionCtx } from "./_generated/server";
 import { LATEX_COMMANDS } from "./latexGuard";
 import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
 import { v } from "convex/values";
@@ -1060,13 +1060,33 @@ const cramSchema = z.object({
     .array(
       z.object({
         topic: z.string().min(1),
-        weight: z.number(),
+        // Models occasionally write the weight as a string ("0.8"); that is
+        // still the number the student sees, so coerce instead of failing the
+        // whole reading over a pair of quotes.
+        weight: z.coerce.number(),
         note: z.string().min(1),
         covered: z.boolean().catch(false),
       }),
     )
     .min(1),
 });
+
+/** The model answered, but not with the shape this action can render. */
+class CramShapeError extends Error {
+  constructor(detail: string) {
+    super(`Cram Mode's reply was incomplete. ${detail}`);
+    this.name = "CramShapeError";
+  }
+}
+
+/** Parse one reply, returning null instead of throwing on bad JSON/shape. */
+function readCramReply(raw: string) {
+  try {
+    return cramSchema.parse(parseJsonLoose(raw));
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Read a textbook upload and compress it against its syllabus.
@@ -1090,18 +1110,92 @@ export const cramAnalyze = action({
   handler: async (
     ctx,
     { storageId, name, mime, note },
-  ): Promise<{
-    subject: string;
-    notes: { topic: string; points: string[] }[];
-    benchmarks: { topic: string; weight: number; note: string; covered: boolean }[];
-    characters: number;
-    model: string;
-  }> => {
+  ): Promise<
+    | {
+        ok: true;
+        subject: string;
+        notes: { topic: string; points: string[] }[];
+        benchmarks: { topic: string; weight: number; note: string; covered: boolean }[];
+        characters: number;
+        model: string;
+      }
+    | { ok: false; error: string }
+  > => {
+    /*
+     * Nothing in this action throws at the client.
+     *
+     * A Convex action's thrown errors are replaced with "Server Error" before
+     * they reach the browser, so every message written here — "mostly
+     * pictures", "password protected", "no model answered" — was arriving as
+     * the same unexplained line. The panel could not tell a scanned PDF from
+     * an expired key. Expected failures are returned as `{ ok: false }` with a
+     * sentence the student can act on; the real upstream reason is logged.
+     */
+    try {
+      return await analyzeCram(ctx, { storageId, name, mime, note });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error(`[cramAnalyze] ${detail}`);
+
+      if (error instanceof UploadUnreadable) {
+        return { ok: false, error: error.message };
+      }
+      if (error instanceof ProviderUnavailable) {
+        return {
+          ok: false,
+          error: error.dayExhausted
+            ? "Every study model has hit its limit for today. Try again tomorrow, or paste the chapter text into a notebook instead."
+            : error.rateLimited
+              ? "The study models are busy right now. Nothing was saved — try again in a minute."
+              : "No study model could read that file just now. Try again in a minute, or paste the chapter text.",
+        };
+      }
+      if (error instanceof CramShapeError) {
+        return {
+          ok: false,
+          error:
+            "The notes came back incomplete, so nothing was saved. Try the upload again — a shorter chapter or a PDF with a real text layer reads best.",
+        };
+      }
+      return {
+        ok: false,
+        error:
+          "Cram Mode could not finish that file. Try again, or add the chapter as a notebook source and churn it there.",
+      };
+    }
+  },
+});
+
+/**
+ * The reading itself, separated so the action can own the error contract.
+ *
+ * Corpus is capped at 60k characters here, not the 120k used by generation:
+ * the reply is short, and a full textbook made every provider on the chain
+ * reject the request for length before any of them could answer.
+ */
+async function analyzeCram(
+  ctx: ActionCtx,
+  { storageId, name, mime, note }: {
+    storageId: Id<"_storage">;
+    name: string;
+    mime?: string;
+    note?: string;
+  },
+): Promise<{
+  ok: true;
+  subject: string;
+  notes: { topic: string; points: string[] }[];
+  benchmarks: { topic: string; weight: number; note: string; covered: boolean }[];
+  characters: number;
+  model: string;
+}> {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Sign in to run Cram Mode.");
+    if (!identity) throw new UploadUnreadable("Sign in to run Cram Mode.");
 
     const blob = await ctx.storage.get(storageId);
-    if (!blob) throw new Error("The upload did not reach storage. Try again.");
+    if (!blob) {
+      throw new UploadUnreadable("The upload did not reach storage. Try again.");
+    }
 
     const buffer = Buffer.from(await blob.arrayBuffer());
     // Read once, keep nothing: the bytes are in memory now.
@@ -1111,20 +1205,23 @@ export const cramAnalyze = action({
     try {
       text = (await readUpload(buffer, name, mime)).text;
     } catch (err) {
+      // Both of these already carry a message meant for the student (or, for a
+      // provider outage, the flags the action maps to one), so let them through
+      // untouched instead of flattening them into one generic sentence.
       if (err instanceof UploadUnreadable) throw err;
-      if (err instanceof ProviderUnavailable) {
-        throw new Error(
-          "No AI model could read that upload just now. Try again in a minute, or paste the text instead.",
-        );
-      }
-      throw new Error(
+      if (err instanceof ProviderUnavailable) throw err;
+      throw new UploadUnreadable(
         "Cram Mode reads PDF, Word, photos and text files. This one could not be read — if it is password protected, paste its text instead.",
       );
     }
 
-    const corpus = tidy(text).slice(0, MAX_CORPUS);
+    // 60k, not the generation budget: Cram's reply is a few hundred words, and
+    // a whole textbook pushed past what every provider on the chain accepts,
+    // so the request failed before any model could read it. A chapter fits;
+    // a 400-page book is pasted in chapters.
+    const corpus = tidy(text).slice(0, 60_000);
     if (corpus.length < 40) {
-      throw new Error(
+      throw new UploadUnreadable(
         "No readable text was found in that file — if it is a scan or images, paste the text instead.",
       );
     }
@@ -1134,7 +1231,7 @@ export const cramAnalyze = action({
     // so plainly and point at the path that works (photos, which are read by
     // the image reader).
     if (corpus.length < 600 && buffer.length > 120_000) {
-      throw new Error(
+      throw new UploadUnreadable(
         "This file is mostly pictures, so almost no text could be read. Photograph the pages and add those instead, or paste the chapter text.",
       );
     }
@@ -1156,10 +1253,33 @@ export const cramAnalyze = action({
       .join("\n");
 
     const candidates = await resolveCandidates();
-    const { text: raw, model } = await callModel(candidates, CRAM_SYSTEM, prompt);
-    const parsed = cramSchema.parse(parseJsonLoose(raw));    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
+    let { text: raw, model } = await callModel(candidates, CRAM_SYSTEM, prompt);
+    let parsed = readCramReply(raw);
+
+    // A truncated or malformed reply is worth exactly one more ask. It is the
+    // common failure on a long chapter: the model starts the JSON, then runs
+    // out of room. Asking again with the same text but an explicit reminder is
+    // cheaper than making the student re-upload the file, and if it happens
+    // twice the action returns a sentence instead of a Zod stack.
+    if (!parsed) {
+      console.error(
+        `[cramAnalyze] unreadable reply (${raw.length} chars): ${raw.slice(0, 240)}`,
+      );
+      const retry = await callModel(
+        candidates,
+        CRAM_SYSTEM,
+        `${prompt}\n\nYour previous reply could not be parsed. Reply with one complete JSON object only, with every required field. No prose before or after it.`,
+      );
+      raw = retry.text;
+      model = retry.model;
+      parsed = readCramReply(raw);
+    }
+    if (!parsed) throw new CramShapeError(`${raw.slice(0, 200)}`);
+
+    const clean = (value: string) => value.replace(/[*_`#]/g, "").trim();
 
     return {
+      ok: true,
       subject: clean(parsed.subject),
       notes: parsed.notes.map((entry) => ({
         topic: clean(entry.topic),
@@ -1174,8 +1294,7 @@ export const cramAnalyze = action({
       characters: corpus.length,
       model,
     };
-  },
-});
+}
 
 /* ------------------------------------------------------------------ */
 /* Avia — the spoken study companion                                    */

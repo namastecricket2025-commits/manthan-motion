@@ -73,10 +73,39 @@ function estimateTokens(prompt: string, reply: string) {
   return Math.max(1, Math.round((prompt.length + reply.length) / CHARS_PER_TOKEN));
 }
 
+/**
+ * The short answer Google itself puts above the results.
+ *
+ * Serper exposes this as `answerBox` (a sentence or a definition) and, for
+ * entities, as `knowledgeGraph` (a paragraph). Both are Google's own summary,
+ * not something this app wrote: the panel labels it and links the page it came
+ * from, so a student can check it. This is the piece that makes the panel read
+ * as an answer rather than as a list of links.
+ */
+interface SearchAnswer {
+  text: string;
+  title?: string;
+  url?: string;
+}
+
 interface SearchReply {
+  answer?: SearchAnswer;
   results: Hit[];
   provider: "serper";
   tokens: number;
+}
+
+/** Trim a candidate paragraph and drop it if it only repeats what we have. */
+function addAnswerPart(parts: string[], value: unknown) {
+  const text = stripTags(value).slice(0, 700);
+  if (!text) return;
+  const normal = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  if (parts.some((part) => normal(part).includes(normal(text)))) return;
+  if (parts.some((part) => normal(text).includes(normal(part)))) {
+    parts[parts.findIndex((part) => normal(text).includes(normal(part)))] = text;
+    return;
+  }
+  parts.push(text);
 }
 
 /**
@@ -109,6 +138,17 @@ async function runSerper(query: string, key: string): Promise<SearchReply> {
   }
 
   const data = (await response.json()) as {
+    answerBox?: {
+      title?: string;
+      answer?: string;
+      snippet?: string;
+      link?: string;
+    };
+    knowledgeGraph?: {
+      title?: string;
+      description?: string;
+      descriptionLink?: string;
+    };
     organic?: Array<{ title?: string; link?: string; snippet?: string }>;
   };
 
@@ -120,10 +160,35 @@ async function runSerper(query: string, key: string): Promise<SearchReply> {
     })),
   );
 
+  // One answer, assembled from whichever of Google's own summaries exists.
+  // The answer box is the tight one; the knowledge panel adds the context a
+  // student needs when the query names a concept rather than a product. A
+  // matching organic snippet is the last resort, so the panel still opens on
+  // an answer for queries Google gives no box for.
+  const parts: string[] = [];
+  addAnswerPart(parts, data.answerBox?.answer);
+  addAnswerPart(parts, data.answerBox?.snippet);
+  addAnswerPart(parts, data.knowledgeGraph?.description);
+  if (parts.length === 0) addAnswerPart(parts, results[0]?.snippet);
+
+  const answer: SearchAnswer | undefined =
+    parts.length > 0
+      ? {
+          text: parts.join(" "),
+          title: stripTags(data.answerBox?.title) || stripTags(data.knowledgeGraph?.title),
+          url:
+            (typeof data.answerBox?.link === "string" && data.answerBox.link) ||
+            (typeof data.knowledgeGraph?.descriptionLink === "string" &&
+              data.knowledgeGraph.descriptionLink) ||
+            results[0]?.url,
+        }
+      : undefined;
+
   return {
+    answer,
     results,
     provider: "serper",
-    tokens: estimateTokens(query, JSON.stringify(results)),
+    tokens: estimateTokens(query, JSON.stringify({ answer, results })),
   };
 }
 
@@ -138,6 +203,7 @@ export const search = action({
     ok: boolean;
     error?: string;
     provider?: string;
+    answer?: SearchAnswer;
     results: Hit[];
   }> => {
     const empty = { results: [] as Hit[] };
@@ -197,6 +263,7 @@ export const search = action({
       return {
         ok: true,
         provider: reply.provider,
+        answer: reply.answer,
         results: reply.results,
       };
     } catch (error) {

@@ -27,6 +27,12 @@ interface Hit {
   snippet: string;
 }
 
+interface SearchAnswer {
+  text: string;
+  title?: string;
+  url?: string;
+}
+
 function hostOf(url: string) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -60,6 +66,7 @@ export function SearchWithGoogle({
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<SearchAnswer | null>(null);
   const [results, setResults] = useState<Hit[]>([]);
 
   const sent = (query.trim() || topic.trim()).slice(0, 240);
@@ -71,10 +78,12 @@ export function SearchWithGoogle({
     setBusy(true);
     setSearched(true);
     setError(null);
+    setAnswer(null);
     setResults([]);
     try {
       const reply = await runSearch({ q: value });
       if (reply.ok) {
+        setAnswer(reply.answer ?? null);
         setResults(reply.results);
       } else {
         setError(reply.error ?? "That search did not go through. Try again.");
@@ -95,6 +104,7 @@ export function SearchWithGoogle({
     setQuery(initial);
     setSearched(false);
     setError(null);
+    setAnswer(null);
     setResults([]);
     if (initial) void run(initial);
   };
@@ -184,25 +194,62 @@ export function SearchWithGoogle({
           </p>
         ) : null}
 
+        {!busy && !error && answer ? (
+          <div className="gs-answer">
+            <p className="gs-answer__label">
+              <img
+                src="/google-g.png"
+                alt=""
+                aria-hidden
+                width={13}
+                height={13}
+                draggable={false}
+              />
+              Answer
+            </p>
+            <p className="gs-answer__text">{answer.text}</p>
+            {answer.url ? (
+              <a
+                className="gs-answer__source"
+                href={answer.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {answer.title || hostOf(answer.url)}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
         {!busy && !error && results.length > 0 ? (
-          <ul className="gs-results">
-            {results.map((result) => (
-              <li key={result.url}>
-                <a
-                  className="gs-hit"
-                  href={result.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span className="gs-hit__host">{hostOf(result.url)}</span>
-                  <span className="gs-hit__title">{result.title}</span>
-                  {result.snippet ? (
-                    <span className="gs-hit__snip">{result.snippet}</span>
-                  ) : null}
-                </a>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="gs-results__label">Sources</p>
+            <ul className="gs-results">
+              {results.map((result, index) => (
+                <li key={result.url}>
+                  <a
+                    className="gs-hit"
+                    href={result.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <span className="gs-hit__index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="gs-hit__body">
+                      <span className="gs-hit__host">
+                        {hostOf(result.url)}
+                      </span>
+                      <span className="gs-hit__title">{result.title}</span>
+                      {result.snippet ? (
+                        <span className="gs-hit__snip">{result.snippet}</span>
+                      ) : null}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : null}
 
         {!busy && !error && searched && results.length === 0 ? (
