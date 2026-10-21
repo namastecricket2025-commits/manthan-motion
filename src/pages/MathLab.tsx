@@ -59,6 +59,12 @@ export default function MathLabPage() {
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="relative z-10">
+        {/* Page-top texture, then the aura on top of it — the exact two layers
+            and placement the dashboard uses. They belong to the PAGE, not to
+            the notebook: anchored to the notebook, the wash starts at the tab
+            row and shows its own top edge as a lit band. */}
+        <div className="dot-field" aria-hidden="true" />
+        <div className="glow-aura" aria-hidden="true" />
         {/* ---- Sidebar (desktop) ---- */}
         <aside
           className="fixed inset-y-0 left-0 z-30 hidden flex-col justify-between overflow-y-auto overflow-x-hidden border-r border-[var(--card-border)] bg-[var(--panel-bg)] py-5 backdrop-blur-xl transition-[width,padding] duration-300 ease-out min-[760px]:flex"

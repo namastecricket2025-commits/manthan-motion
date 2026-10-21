@@ -40,8 +40,9 @@ const SUBJECTS: Array<{
 /**
  * The STEM Lab.
  *
- * A dark room, two blurred colour meshes at 4% and glass — nothing else on the
- * canvas. Three environments live inside it, each one vector-first:
+ * A black room, one dot field and flat near-black panels — the same surface
+ * language as the dashboard. Three environments live inside it, each one
+ * vector-first:
  * Physics (circuits / motion / dynamics / waves), Chemistry (periodic table +
  * Bohr model) and Biology (structural schematics + the DNA indicator).
  *
@@ -56,10 +57,6 @@ export default function Lab() {
 
   return (
     <div className="apple-lab">
-      {/* The only background art: two organic meshes, floating deep. */}
-      <div className="apple-lab__mesh apple-lab__mesh--violet" aria-hidden />
-      <div className="apple-lab__mesh apple-lab__mesh--cyan" aria-hidden />
-
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 md:py-8">
         <header className="apple-lab-glass flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">

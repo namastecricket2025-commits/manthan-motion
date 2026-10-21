@@ -33,19 +33,21 @@ Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, an
 
 Convex keeps a **separate set of environment variables for dev and for
 production**. Setting a key while developing does not configure the deployed
-site, so web search (and any other keyed feature) can work locally and still
-return "not configured" on production. Set every backend key on both
-deployments:
+site, so any keyed feature can work locally and still fail on production. Set
+every backend key on both deployments:
 
 ```bash
-bunx convex env set SERPER_API_KEY <key>            # dev
-bunx convex env set SERPER_API_KEY <key> --prod     # production
+bunx convex env set SOME_API_KEY <key>            # dev
+bunx convex env set SOME_API_KEY <key> --prod     # production
 ```
 
-Keys used by the search panel: `SERPER_API_KEY` (Google results through
-Serper), `SEARCH_API_KEY` + `GOOGLE_SEARCH_ENGINE_ID` (Programmable Search
-Engine), and `GEMINI_API_KEY_2` (Gemini Google Search grounding, the fallback).
-`SEARCH_MODEL` optionally pins a single Gemini model id for grounded search.
+The search panel is the exception: it uses exactly one key, the project's own
+Serper key, held as `SERPER_KEY` in `src/convex/webSearch.ts`. That file runs
+only on the Convex server, so the key is never bundled into the client, and
+having a single value means dev and production cannot drift apart. Rotating it
+means changing that constant. There is no model fallback — if Serper refuses
+the request the panel says so in one sentence and the student opens Google
+directly.
 
 
 # Using Authentication (Important!)

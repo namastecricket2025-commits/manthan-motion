@@ -1,11 +1,10 @@
 /* ============================================================
    STEM Lab — Apple glass surface language.
 
-   The lab is its own black room: a #050505 canvas lit by two deeply blurred
-   white meshes at 4% opacity, and nothing else. Structural modules (the
-   header, the tab rail, every workspace panel) carry the strict glass spec —
-   `backdrop-filter: blur(24px)`, a 1px `rgba(255,255,255,0.08)` hairline and
-   text at `rgba(255,255,255,0.9)`.
+   The lab is its own black room — the dashboard's palette, exactly: a #000
+   canvas, #0a0a0a panels with a 12% white hairline, and text at
+   `rgba(255,255,255,0.9)`. One dot field and one shallow top wash are the only
+   light; there are no drifting meshes and no frosted gradients.
 
    The palette is deliberately monochrome. It used to run a violet accent (the
    tab hover, the selected button, the slider thumb's halo, the vector ink in
@@ -19,20 +18,22 @@
    a physics bench should not change colour when the student flips the site to
    light mode, and these values are the ones the layout was tuned against.
 
-   Performance note: the blur covers every structural surface and every card.
-   The one exception is the 118 cells of the periodic grid itself: those are
-   translucent fills with tinted borders, because 118 simultaneous
-   backdrop-filters would cost far more than they communicate. The grid panel
-   around them is still full glass.
+   Performance note: removing the per-panel backdrop-filter also removes a
+   full-viewport blur pass from every bench. The 118 periodic cells keep their
+   translucent fills and tinted borders, unchanged.
    ============================================================ */
 
 .apple-lab {
-  --lab-canvas: #050505;
+  /* The dashboard's dark palette, exactly: #000 page, #0a0a0a panel, a 12%
+     hairline. The lab used to sit on #050505 with 8% lines and a white gradient
+     over every panel, which is what a #000 dashboard made look grey by
+     comparison. */
+  --lab-canvas: #000000;
   --lab-ink: rgba(255, 255, 255, 0.9);
   --lab-ink-dim: rgba(255, 255, 255, 0.68);
   --lab-ink-micro: rgba(255, 255, 255, 0.58);
-  --lab-line: rgba(255, 255, 255, 0.08);
-  --lab-line-soft: rgba(255, 255, 255, 0.05);
+  --lab-line: rgba(255, 255, 255, 0.12);
+  --lab-line-soft: rgba(255, 255, 255, 0.07);
   --lab-fill: rgba(255, 255, 255, 0.028);
   --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.85);
   /* Kept as the two accent slots the benches already read. Both are ink now:
@@ -45,7 +46,7 @@
      alpha. `--lab-diagram-violet` is the primary vector stroke and is ink; the
      remaining accents are data colours, each tied to a quantity. */
   --lab-diagram-ink: 255, 255, 255;
-  --lab-diagram-plate: 5, 5, 5;
+  --lab-diagram-plate: 0, 0, 0;
   --lab-diagram-violet: #f5f5f5;
   --lab-diagram-cyan: #7dd3fc;
   --lab-diagram-amber: #fcd34d;
@@ -59,9 +60,12 @@
 }
 
 /* ---- Background art --------------------------------------------------
-   The room is not a flat black rectangle. A dot grid fades in from the top and
-   disappears before it reaches the benches, and two wide corner glows sit
-   behind the meshes. Every layer is pointer-transparent and sits under the
+   The room is black, like the dashboard. One quiet dot grid fades in from the
+   top and is spent before it reaches the benches; one shallow wash lifts the
+   top edge. Nothing drifts behind the panels and nothing is blurred: the two
+   white mesh clouds that used to sit here lifted most of the viewport by a few
+   percent, which is exactly what made the lab measure grey next to the
+   dashboard's #000. Every layer is pointer-transparent and sits under the
    content (which is z-10), so nothing about the lab's interaction changes. */
 .apple-lab::before,
 .apple-lab::after {
@@ -72,10 +76,10 @@
   pointer-events: none;
 }
 
-/* The dot grid is texture, not a veil. At 12% dots across most of the viewport
-   it did not read as a grid on black — it raised the whole canvas to charcoal,
+/* The dot grid is texture, not a veil. Spread across most of the viewport it
+   did not read as a grid on black — it raised the whole canvas to charcoal,
    which is why the room looked grey next to the dashboard. It now stays in the
-   top band, spent before the first bench, and the dots themselves are fainter. */
+   top band, spent before the first bench, at about half its old strength. */
 .apple-lab::before {
   background-image: radial-gradient(
     circle at center,
@@ -83,18 +87,16 @@
     transparent 1.2px
   );
   background-size: 26px 26px;
-  opacity: 0.26;
-  -webkit-mask-image: radial-gradient(ellipse 52% 30% at 50% 0%, #000 0%, transparent 72%);
-  mask-image: radial-gradient(ellipse 52% 30% at 50% 0%, #000 0%, transparent 72%);
+  opacity: 0.12;
+  -webkit-mask-image: radial-gradient(ellipse 52% 26% at 50% 0%, #000 0%, transparent 74%);
+  mask-image: radial-gradient(ellipse 52% 26% at 50% 0%, #000 0%, transparent 74%);
 }
 
-/* One shallow wash on the top edge, the same light model the dashboard uses.
-   The cyan corner is gone: two light sources at different hues over a black
-   room is what made the canvas read as grey-blue instead of black. */
+/* One shallow wash on the top edge, the same light model the dashboard uses. */
 .apple-lab::after {
   background:
-    radial-gradient(64% 300px at 50% -48%, rgba(255, 255, 255, 0.05), transparent 74%),
-    radial-gradient(110% 420px at 50% -60%, rgba(255, 255, 255, 0.028), transparent 80%);
+    radial-gradient(64% 300px at 50% -48%, rgba(255, 255, 255, 0.035), transparent 74%),
+    radial-gradient(110% 420px at 50% -60%, rgba(255, 255, 255, 0.02), transparent 80%);
 }
 
 html[data-comfort="on"] .apple-lab::before {
@@ -111,76 +113,18 @@ html[data-comfort="on"] .apple-lab::after {
     radial-gradient(110% 420px at 50% -60%, rgba(255, 214, 160, 0.04), transparent 80%);
 }
 
-/* ---- The only background art: two organic meshes, 4% opacity ---------- */
-.apple-lab__mesh {
-  position: fixed;
-  z-index: 0;
-  border-radius: 999px;
-  filter: blur(120px);
-  opacity: 0.04;
-  pointer-events: none;
-  will-change: transform;
-}
-/* Both meshes are white light now, not a violet/cyan pair. At 4% opacity the
-   hue was barely legible as colour anyway, so the only thing it contributed
-   was a cool cast over two thirds of the canvas — the opposite of the neutral
-   ambient the rest of the site uses. The drift, the blur and the opacity are
-   unchanged. */
-.apple-lab__mesh--violet {
-  top: -18vh;
-  left: -10vw;
-  width: 68vw;
-  height: 68vw;
-  background: radial-gradient(circle at 40% 40%, #ffffff, transparent 68%);
-  animation: apple-lab-drift-a 72s ease-in-out infinite alternate;
-}
-.apple-lab__mesh--cyan {
-  right: -14vw;
-  bottom: -24vh;
-  width: 62vw;
-  height: 62vw;
-  background: radial-gradient(circle at 60% 60%, #ffffff, transparent 68%);
-  animation: apple-lab-drift-b 88s ease-in-out infinite alternate;
-}
-@keyframes apple-lab-drift-a {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(6vw, 5vh, 0) scale(1.12);
-  }
-}
-@keyframes apple-lab-drift-b {
-  from {
-    transform: translate3d(0, 0, 0) scale(1.08);
-  }
-  to {
-    transform: translate3d(-5vw, -6vh, 0) scale(1);
-  }
-}
-
-/* ---- Glass --------------------------------------------------------- */
+/* ---- Surfaces ------------------------------------------------------
+   The lab's panels speak the dashboard's surface language exactly: a
+   near-black fill (#0a0a0a, one step above the page so it can be separated
+   from it) and a 1px white-alpha hairline. No white gradient over the fill, no
+   `saturate(150%)`, no inner top highlight — those three together are what
+   lifted every bench to charcoal and gave it a tint. */
 .apple-lab-glass {
   position: relative;
-  /* Glass keeps its highlight, but sits on a near-solid base instead of letting
-     the blurred dot field show through. Without that base a panel over the grid
-     blurred into flat charcoal and the bench read grey; the white stops are the
-     same, so the spec (blur 24px, 1px hairline) is unchanged. */
-  background:
-    linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.055),
-      rgba(255, 255, 255, 0.018) 55%,
-      rgba(255, 255, 255, 0.035)
-    ),
-    rgba(6, 6, 6, 0.78);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid var(--lab-line);
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
-  box-shadow:
-    var(--lab-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 30px 80px -58px rgba(0, 0, 0, 0.9);
 }
 
 /* The panel the current environment renders inside. */
@@ -194,18 +138,15 @@ html[data-comfort="on"] .apple-lab::after {
   }
 }
 
-/* Nested cards — control wells, readouts, structure lists — carry the same
-   glass spec as the panels they sit in: blur(24px), the same 1px hairline,
-   the same text colour. Only the periodic tiles below opt out of the blur (see
-   the note at the top of the file). */
+/* Nested cards — control wells, readouts, structure lists — are one step off
+   the panel fill (#0c0c0c on #0a0a0a) with the same hairline. No blur: a
+   backdrop-filter over a flat black panel has nothing to blur, and its
+   `saturate()` was tinting the wells. */
 .apple-lab-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.022);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid var(--lab-line);
+  background: #0c0c0c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .apple-lab-chip {
@@ -314,9 +255,7 @@ html[data-comfort="on"] .apple-lab::after {
   gap: 0.25rem;
   border-radius: 999px;
   border: 1px solid var(--lab-line);
-  background: rgba(255, 255, 255, 0.03);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  background: rgba(255, 255, 255, 0.022);
   padding: 0.3rem;
   /* Four benches plus the theme switch no longer fit a 360px phone on one
      line. The rail scrolls sideways instead of wrapping (a wrapped pill rail
@@ -354,11 +293,10 @@ html[data-comfort="on"] .apple-lab::after {
   border-radius: 999px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.1),
-    rgba(255, 255, 255, 0.04)
+    rgba(255, 255, 255, 0.075),
+    rgba(255, 255, 255, 0.03)
   );
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* ---- Controls ------------------------------------------------------ */
@@ -413,7 +351,10 @@ html[data-comfort="on"] .apple-lab::after {
   overflow: hidden;
   border-radius: 18px;
   border: 1px solid var(--lab-line);
-  background: radial-gradient(ellipse at 50% 32%, #16233c 0%, #0a1120 74%);
+  /* Neutral studio backdrop. The blue-slate vignette this replaced was the
+     last cold cast left in the lab, and on a black bench it read as a grey
+     panel rather than as a stage. */
+  background: radial-gradient(ellipse at 50% 32%, #101010 0%, #060606 74%);
 }
 .apple-lab-stage__canvas {
   display: block;
@@ -493,11 +434,9 @@ html[data-comfort="on"] .apple-lab::after {
   gap: 0.42rem;
   max-width: 190px;
   padding: 0.4rem 0.52rem;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
-  background: rgba(8, 13, 24, 0.84);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  background: rgba(10, 10, 10, 0.92);
   color: #f8fafc;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   transform: translate(0, 0);
@@ -671,14 +610,12 @@ html[data-comfort="on"] .apple-lab::after {
    and who has never opened Settings — would otherwise still get the orbiting
    shells and drifting meshes. */
 html[data-motion="reduced"] .apple-lab-orbit,
-html[data-motion="reduced"] .apple-lab-spin,
-html[data-motion="reduced"] .apple-lab__mesh {
+html[data-motion="reduced"] .apple-lab-spin {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .apple-lab-orbit,
-  .apple-lab-spin,
-  .apple-lab__mesh {
+  .apple-lab-spin {
     animation: none;
   }
 }
@@ -769,10 +706,8 @@ html[data-motion="reduced"] .lab-element-split {
 /* ---- Biology callout flag ----------------------------------------- */
 .apple-lab-flag {
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(15, 15, 22, 0.92);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(12, 12, 12, 0.94);
   box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.9);
   padding: 0.5rem 0.7rem;
 }
@@ -837,11 +772,11 @@ html[data-motion="reduced"] .apple-lab-drop {
 
    Eye comfort works by warming the tokens and laying an amber multiply
    veil over the viewport. Multiply keeps black black, and the room's
-   canvas is #050505 — so the veil had nothing to warm and the lab looked
+   canvas is #000 — so the veil had nothing to warm and the lab looked
    exactly the same with the preference on. The room therefore carries its
    own low-glare values here: a warm charcoal plate instead of a cold black
-   one, warm ink instead of pure white, and warmer meshes. The light bench
-   gets the matching paper values.
+   one, and warm ink instead of pure white. The light bench gets the
+   matching paper values.
    ============================================================ */
 
 html[data-comfort="on"] .apple-lab {
@@ -861,22 +796,12 @@ html[data-comfort="on"] .apple-lab {
   --lab-diagram-lilac: #d8cfc0;
 }
 
-html[data-comfort="on"] .apple-lab .apple-lab__mesh {
-  opacity: 0.05;
-  background: radial-gradient(circle at 40% 40%, #ffd7a1, transparent 68%);
-}
-
 html[data-comfort="on"] .apple-lab-glass {
-  background: linear-gradient(
-    160deg,
-    rgba(255, 238, 214, 0.06),
-    rgba(255, 238, 214, 0.02) 55%,
-    rgba(255, 238, 214, 0.04)
-  );
+  background: #0c0a08;
 }
 
 html[data-comfort="on"] .apple-lab-card {
-  background: rgba(255, 238, 214, 0.026);
+  background: #0f0d0a;
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] {
@@ -891,12 +816,7 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] {
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
-  background: linear-gradient(
-    160deg,
-    rgba(255, 251, 242, 0.9),
-    rgba(251, 245, 233, 0.68) 55%,
-    rgba(255, 249, 238, 0.84)
-  );
+  background: #fbf7ee;
 }
 
 /* ============================================================
@@ -934,22 +854,14 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-glass {
-  background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.88),
-    rgba(255, 255, 255, 0.62) 55%,
-    rgba(255, 255, 255, 0.8)
-  );
-  border-color: rgba(16, 16, 16, 0.1);
-  box-shadow:
-    var(--lab-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: #ffffff;
+  border-color: rgba(16, 16, 16, 0.12);
+  box-shadow: var(--lab-shadow);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-card {
-  background: rgba(255, 255, 255, 0.72);
+  background: #fafafa;
   border-color: rgba(16, 16, 16, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-chip {

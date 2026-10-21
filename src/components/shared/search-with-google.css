@@ -1,4 +1,4 @@
-/* The Search-on-Google control. Neutral tokens only, so it sits correctly on
+/* The Search-Google control. Neutral tokens only, so it sits correctly on
    the marketing paper, the math notebook and the black lab.
 
    Two parts:
@@ -29,9 +29,8 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   /* Hover is a change of TONE, never of position. The trigger sits in a toolbar
-     and on a lab bench, so the 1px lift it used to have made the whole row
-     twitch whenever the pointer crossed it. It dims a step instead, the way the
-     buttons around it do. */
+     and on a lab bench, so a lift made the whole row twitch whenever the
+     pointer crossed it. It dims a step instead. */
   transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -69,43 +68,9 @@
      classes the dialog carries. */
   border-radius: 22px;
   max-width: min(540px, calc(100vw - 28px));
-  gap: 13px;
+  gap: 11px;
   border-color: var(--card-border, rgba(127, 127, 127, 0.2));
   box-shadow: 0 34px 84px -48px rgba(0, 0, 0, 0.82);
-}
-
-.gs-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-dim, #8b8b8b);
-}
-
-.gs-kicker__mark {
-  display: block;
-  width: auto;
-  height: 15px;
-  opacity: 0.92;
-  user-select: none;
-}
-
-.gs-title {
-  font-family: var(--font-display, inherit);
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--text-main, inherit);
-}
-
-.gs-desc {
-  margin-top: 4px;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--text-dim, #8b8b8b);
 }
 
 .gs-field {
@@ -115,7 +80,7 @@
   border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
   border-radius: 14px;
   background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
-  padding: 7px 7px 7px 13px;
+  padding: 6px 6px 6px 13px;
   color: var(--text-dim, #8b8b8b);
   transition: border-color 180ms var(--ease-momentum, ease);
 }
@@ -130,7 +95,7 @@
   border: 0;
   background: transparent;
   outline: none;
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--text-main, inherit);
 }
 
@@ -142,11 +107,11 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 7px;
-  border-radius: 999px;
+  gap: 6px;
+  border-radius: 10px;
   background: var(--signal-strong, #111);
   color: var(--primary-foreground, #fff);
-  padding: 8px 15px;
+  padding: 7px 14px;
   font-size: 12px;
   font-weight: 700;
   transition: opacity 160ms ease, transform 160ms ease;
@@ -160,19 +125,36 @@
   transform: scale(0.97);
 }
 
-.gs-submit__mark {
+.gs-corner {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  /* Sits level with the dialog's own close button in the opposite corner. */
+  margin: -4px 0 -2px -4px;
+  border-radius: 999px;
+  opacity: 0.85;
+  transition: opacity 160ms ease, background-color 160ms ease;
+}
+
+.gs-corner img {
   display: block;
   width: auto;
-  height: 15px;
+  height: 20px;
   user-select: none;
 }
 
-.gs-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--text-dim, #8b8b8b);
+.gs-corner:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--text-main, currentColor) 7%, transparent);
+}
+
+.gs-corner:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--signal, #de9c0d) 55%, transparent);
+  outline-offset: 2px;
 }
 
 .gs-error {
@@ -188,41 +170,15 @@
   color: var(--destructive, #e5484d);
 }
 
-.gs-answer {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  border: 1px solid color-mix(in srgb, var(--signal, #de9c0d) 30%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--signal, #de9c0d) 7%, transparent);
-  padding: 11px 12px;
-}
-
-.gs-answer__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--signal, #de9c0d) 76%, var(--text-main));
-}
-
-.gs-answer__text {
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--text-main, inherit);
-}
-
 .gs-results {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  max-height: min(42vh, 300px);
+  gap: 2px;
+  max-height: min(52vh, 380px);
   overflow-y: auto;
+  scrollbar-width: thin;
   margin: 0;
-  padding: 3px;
+  padding: 2px;
   list-style: none;
 }
 
@@ -258,73 +214,15 @@
   transition: color 160ms ease;
 }
 
-.gs-hit:hover .gs-hit__title {
-  color: var(--text-main);
-}
-
 .gs-hit__snip {
   font-size: 11.5px;
   line-height: 1.55;
   color: var(--text-dim, #8b8b8b);
 }
 
-.gs-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-}
-
-.gs-open,
-.gs-ai {
-  display: inline-flex;
-  flex: 1 1 200px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 9px 15px;
-  font-size: 11.5px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background 180ms ease, border-color 180ms ease, color 160ms ease;
-}
-
-.gs-open {
-  border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
-  color: var(--text-main, inherit);
-  background: transparent;
-}
-
-.gs-open:hover {
-  color: var(--text-main);
-  border-color: color-mix(in srgb, var(--signal, #de9c0d) 40%, transparent);
-  background: color-mix(in srgb, var(--signal, #de9c0d) 9%, transparent);
-}
-
-.gs-open__mark {
-  display: block;
-  width: auto;
-  height: 14px;
-  user-select: none;
-}
-
-.gs-ai {
-  border: 1px solid transparent;
-  background: var(--signal-strong, #111);
-  color: var(--primary-foreground, #fff);
-}
-
-.gs-ai:hover {
-  opacity: 0.85;
-}
-
 .gs-note {
-  font-size: 10.5px;
+  font-size: 11.5px;
   line-height: 1.5;
   color: var(--text-dim, #8b8b8b);
-  padding: 0 2px;
-}
-
-.gs-note:last-child {
-  margin-top: 2px;
+  padding: 2px;
 }
