@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { AlertCircle, Loader2, Search } from "lucide-react";
+import { AlertCircle, ArrowUp, Loader2, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,11 @@ interface SearchAnswer {
   url?: string;
 }
 
+interface FollowUpTurn {
+  question: string;
+  answer: string;
+}
+
 function hostOf(url: string) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -60,6 +65,7 @@ export function SearchWithGoogle({
   className?: string;
 }) {
   const runSearch = useAction(api.webSearch.search);
+  const askFollowUp = useAction(api.webSearch.followUp);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(topic);
@@ -68,6 +74,13 @@ export function SearchWithGoogle({
   const [error, setError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<SearchAnswer | null>(null);
   const [results, setResults] = useState<Hit[]>([]);
+  /* The conversation that grows under an answer. It is cleared with every new
+     search: "and why is that?" belongs to the query that produced it. */
+  const [thread, setThread] = useState<FollowUpTurn[]>([]);
+  const [question, setQuestion] = useState("");
+  const [followBusy, setFollowBusy] = useState(false);
+  const [followError, setFollowError] = useState<string | null>(null);
+  const threadEnd = useRef<HTMLDivElement | null>(null);
 
   const sent = (query.trim() || topic.trim()).slice(0, 240);
   const googleUrl = googleUrlFor(sent);
@@ -80,6 +93,9 @@ export function SearchWithGoogle({
     setError(null);
     setAnswer(null);
     setResults([]);
+    setThread([]);
+    setQuestion("");
+    setFollowError(null);
     try {
       const reply = await runSearch({ q: value });
       if (reply.ok) {
@@ -106,7 +122,43 @@ export function SearchWithGoogle({
     setError(null);
     setAnswer(null);
     setResults([]);
+    setThread([]);
+    setQuestion("");
+    setFollowError(null);
     if (initial) void run(initial);
+  };
+
+  const ask = async (text: string) => {
+    const value = text.trim().replace(/\s+/g, " ").slice(0, 400);
+    if (!value || followBusy || !answer) return;
+    setFollowBusy(true);
+    setFollowError(null);
+    try {
+      const reply = await askFollowUp({
+        query: sent,
+        answer: answer.text,
+        sources: results.slice(0, 6).map((hit) => ({
+          title: hit.title,
+          url: hit.url,
+          snippet: hit.snippet,
+        })),
+        history: thread.slice(-3),
+        question: value,
+      });
+      if (reply.ok && reply.text) {
+        setThread((turns) => [...turns, { question: value, answer: reply.text! }]);
+        setQuestion("");
+        requestAnimationFrame(() =>
+          threadEnd.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+        );
+      } else {
+        setFollowError(reply.error ?? "That question did not go through. Try again.");
+      }
+    } catch {
+      setFollowError("That question did not go through. Try again.");
+    } finally {
+      setFollowBusy(false);
+    }
   };
 
   return (
@@ -218,6 +270,53 @@ export function SearchWithGoogle({
                 {answer.title || hostOf(answer.url)}
               </a>
             ) : null}
+          </div>
+        ) : null}
+
+        {/* The conversation continues in place. An answer that ends the panel
+            is a dictionary lookup; a student usually has one more question. */}
+        {!busy && !error && answer ? (
+          <div className="gs-thread">
+            {thread.map((turn, index) => (
+              <div className="gs-turn" key={`${turn.question}-${index}`}>
+                <p className="gs-turn__q">{turn.question}</p>
+                <p className="gs-turn__a">{turn.answer}</p>
+              </div>
+            ))}
+            {followBusy ? (
+              <p className="gs-turn__pending">
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                Thinking it through…
+              </p>
+            ) : null}
+            {!followBusy && followError ? (
+              <p className="gs-turn__error" role="status">
+                {followError}
+              </p>
+            ) : null}
+            <div ref={threadEnd} />
+            <form
+              className="gs-follow"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void ask(question);
+              }}
+            >
+              <input
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder="Ask a follow-up on this…"
+                aria-label="Ask a follow-up question"
+                disabled={followBusy}
+              />
+              <button
+                type="submit"
+                aria-label="Send follow-up"
+                disabled={followBusy || !question.trim()}
+              >
+                <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            </form>
           </div>
         ) : null}
 

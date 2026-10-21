@@ -1,6 +1,6 @@
 import { gsap, prefersReducedMotion, refreshOnLoad, revealConfig } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
-import { Check, FileText, Plus, Search } from "lucide-react";
+import { ArrowUp, Check, FileText, Plus, Search } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { useSpotlight } from "./use-spotlight";
 
@@ -338,6 +338,33 @@ function SearchArt() {
             </li>
           ))}
         </ul>
+
+        {/* The panel's own footer, where the conversation continues: the answer
+            is the first turn, and a student can keep asking about the same
+            page without leaving the app. */}
+        <div className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-[var(--panel-line)] px-2.5 py-1.5">
+          <span className="text-[10.5px] text-text-dim">Ask a follow-up…</span>
+          <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-main)] text-[var(--panel)]">
+            <ArrowUp className="h-2.5 w-2.5" strokeWidth={3} />
+          </span>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--panel-line)] pt-2">
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim">
+            <img
+              src="/google-g.png"
+              alt=""
+              width={11}
+              height={11}
+              className="shrink-0"
+              aria-hidden
+            />
+            Google
+          </span>
+          <span className="text-[10px] text-text-dim underline underline-offset-2">
+            Open this search
+          </span>
+        </div>
       </div>
     </Art>
   );

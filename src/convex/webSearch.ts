@@ -3,6 +3,7 @@
 import { action } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { callModel, ProviderUnavailable, resolveCandidates } from "./providers";
 import { v } from "convex/values";
 
 /**
@@ -191,6 +192,153 @@ async function runSerper(query: string, key: string): Promise<SearchReply> {
     tokens: estimateTokens(query, JSON.stringify({ answer, results })),
   };
 }
+
+/* ---------------------------- follow-up chat ---------------------------- */
+
+/**
+ * "Ask a follow-up" — the panel is not a dead end after the answer.
+ *
+ * Google gives the definition; the follow-up is where a student asks the
+ * thing they actually came for ("but why does it scatter more?", "show me an
+ * example", "how is this asked in the board paper?"). The model is given the
+ * search context so it answers about the same page, and it is told to admit
+ * when the context does not cover the question rather than inventing a fact.
+ */
+const FOLLOW_UP_SYSTEM = [
+  "You are Manthan's study assistant, inside a study app for Indian school students in Classes 8 to 12.",
+  "A student searched Google in the app and is now asking a follow-up on the same topic.",
+  "Answer from the search context first. If the context does not contain the answer, say so in one short line, then give the explanation you are confident about — never invent a source, a number, a date or a quotation.",
+  "Prefer CBSE/NCERT wording where it fits. Answer in the language the question is asked in; if it is Hindi, answer in Hindi.",
+  "Length: match the question. A definition gets two or three sentences; 'explain' or 'how' gets the key idea plus one worked example. Never pad.",
+  "No preamble, no 'great question', no restating the question back.",
+  'Reply with a single JSON object and nothing else: {"answer":string}.',
+].join(" ");
+
+interface FollowUpTurn {
+  question: string;
+  answer: string;
+}
+
+function readFollowUp(raw: string): string | null {
+  const body = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```$/, "")
+    .trim();
+  try {
+    const parsed = JSON.parse(body.slice(body.indexOf("{"), body.lastIndexOf("}") + 1));
+    const answer = typeof parsed?.answer === "string" ? parsed.answer.trim() : "";
+    return answer || null;
+  } catch {
+    // A reply that forgot the JSON wrapper still answered the question.
+    return body && !body.startsWith("{") ? body.slice(0, 1200) : null;
+  }
+}
+
+export const followUp = action({
+  args: {
+    /** The search the student is asking about. */
+    query: v.string(),
+    /** Google's own answer, when the query produced one. */
+    answer: v.optional(v.string()),
+    /** The page results the answer sits above. */
+    sources: v.array(
+      v.object({ title: v.string(), url: v.string(), snippet: v.string() }),
+    ),
+    /** Earlier turns, oldest first, so "and that one?" still makes sense. */
+    history: v.optional(
+      v.array(v.object({ question: v.string(), answer: v.string() })),
+    ),
+    question: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ ok: boolean; text?: string; error?: string }> => {
+    const question = args.question.trim().replace(/\s+/g, " ").slice(0, 400);
+    if (question.length < 2) {
+      return { ok: false, error: "Type a question first." };
+    }
+
+    const { signedIn, userId } = await ctx.runQuery(
+      internal.searchContext.whoAmI,
+      {},
+    );
+    if (!signedIn) {
+      return { ok: false, error: "Sign in to keep asking from inside Manthan." };
+    }
+
+    let meter = false;
+    if (userId) {
+      const usage = await ctx.runQuery(internal.usage.ensureWithinQuota, {
+        userId,
+      });
+      if (usage.used >= usage.limit) {
+        return {
+          ok: false,
+          error:
+            usage.window === "month"
+              ? "Your monthly AI allowance is used up — it resets on the 1st."
+              : "Your daily AI allowance is used up — it resets at midnight.",
+        };
+      }
+      meter = true;
+    }
+
+    const context = [
+      `Search: ${args.query.slice(0, MAX_QUERY)}`,
+      args.answer ? `Google's answer above the results: ${args.answer.slice(0, 900)}` : "",
+      ...args.sources.slice(0, 6).map(
+        (source) =>
+          `- ${source.title} (${source.url}): ${source.snippet.slice(0, 320)}`,
+      ),
+      ...(args.history ?? [])
+        .slice(-3)
+        .map((turn) => `Earlier — student: ${turn.question.slice(0, 300)}\nYou: ${turn.answer.slice(0, 700)}`),
+      `Student's follow-up: ${question}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const reply = await callModel(
+        await resolveCandidates(),
+        FOLLOW_UP_SYSTEM,
+        context,
+        undefined,
+        0.4,
+      );
+      const text = readFollowUp(reply.text);
+      if (!text) {
+        return { ok: false, error: "That answer came back empty. Try asking again." };
+      }
+
+      if (meter) {
+        await ctx.runMutation(internal.usage.record, {
+          userId: userId as Id<"users">,
+          tokens: reply.tokens ?? estimateTokens(context, text),
+          requests: 1,
+        });
+      }
+      return { ok: true, text };
+    } catch (error) {
+      if (!(error instanceof ProviderUnavailable)) {
+        console.error(
+          `[webSearch] follow-up: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return { ok: false, error: SEARCH_FAILED };
+      }
+      return {
+        ok: false,
+        error: error.dayExhausted
+          ? "Every study model has hit its limit for today. Try again tomorrow."
+          : error.rateLimited
+            ? "The study models are busy right now. Try again in a minute."
+            : "No study model could answer that just now. Try again in a minute.",
+      };
+    }
+  },
+});
 
 /* ------------------------------- action ------------------------------- */
 

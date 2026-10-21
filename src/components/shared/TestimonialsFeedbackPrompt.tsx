@@ -235,7 +235,7 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
         </p>
         <p className="mt-1 text-xs text-text-dim">
           {consent
-            ? "If you consented, it may appear on the site once approved."
+            ? "It is on the site now — in the reviews section of the homepage."
             : "Since publishing was not consented to, this stays between you and us."}
         </p>
       </div>
@@ -308,7 +308,8 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
             className="mt-0.5 h-4 w-4 rounded border-[var(--card-border)] text-[var(--signal)] focus:ring-[var(--signal)]"
           />
           <span className="text-xs leading-relaxed text-text-dim">
-            I&apos;m happy for Manthan to show this on the website
+            Show this on the website — it appears in the homepage reviews
+            straight away
           </span>
         </label>
 

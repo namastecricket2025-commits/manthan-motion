@@ -44,6 +44,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import type { TextComfort, ThemeMode } from "@/lib/app-settings";
+import { ReviewsPanel } from "./ReviewsPanel";
 import { useSettings } from "./SettingsProvider";
 
 /* ------------------------------------------------------------------ */
@@ -64,7 +65,7 @@ const COMFORT: { key: TextComfort; label: string; scale: string }[] = [
 ];
 
 /** The three accordion panels, addressable as `/settings#<key>`. */
-const PANEL_KEYS = ["appearance", "account", "data"] as const;
+const PANEL_KEYS = ["appearance", "account", "data", "reviews"] as const;
 
 /** One spring for the panels that do animate; Motionless Mode zeroes it. */
 const PANEL_SPRING = { type: "spring", stiffness: 300, damping: 32 } as const;
@@ -868,6 +869,11 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
               </div>
             </AccordionContent>
           </AccordionItem>
+
+          {/* ============ 5. REVIEWS (owner only) ============ */}
+          {/* Renders nothing for everyone else; `ownerOverview` returns
+              `{ moderator: false }` and the panel is not mounted. */}
+          <ReviewsPanel />
         </Accordion>
       </div>
 
