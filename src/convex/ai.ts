@@ -1236,6 +1236,28 @@ async function analyzeCram(
       );
     }
 
+    return await cramFromText(corpus, name, note);
+}
+
+/**
+ * The model half of Cram Mode: text in, notes and benchmarks out.
+ *
+ * Split from the action so the same pipeline can be exercised on a stored
+ * chapter without an upload — the action still owns auth, storage and the
+ * error contract, and this owns the prompt, the one retry and the parse.
+ */
+export async function cramFromText(
+  corpus: string,
+  name: string,
+  note?: string,
+): Promise<{
+  ok: true;
+  subject: string;
+  notes: { topic: string; points: string[] }[];
+  benchmarks: { topic: string; weight: number; note: string; covered: boolean }[];
+  characters: number;
+  model: string;
+}> {
     // The chapter's own language decides the output language.
     const language = detectLanguage([corpus]);
     const prompt = [

@@ -68,6 +68,11 @@
      classes the dialog carries. */
   border-radius: 22px;
   max-width: min(540px, calc(100vw - 28px));
+  /* A follow-up thread plus eight sources is taller than a laptop screen, so
+     the panel scrolls as one page instead of pushing the Send button off it. */
+  max-height: min(88dvh, 760px);
+  overflow-y: auto;
+  scrollbar-width: thin;
   gap: 11px;
   border-color: var(--card-border, rgba(127, 127, 127, 0.2));
   box-shadow: 0 34px 84px -48px rgba(0, 0, 0, 0.82);

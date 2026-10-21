@@ -70,6 +70,44 @@ function dedupe(hits: Hit[]): Hit[] {
   return out;
 }
 
+/** Words too common to say anything about which result answers the query. */
+const STOP_WORDS = new Set([
+  "what", "why", "how", "when", "where", "which", "does", "did", "with",
+  "from", "that", "this", "your", "have", "into", "about", "explain",
+  "class", "cbse", "ncert", "chapter", "notes", "example", "between",
+  "difference", "define", "definition", "short", "long", "answer",
+]);
+
+/**
+ * Google does not always put an answer box above the results, and the first
+ * organic result is not always the one that answers the question — searching
+ * "why is the sky blue" can rank a chapter index above the explanation. When
+ * there is no box, pick the snippet that shares the most meaningful words with
+ * the query instead of blindly taking result one.
+ */
+function bestAnswerSource(query: string, results: Hit[]): Hit | undefined {
+  const words = new Set(
+    (query.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+      (word) => word.length > 3 && !STOP_WORDS.has(word),
+    ),
+  );
+  if (words.size === 0) return results[0];
+
+  let best: Hit | undefined;
+  let bestScore = 0;
+  for (const hit of results) {
+    const body = `${hit.title} ${hit.snippet}`.toLowerCase();
+    let score = 0;
+    for (const word of words) if (body.includes(word)) score += 1;
+    if (score > bestScore) {
+      best = hit;
+      bestScore = score;
+    }
+  }
+  // No overlap at all is still better answered by result one than by nothing.
+  return best ?? results[0];
+}
+
 function estimateTokens(prompt: string, reply: string) {
   return Math.max(1, Math.round((prompt.length + reply.length) / CHARS_PER_TOKEN));
 }
@@ -170,17 +208,25 @@ async function runSerper(query: string, key: string): Promise<SearchReply> {
   addAnswerPart(parts, data.answerBox?.answer);
   addAnswerPart(parts, data.answerBox?.snippet);
   addAnswerPart(parts, data.knowledgeGraph?.description);
-  if (parts.length === 0) addAnswerPart(parts, results[0]?.snippet);
+  let fallback: Hit | undefined;
+  if (parts.length === 0) {
+    fallback = bestAnswerSource(query, results);
+    addAnswerPart(parts, fallback?.snippet);
+  }
 
   const answer: SearchAnswer | undefined =
     parts.length > 0
       ? {
           text: parts.join(" "),
-          title: stripTags(data.answerBox?.title) || stripTags(data.knowledgeGraph?.title),
+          title:
+            stripTags(data.answerBox?.title) ||
+            stripTags(data.knowledgeGraph?.title) ||
+            fallback?.title,
           url:
             (typeof data.answerBox?.link === "string" && data.answerBox.link) ||
             (typeof data.knowledgeGraph?.descriptionLink === "string" &&
               data.knowledgeGraph.descriptionLink) ||
+            fallback?.url ||
             results[0]?.url,
         }
       : undefined;

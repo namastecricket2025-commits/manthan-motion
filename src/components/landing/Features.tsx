@@ -442,8 +442,8 @@ const MOBILE_POINTS = [
 
 const SEARCH_POINTS = [
   "Results open in the panel, not a new tab",
-  "NCERT, CBSE and Hindi one-shots first",
-  "One click to read the source",
+  "Google's answer first, then the sources",
+  "Ask a follow-up without leaving the answer",
 ];
 
 export default function Features() {

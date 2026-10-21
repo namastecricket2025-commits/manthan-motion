@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 
 /**
  * What early testers said.
@@ -19,8 +20,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  *
  * Display order is an editorial mix, not the database order: casual short
  * reviews and longer ones alternate, and the three 4-star quotes are spaced
- * out instead of arriving together. The list is only reordered here; nothing
- * is written back, so a new approved review is picked up automatically.
+ * out instead of arriving together. Reviews that are not on the curated sheet
+ * — anything a student posts from /feedback — go first, newest first, so the
+ * person who just wrote one sees it on the homepage rather than eleven slides
+ * later. The list is only reordered here; nothing is written back.
  *
  * Avatar colours are assigned on that final order by `assignAvatarColors`, so
  * no two cards within two positions of each other share a hue — including
@@ -74,9 +77,10 @@ function orderReviews(reviews: Review[]): Review[] {
   return unique.sort((a, b) => {
     const aRank = rank.get((a.displayName ?? "").trim());
     const bRank = rank.get((b.displayName ?? "").trim());
+    // Both unranked (student-submitted): keep the query's newest-first order.
     if (aRank === undefined && bRank === undefined) return 0;
-    if (aRank === undefined) return 1;
-    if (bRank === undefined) return -1;
+    if (aRank === undefined) return -1;
+    if (bRank === undefined) return 1;
     return aRank - bRank;
   });
 }
@@ -285,8 +289,9 @@ export default function Testimonials() {
             From our <span className="gradient-text">early testers</span>
           </h2>
           <p className="mt-4 text-base leading-relaxed text-text-dim">
-            Students who used Manthan before launch — quoted exactly as they
-            wrote it, with only their first name and class.
+            Students who used Manthan before launch, plus reviews posted from
+            inside the app — quoted exactly as written, with only a first name
+            and class.
           </p>
 
           {reviewCount > 0 ? (
@@ -333,7 +338,7 @@ export default function Testimonials() {
         </div>
       ) : ordered.length === 0 ? (
         <p className="mt-10 text-sm text-text-dim">
-          Reviews appear here once a tester has approved theirs for publishing.
+          Reviews appear here once someone agrees to publish theirs.
         </p>
       ) : (
         <>
@@ -342,7 +347,7 @@ export default function Testimonials() {
             ref={trackRef}
             role="region"
             aria-roledescription="carousel"
-            aria-label="Reviews from early testers"
+            aria-label="Reviews from students"
             className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {ordered.map((review, index) => (
@@ -378,7 +383,13 @@ export default function Testimonials() {
         </>
       )}
 
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+        <Link
+          to="/feedback"
+          className="text-xs font-medium text-[var(--signal)] underline decoration-[color-mix(in_srgb,var(--signal)_45%,transparent)] underline-offset-4 transition-colors hover:text-foreground"
+        >
+          Leave a review
+        </Link>
         <RemovalLink />
       </div>
     </section>
