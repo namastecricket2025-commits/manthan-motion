@@ -66,16 +66,98 @@
   /* Soft-cornered rectangle: wider than the shadcn default so a result list
      reads as a page, not as a card. Unlayered, so it wins over the utility
      classes the dialog carries. */
+  display: flex;
+  flex-direction: column;
   border-radius: 22px;
   max-width: min(540px, calc(100vw - 28px));
-  /* A follow-up thread plus eight sources is taller than a laptop screen, so
-     the panel scrolls as one page instead of pushing the Send button off it. */
-  max-height: min(88dvh, 760px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  gap: 11px;
+  /* A fixed frame, not a stack that grows with the results: the query stays at
+     the top, the follow-up field stays at the bottom, and only the middle
+     scrolls — the same shape whether there are two sources or eight. */
+  height: min(82dvh, 640px);
+  padding: 14px 16px 0;
+  overflow: hidden;
+  gap: 10px;
   border-color: var(--card-border, rgba(127, 127, 127, 0.2));
   box-shadow: 0 34px 84px -48px rgba(0, 0, 0, 0.82);
+}
+
+/* The scrolling middle: answer, conversation, sources. */
+.gs-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 2px 2px 4px;
+  margin: -2px -2px 0;
+}
+
+/* The wait: Google's mark, centred, breathing. No spinner text. */
+.gs-loading {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 130px;
+  align-items: center;
+  justify-content: center;
+}
+
+.gs-loading img {
+  width: 34px;
+  height: auto;
+  user-select: none;
+  animation: gs-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes gs-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-loading img { animation: none; opacity: 0.9; }
+}
+
+.gs-foot {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
+  padding: 9px 1px 11px;
+}
+
+.gs-foot__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-foot__brand img {
+  width: 12px;
+  height: auto;
+  user-select: none;
+}
+
+.gs-foot__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--text-dim, #8b8b8b);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 160ms ease;
+}
+
+.gs-foot__link:hover {
+  color: var(--text-main, inherit);
 }
 
 .gs-field {
@@ -260,12 +342,13 @@
 
 .gs-follow {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--text-main, currentColor) 3%, transparent);
-  padding: 4px 4px 4px 13px;
+  background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
+  padding: 4px 4px 4px 14px;
   transition: border-color 180ms var(--ease-momentum, ease);
 }
 
@@ -333,22 +416,19 @@
 .gs-results {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: min(46vh, 340px);
-  overflow-y: auto;
-  scrollbar-width: thin;
+  gap: 1px;
   margin: 0;
-  padding: 2px;
+  padding: 0;
   list-style: none;
 }
 
 .gs-hit {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 9px 10px;
+  border-radius: 11px;
+  padding: 7px 9px;
   text-decoration: none;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
@@ -356,8 +436,7 @@
 
 .gs-hit__index {
   flex: 0 0 auto;
-  width: 16px;
-  padding-top: 1px;
+  width: 15px;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim, #8b8b8b);

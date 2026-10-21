@@ -40,17 +40,24 @@ const MAX_NAME = 40;
 
 /** Owner identity is the Supabase `sub` stored in the deployment's env. */
 const OWNER_SUBJECT_KEY = "MANTHAN_OWNER_SUBJECT";
+/** The same owner, addressed by the email they sign in with. */
+const OWNER_EMAIL_KEY = "MANTHAN_OWNER_EMAIL";
 
 /**
  * Who may moderate reviews — three ways, in order of explicitness:
  *
- *   1. the subject in `MANTHAN_OWNER_SUBJECT`, when that env var is set;
+ *   1. the subject in `MANTHAN_OWNER_SUBJECT`, or the address in
+ *      `MANTHAN_OWNER_EMAIL`, when either env var is set — either one is
+ *      enough, so the owner does not have to dig a Supabase UID out to get in;
  *   2. a `users` row whose role is `admin`;
- *   3. the first account ever created on the deployment, which is the site
- *      owner in practice. Without this fallback a fresh deployment has no way
- *      to reach the queue at all: the env var is optional, and asking the
- *      owner to hand-edit a role in the Convex dashboard before they can see
- *      their own reviews was exactly why submitted reviews never surfaced.
+ *   3. the first account that actually came through Supabase (a row with an
+ *      `authSubject`), which is the site owner in practice. Without this
+ *      fallback a fresh deployment has no way to reach the queue at all: the
+ *      env var is optional, and asking the owner to hand-edit a role in the
+ *      Convex dashboard before they can see their own reviews was exactly why
+ *      submitted reviews never surfaced. Older anonymous rows are skipped,
+ *      because they cannot be the signed-in account and counting them as
+ *      "the first user" locked the real owner out.
  *
  * Membership is never exposed to other users: `ownerOverview` returns
  * `{ moderator: false }` and the panel is not rendered.
@@ -70,13 +77,22 @@ async function moderatorStatus(
   if (owner && identity.subject === owner) {
     return { moderator: true, userId: user?._id ?? null };
   }
+  const ownerEmail = process.env[OWNER_EMAIL_KEY]?.trim().toLowerCase();
+  if (ownerEmail && identity.email?.trim().toLowerCase() === ownerEmail) {
+    return { moderator: true, userId: user?._id ?? null };
+  }
   if (user?.role === "admin") {
     return { moderator: true, userId: user._id };
   }
 
-  const first = await ctx.db.query("users").first();
+  // The first account that actually came through Supabase. Earlier rows in
+  // this table can be anonymous or predate the bridge and have no
+  // `authSubject`; those can never be the signed-in account, so counting them
+  // as "the first user" left the real owner locked out of the queue entirely.
+  const accounts = await ctx.db.query("users").collect();
+  const firstAccount = accounts.find((row) => Boolean(row.authSubject));
   return {
-    moderator: !!user && !!first && first._id === user._id,
+    moderator: !!user && !!firstAccount && firstAccount._id === user._id,
     userId: user?._id ?? null,
   };
 }
