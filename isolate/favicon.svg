@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="core" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f4b93a" />
-      <stop offset="1" stop-color="#d98c07" />
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="15" fill="#141210" />
-  <rect width="64" height="64" rx="15" fill="none" stroke="rgba(255, 245, 230, 0.09)" />
-  <circle cx="25.5" cy="33" r="13.5" fill="url(#core)" />
-  <rect x="38.5" y="31" width="4" height="4" rx="1.4" fill="#f3eee2" />
-  <circle cx="48" cy="33" r="4.6" fill="#f3eee2" />
+  <!-- The Manthan mark, with no tile behind it: one large circle, one small
+       circle, and the bar that joins them. Transparent so the tab's own colour
+       shows through. A light browser chrome would erase a pure-white mark, so
+       the ink flips to near-black there; the artwork is identical. -->
+  <style>
+    .ink { fill: #ffffff; }
+    @media (prefers-color-scheme: light) {
+      .ink { fill: #0a0a0b; }
+    }
+  </style>
+  <g class="ink">
+    <circle cx="25.5" cy="32" r="19" />
+    <rect x="41" y="29.8" width="7" height="4.4" rx="1.6" />
+    <circle cx="51" cy="32" r="6.2" />
+  </g>
 </svg>
