@@ -1,6 +1,6 @@
 import { gsap, prefersReducedMotion, refreshOnLoad, revealConfig } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
-import { Check, FileText, Plus } from "lucide-react";
+import { Check, FileText, Plus, Search } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { useSpotlight } from "./use-spotlight";
 
@@ -242,6 +242,71 @@ function ThemeArt() {
   );
 }
 
+/**
+ * The in-app search panel, reduced to its real parts: the Google mark, one
+ * field, and Google's own results. No illustration invented for the landing
+ * page — this is the surface a student actually gets, which is also why the
+ * copy underneath can stay to two sentences.
+ */
+function SearchArt() {
+  const hits = [
+    {
+      host: "ncert.nic.in",
+      title: "Light — Reflection and Refraction",
+      snippet: "Class 10 Science, Chapter 10. Laws of reflection, mirrors, refraction through a glass slab.",
+    },
+    {
+      host: "byjus.com",
+      title: "Why is the sky blue? Rayleigh scattering",
+      snippet: "Shorter wavelengths scatter more, so blue reaches your eye from every direction.",
+    },
+    {
+      host: "youtube.com",
+      title: "Rayleigh scattering, explained in four minutes",
+      snippet: "A chalkboard walkthrough of the same chapter, for a second pass.",
+    },
+  ];
+  return (
+    <Art>
+      <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-[var(--panel-line)] bg-[var(--panel)] px-2.5 py-2">
+          <Search className="h-3.5 w-3.5 shrink-0 text-text-dim" />
+          <span className="min-w-0 flex-1 truncate text-[12px] text-foreground">
+            why is the sky blue — Class 10
+          </span>
+          <span className="shrink-0 rounded-full bg-[var(--text-main)] px-2 py-0.5 text-[10px] font-semibold text-[var(--panel)]">
+            Search
+          </span>
+        </div>
+        <img
+          src="/google-g.png"
+          alt=""
+          width={16}
+          height={16}
+          className="shrink-0 opacity-90"
+          aria-hidden
+        />
+      </div>
+      <ul className="mt-2.5">
+        {hits.map((hit) => (
+          <li
+            key={hit.host}
+            className="border-t border-[var(--panel-line)] py-1.5 first:border-0 first:pt-0 last:pb-0"
+          >
+            <span className="block text-[10px] text-text-dim">{hit.host}</span>
+            <span className="block truncate text-[12px] font-medium text-foreground">
+              {hit.title}
+            </span>
+            <span className="mt-0.5 block truncate text-[11px] text-text-dim">
+              {hit.snippet}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Art>
+  );
+}
+
 /** The phone: the same app, stacked, with the off-canvas bar at the bottom. */
 function PhoneArt() {
   return (
@@ -310,6 +375,12 @@ const MOBILE_POINTS = [
   "Off-canvas navigation instead of a squeezed sidebar",
   "Stacked cards that read at thumb width",
   "A background tuned for mid-range devices",
+];
+
+const SEARCH_POINTS = [
+  "Results open in the panel, not a new tab",
+  "NCERT, CBSE and Hindi one-shots first",
+  "One click to read the source",
 ];
 
 export default function Features() {
@@ -419,6 +490,37 @@ export default function Features() {
             </p>
             <ul className="mt-4 grid gap-2 sm:grid-cols-3">
               {MOBILE_POINTS.map((point) => (
+                <li key={point} className="flex items-start gap-2 text-[13px] text-text-dim">
+                  <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
+                    <Check className="h-2 w-2" strokeWidth={3.5} />
+                  </span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </article>
+
+        {/* The search panel, given the closing slot: it is the one feature
+            that works the same on every page, so it reads last and widest. */}
+        <article
+          data-card
+          className="feature-card glass-panel card-surface spot-card flex flex-col gap-6 p-4 sm:col-span-2 sm:p-5 lg:col-span-6 lg:flex-row-reverse lg:items-center lg:gap-8 lg:p-6"
+        >
+          <div className="min-w-0 lg:w-[46%] lg:shrink-0">
+            <SearchArt />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-[17px] font-semibold tracking-[-0.01em] text-foreground sm:text-lg">
+              Google, inside the working
+            </h3>
+            <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-text-dim">
+              Every lab carries its own search. Ask for a definition mid-solution
+              and Google's results open beside the problem — the page, the
+              diagram and the answer never leave the screen.
+            </p>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-3">
+              {SEARCH_POINTS.map((point) => (
                 <li key={point} className="flex items-start gap-2 text-[13px] text-text-dim">
                   <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
                     <Check className="h-2 w-2" strokeWidth={3.5} />
