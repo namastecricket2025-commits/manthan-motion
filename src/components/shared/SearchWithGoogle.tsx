@@ -323,7 +323,11 @@ export function SearchWithGoogle({
                 aria-label="Send follow-up"
                 disabled={followBusy || !question.trim()}
               >
-                <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+                {followBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <ArrowUp className="h-3.5 w-3.5" aria-hidden />
+                )}
               </button>
             </form>
           </div>

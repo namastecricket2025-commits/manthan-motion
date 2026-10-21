@@ -609,7 +609,7 @@ export async function callModel(
   temperature = 0.3,
   /** Per-request budget. Generation may legitimately run long; a short
    *  follow-up must not wait that long on a provider that never replies. */
-  timeoutMs = 90_000,
+  timeoutMs = 120_000,
 ): Promise<{
   text: string;
   model: string;
