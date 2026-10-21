@@ -72,38 +72,43 @@
   pointer-events: none;
 }
 
+/* The dot grid is texture, not a veil. At 12% dots across most of the viewport
+   it did not read as a grid on black — it raised the whole canvas to charcoal,
+   which is why the room looked grey next to the dashboard. It now stays in the
+   top band, spent before the first bench, and the dots themselves are fainter. */
 .apple-lab::before {
   background-image: radial-gradient(
     circle at center,
-    rgba(255, 255, 255, 0.12) 1px,
+    rgba(255, 255, 255, 0.1) 1px,
     transparent 1.2px
   );
   background-size: 26px 26px;
-  opacity: 0.55;
-  -webkit-mask-image: radial-gradient(ellipse 78% 62% at 50% 4%, #000 6%, transparent 74%);
-  mask-image: radial-gradient(ellipse 78% 62% at 50% 4%, #000 6%, transparent 74%);
+  opacity: 0.26;
+  -webkit-mask-image: radial-gradient(ellipse 52% 30% at 50% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 52% 30% at 50% 0%, #000 0%, transparent 72%);
 }
 
+/* One shallow wash on the top edge, the same light model the dashboard uses.
+   The cyan corner is gone: two light sources at different hues over a black
+   room is what made the canvas read as grey-blue instead of black. */
 .apple-lab::after {
   background:
-    radial-gradient(620px 360px at 4% -6%, rgba(255, 255, 255, 0.07), transparent 70%),
-    radial-gradient(620px 380px at 98% -4%, rgba(125, 211, 252, 0.06), transparent 72%),
-    radial-gradient(700px 420px at 50% 108%, rgba(255, 255, 255, 0.035), transparent 70%);
+    radial-gradient(64% 300px at 50% -48%, rgba(255, 255, 255, 0.05), transparent 74%),
+    radial-gradient(110% 420px at 50% -60%, rgba(255, 255, 255, 0.028), transparent 80%);
 }
 
 html[data-comfort="on"] .apple-lab::before {
   background-image: radial-gradient(
     circle at center,
-    rgba(255, 238, 214, 0.14) 1px,
+    rgba(255, 238, 214, 0.11) 1px,
     transparent 1.2px
   );
 }
 
 html[data-comfort="on"] .apple-lab::after {
   background:
-    radial-gradient(620px 360px at 4% -6%, rgba(255, 206, 148, 0.09), transparent 70%),
-    radial-gradient(620px 380px at 98% -4%, rgba(255, 190, 130, 0.06), transparent 72%),
-    radial-gradient(700px 420px at 50% 108%, rgba(255, 214, 160, 0.05), transparent 70%);
+    radial-gradient(64% 300px at 50% -48%, rgba(255, 222, 178, 0.065), transparent 74%),
+    radial-gradient(110% 420px at 50% -60%, rgba(255, 214, 160, 0.04), transparent 80%);
 }
 
 /* ---- The only background art: two organic meshes, 4% opacity ---------- */
@@ -157,12 +162,18 @@ html[data-comfort="on"] .apple-lab::after {
 /* ---- Glass --------------------------------------------------------- */
 .apple-lab-glass {
   position: relative;
-  background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.055),
-    rgba(255, 255, 255, 0.018) 55%,
-    rgba(255, 255, 255, 0.035)
-  );
+  /* Glass keeps its highlight, but sits on a near-solid base instead of letting
+     the blurred dot field show through. Without that base a panel over the grid
+     blurred into flat charcoal and the bench read grey; the white stops are the
+     same, so the spec (blur 24px, 1px hairline) is unchanged. */
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018) 55%,
+      rgba(255, 255, 255, 0.035)
+    ),
+    rgba(6, 6, 6, 0.78);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
   border: 1px solid var(--lab-line);

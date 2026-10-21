@@ -13,13 +13,14 @@
 
 .gs-trigger,
 .gs-trigger:hover,
+.gs-trigger:active,
 .gs-trigger:focus-visible {
-  background: #ffffff !important;
   color: #1f1f1f !important;
   border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 .gs-trigger {
+  background: #ffffff !important;
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
   border-radius: 999px !important;
@@ -27,16 +28,26 @@
   font-size: inherit;
   font-weight: 600;
   letter-spacing: -0.01em;
+  /* Hover is a change of TONE, never of position. The trigger sits in a toolbar
+     and on a lab bench, so the 1px lift it used to have made the whole row
+     twitch whenever the pointer crossed it. It dims a step instead, the way the
+     buttons around it do. */
+  transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .gs-trigger:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+  background: #f7f7f7 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .gs-trigger:active {
-  transform: translateY(0);
+  background: #ededed !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.gs-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--signal, #de9c0d) 55%, transparent);
+  outline-offset: 2px;
 }
 
 .gs-trigger__text {

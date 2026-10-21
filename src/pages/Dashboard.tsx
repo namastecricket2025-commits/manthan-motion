@@ -227,7 +227,9 @@ export default function Dashboard() {
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="relative z-10">
-        {/* Page-top aura — ambient light spilling in from above, dark mode only. */}
+        {/* Page-top texture, then the aura on top of it: the same two layers
+            the Math Lab uses, so the two pages read as one product. */}
+        <div className="dot-field" aria-hidden="true" />
         <div className="glow-aura" aria-hidden="true" />
         {/* ---- Sidebar (desktop, collapsible) ---- */}
         <aside

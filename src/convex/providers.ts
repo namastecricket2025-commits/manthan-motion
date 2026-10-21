@@ -55,7 +55,7 @@ export const NO_KEY_MESSAGE =
  * hard-coded model is not a working configuration. A 404 parks the candidate for
  * the life of the process and the next one is tried. `AI_MODEL` pins exactly one.
  */
-const GEMINI_MODELS = [
+export const GEMINI_MODELS = [
   "gemini-3.6-flash",
   "gemini-3.5-flash",
   "gemini-3-flash-preview",

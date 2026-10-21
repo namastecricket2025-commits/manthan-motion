@@ -303,7 +303,7 @@ export function AudioOverview({
             )}
           </div>
 
-          <ol className="flex max-h-[230px] flex-col gap-1 overflow-y-auto pr-1">
+          <ol className="thin-scroll thin-scroll flex max-h-[230px] flex-col gap-1 overflow-y-auto pr-1">
             {overview.segments.map((segment, i) => {
               const active = i === index;
               return (

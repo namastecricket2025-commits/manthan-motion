@@ -4,6 +4,9 @@ import { action } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+// One model list for the whole app: the tutor and grounded search must agree on
+// which ids Google still serves, so a retirement is fixed in one place.
+import { GEMINI_MODELS } from "./providers";
 
 /**
  * In-app web search — the engine behind every "Search on Google" control.
@@ -13,15 +16,16 @@ import { v } from "convex/values";
  * Nothing here exposes a key to the browser: the action reads the key from the
  * deployment, calls Google server-side and returns titles, links and snippets.
  *
- * Two back ends, tried in this order:
+ * Three back ends, tried in this order:
  *
  *   1. Serper (`SERPER_API_KEY`) — a Google search API that returns the
  *      organic results as JSON, with the answer box when there is one. This
  *      is the configured path for Manthan.
  *   2. The Custom Search JSON API, when a Programmable Search Engine id is
  *      configured (`GOOGLE_SEARCH_ENGINE_ID`).
- *   3. Gemini's Google Search grounding, which needs only a Gemini key, so a
- *      key the student already has for the tutor can still power the search.
+ *   3. Gemini's Google Search grounding through `GEMINI_API_KEY_2`, whose whole
+ *      job is this path. It walks the same model list the tutor uses and only
+ *      gives up once every id has answered no.
  *
  * Whatever runs is metered against the same plan allowance as generation, so
  * the dashboard meter, the plan card and the server keep agreeing. A missing
@@ -56,57 +60,30 @@ const CSE_ID_NAMES = [
   "GOOGLE_CSE_ID",
   "SEARCH_ENGINE_ID",
 ];
+/**
+ * The second Gemini key is listed first: it was created for search, so the
+ * grounded fallback spends it instead of the tutor's own key. The Custom Search
+ * key (`SEARCH_API_KEY`) is deliberately absent — it is a Google Cloud key and
+ * cannot authenticate a Gemini call, so trying it would only add a 403.
+ */
 const GEMINI_KEY_NAMES = [
+  "GEMINI_API_KEY_2",
   "GEMINI_API_KEY",
-  "SEARCH_API_KEY",
-  "GOOGLE_SEARCH_API_KEY",
   "NEW_GEMINI_API_KEY",
   "GOOGLE_API_KEY",
   "GOOGLE_GENERATIVE_AI_API_KEY",
 ];
-/**
- * Tried in order, but a model id that Google has already told us does not exist
- * on this key is never retried. The old behavior kept cycling through every id in
- * the list until one worked, which is why the panel sometimes got stuck blaming a
- * fresh id for a key/scopes problem that was never about the id itself.
- */
-const GEMINI_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-];
 
 /**
- * A Gemini model id is only worth trying once per request. If that id returns 404,
- * or a 400 whose body says the model/tool/search is not available on this key, the
- * id itself is tainted for the rest of this request: we record it and stop cycling
- * through the rest of the list so the real error bubbles up unchanged.
- *
- * `WeakSet<object>` only accepts objects, so we box each model id in an opaque
- * object once and reuse that same box as the tainted marker.
+ * Student-facing sentences. Model ids, key names and upstream paths belong in
+ * the server log, never in the panel: a student cannot act on any of them.
  */
-const rejectedGeminiIds = new WeakSet<object>();
-const taintedGeminiId = new Map<string, object>();
-
-function markerFor(model: string): object {
-  const existing = taintedGeminiId.get(model);
-  if (existing) return existing;
-  const marker: object = Object.create(null);
-  taintedGeminiId.set(model, marker);
-  return marker;
-}
-
-/**
- * Throwing this instead of `continue` makes the rest of the model loop go quiet.
- * The outer action only sees one error string, never a rotating model id.
- */
-function stopTryingGemini(_key: string, model: string): never {
-  throw new Error(`${model} is not available on this key.`);
-}
-
 const NO_KEY =
-  "Web search is not configured yet. Add SERPER_API_KEY in the Keys tab, or use the Google link below.";
-const TOOL_OFF =
-  "This key does not have Google Search enabled for it. Turn on the Google Search tool for the API key (or add GOOGLE_SEARCH_ENGINE_ID for a Programmable Search Engine) in the Keys tab.";
+  "Web search is not configured yet. Use the Google link below.";
+const SEARCH_UNAVAILABLE =
+  "Search is unavailable right now. Use the Google link below.";
+const SEARCH_BUSY =
+  "Google search is rate-limited right now. Try again in a moment.";
 
 /** htmlTitle/htmlSnippet arrive with markup; the panel renders plain text. */
 function stripTags(value: unknown): string {
@@ -172,9 +149,7 @@ async function runSerper(query: string, key: string): Promise<SearchReply> {
     );
   }
   if (response.status === 429) {
-    throw new Error(
-      "Google search is rate-limited right now. Try again in a moment.",
-    );
+    throw new Error(SEARCH_BUSY);
   }
   if (!response.ok) {
     throw new Error(`Google search failed (${response.status}).`);
@@ -248,6 +223,30 @@ async function runCustomSearch(
   };
 }
 
+interface GeminiCandidate {
+  content?: { parts?: Array<{ text?: string }> };
+  groundingMetadata?: {
+    groundingChunks?: Array<{
+      web?: { uri?: string; title?: string; snippet?: string };
+      retrievedContext?: { uri?: string; title?: string; snippet?: string };
+    }>;
+  };
+}
+
+/**
+ * Gemini's Google Search grounding: the last resort when neither a Serper key nor
+ * a Programmable Search Engine is configured.
+ *
+ * Model ids come from `providers.ts`, best first, because Google retires ids for
+ * new keys without saying so. A 404 (id gone), a 400 naming the tool (grounding
+ * off for this key) and a 429 (this model's daily free quota spent) are all
+ * *per-model* facts, so each one records the failure and the loop moves on. The
+ * panel only hears about it after every id has failed, which is the one moment
+ * the failure is actually about the request.
+ *
+ * The rejection set is local to this call. Nothing is cached at module level: a
+ * verdict from one search must not follow the next student around.
+ */
 async function runGeminiGrounded(
   query: string,
   key: string,
@@ -255,83 +254,83 @@ async function runGeminiGrounded(
   const prompt =
     `Search the web for this and answer in at most 70 words, plain text, no markdown, no bullet points, no URLs:\n\n${query}`;
 
-  let lastError = "";
-  for (const model of GEMINI_MODELS) {
-    // If this id already told us it is not available on this key during this
-    // request, do not ask Google about it again.
-    if (rejectedGeminiIds.has(markerFor(model))) {
-      continue;
-    }
+  // `SEARCH_MODEL` pins exactly one id, for when the owner wants to spend a
+  // specific model's quota on search.
+  const pinned = process.env.SEARCH_MODEL?.trim();
+  const models = pinned ? [pinned] : GEMINI_MODELS;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": key,
+  const rejected = new Set<string>();
+  let lastStatus: number | undefined;
+  let lastReason = "no model was tried";
+
+  for (const model of models) {
+    if (rejected.has(model)) continue;
+
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": key,
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 600 },
+          }),
+          signal: AbortSignal.timeout(TIMEOUT_MS),
         },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 600 },
-        }),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      },
-    );
-
-    if (response.status === 404) {
-      // This model id does not exist on this key. Record it and give up on the
-      // whole Gemini path for this request: the problem is the key/scopes/endpoint,
-      // not whichever id we asked about, so retrying a different id only makes the
-      // panel blame the wrong id on the next render.
-      rejectedGeminiIds.add(markerFor(model));
-      throw stopTryingGemini(key, model);
+      );
+    } catch (error) {
+      // A timeout on one id says nothing about the next one.
+      lastStatus = undefined;
+      lastReason = `${model}: network ${error instanceof Error ? error.message : String(error)}`;
+      console.error(`[webSearch] ${lastReason}`);
+      continue;
     }
 
     const body = await response.text();
 
     if (!response.ok) {
+      const snippet = body.replace(/\s+/g, " ").slice(0, 300);
+      lastStatus = response.status;
+      lastReason = `${model}: ${response.status} ${snippet}`;
+      console.error(`[webSearch] ${lastReason}`);
+
       if (
-        response.status === 400 &&
-        /tool|google_search|not found|unsupported/i.test(body)
+        response.status === 404 ||
+        (response.status === 400 &&
+          /tool|google_search|not found|unsupported|model/i.test(body))
       ) {
-        // Either the model has no search tool, or the search tool is off for
-        // the key. In either case the current id is not the real fault — do not
-        // keep trying a fresh id on the same key.
-        rejectedGeminiIds.add(markerFor(model));
-        throw stopTryingGemini(key, model);
+        // Either this id is retired on this key or the search tool is not
+        // available to it. Both are settled facts for this id: skip it.
+        rejected.add(model);
       }
-      if (response.status === 429) {
-        throw new Error("Google search is rate-limited right now. Try again in a moment.");
-      }
-      throw new Error(`Google search failed (${response.status}).`);
+      continue;
     }
 
-    // Any earlier per-request rejection is irrelevant now that this id answered.
-    rejectedGeminiIds.delete(markerFor(model));
-
     let data: {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-        groundingMetadata?: {
-          groundingChunks?: Array<{
-            web?: { uri?: string; title?: string; snippet?: string };
-            retrievedContext?: { uri?: string; title?: string; snippet?: string };
-          }>;
-        };
-      }>;
+      candidates?: GeminiCandidate[];
       usageMetadata?: { totalTokenCount?: number };
     };
     try {
       data = JSON.parse(body);
     } catch {
-      throw new Error("Google search returned something unreadable.");
+      lastStatus = undefined;
+      lastReason = `${model}: unreadable response body`;
+      console.error(`[webSearch] ${lastReason}`);
+      continue;
     }
 
     const candidate = data.candidates?.[0];
     if (!candidate) {
-      throw new Error("Google search came back empty. Try the query again.");
+      lastStatus = undefined;
+      lastReason = `${model}: no candidate returned`;
+      console.error(`[webSearch] ${lastReason}`);
+      continue;
     }
 
     const answer = (candidate.content?.parts ?? [])
@@ -352,13 +351,28 @@ async function runGeminiGrounded(
       }),
     );
 
+    // Neither prose nor sources means this id did nothing useful; the next one
+    // may still ground the query properly.
+    if (!answer && results.length === 0) {
+      lastStatus = undefined;
+      lastReason = `${model}: empty answer and no sources`;
+      console.error(`[webSearch] ${lastReason}`);
+      continue;
+    }
+
     const tokens =
       data.usageMetadata?.totalTokenCount ?? estimateTokens(prompt, answer);
 
     return { answer, results, provider: "gemini-grounded", tokens };
   }
 
-  throw new Error(lastError || TOOL_OFF);
+  console.error(
+    `[webSearch] every Gemini model failed (last: ${lastReason}). ` +
+      "Check GEMINI_API_KEY_2 has the Google Search tool enabled for the deployment.",
+  );
+  // The real reason is in the log above; the panel gets the one sentence a
+  // student can act on.
+  throw new Error(lastStatus === 429 ? SEARCH_BUSY : SEARCH_UNAVAILABLE);
 }
 
 /* ------------------------------- action ------------------------------- */

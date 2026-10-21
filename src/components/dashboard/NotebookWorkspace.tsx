@@ -15,7 +15,6 @@ import { CramMode } from "@/components/dashboard/CramMode";
 import { MindmapView } from "@/components/dashboard/MindmapView";
 import { NotebookChat } from "@/components/dashboard/NotebookChat";
 import { AudioOverview } from "@/components/dashboard/AudioOverview";
-import { WatchNext } from "@/components/dashboard/WatchNext";
 import { setRecentKind } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -417,8 +416,11 @@ export function NotebookWorkspace({
             readyCount={readyCount}
           />
           <div className="flex min-w-0 flex-col gap-3">
+            {/* Audio is the only artefact beside the chat. Video suggestions
+                belong to a specific answer, so the chat offers one under the
+                answer that needs it instead of this column listing channels
+                nobody asked for. */}
             <AudioOverview notebookId={notebookId} readyCount={readyCount} />
-            <WatchNext notebookName={notebookName} />
           </div>
         </div>
       </section>

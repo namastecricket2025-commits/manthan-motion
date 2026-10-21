@@ -217,7 +217,7 @@ export const editText = mutation({
  */
 export const EARLY_TESTERS = [
   {
-    displayName: "Luv",
+    displayName: "Aarav",
     classLabel: "Class 9",
     rating: 5,
     text: "I used Manthan to make summaries and quizzes for my science chapters. I liked how quickly it helped me revise important topics without reading everything again. It makes studying easier and more interesting.",

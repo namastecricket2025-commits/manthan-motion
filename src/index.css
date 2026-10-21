@@ -968,6 +968,28 @@ html[data-comfort="on"] {
      Height is a fixed band pinned to the wrapper's top edge rather than
      `inset: 0`: the wash belongs to the top of a page, and on a long page a
      full-height box would stretch it until it vanished. */
+  /* The paper under the wash: a quiet dot field across the top of a page,
+     drawn as one repeating gradient and masked so it never reaches a card.
+     Ink is mixed from `--text-main`, so the same rule is faint black on paper
+     and faint white on ink. Sits BELOW `.glow-aura`, so the light still falls
+     on top of the texture rather than behind it. */
+  .dot-field {
+    position: absolute;
+    inset: 0 0 auto;
+    height: min(420px, 100%);
+    z-index: -2;
+    pointer-events: none;
+    background-image: radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--text-main) 13%, transparent) 1px,
+      transparent 1.2px
+    );
+    background-size: 26px 26px;
+    opacity: 0.5;
+    -webkit-mask-image: radial-gradient(ellipse 55% 42% at 50% 0%, #000 0%, transparent 76%);
+    mask-image: radial-gradient(ellipse 55% 42% at 50% 0%, #000 0%, transparent 76%);
+  }
+
   .glow-aura {
     position: absolute;
     inset: 0 0 auto;
@@ -2074,6 +2096,40 @@ html {
 }
 .dashboard-chart-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* ------------------------------------------------
+   Thin scroll wells.
+
+   A `<ol>` or a transcript inside a dashboard card inherits the platform
+   scrollbar, which on Windows is a 17px grey trough with two stepper arrows
+   and a white thumb — the loudest thing in the card. This is the same
+   contract the lab uses: a 6px well, a rounded thumb mixed from the text
+   colour, and no arrows on any platform.
+   ------------------------------------------------ */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-main) 18%, transparent) transparent;
+  overscroll-behavior: contain;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 16%, transparent);
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-main) 28%, transparent);
+}
+.thin-scroll::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* ------------------------------------------------

@@ -2478,9 +2478,10 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 }
 
 /* The lab's page texture: a quiet dot grid that fades out at the edges, plus
-   two soft corner glows in the brand amber and a cool graphite. Both are
-   painted behind the notebook and never intercept a click, so the empty right
-   side of a solved page reads as a desk rather than as a missing panel. */
+   one shallow wash of light on the top edge — the same single light source the
+   dashboard uses (`.glow-aura`). Both are painted behind the notebook and never
+   intercept a click, so the empty right side of a solved page reads as a desk
+   rather than as a missing panel. */
 .mathlab-page::before,
 .mathlab-page::after {
   content: "";
@@ -2498,34 +2499,27 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   );
   background-size: 22px 22px;
   opacity: 0.4;
-  -webkit-mask-image: radial-gradient(ellipse 82% 72% at 50% 26%, #000 18%, transparent 78%);
-  mask-image: radial-gradient(ellipse 82% 72% at 50% 26%, #000 18%, transparent 78%);
+  /* The mask has to finish INSIDE the box. At 82%/72% of the element's own
+     width and height it was still partially opaque where the box ended, which
+     cut the dot field off in a straight line — the rectangle students saw. */
+  -webkit-mask-image: radial-gradient(ellipse 42% 38% at 50% 28%, #000 0%, transparent 74%);
+  mask-image: radial-gradient(ellipse 42% 38% at 50% 28%, #000 0%, transparent 74%);
 }
 
+/* The page wash, copied from the dashboard's `.glow-aura`: both radial centres
+   sit ABOVE the box, so only the dim outer half of each one is ever on screen
+   and the light is spent before the toolbar. That is the whole trick — the
+   previous version was a fixed 420px amber box whose mask was larger than the
+   box itself, so the wash was still visible where the element stopped and left
+   a hard horizontal edge and a lit rectangle behind the tabs. No mask is
+   needed now: every stop falls to transparent inside the element. */
 .mathlab-page::after {
-  /* One warm wash hugging the top of the canvas, faded in every direction.
-     It used to be two saturated meshes in a 520px box, which clipped in
-     mid-air and read as a smudge on the page header instead of as light. */
-  inset: -24px -48px auto -48px;
-  height: 420px;
+  inset: 0 0 auto;
+  height: min(320px, 100%);
   background:
-    radial-gradient(560px 260px at 10% 0%, color-mix(in srgb, var(--signal) 9%, transparent), transparent 72%),
-    radial-gradient(560px 240px at 92% -4%, color-mix(in srgb, var(--signal) 5%, transparent), transparent 74%);
-  -webkit-mask-image: radial-gradient(130% 105% at 50% 0%, #000 42%, transparent 100%);
-  mask-image: radial-gradient(130% 105% at 50% 0%, #000 42%, transparent 100%);
-  opacity: calc(0.65 * var(--ambient, 1));
-}
-
-html[data-comfort="on"] .mathlab-page::after {
-  background:
-    radial-gradient(560px 260px at 10% 0%, rgba(255, 205, 140, 0.11), transparent 72%),
-    radial-gradient(560px 240px at 92% -4%, rgba(255, 195, 130, 0.07), transparent 74%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mathlab-page::after {
-    opacity: 0.6;
-  }
+    radial-gradient(68% 300px at 50% -46%, var(--halo-near), transparent 74%),
+    radial-gradient(110% 420px at 50% -58%, var(--halo-far), transparent 80%);
+  opacity: calc(0.9 * var(--ambient, 1));
 }
 
 .mathlab-solvepage {

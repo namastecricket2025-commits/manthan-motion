@@ -29,6 +29,24 @@ The convex server has a separate set of environment variables that are accessibl
 
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
 
+### Dev and production are separate deployments
+
+Convex keeps a **separate set of environment variables for dev and for
+production**. Setting a key while developing does not configure the deployed
+site, so web search (and any other keyed feature) can work locally and still
+return "not configured" on production. Set every backend key on both
+deployments:
+
+```bash
+bunx convex env set SERPER_API_KEY <key>            # dev
+bunx convex env set SERPER_API_KEY <key> --prod     # production
+```
+
+Keys used by the search panel: `SERPER_API_KEY` (Google results through
+Serper), `SEARCH_API_KEY` + `GOOGLE_SEARCH_ENGINE_ID` (Programmable Search
+Engine), and `GEMINI_API_KEY_2` (Gemini Google Search grounding, the fallback).
+`SEARCH_MODEL` optionally pins a single Gemini model id for grounded search.
+
 
 # Using Authentication (Important!)
 

@@ -6,6 +6,7 @@ import {
   BookOpenCheck,
   Compass,
   Loader2,
+  Play,
   Sparkles,
   Turtle,
 } from "lucide-react";
@@ -95,20 +96,15 @@ export function NotebookChat({
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="dashboard-kicker">
-            <BookOpenCheck className="h-3.5 w-3.5" />
-            Ask this notebook
-          </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-text-dim">
-            Answers come only from the {readyCount} readable source
-            {readyCount === 1 ? "" : "s"} here, and name the source they used.
-          </p>
-        </div>
-        <span className="glass-chip text-[10px] uppercase tracking-[0.12em]">
-          grounded
-        </span>
+      <div>
+        <p className="dashboard-kicker">
+          <BookOpenCheck className="h-3.5 w-3.5" />
+          Ask this notebook
+        </p>
+        <p className="mt-1.5 text-xs leading-relaxed text-text-dim">
+          Answers come only from the {readyCount} readable source
+          {readyCount === 1 ? "" : "s"} here, and name the source they used.
+        </p>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Answer depth">
@@ -138,7 +134,7 @@ export function NotebookChat({
 
       <div
         ref={scroller}
-        className="mt-3 flex max-h-[360px] min-h-[190px] flex-col gap-3 overflow-y-auto rounded-2xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--card)_45%,transparent)] p-3.5"
+        className="thin-scroll mt-3 flex max-h-[360px] min-h-[190px] flex-col gap-3 overflow-y-auto rounded-2xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--card)_45%,transparent)] p-3.5"
         aria-live="polite"
       >
         {turns.length === 0 ? (
@@ -179,6 +175,25 @@ export function NotebookChat({
                     From {turn.sources.join(" · ")}
                   </p>
                 ) : null}
+                {/* The video suggestion belongs to the answer, not to a panel in
+                    the sidebar: it is offered at the moment a student is reading
+                    an explanation that may not have landed, which is the only
+                    point at which "watch this too" means anything. It opens a
+                    YouTube search, so nothing is fetched or stored. */}
+                <a
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                    [notebookName, turns[index - 1]?.role === "student" ? turns[index - 1].text : ""]
+                      .filter(Boolean)
+                      .join(" "),
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  title="Opens a YouTube search — nothing is added to your notebook"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[11px] text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
+                >
+                  <Play className="h-3 w-3" />
+                  Still fuzzy? Watch a video on this
+                </a>
               </div>
             ),
           )
