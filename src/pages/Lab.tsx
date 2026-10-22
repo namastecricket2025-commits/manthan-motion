@@ -15,26 +15,10 @@ const SUBJECTS: Array<{
   id: Subject;
   label: string;
   icon: typeof Atom;
-  blurb: string;
 }> = [
-  {
-    id: "physics",
-    label: "Physics",
-    icon: Atom,
-    blurb: "Vector circuits, a drop tower with live energy and an oracle, plus wave streams.",
-  },
-  {
-    id: "chemistry",
-    label: "Chemistry",
-    icon: FlaskConical,
-    blurb: "A complete periodic table with a profile that pushes in, plus a reaction builder and titration bench.",
-  },
-  {
-    id: "biology",
-    label: "Biology",
-    icon: Dna,
-    blurb: "Crisp schematics with cross-section callouts, and a processing helix.",
-  },
+  { id: "physics", label: "Physics", icon: Atom },
+  { id: "chemistry", label: "Chemistry", icon: FlaskConical },
+  { id: "biology", label: "Biology", icon: Dna },
 ];
 
 /**
@@ -79,38 +63,17 @@ export default function Lab() {
               >
                 <Beaker className="h-4 w-4" />
               </span>
-              <div className="min-w-0">
-                <p className="apple-lab-title truncate text-[15px] leading-tight">
-                  STEM Lab
-                </p>
-                <p className="text-[11px] leading-tight text-[var(--lab-ink-micro)]">
-                  Vector models, live equations
-                </p>
-              </div>
+              <p className="apple-lab-title truncate text-[15px] leading-tight">
+                STEM Lab
+              </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Eye comfort is a site-wide preference owned by Settings; it
-                used to have a second switch in this header, which meant two
-                controls for one flag. The search below opens in-app. */}
-            <SearchWithGoogle
-              topic={`${active.label} practical experiment — NCERT CBSE explained`}
-              label="Search"
-              compact={false}
-            />
-            <span className="apple-lab-chip">
-              <span
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ background: "var(--signal)" }}
-              />
-              sandboxed — nothing here touches real apparatus
-            </span>
-          </div>
-        </header>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          {/* The subject rail sits in the same bar as the title. It used to
+              live on its own row under the header, which left a full-width
+              line holding three small tabs and a stretch of empty glass. One
+              bar, one place to look for "which room am I in". */}
           <div
-            className="apple-lab-tabrail"
+            className="apple-lab-tabrail order-3 w-full lg:order-none lg:w-auto"
             role="tablist"
             aria-label="STEM Lab subjects"
           >
@@ -141,10 +104,15 @@ export default function Lab() {
               );
             })}
           </div>
-          <p className="apple-lab-note hidden max-w-sm text-right lg:block">
-            {active.blurb}
-          </p>
-        </div>
+
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <SearchWithGoogle
+              topic={`${active.label} practical experiment — NCERT CBSE explained`}
+              label="Search"
+              compact={false}
+            />
+          </div>
+        </header>
 
         <main className="mt-5 flex-1">
           <AnimatePresence mode="wait" initial={false}>
@@ -163,11 +131,8 @@ export default function Lab() {
           </AnimatePresence>
         </main>
 
-        <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 pb-2 text-[11px] text-[var(--lab-ink-micro)]">
-          <span>Manthan STEM Lab</span>
-          <span>
-            Interactive models for revision, not substitutes for a teacher.
-          </span>
+        <footer className="mt-8 pb-2 text-[11px] text-[var(--lab-ink-micro)]">
+          Manthan STEM Lab
         </footer>
       </div>
     </div>

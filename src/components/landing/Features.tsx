@@ -446,12 +446,13 @@ const SEARCH_POINTS = [
   "Ask a follow-up without leaving the answer",
 ];
 
-/** Real queries the panel is built for; they fill the tile's left column with
- *  something a student recognises instead of white space. */
+/** Real queries the panel is built for. Each carries the line a student
+ *  would type, so the column reads as a list of things to ask rather than as
+ *  three loose chips above a stretch of empty card. */
 const SEARCH_EXAMPLES = [
-  "why is the sky blue",
-  "NCERT trig formulas",
-  "laws of reflection",
+  { query: "why is the sky blue", note: "Class 10 · Rayleigh scattering" },
+  { query: "NCERT trig formulas", note: "Class 10 · the identities, then the chapter" },
+  { query: "laws of reflection", note: "Class 8 · statement, diagram, worked example" },
 ];
 
 export default function Features() {
@@ -581,65 +582,59 @@ export default function Features() {
           <div className="min-w-0 lg:w-[46%] lg:shrink-0">
             <SearchArt />
           </div>
-          <div className="relative flex min-w-0 flex-1 flex-col justify-between gap-6 self-stretch">
-            {/* A quiet watermark: the column is taller than its copy, and the
-                mark fills the top corner without competing with the panel. */}
-            <img
-              src="/google-g.png"
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute -left-1 -top-3 h-20 w-20 opacity-[0.05] sm:h-24 sm:w-24"
-            />
-
-            <div className="relative">
+          <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 self-stretch py-1">
+            <div>
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--panel-line)] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.14)]">
-                  <img
-                    src="/google-g.png"
-                    alt=""
-                    aria-hidden
-                    width={17}
-                    height={17}
-                    className="h-[17px] w-[17px]"
-                  />
-                </span>
+                <img
+                  src="/google-g.png"
+                  alt=""
+                  aria-hidden
+                  width={22}
+                  height={22}
+                  className="h-[22px] w-[22px] shrink-0"
+                />
                 <h3 className="font-display text-[17px] font-semibold tracking-[-0.01em] text-foreground sm:text-lg">
                   Google, inside the working
                 </h3>
               </div>
 
-              <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-text-dim">
+              <p className="mt-2.5 max-w-xl text-[13px] leading-relaxed text-text-dim">
                 Every lab carries its own search. Ask for a definition
                 mid-solution and Google's results open beside the problem — the
                 page, the diagram and the answer never leave the screen.
               </p>
-
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {SEARCH_EXAMPLES.map((example) => (
-                  <span
-                    key={example}
-                    className="rounded-full border border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] px-2.5 py-1 text-[10.5px] text-text-dim"
-                  >
-                    {example}
-                  </span>
-                ))}
-              </div>
-
-              <ul className="mt-4 grid gap-2 sm:grid-cols-3">
-                {SEARCH_POINTS.map((point) => (
-                  <li key={point} className="flex items-start gap-2 text-[13px] text-text-dim">
-                    <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
-                      <Check className="h-2 w-2" strokeWidth={3.5} />
-                    </span>
-                    {point}
-                  </li>
-                ))}
-              </ul>
             </div>
 
-            <p className="relative text-[11px] leading-relaxed text-text-dim">
-              One field, every page — and the answer stays open while you work.
-            </p>
+            <ul className="flex flex-col gap-2">
+              {SEARCH_EXAMPLES.map((example) => (
+                <li
+                  key={example.query}
+                  className="flex items-center gap-2.5 rounded-[10px] border border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--text-main)_3%,transparent)] px-3 py-2"
+                >
+                  <Search className="h-3.5 w-3.5 shrink-0 text-text-dim" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] text-foreground">
+                      {example.query}
+                    </span>
+                    <span className="block truncate text-[10.5px] text-text-dim">
+                      {example.note}
+                    </span>
+                  </span>
+                  <ArrowUp className="h-3.5 w-3.5 shrink-0 rotate-45 text-text-dim" />
+                </li>
+              ))}
+            </ul>
+
+            <ul className="grid gap-2 sm:grid-cols-3">
+              {SEARCH_POINTS.map((point) => (
+                <li key={point} className="flex items-start gap-2 text-[12.5px] leading-snug text-text-dim">
+                  <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
+                    <Check className="h-2 w-2" strokeWidth={3.5} />
+                  </span>
+                  {point}
+                </li>
+              ))}
+            </ul>
           </div>
         </article>
       </div>

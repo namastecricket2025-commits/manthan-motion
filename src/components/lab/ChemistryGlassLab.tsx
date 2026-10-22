@@ -550,14 +550,9 @@ function PeriodicTableTab({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="apple-lab-note text-[11.5px]">
-            All 18 groups stay on screen. Click a tile and the profile slides in
-            from the right, pushing the table across; close it and the table
-            takes the full width again.
-          </p>
-          <span className="apple-lab-chip !py-0.5 !text-[10px] lg:hidden">drag to pan</span>
-        </div>
+        <span className="apple-lab-chip mt-3 !py-0.5 !text-[10px] lg:hidden">
+          drag to pan
+        </span>
       </div>
 
       {/* Element profile. On a desktop it grows in from the right as its own
@@ -686,10 +681,7 @@ function PeriodicTableTab({
                     .map((count, index) => `${SHELL_LETTERS[index] ?? index + 1}·${count}`)
                     .join("  ")}
                 </p>
-                <p className="apple-lab-note mt-1.5">
-                  Every ring turns on its own CSS timeline — slower the further
-                  out it sits. Open Atomic Models for the labelled version.
-                </p>
+
               </div>
             </div>
 
@@ -698,10 +690,7 @@ function PeriodicTableTab({
                   <p className="apple-lab-value mt-1 break-words text-[11.5px] leading-relaxed">
                     {configFor(selectedElement.n)}
                   </p>
-                  <p className="apple-lab-note mt-1 text-[10.5px]">
-                    The real configuration, half-filled d⁵/d¹⁰ exceptions
-                    included (Cr, Cu, Pd, Au …).
-                  </p>
+
                 </div>
 
                 {USES[selectedElement.n] ? (
@@ -729,16 +718,6 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
   const transition = useSpringTransition();
   const stagger = useStagger(0.07);
   const catColor = theme === "light" ? CAT_COLORS[element.cat].onLight : CAT_COLORS[element.cat].on;
-  const quickColor = (cat: Category) =>
-    theme === "light" ? CAT_COLORS[cat].onLight : CAT_COLORS[cat].on;
-
-  const shortlist = useMemo(
-    () =>
-      [1, 2, 6, 7, 8, 11, 12, 13, 14, 16, 17, 18, 19, 20, 26, 29, 30, 47, 53, 79, 80, 82, 92].map(
-        (n) => ELEMENTS.find((el) => el.n === n)!,
-      ),
-    [],
-  );
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -771,11 +750,6 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
           <BohrDiagram element={element} size={420} theme={theme} labeled />
         </div>
 
-        <p className="apple-lab-note mt-2 text-center">
-          Shells are grouped from the real ground-state configuration — Aufbau
-          order plus the half/full-filled d-subshell exceptions (Cr, Cu, Pd,
-          Au …) — so the electron counts are the measured ones.
-        </p>
       </div>
 
       <div className="apple-lab-panel apple-lab-glass min-w-0">
@@ -819,41 +793,6 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
           </p>
         </div>
 
-        <div className="mt-4">
-          <p className="apple-lab-micro">Quick switch</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {shortlist.map((el) => {
-              const active = el.n === z;
-              return (
-                <button
-                  key={el.n}
-                  type="button"
-                  onClick={() => setZ(el.n)}
-                  aria-pressed={active}
-                  className="apple-lab-btn relative !px-2.5 !py-1.5 !text-[11.5px]"
-                  style={{ borderColor: tint(quickColor(el.cat), "3d") }}
-                >
-                  {/* Same rule as the rail above: the chips keep their category
-                      hairline, and the pill that travels between them is the
-                      whole selection — nothing snaps on ahead of it. */}
-                  {active && (
-                    <motion.span
-                      layoutId="chem-quick-pill"
-                      aria-hidden
-                      className="apple-lab-pill"
-                      transition={transition}
-                    />
-                  )}
-                  <span
-                    className="relative z-10 inline-block h-1.5 w-1.5 rounded-full"
-                    style={{ background: quickColor(el.cat) }}
-                  />
-                  <span className="relative z-10">{el.sym}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1269,20 +1208,30 @@ function TitrationTab() {
           <ellipse cx="186" cy="272" rx="14" ry="3.4" fill="none" stroke="rgba(148,163,184,0.55)" strokeWidth="1.4" />
           <ellipse cx="186" cy={surface} rx="28" ry="2.2" fill="#ffffff" opacity="0.3" />
 
-          {/* Drops fall from the tip to the liquid surface, never through it.
+          {/* The drip, drawn as the liquid itself rather than as a hint.
 
-              Three staggered beads rather than one, each starting at the
-              stopcock tip and landing on the surface as it rises. The bead at
-              the tip and the rings on the surface are what make the fall read
-              as a drip: without them a 6px dot crossing 110 units of glass in
-              under a second is easy to miss entirely. */}
-          {running && !still && !atMax ? (
+              A thin thread leaves the stopcock tip and beads of titrant fall
+              from it all the way to the surface, where each one lands inside
+              the flask and rings out. It runs whenever the burette is open,
+              including under Motionless Mode: this is the apparatus working,
+              not a decoration, so switching it off would leave a bench that
+              silently claims to be dripping with nothing moving. */}
+          {running && !atMax ? (
             <>
+              <line
+                x1="186"
+                y1="264"
+                x2="186"
+                y2={surface}
+                stroke={look.color}
+                strokeWidth="1.2"
+                opacity="0.45"
+              />
               <motion.circle
                 cx="186"
                 cy="266"
                 fill="#d9efff"
-                animate={{ r: [2.1, 3.3, 2.1], opacity: [0.4, 0.95, 0.4] }}
+                animate={{ r: [2.4, 4, 2.4], opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: dropDuration, repeat: Infinity, ease: "easeInOut" }}
               />
               {[0, 1, 2].map((drop) => (
@@ -1290,38 +1239,38 @@ function TitrationTab() {
                   key={drop}
                   cx="186"
                   fill="url(#titration-drop)"
-                  initial={{ cy: 268, opacity: 0, r: 2.6 }}
+                  initial={{ cy: 268, opacity: 0, r: 3 }}
                   animate={{
                     // Four keyframes for every channel: `times` below has four
                     // entries and Motion requires them to line up.
-                    cy: [268, 274, Math.max(276, surface - 7), surface - 3],
+                    cy: [268, 276, Math.max(280, surface - 8), surface - 2],
                     opacity: [0, 1, 1, 0],
-                    r: [2.6, 3.5, 3.5, 2.8],
+                    r: [3, 4.6, 4.6, 3.2],
                   }}
                   transition={{
-                    duration: Math.max(0.45, dropDuration),
+                    duration: Math.max(0.55, dropDuration),
                     repeat: Infinity,
                     repeatDelay: 0,
-                    delay: (drop * Math.max(0.45, dropDuration)) / 3,
+                    delay: (drop * Math.max(0.55, dropDuration)) / 3,
                     ease: [0.45, 0, 0.9, 0.55],
-                    times: [0, 0.12, 0.9, 1],
+                    times: [0, 0.12, 0.86, 1],
                   }}
-                  style={{ filter: "drop-shadow(0 0 4px rgba(190, 228, 255, 0.6))" }}
+                  style={{ filter: "drop-shadow(0 0 5px rgba(190, 228, 255, 0.75))" }}
                 />
               ))}
-              {[0, 1].map((ring) => (
+              {[0, 1, 2].map((ring) => (
                 <motion.ellipse
                   key={`ring-${ring}`}
                   cx="186"
-                  ry="2.6"
+                  ry="3"
                   fill="none"
                   stroke={look.color}
-                  strokeWidth="1.4"
-                  animate={{ cy: surface, rx: [3, 17], opacity: [0.65, 0] }}
+                  strokeWidth="1.6"
+                  animate={{ cy: surface, rx: [3, 20], opacity: [0.75, 0] }}
                   transition={{
-                    duration: Math.max(0.45, dropDuration),
+                    duration: Math.max(0.55, dropDuration),
                     repeat: Infinity,
-                    delay: Math.max(0.45, dropDuration) * (0.42 + ring * 0.5),
+                    delay: Math.max(0.55, dropDuration) * (0.3 + ring * 0.33),
                     ease: "easeOut",
                   }}
                 />
@@ -1529,11 +1478,6 @@ function TitrationTab() {
           <p className="apple-lab-note mt-1">{indicatorNote}</p>
         </div>
 
-        <p className="apple-lab-note mt-3">
-          25.0 mL of {c0.toFixed(2)} M {analyte.formula} in the flask; equivalence
-          volume nₐ/cₜ = <span className="apple-lab-value">{eqVolume.toFixed(1)} mL</span>. Change
-          either concentration and the end point moves with it.
-        </p>
       </div>
     </div>
   );
@@ -1634,13 +1578,6 @@ const SHELF_GROUPS: Array<{ id: string; label: string; ids: string[] }> = [
   },
 ];
 
-const REACTION_PRESETS: Array<{ ids: [string, string]; label: string }> = [
-  { ids: ["hcl", "naoh"], label: "Acid + base" },
-  { ids: ["caco3", "hcl"], label: "Acid + carbonate" },
-  { ids: ["mg", "o2"], label: "Combustion" },
-  { ids: ["cuso4", "fe"], label: "Displacement" },
-];
-
 function ReactionsTab() {
   const transition = useSpringTransition();
   const still = useStillMotion();
@@ -1676,16 +1613,6 @@ function ReactionsTab() {
     if (!slotA) return load("a", substance);
     if (!slotB && slotA.id !== substance.id) return load("b", substance);
     load("b", substance);
-  };
-
-  const loadPreset = (ids: [string, string]) => {
-    const first = SUBSTANCES.find((entry) => entry.id === ids[0]);
-    const second = SUBSTANCES.find((entry) => entry.id === ids[1]);
-    if (!first || !second) return;
-    setSlotA(first);
-    setSlotB(second);
-    setRunKey(0);
-    setFlash(false);
   };
 
   const clearSlot = (slot: "a" | "b") => {
@@ -1941,10 +1868,6 @@ function ReactionsTab() {
           )}
         </div>
 
-        <p className="apple-lab-note mt-4">
-          Coefficients stay fixed because atoms are never created or destroyed —
-          only rearranged. Unlisted pairs honestly report that nothing happens.
-        </p>
       </div>
 
       {/* Reagent shelf */}
@@ -2034,19 +1957,6 @@ function ReactionsTab() {
           ) : null}
         </div>
 
-        <p className="apple-lab-micro mt-4">Try a reaction</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {REACTION_PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              type="button"
-              onClick={() => loadPreset(preset.ids)}
-              className="apple-lab-btn !px-2.5 !py-1 !text-[10.5px]"
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

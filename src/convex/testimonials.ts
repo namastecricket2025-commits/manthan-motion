@@ -78,8 +78,16 @@ async function moderatorStatus(
     return { moderator: true, userId: user?._id ?? null };
   }
   const ownerEmail = process.env[OWNER_EMAIL_KEY]?.trim().toLowerCase();
-  if (ownerEmail && identity.email?.trim().toLowerCase() === ownerEmail) {
-    return { moderator: true, userId: user?._id ?? null };
+  if (ownerEmail) {
+    // Either copy of the address counts: the token's claim, and the one cached
+    // on the account row. A provider that omits `email` from the access token
+    // would otherwise lock the owner out even though the env var is right.
+    const candidate = [identity.email, user?.email]
+      .map((value) => value?.trim().toLowerCase())
+      .filter((value): value is string => Boolean(value));
+    if (candidate.includes(ownerEmail)) {
+      return { moderator: true, userId: user?._id ?? null };
+    }
   }
   if (user?.role === "admin") {
     return { moderator: true, userId: user._id };

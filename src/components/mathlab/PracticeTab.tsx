@@ -46,6 +46,9 @@ export function PracticeTab({
 }) {
   const grade = GRADES.find((entry) => entry.id === gradeId) ?? GRADES[0];
   const chapter = grade.chapters[chapterIndex] ?? grade.chapters[0];
+  /* Board papers exist for Class 10 in this lab. Class 8 and 9 have school
+     exams, not a board, so the option is not shown rather than explained. */
+  const boardYear = grade.id === "10";
 
   return (
     <section className="mathlab-card mathlab-viewcard mathlab-practice-tab">
@@ -53,9 +56,9 @@ export function PracticeTab({
         <div>
           <h2 className="mathlab-card__title">Practice set</h2>
           <p className="mathlab-practice-tab__sub">
-            Choose the class and chapter, how many questions you want, and how
-            hard they should be — including board-paper questions tagged with
-            the year they follow.
+            {boardYear
+              ? "Choose the chapter, how many questions you want and how hard they should be — or generate a board-paper set tagged with the year it follows."
+              : "Choose the chapter, how many questions you want and how hard they should be."}
           </p>
         </div>
 
@@ -124,6 +127,7 @@ export function PracticeTab({
         steps={seed?.steps ?? []}
         finalAnswer={seed?.finalAnswer ?? ""}
         track={track}
+        gradeId={grade.id}
         chapterName={chapter.name}
         chapterFormulas={chapter.formulas}
         autoStart={Boolean(seed)}

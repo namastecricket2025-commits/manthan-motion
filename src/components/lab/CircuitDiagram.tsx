@@ -44,8 +44,6 @@ const RESISTOR_KINDS: Array<{ id: ResistorKind; label: string }> = [
   { id: "rheostat", label: "Rheostat" },
 ];
 
-const VOLTAGE_STEPS = [1.5, 3, 4.5, 6, 9, 12];
-
 /* Geometry: one rectangular loop, read left to right. */
 const LEFT = 120;
 const RIGHT = 640;
@@ -250,7 +248,16 @@ function Lamp({ cx, cy, glow }: { cx: number; cy: number; glow: number }) {
   );
 }
 
-/** A plug key: two terminals and a lever that lifts to open the circuit. */
+/**
+ * A plug key: two terminals and a lever that pivots on the left one.
+ *
+ * The open end is computed, not rotated with a CSS transform. A transform
+ * origin on an SVG child is easy to lose (it depends on `transform-box`, and
+ * when it is ignored the lever swings around the viewBox origin and lands in
+ * the middle of the diagram). Animating the far endpoint keeps the hinge
+ * pinned to its terminal at every frame: the key is attached at one contact
+ * and lifted off the other, which is exactly what an open key looks like.
+ */
 function Switch({
   x1,
   x2,
@@ -262,29 +269,28 @@ function Switch({
   y: number;
   closed: boolean;
 }) {
+  const lift = -30 * (Math.PI / 180);
+  const length = x2 - x1;
+  const openX = x1 + length * Math.cos(lift);
+  const openY = y + length * Math.sin(lift);
+
   return (
     <g>
       {/* The lever is the only connection between the terminals. */}
-      <rect x={x1 + 4} y={y - 4} width={x2 - x1 - 8} height={8} style={{ fill: plate(0.98) }} />
+      <rect x={x1 + 5} y={y - 4} width={x2 - x1 - 10} height={8} style={{ fill: plate(0.98) }} />
       <circle cx={x1} cy={y} r={5} style={{ fill: plate(0.98), stroke: ink(0.85) }} strokeWidth={1.6} />
       <circle cx={x2} cy={y} r={5} style={{ fill: plate(0.98), stroke: ink(0.85) }} strokeWidth={1.6} />
       <motion.line
         x1={x1}
         y1={y}
-        x2={x2}
-        y2={y}
         strokeWidth={2.4}
         strokeLinecap="round"
         initial={false}
-        animate={{ rotate: closed ? 0 : -34 }}
+        animate={{ x2: closed ? x2 : openX, y2: closed ? y : openY }}
         transition={{ type: "spring", stiffness: 320, damping: 24 }}
-        style={{
-          transformBox: "view-box",
-          transformOrigin: `${x1}px ${y}px`,
-          stroke: closed ? VIOLET : ink(0.75),
-        }}
+        style={{ stroke: closed ? VIOLET : ink(0.75) }}
       />
-      <text x={(x1 + x2) / 2} y={y - 26} fontSize={14} textAnchor="middle" style={{ fill: ink(0.72) }}>
+      <text x={(x1 + x2) / 2} y={y - 30} fontSize={14} textAnchor="middle" style={{ fill: ink(0.72) }}>
         {closed ? "key closed" : "key open"}
       </text>
     </g>
@@ -797,15 +803,6 @@ export function CircuitsBench() {
               <Picker label="R₂ type" value={resistorKind} options={RESISTOR_KINDS} onChange={setResistorKind} />
             </div>
           ) : null}
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="apple-lab-micro mr-1">Switch</span>
-            <button type="button" onClick={() => setClosed(true)} data-active={closed} className="apple-lab-btn !px-2.5 !py-1 !text-[11px]">
-              Closed
-            </button>
-            <button type="button" onClick={() => setClosed(false)} data-active={!closed} className="apple-lab-btn !px-2.5 !py-1 !text-[11px]">
-              Open
-            </button>
-          </div>
         </div>
 
         <div className="apple-lab-panel apple-lab-glass">
@@ -817,25 +814,6 @@ export function CircuitsBench() {
           <div className="mt-4">
             <Picker label="Cell 2 polarity" value={polarity} options={POLARITY} onChange={setPolarity} />
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-1.5">
-            <span className="apple-lab-micro mr-1">Cell 1 steps</span>
-            {VOLTAGE_STEPS.map((step) => (
-              <button
-                key={step}
-                type="button"
-                onClick={() => setCell1(step)}
-                data-active={step === cell1}
-                className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
-              >
-                {step} V
-              </button>
-            ))}
-          </div>
-          <p className="apple-lab-note mt-3">
-            Two cells add when they agree and subtract when the second one is
-            turned around. Push it past cell 1 and the current reverses — the
-            dots run backwards and the ammeter reads negative.
-          </p>
         </div>
 
         <div className="apple-lab-panel apple-lab-glass">
@@ -845,11 +823,6 @@ export function CircuitsBench() {
               <Readout key={label} label={label} value={value} />
             ))}
           </div>
-          <p className="apple-lab-note mt-3">
-            Ohm's law for the whole loop: I = EMF / R. The ammeter is in series,
-            so it reads the total current; the voltmeter is in parallel with the
-            load, so it reads the voltage across it.
-          </p>
         </div>
       </div>
     </div>

@@ -1455,16 +1455,11 @@ function MotionSandbox() {
             <Picker label="Body" value={body} options={bodyOptions} onChange={selectBody} />
           </div>
           <div className="mt-4">
+            {/* One control for gravity: the World picker sets it. A second
+                slider for the same number was the clearest duplicate on the
+                bench. */}
             <Picker label="World" value={worldId} options={worldOptions} onChange={selectWorld} />
           </div>
-          <div className="mt-4">
-            <Range label="Gravity" value={g} min={0.5} max={20} step={0.1} unit="m/s²" format={(v) => v.toFixed(1)} onChange={setG} />
-          </div>
-          <p className="apple-lab-note mt-3">
-            Run always starts the bench from rest, Pause holds it and Reset puts
-            it back on the start line. Changing anything re-parks the run, so the
-            picture never shows a half-flown flight.
-          </p>
         </div>
 
         <div className="apple-lab-panel apple-lab-glass">

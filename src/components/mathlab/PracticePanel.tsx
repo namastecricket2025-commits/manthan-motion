@@ -36,6 +36,10 @@ const LEVELS: Array<{ id: Level; label: string; hint: string }> = [
   { id: "board", label: "Board paper", hint: "CBSE style, with marks" },
 ];
 
+/** Only Class 10 has a board paper in this lab's classes — a Class 8 or 9
+ *  set with a "CBSE 2025" tag would be inventing an exam that does not exist. */
+const BOARD_GRADE = "10";
+
 const COUNTS = [1, 3, 5];
 
 const BOARDS = ["CBSE 2025", "CBSE 2024", "CBSE (mixed)"];
@@ -50,6 +54,7 @@ export function PracticePanel({
   steps,
   finalAnswer,
   track,
+  gradeId,
   chapterName,
   chapterFormulas,
   autoStart = false,
@@ -58,11 +63,14 @@ export function PracticePanel({
   steps: EngineStep[];
   finalAnswer: string;
   track: string;
+  gradeId: string;
   chapterName: string;
   chapterFormulas: string[];
   /** Generate immediately when opened from "Another similar problem". */
   autoStart?: boolean;
 }) {
+  const boardAllowed = gradeId === BOARD_GRADE;
+  const levels = boardAllowed ? LEVELS : LEVELS.filter((entry) => entry.id !== "board");
   const setAction = useAction(api.mathTutor.practiceSet);
   const gradeAction = useAction(api.mathTutor.gradeAnswer);
 
@@ -96,8 +104,8 @@ export function PracticePanel({
           chapterName,
           chapterFormulas,
           count: overrideCount ?? count,
-          level,
-          boardYear: level === "board" ? boardYear : undefined,
+          level: boardAllowed || level !== "board" ? level : "medium",
+          boardYear: boardAllowed && level === "board" ? boardYear : undefined,
           realWorld,
         });
         setQuestions(reply.problems);
@@ -114,7 +122,7 @@ export function PracticePanel({
         setBusy(false);
       }
     },
-    [boardYear, chapterFormulas, chapterName, count, finalAnswer, level, problem, realWorld, setAction, steps, track],
+    [boardAllowed, boardYear, chapterFormulas, chapterName, count, finalAnswer, level, problem, realWorld, setAction, steps, track],
   );
 
   /* Carry-over from Solve: one genuinely similar question, once. */
@@ -167,7 +175,7 @@ export function PracticePanel({
         <div className="mathlab-practice__row">
           <span className="mathlab-practice__label">Difficulty</span>
           <div className="mathlab-practice__levels" role="radiogroup" aria-label="Difficulty">
-            {LEVELS.map((entry) => (
+            {levels.map((entry) => (
               <button
                 key={entry.id}
                 type="button"
@@ -202,22 +210,7 @@ export function PracticePanel({
         </div>
 
         <div className="mathlab-practice__row">
-          <span className="mathlab-practice__label">Board</span>
-          <select
-            className="mathlab-practice__select"
-            value={boardYear}
-            onChange={(event) => {
-              setBoardYear(event.target.value);
-              setLevel("board");
-            }}
-            aria-label="Board paper year"
-          >
-            {BOARDS.map((entry) => (
-              <option key={entry} value={entry}>
-                {entry}
-              </option>
-            ))}
-          </select>
+          <span className="mathlab-practice__label">Framing</span>
           <label className="mathlab-practice__check">
             <input
               type="checkbox"
@@ -226,6 +219,23 @@ export function PracticePanel({
             />
             Real-world framing
           </label>
+          {boardAllowed ? (
+            <select
+              className="mathlab-practice__select"
+              value={boardYear}
+              onChange={(event) => {
+                setBoardYear(event.target.value);
+                setLevel("board");
+              }}
+              aria-label="Board paper year"
+            >
+              {BOARDS.map((entry) => (
+                <option key={entry} value={entry}>
+                  {entry}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </div>
 
         <div className="mathlab-practice__go">
