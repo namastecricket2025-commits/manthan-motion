@@ -134,7 +134,9 @@ export function NotebookWorkspace({
   const [translating, setTranslating] = useState(false);
   const [offlineSaved, setOfflineSaved] = useState(false);
   const [savingOffline, setSavingOffline] = useState(false);
-  const [peekSource, setPeekSource] = useState<string | null>(null);
+  const [peek, setPeek] = useState<{ sourceName: string; focus?: string } | null>(
+    null,
+  );
   const createShare = useMutation(api.shares.create);
   const revokeShare = useMutation(api.shares.revoke);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
@@ -1058,7 +1060,9 @@ export function NotebookWorkspace({
                   {activeKind === "summary" && (
                     <SummaryView
                       payload={shownPayload as SummaryPayload}
-                      onSourcePeek={setPeekSource}
+                      onSourcePeek={(sourceName, focus) =>
+                        setPeek({ sourceName, focus })
+                      }
                     />
                   )}
                   {activeKind === "flashcards" && (
@@ -1069,7 +1073,9 @@ export function NotebookWorkspace({
                   {activeKind === "quiz" && (
                     <QuizView
                       payload={shownPayload as QuizPayload}
-                      onSourcePeek={setPeekSource}
+                      onSourcePeek={(sourceName, focus) =>
+                        setPeek({ sourceName, focus })
+                      }
                       onWrongAnswer={({ question, pickedIndex }) => {
                         if (!active) return;
                         void recordMistake({
@@ -1101,12 +1107,12 @@ export function NotebookWorkspace({
         )}
       </div>
 
-      {active && peekSource ? (
+      {active && peek ? (
         <MaterialSourcePeek
           materialId={active._id}
-          sourceName={peekSource}
-          focus={active.title}
-          onClose={() => setPeekSource(null)}
+          sourceName={peek.sourceName}
+          focus={peek.focus ?? active.title}
+          onClose={() => setPeek(null)}
         />
       ) : null}
     </div>
