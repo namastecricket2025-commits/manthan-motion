@@ -1,4 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
+import { openCommandPalette } from "@/components/shared/CommandPalette";
+import { Search } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Logo } from "./Logo";
 import { MobileMenu } from "./MobileMenu";
@@ -90,6 +92,16 @@ export default function Navbar() {
           <div className="md:hidden">
             <MobileMenu />
           </div>
+          {/* ⌘K is the fast path; this is the visible one for a mouse. */}
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            aria-label="Search pages, chapters and notebooks (Command K)"
+            title="Search (⌘K)"
+            className="hidden h-8 w-8 items-center justify-center rounded-md text-text-dim transition-colors hover:text-foreground sm:inline-flex"
+          >
+            <Search className="h-4 w-4" />
+          </button>
           {/* At the narrowest widths the bar carries only the mark, the menu
               and the primary action: a fourth control in a 320px row is how a
               header starts wrapping. The theme control still lives on every

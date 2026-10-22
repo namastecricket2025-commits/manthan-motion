@@ -45,6 +45,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import type { TextComfort, ThemeMode } from "@/lib/app-settings";
 import { ReviewsPanel } from "./ReviewsPanel";
+import { StudyProfileCard } from "./StudyProfileCard";
 import { useSettings } from "./SettingsProvider";
 
 /* ------------------------------------------------------------------ */
@@ -708,6 +709,8 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     </button>
                   </div>
                 </div>
+
+                <StudyProfileCard />
 
                 {/* password */}
                 <form className="set-card" onSubmit={onChangePassword}>

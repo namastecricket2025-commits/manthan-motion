@@ -21,7 +21,13 @@ function resolveRedirectAfterAuth(
   returnTo: string | null,
   fallback = "/dashboard",
 ) {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+  if (
+    returnTo?.startsWith("/") &&
+    !returnTo.startsWith("//") &&
+    /* Returning to the sign-in page would bounce the visitor straight back
+       into the form they just completed. */
+    !returnTo.startsWith("/auth")
+  ) {
     return returnTo;
   }
   return fallback;

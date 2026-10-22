@@ -19,6 +19,7 @@ import { FormulaSheet } from "@/components/mathlab/FormulaSheet";
 import { MathHistory } from "@/components/mathlab/MathHistory";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
 import { PracticeTab } from "@/components/mathlab/PracticeTab";
+import { ProgressMap } from "@/components/mathlab/ProgressMap";
 import { splitProblems, uprightWords } from "@/components/mathlab/problems";
 import { DetailList, Fold, InlineMath, ProblemStatement } from "@/components/mathlab/parts";
 import {
@@ -46,6 +47,7 @@ import {
   History,
   Lightbulb,
   LineChart,
+  ListChecks,
   Loader2,
   Lock,
   Mic,
@@ -58,7 +60,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 
@@ -78,6 +80,7 @@ const VIEW_TABS = [
   { id: "tools", label: "Calculator & Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
   { id: "practice", label: "Practice", icon: Sparkles },
+  { id: "progress", label: "Progress", icon: ListChecks },
 ] as const;
 type ViewId = (typeof VIEW_TABS)[number]["id"];
 
@@ -241,12 +244,44 @@ export function MathLab() {
   const recordSolution = useMutation(api.mathHistory.record);
   const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
   const reduceMotion = useReducedMotion();
-  const [view, setView] = useState<ViewId>("solve");
+  /* ⌘K links arrive as `?view=practice&grade=10&chapter=3`. The first render
+     reads them synchronously so the lab never flashes its Solve tab first. */
+  const [searchParams] = useSearchParams();
+  const paramView = VIEW_TABS.find((tab) => tab.id === searchParams.get("view"))?.id;
+  const paramGrade = GRADES.find((entry) => entry.id === searchParams.get("grade"));
+  const paramChapter = Number(searchParams.get("chapter"));
+
+  const [view, setView] = useState<ViewId>(paramView ?? "solve");
   const [track, setTrack] = useState<CurriculumTrack>("CBSE");
-  const [gradeId, setGradeId] = useState<string>(GRADES[0].id);
+  const [gradeId, setGradeId] = useState<string>(paramGrade?.id ?? GRADES[0].id);
   const grade: GradeSpec = useMemo(() => getGrade(gradeId as GradeSpec["id"]), [gradeId]);
-  const [chapterIndex, setChapterIndex] = useState(0);
+  const [chapterIndex, setChapterIndex] = useState(() =>
+    Number.isInteger(paramChapter) &&
+    paramChapter >= 0 &&
+    paramChapter < (paramGrade ?? GRADES[0]).chapters.length
+      ? paramChapter
+      : 0,
+  );
   const chapter = grade.chapters[chapterIndex] ?? grade.chapters[0];
+
+  /* A second ⌘K jump while /math-lab is already open changes the query string
+     without remounting — follow it without touching state on every keystroke. */
+  useEffect(() => {
+    const nextView = VIEW_TABS.find((tab) => tab.id === searchParams.get("view"))?.id;
+    if (nextView) setView(nextView);
+
+    const nextGrade = GRADES.find((entry) => entry.id === searchParams.get("grade"));
+    if (nextGrade) setGradeId(nextGrade.id);
+
+    const raw = Number(searchParams.get("chapter"));
+    if (
+      Number.isInteger(raw) &&
+      raw >= 0 &&
+      raw < (nextGrade ?? grade).chapters.length
+    ) {
+      setChapterIndex(raw);
+    }
+  }, [searchParams, grade]);
   /** Empty on purpose: the first screen asks the student for their problem,
    *  it does not put a demo problem there for them. */
   const [formula, setFormula] = useState("");
@@ -997,6 +1032,18 @@ export function MathLab() {
             seed={practiceSeed}
             onSelect={(nextGradeId, nextIndex) => selectSkill(nextGradeId, nextIndex)}
           />
+        ) : view === "progress" ? (
+          <section className="mathlab-card mathlab-viewcard">
+            <ProgressMap
+              track={track}
+              gradeId={grade.id}
+              currentChapter={chapterIndex}
+              onPractice={(nextIndex) => {
+                selectSkill(grade.id, nextIndex);
+                setView("practice");
+              }}
+            />
+          </section>
         ) : (
           <section className="mathlab-card mathlab-viewcard">
             <MathHistory onOpen={openStored} />

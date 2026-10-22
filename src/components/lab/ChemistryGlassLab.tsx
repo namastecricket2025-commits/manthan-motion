@@ -735,7 +735,7 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
               value={z}
               onChange={(event) => setZ(Number(event.target.value))}
               aria-label="Choose an element"
-              className="max-w-[150px] cursor-pointer bg-transparent text-[12.5px] font-medium text-[var(--lab-ink)] outline-none"
+              className="w-full min-w-0 max-w-[220px] cursor-pointer truncate bg-transparent text-[12.5px] font-medium text-[var(--lab-ink)] outline-none"
             >
               {ELEMENTS.map((el) => (
                 <option key={el.n} value={el.n}>

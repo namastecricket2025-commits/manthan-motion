@@ -19,15 +19,19 @@ import { setRecentKind } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
+import { SITE_URL } from "@/lib/site";
 import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
   AlertCircle,
   Check,
   FileText,
   Link2,
+  Link2Off,
   Loader2,
   Lock,
   NotebookPen,
+  Printer,
+  Share2,
   RotateCcw,
   Sparkles,
   Trash2,
@@ -118,6 +122,9 @@ export function NotebookWorkspace({
   const [tab, setTab] = useState<Kind>(initialTab ?? "summary");
   const [retrying, setRetrying] = useState<string | null>(null);
   const [tool, setTool] = useState<"cram" | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const createShare = useMutation(api.shares.create);
+  const revokeShare = useMutation(api.shares.revoke);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
   const { can, requireAccess } = usePlan();
 
@@ -212,6 +219,19 @@ export function NotebookWorkspace({
         }
       }),
     );
+  }
+
+  /**
+   * Print the material that is on screen, not the whole dashboard. The body
+   * class scopes the print stylesheet; `afterprint` clears it even if the
+   * dialog is cancelled, so the screen never stays half-printed.
+   */
+  function printMaterial() {
+    const cleanup = () => document.body.classList.remove("material-printing");
+    document.body.classList.add("material-printing");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    window.setTimeout(cleanup, 1500);
   }
 
   async function submitLink() {
@@ -340,6 +360,52 @@ export function NotebookWorkspace({
     byKind.get(tab) ??
     (availableTabs[0] ? byKind.get(availableTabs[0].kind) : undefined);
   const activeKind = (active?.kind ?? tab) as Kind;
+  /* A live share link for the sheet on screen, so the button can say "Copy"
+     instead of silently creating a second token. */
+  const share = useQuery(
+    api.shares.forMaterial,
+    active ? { materialId: active._id } : "skip",
+  );
+
+  async function shareActive() {
+    if (!active || sharing) return;
+    setSharing(true);
+    try {
+      const { token } = await createShare({ materialId: active._id });
+      const url = `${SITE_URL}/s/${token}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success(share ? "Link copied again" : "Share link copied", {
+          description: "Anyone with the link can read this sheet, not your notebook.",
+        });
+      } catch {
+        toast("Share link", {
+          description: url,
+          duration: 10000,
+        });
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not create a share link",
+      );
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function stopSharing() {
+    if (!active) return;
+    try {
+      await revokeShare({ materialId: active._id });
+      toast("Sharing stopped", {
+        description: "Every existing link to this sheet now shows as unavailable.",
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not stop sharing",
+      );
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -782,7 +848,41 @@ export function NotebookWorkspace({
                     {active.sourceIds.length === 1 ? "" : "s"} ·{" "}
                     {relativeTime(active.createdAt)} · {active.model}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void shareActive()}
+                      disabled={sharing}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
+                      title="Create a read-only link to this sheet"
+                    >
+                      {sharing ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Share2 className="h-3 w-3" />
+                      )}
+                      {share ? "Copy link" : "Share"}
+                    </button>
+                    {share ? (
+                      <button
+                        type="button"
+                        onClick={() => void stopSharing()}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-[var(--signal)]"
+                        title="Revoke every link to this sheet"
+                      >
+                        <Link2Off className="h-3 w-3" />
+                        Stop sharing
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={printMaterial}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3 py-1 text-[11px] font-medium text-text-dim transition-colors hover:text-foreground"
+                      title="Print or save this material as a PDF"
+                    >
+                      <Printer className="h-3 w-3" />
+                      Print / PDF
+                    </button>
                     <button
                       type="button"
                       ref={regenerateRef}
@@ -810,7 +910,7 @@ export function NotebookWorkspace({
                   </div>
                 </div>
 
-                <div className="mt-5">
+                <div className="material-print-area mt-5">
                   {activeKind === "summary" && (
                     <SummaryView payload={active.payload as SummaryPayload} />
                   )}

@@ -40,6 +40,14 @@ const schema = defineSchema(
       // usage engine reads this to size the generation allowance, so a plan
       // change moves the meter and the enforcement together.
       plan: v.optional(v.string()),
+
+      // Onboarding answers. They are optional because an account created
+      // before onboarding existed (or one that skipped it) is still valid;
+      // `onboardedAt` is the flag the first-run gate reads.
+      grade: v.optional(v.string()),
+      board: v.optional(v.string()),
+      subjects: v.optional(v.array(v.string())),
+      onboardedAt: v.optional(v.number()),
     })
       .index("email", ["email"]) // index for the email. do not remove or modify
       .index("by_auth_subject", ["authSubject"]),
@@ -140,6 +148,36 @@ const schema = defineSchema(
     })
       .index("by_owner", ["ownerId"])
       .index("by_owner_created", ["ownerId", "createdAt"]),
+
+    // A read-only public link to one generated material. The token is the
+    // capability: anyone holding it can read the sheet, and revoking it makes
+    // every existing copy of the link stop working. Only the owner can create
+    // or revoke one, and the material is re-checked on each read.
+    sharedMaterials: defineTable({
+      token: v.string(),
+      ownerId: v.id("users"),
+      materialId: v.id("materials"),
+      notebookName: v.string(),
+      createdAt: v.number(),
+      revokedAt: v.optional(v.number()),
+    })
+      .index("by_token", ["token"])
+      .index("by_material", ["materialId"]),
+
+    // One row per chapter a student has marked as revised. Progress is stored
+    // on the account (not in localStorage) so it follows the student to a new
+    // device, and `chapterName` is kept beside the index because curriculum
+    // indexes can move between editions.
+    syllabusProgress: defineTable({
+      ownerId: v.id("users"),
+      track: v.string(),
+      grade: v.string(),
+      chapterIndex: v.number(),
+      chapterName: v.string(),
+      doneAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_grade", ["ownerId", "track", "grade"]),
 
     // One row per user per UTC day. `used`/`requests` are written by the
     // generation action; the dashboard reads the same row to draw the quota

@@ -1,9 +1,11 @@
 import { cn } from "@/lib/utils";
+import { openCommandPalette } from "@/components/shared/CommandPalette";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Atom,
   LayoutDashboard,
   LogIn,
+  Search,
   Sigma,
   Tag,
   User,
@@ -152,6 +154,27 @@ export function MobileMenu() {
                 </MovingBorderButton>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                openCommandPalette();
+              }}
+              className="mx-1 mb-1.5 flex w-[calc(100%-0.5rem)] items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--signal)_7%,transparent)]"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--glass-hairline)] text-[var(--signal)]">
+                <Search className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-foreground">
+                  Search
+                </span>
+                <span className="block truncate text-[11px] leading-snug text-text-dim">
+                  Chapters, notebooks and pages
+                </span>
+              </span>
+            </button>
 
             <div className="mx-2 border-t border-[var(--glass-hairline)]" />
 

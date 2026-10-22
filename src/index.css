@@ -860,6 +860,66 @@ html[data-comfort="on"] {
 }
 
 /* ============================================================
+   Native selects — one appearance everywhere
+   ============================================================ */
+/* The browser default is a bevelled grey box with a tiny arrow that ignores
+   the theme, and in the lab the selected element name was clipped mid-word.
+   These rules keep the control's own type/colour (the lab opts into
+   transparent fills) while giving every select the same chevron, the same
+   right-hand room for it, and ellipsis when a label is longer than the box. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 100%;
+  padding-right: 1.65rem;
+  text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23949499' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.15rem center;
+  background-size: 10px 7px;
+}
+select option,
+select optgroup {
+  background-color: var(--panel);
+  color: var(--text-main);
+}
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* One accent for every tick box and radio — the OS blue was the only place
+   the product's signal colour went missing. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--signal);
+}
+
+/* The document scrollbar follows the theme instead of flashing a white
+   trough on a dark page (Firefox inherits these; WebKit is styled below). */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-main) 20%, transparent) transparent;
+}
+body::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-main) 18%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-main) 30%, transparent);
+  background-clip: padding-box;
+}
+
+/* ============================================================
    Manthan surface language
    ============================================================ */
 @layer components {
@@ -2164,5 +2224,58 @@ html {
     transparent 46%,
     #000 88%
   );
+}
+
+/* ============================================================
+   Printing one piece of study material
+   ============================================================ */
+/* The dashboard is a dark, chrome-heavy screen; a photocopy of it is not
+   study material. `printMaterial()` puts `material-printing` on <body> for
+   the duration of the dialog, and this block prints only the active sheet on
+   white, with the controls that make no sense on paper hidden. */
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  body.material-printing {
+    background: #fff !important;
+  }
+
+  body.material-printing * {
+    visibility: hidden !important;
+  }
+
+  body.material-printing .material-print-area,
+  body.material-printing .material-print-area * {
+    visibility: visible !important;
+  }
+
+  body.material-printing .material-print-area {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.material-printing .material-print-area * {
+    color: #111 !important;
+    background: transparent !important;
+    border-color: #ddd !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body.material-printing .material-print-area button,
+  body.material-printing .material-print-area [role="button"],
+  body.material-printing .material-print-area svg.lucide {
+    display: none !important;
+  }
+
+  body.material-printing .material-print-area a {
+    text-decoration: underline;
+  }
 }
 

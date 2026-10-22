@@ -4,7 +4,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check,
+  Clock,
   Eye,
+  Flag,
   Loader2,
   ShieldCheck,
   Sparkles,
@@ -43,6 +45,16 @@ const BOARD_GRADE = "10";
 const COUNTS = [1, 3, 5];
 
 const BOARDS = ["CBSE 2025", "CBSE 2024", "CBSE (mixed)"];
+
+/** A CBSE Class 10 maths paper runs three hours; this set is a section of it,
+ *  so the clock is 90 minutes — enough to finish without being a mock exam. */
+const BOARD_SECONDS = 90 * 60;
+
+function clock(total: number) {
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 interface Verdict {
   correct: boolean;
@@ -86,6 +98,8 @@ export function PracticePanel({
   const [feedback, setFeedback] = useState<Record<number, Verdict>>({});
   const [checking, setChecking] = useState<Record<number, boolean>>({});
   const [openWorking, setOpenWorking] = useState<Record<number, boolean>>({});
+  const [remaining, setRemaining] = useState(BOARD_SECONDS);
+  const [finished, setFinished] = useState(false);
 
   const generate = useCallback(
     async (overrideCount?: number) => {
@@ -112,6 +126,8 @@ export function PracticePanel({
         setAnswers({});
         setFeedback({});
         setOpenWorking({});
+        setRemaining(BOARD_SECONDS);
+        setFinished(false);
       } catch (err) {
         setError(
           err instanceof Error && err.message
@@ -124,6 +140,21 @@ export function PracticePanel({
     },
     [boardAllowed, boardYear, chapterFormulas, chapterName, count, finalAnswer, level, problem, realWorld, setAction, steps, track],
   );
+
+  /* A board set is timed from the moment it lands. The interval is cleared
+     when the paper is finished, the level changes, or the component leaves. */
+  useEffect(() => {
+    if (!questions.length || level !== "board" || finished) return;
+    const end = Date.now() + BOARD_SECONDS * 1000;
+    const tick = () => {
+      const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+      setRemaining(left);
+      if (left === 0) setFinished(true);
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [finished, level, questions]);
 
   /* Carry-over from Solve: one genuinely similar question, once. */
   const autoRan = useRef(false);
@@ -265,10 +296,38 @@ export function PracticePanel({
               {questions.length} question{questions.length === 1 ? "" : "s"} ·{" "}
               {LEVELS.find((entry) => entry.id === level)?.label}
             </span>
-            <span className="mathlab-practice__score">
-              {answered}/{questions.length} correct
+            <span className="flex items-center gap-3">
+              {level === "board" ? (
+                <span
+                  className="inline-flex items-center gap-1.5 tabular-nums"
+                  title={finished ? "Time is up" : "Time left for this paper"}
+                  style={
+                    finished
+                      ? { color: "var(--signal)" }
+                      : remaining < 300
+                        ? { color: "#d97706" }
+                        : undefined
+                  }
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  {finished ? "Time up" : clock(remaining)}
+                </span>
+              ) : null}
+              <span className="mathlab-practice__score">
+                {answered}/{questions.length} correct
+              </span>
             </span>
           </header>
+
+          {finished ? (
+            <p
+              className="mb-3 rounded-lg border border-[var(--signal)]/40 bg-[color-mix(in_srgb,var(--signal)_8%,transparent)] px-3 py-2 text-[12px] text-foreground"
+              role="status"
+            >
+              <strong>Paper finished.</strong> {answered} of {questions.length} correct
+              {level === "board" ? " — review the solutions, then generate a fresh set." : "."}
+            </p>
+          ) : null}
 
           <AnimatePresence initial={false}>
             {questions.map((question, index) => {
@@ -414,6 +473,17 @@ export function PracticePanel({
               {busy ? <Loader2 className="spin-micro h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
               Generate another set
             </button>
+            {level === "board" && !finished ? (
+              <button
+                type="button"
+                className="mathlab-tab-action"
+                onClick={() => setFinished(true)}
+                title="Stop the clock and mark this paper finished"
+              >
+                <Flag className="h-3.5 w-3.5" />
+                Finish paper
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -5,11 +5,14 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useSettings } from "@/components/settings/SettingsProvider"
 
+/* The app's theme lives in SettingsProvider, not next-themes. Reading it from
+   there keeps toasts legible and removes a second, unused theme engine. */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { resolvedTheme } = useSettings()
+  const theme: ToasterProps["theme"] = resolvedTheme === "dark" ? "dark" : "light"
 
   return (
     <Sonner
