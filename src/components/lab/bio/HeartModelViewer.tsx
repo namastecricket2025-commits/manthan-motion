@@ -180,14 +180,11 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
     ctl.current.controls?.target.set(0, 0, 0);
   };
   const pick = (id: string) => {
-    const next = pin === id ? null : id;
-    setPin(next);
-    const a = PARTS.find((p) => p.id === next);
-    const cam = ctl.current.cam;
-    if (a && cam) {
-      const cx = cam.position.clone().normalize().x;
-      if ((a.side === "f" && cx < 0.3) || (a.side === "b" && cx > -0.3)) side(a.side === "f" ? 1 : -1);
-    }
+    // Deliberately does not move the camera. Swinging the model round to face
+    // the picked side made the numbered dots jump to new places, so the dot
+    // you just clicked was no longer where you clicked it. Keep the heart
+    // exactly where the student left it; Front/Back are there for turning.
+    setPin((current) => (current === id ? null : id));
   };
   const sel = PARTS.find((p) => p.id === pin);
 
