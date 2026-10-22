@@ -867,7 +867,9 @@ function AllowanceLine() {
             animate={{ width: `${ratio * 100}%` }}
             transition={transition}
           >
-            <span className="absolute right-[3px] top-1/2 h-[15px] w-[15px] -translate-y-1/2 rounded-full bg-white/95 shadow-[0_2px_8px_rgba(0,0,0,0.35)]" />
+            {/* Centred on the end of the filled line, so the knob reads as the
+                tip of the progress rather than a dot floating past it. */}
+            <span className="absolute right-[-7.5px] top-1/2 h-[15px] w-[15px] -translate-y-1/2 rounded-full bg-white/95 shadow-[0_2px_8px_rgba(0,0,0,0.35)]" />
           </motion.div>
         </div>
         <div className="mt-3.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-text-dim">
