@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supportMailto } from "@/lib/site";
 import { Link } from "react-router";
 
 /**
@@ -30,13 +31,10 @@ import { Link } from "react-router";
  * across the carousel's wrap.
  */
 
-const REMOVAL_MAILTO =
-  "mailto:owner@manthan.app?subject=" +
-  encodeURIComponent("Request removal of a review") +
-  "&body=" +
-  encodeURIComponent(
-    "Please tell us which review you would like removed — the name shown on it and, if you can, the class label.",
-  );
+const REMOVAL_MAILTO = supportMailto(
+  "Request removal of a review",
+  "Please tell us which review you would like removed — the name shown on it and, if you can, the class label.",
+);
 
 /** Canonical mix for the current quote sheet; unknown names follow in order. */
 const DISPLAY_ORDER = [

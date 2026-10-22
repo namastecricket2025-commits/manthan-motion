@@ -1,4 +1,5 @@
 import LegalPage from "@/components/legal/LegalPage";
+import { SUPPORT_EMAIL } from "@/lib/site";
 
 export default function Terms() {
   return (
@@ -44,7 +45,7 @@ export default function Terms() {
         {
           heading: "6. Contact",
           body: [
-            "Questions about these terms? Reach us at support@manthan.app.",
+            `Questions about these terms? Reach us at ${SUPPORT_EMAIL}.`,
           ],
         },
       ]}

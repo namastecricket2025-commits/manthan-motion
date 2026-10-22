@@ -9,7 +9,7 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -29,6 +29,9 @@ export function MobileMenu() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
+  const { pathname, search, hash } = useLocation();
+  const returnTo = pathname === "/" ? "/dashboard" : `${pathname}${search}${hash}`;
+  const authHref = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
 
   useEffect(() => {
     if (!open) return;
@@ -88,6 +91,12 @@ export function MobileMenu() {
       icon: <Tag className="h-full w-full" strokeWidth={1.7} />,
     },
     {
+      title: "Feedback",
+      sub: "Tell us what worked, and what didn't",
+      href: "/feedback",
+      icon: null,
+    },
+    {
       title: "About Us",
       sub: "The idea behind Manthan",
       href: "/about",
@@ -106,7 +115,7 @@ export function MobileMenu() {
           {
             title: "Sign in",
             sub: "Email or Google",
-            href: "/auth?returnTo=%2Fdashboard",
+            href: authHref,
             icon: <LogIn className="h-full w-full" strokeWidth={1.7} />,
           },
         ]),
@@ -135,7 +144,7 @@ export function MobileMenu() {
                 </MovingBorderButton>
               ) : (
                 <MovingBorderButton
-                  to="/auth?returnTo=%2Fdashboard"
+                  to={authHref}
                   className="w-full"
                   innerClassName="w-full px-4 py-2.5 text-[13px]"
                 >

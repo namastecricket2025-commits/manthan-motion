@@ -1,5 +1,8 @@
-import { Link } from "react-router";
+import Footer from "@/components/landing/Footer";
+import Navbar from "@/components/landing/Navbar";
 import { Logo } from "@/components/landing/Logo";
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/site";
+import { Link } from "react-router";
 
 /**
  * Shared shell for the standalone legal pages (Terms, Privacy): the Manthan
@@ -16,8 +19,12 @@ export default function LegalPage({
   sections: { heading: string; body: string[] }[];
 }) {
   return (
-    <div className="relative min-h-screen bg-[var(--ink)]">
-      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+    <div className="relative min-h-screen bg-background text-foreground">
+      {/* Policy pages keep the site's own navigation. Dropping it made /terms,
+          /privacy and /honor the only public pages with no way onwards except
+          the browser's back button. */}
+      <Navbar />
+      <div className="mx-auto max-w-3xl px-4 pb-16 pt-28 sm:px-6 sm:pt-32">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-sm font-medium text-text-dim transition-colors hover:text-foreground"
@@ -56,7 +63,19 @@ export default function LegalPage({
             </section>
           ))}
         </div>
+
+        <p className="mt-12 border-t border-[var(--card-border)] pt-6 text-sm leading-relaxed text-text-dim">
+          Questions about this policy? Write to{" "}
+          <a
+            href={supportMailto("Manthan — policy question")}
+            className="font-medium text-foreground underline underline-offset-2"
+          >
+            {SUPPORT_EMAIL}
+          </a>
+          .
+        </p>
       </div>
+      <Footer />
     </div>
   );
 }

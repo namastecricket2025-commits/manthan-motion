@@ -5,8 +5,6 @@ import { MobileMenu } from "./MobileMenu";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { ThemeToggle } from "./ThemeToggle";
 
-const AUTH_URL = "/auth?returnTo=%2Fdashboard";
-
 /**
  * The site header.
  *
@@ -38,7 +36,11 @@ const LINKS: { label: string; to: string }[] = [
 export default function Navbar() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
+  /* Signing in from a deep page should come back to it, not to the dashboard.
+     The landing page is the exception: there is nothing to return to. */
+  const returnTo = pathname === "/" ? "/dashboard" : `${pathname}${search}${hash}`;
+  const authUrl = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--ink)_72%,transparent)] backdrop-blur-xl">
@@ -97,14 +99,14 @@ export default function Navbar() {
           </div>
           {!isAuthenticated && (
             <Link
-              to={AUTH_URL}
+              to={authUrl}
               className="hidden rounded-md px-3 py-2 text-sm text-text-dim transition-colors hover:text-foreground md:block"
             >
               Sign in
             </Link>
           )}
           <MovingBorderButton
-            to={isAuthenticated ? "/dashboard" : AUTH_URL}
+            to={isAuthenticated ? "/dashboard" : authUrl}
             innerClassName="px-4 py-2 text-[13px]"
           >
             {isAuthenticated ? "Dashboard" : "Get started"}

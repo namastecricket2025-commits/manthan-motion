@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { supportMailto } from "@/lib/site";
 import { Logo } from "./Logo";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
@@ -48,15 +49,18 @@ export default function Footer() {
             <span className="mb-1 text-sm font-medium text-foreground">
               Product
             </span>
-            <a href="#features" className="transition-colors hover:text-foreground">
+            {/* The footer lives on every public page, so the section anchors
+                are absolute. A bare `#features` on /about or /feedback only
+                changed the URL and scrolled nowhere. */}
+            <Link to="/#features" className="transition-colors hover:text-foreground">
               Features
-            </a>
-            <a href="#how" className="transition-colors hover:text-foreground">
+            </Link>
+            <Link to="/#how" className="transition-colors hover:text-foreground">
               How it works
-            </a>
-            <a href="#stats" className="transition-colors hover:text-foreground">
+            </Link>
+            <Link to="/#stats" className="transition-colors hover:text-foreground">
               Impact
-            </a>
+            </Link>
             <Link to="/pricing" className="transition-colors hover:text-foreground">
               Plans & Pricing
             </Link>
@@ -86,13 +90,16 @@ export default function Footer() {
               </Link>
             ))}
             <a
-              href="mailto:support@manthan.app"
+              href={supportMailto("Manthan — contact")}
               className="transition-colors hover:text-foreground"
             >
               Contact
             </a>
             <a
-              href="mailto:owner@manthan.app?subject=Request removal of a review&body=Please describe the review you would like removed, including the reviewer name and any details that help us identify it."
+              href={supportMailto(
+                "Request removal of a review",
+                "Please describe the review you would like removed, including the reviewer name and any details that help us identify it.",
+              )}
               className="transition-colors hover:text-foreground"
             >
               Request removal of a review

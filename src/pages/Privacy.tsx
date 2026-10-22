@@ -1,4 +1,5 @@
 import LegalPage from "@/components/legal/LegalPage";
+import { SUPPORT_EMAIL } from "@/lib/site";
 
 export default function Privacy() {
   return (
@@ -32,7 +33,7 @@ export default function Privacy() {
           heading: "4. Retention and deletion",
           body: [
             "Your account data and generated material are kept while your account is active so your dashboard stays intact.",
-            "You can request deletion of your account and associated material at any time by contacting support@manthan.app, and we'll remove it within a reasonable operational window.",
+            `You can request deletion of your account and associated material at any time by contacting ${SUPPORT_EMAIL}, and we'll remove it within a reasonable operational window.`,
           ],
         },
         {
@@ -44,7 +45,7 @@ export default function Privacy() {
         {
           heading: "6. Contact",
           body: [
-            "Questions or requests about your data? Reach us at support@manthan.app.",
+            `Questions or requests about your data? Reach us at ${SUPPORT_EMAIL}.`,
           ],
         },
       ]}
