@@ -153,6 +153,36 @@ export const assertNotebook = internalQuery({
   },
 });
 
+/** Ownership gate for a single material (translation, sharing, deletion). */
+export const assertMaterialOwner = internalQuery({
+  args: { materialId: v.id("materials") },
+  handler: async (ctx, { materialId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Sign in first.");
+    const material = await ctx.db.get(materialId);
+    if (!material || material.ownerId !== userId) {
+      throw new Error("Study material not found.");
+    }
+    return userId;
+  },
+});
+
+/** The material payload, for a translation pass. Owner is checked first. */
+export const getForTranslation = internalQuery({
+  args: { materialId: v.id("materials") },
+  handler: async (ctx, { materialId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Sign in first.");
+    const material = await ctx.db.get(materialId);
+    if (!material || material.ownerId !== userId) return null;
+    return {
+      kind: material.kind,
+      title: material.title,
+      payload: material.payload,
+    };
+  },
+});
+
 /** Same gate as assertNotebook, but returns the owner id for spend metering. */
 export const assertOwner = internalQuery({
   args: { notebookId: v.id("notebooks") },

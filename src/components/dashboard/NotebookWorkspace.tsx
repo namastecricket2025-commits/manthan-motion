@@ -20,11 +20,14 @@ import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
 import { SITE_URL } from "@/lib/site";
+import { isKitSaved, offlineKitId, saveKit } from "@/lib/offline";
 import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
   AlertCircle,
   Check,
+  Download,
   FileText,
+  Languages,
   Link2,
   Link2Off,
   Loader2,
@@ -99,11 +102,13 @@ export function NotebookWorkspace({
   const addText = useMutation(api.sources.addText);
   const removeSource = useMutation(api.sources.remove);
   const removeMaterial = useMutation(api.materials.remove);
+  const recordMistake = useMutation(api.studyMistakes.record);
 
   const ingestFile = useAction(api.ai.ingestFile);
   const ingestLink = useAction(api.ai.ingestLink);
   const reExtract = useAction(api.ai.reExtract);
   const generate = useAction(api.ai.generate);
+  const translate = useAction(api.ai.translateMaterial);
 
   const [dragOver, setDragOver] = useState(false);
   const [uploads, setUploads] = useState<
@@ -123,6 +128,11 @@ export function NotebookWorkspace({
   const [retrying, setRetrying] = useState<string | null>(null);
   const [tool, setTool] = useState<"cram" | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [hindi, setHindi] = useState(false);
+  const [translated, setTranslated] = useState<unknown>(null);
+  const [translating, setTranslating] = useState(false);
+  const [offlineSaved, setOfflineSaved] = useState(false);
+  const [savingOffline, setSavingOffline] = useState(false);
   const createShare = useMutation(api.shares.create);
   const revokeShare = useMutation(api.shares.revoke);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
@@ -366,6 +376,97 @@ export function NotebookWorkspace({
     api.shares.forMaterial,
     active ? { materialId: active._id } : "skip",
   );
+  const translation = useQuery(
+    api.translations.get,
+    active ? { materialId: active._id, lang: "hi" } : "skip",
+  );
+
+  /* A new sheet starts in its source language; the cache is per material. */
+  useEffect(() => {
+    setHindi(false);
+    setTranslated(null);
+  }, [active?._id]);
+
+  const shownPayload = hindi
+    ? (translated ?? translation?.payload ?? active?.payload)
+    : active?.payload;
+
+  async function toggleHindi() {
+    if (!active || translating) return;
+    if (hindi) {
+      setHindi(false);
+      return;
+    }
+    if (translation?.payload) {
+      setHindi(true);
+      return;
+    }
+    setTranslating(true);
+    try {
+      const result = await translate({ materialId: active._id });
+      setTranslated(result.payload);
+      setHindi(true);
+      toast.success("Hindi version ready", {
+        description: "The original is unchanged; this is cached for next time.",
+      });
+    } catch (error) {
+      toast.error("Could not make the Hindi version", {
+        description:
+          error instanceof Error ? error.message : "Please try again in a moment.",
+      });
+    } finally {
+      setTranslating(false);
+    }
+  }
+
+  useEffect(() => {
+    let live = true;
+    if (!active) {
+      setOfflineSaved(false);
+      return;
+    }
+    void isKitSaved(offlineKitId(active._id, hindi ? "hi" : "en")).then(
+      (saved) => {
+        if (live) setOfflineSaved(saved);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [active, hindi]);
+
+  async function saveOffline() {
+    if (!active || savingOffline || offlineSaved) return;
+    setSavingOffline(true);
+    const lang = hindi ? "hi" : "en";
+    const ok = await saveKit({
+      id: offlineKitId(active._id, lang),
+      materialId: active._id,
+      notebookId,
+      notebookName,
+      kind: active.kind as Kind,
+      title: active.title,
+      payload: shownPayload ?? active.payload,
+      lang,
+      savedAt: Date.now(),
+    });
+    setSavingOffline(false);
+    if (!ok) {
+      toast.error("Could not save offline", {
+        description:
+          "This browser may be blocking storage, or the sheet is too large for the remaining space.",
+      });
+      return;
+    }
+    setOfflineSaved(true);
+    toast.success("Saved for offline", {
+      description: `${active.title} is now on this device. Open it from Offline kits.`,
+    });
+    /* Warm the library chunk while there is still a connection, so the route
+       itself is cached by the service worker even if the student goes offline
+       before opening it for the first time. */
+    void import("@/pages/OfflineKits");
+  }
 
   async function shareActive() {
     if (!active || sharing) return;
@@ -847,8 +948,28 @@ export function NotebookWorkspace({
                     {active.title} · from {active.sourceIds.length} source
                     {active.sourceIds.length === 1 ? "" : "s"} ·{" "}
                     {relativeTime(active.createdAt)} · {active.model}
+                    {hindi ? " · हिंदी" : ""}
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void toggleHindi()}
+                      disabled={translating}
+                      className={
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors disabled:opacity-60 " +
+                        (hindi
+                          ? "border-[var(--signal)] text-foreground"
+                          : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                      }
+                      title="Translate this sheet into Hindi without changing the original"
+                    >
+                      {translating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Languages className="h-3 w-3" />
+                      )}
+                      {translating ? "Making Hindi…" : hindi ? "English" : "हिंदी"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => void shareActive()}
@@ -874,6 +995,27 @@ export function NotebookWorkspace({
                         Stop sharing
                       </button>
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() => void saveOffline()}
+                      disabled={savingOffline || offlineSaved}
+                      className={
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors disabled:opacity-70 " +
+                        (offlineSaved
+                          ? "border-[var(--signal)] text-foreground"
+                          : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                      }
+                      title="Store this sheet on this device for offline reading"
+                    >
+                      {savingOffline ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : offlineSaved ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Download className="h-3 w-3" />
+                      )}
+                      {offlineSaved ? "Offline saved" : "Save offline"}
+                    </button>
                     <button
                       type="button"
                       onClick={printMaterial}
@@ -912,21 +1054,39 @@ export function NotebookWorkspace({
 
                 <div className="material-print-area mt-5">
                   {activeKind === "summary" && (
-                    <SummaryView payload={active.payload as SummaryPayload} />
+                    <SummaryView payload={shownPayload as SummaryPayload} />
                   )}
                   {activeKind === "flashcards" && (
                     <FlashcardsView
-                      payload={active.payload as FlashcardsPayload}
+                      payload={shownPayload as FlashcardsPayload}
                     />
                   )}
                   {activeKind === "quiz" && (
-                    <QuizView payload={active.payload as QuizPayload} />
+                    <QuizView
+                      payload={shownPayload as QuizPayload}
+                      onWrongAnswer={({ question, pickedIndex }) => {
+                        if (!active) return;
+                        void recordMistake({
+                          source: "quiz",
+                          prompt: question.question,
+                          options: question.options,
+                          answerIndex: question.answer,
+                          givenAnswer: question.options[pickedIndex] ?? "",
+                          explanation: question.explanation,
+                          materialId: active._id,
+                          chapter: active.title,
+                        }).catch(() => {
+                          /* The quiz must keep working even if the bank write
+                             fails (for example while signing out). */
+                        });
+                      }}
+                    />
                   )}
                   {activeKind === "mindmap" && (
-                    <MindmapView payload={active.payload as MindmapPayload} />
+                    <MindmapView payload={shownPayload as MindmapPayload} />
                   )}
                   {activeKind === "slides" && (
-                    <SlidesView payload={active.payload as SlidesPayload} />
+                    <SlidesView payload={shownPayload as SlidesPayload} />
                   )}
                 </div>
               </>

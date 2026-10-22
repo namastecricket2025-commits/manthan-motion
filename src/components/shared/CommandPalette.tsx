@@ -1,7 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import { GRADES } from "@/components/mathlab/mathlab";
 import {
+  AlertTriangle,
   BookOpen,
+  DownloadCloud,
   Calculator,
   Command,
   FileText,
@@ -84,6 +86,24 @@ const PAGES: Item[] = [
     group: "Pages",
     icon: Settings2,
     keywords: "theme profile delete",
+  },
+  {
+    id: "page-offline",
+    title: "Offline kits",
+    subtitle: "Sheets downloaded to this device",
+    href: "/offline",
+    group: "Pages",
+    icon: DownloadCloud,
+    keywords: "download offline saved no connection",
+  },
+  {
+    id: "page-mistakes",
+    title: "Mistake Bank",
+    subtitle: "Retry the answers you missed",
+    href: "/mistakes",
+    group: "Pages",
+    icon: AlertTriangle,
+    keywords: "wrong errors quiz practice review",
   },
   {
     id: "page-about",

@@ -1,4 +1,4 @@
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -85,6 +85,7 @@ export function PracticePanel({
   const levels = boardAllowed ? LEVELS : LEVELS.filter((entry) => entry.id !== "board");
   const setAction = useAction(api.mathTutor.practiceSet);
   const gradeAction = useAction(api.mathTutor.gradeAnswer);
+  const recordMistake = useMutation(api.studyMistakes.record);
 
   const [level, setLevel] = useState<Level>("medium");
   const [count, setCount] = useState(3);
@@ -185,6 +186,17 @@ export function PracticePanel({
           ...current,
           [index]: { correct: verdict.correct, note: verdict.note },
         }));
+        if (!verdict.correct) {
+          void recordMistake({
+            source: "practice",
+            prompt: question.problem,
+            correctAnswer: question.finalAnswer,
+            givenAnswer: given,
+            chapter: chapterName,
+          }).catch(() => {
+            /* A failed bank write must not block checking the next answer. */
+          });
+        }
       } catch (err) {
         setError(
           err instanceof Error && err.message
@@ -195,7 +207,7 @@ export function PracticePanel({
         setChecking((current) => ({ ...current, [index]: false }));
       }
     },
-    [answers, checking, gradeAction, questions],
+    [answers, chapterName, checking, gradeAction, questions, recordMistake],
   );
 
   const answered = questions.filter((_, index) => feedback[index]?.correct).length;

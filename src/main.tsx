@@ -27,6 +27,8 @@ const MathLab = lazy(() => import("./pages/MathLab.tsx"));
 const Lab = lazy(() => import("./pages/Lab.tsx"));
 const Settings = lazy(() => import("./pages/Settings.tsx"));
 const SharedMaterial = lazy(() => import("./pages/SharedMaterial.tsx"));
+const Mistakes = lazy(() => import("./pages/Mistakes.tsx"));
+const OfflineKits = lazy(() => import("./pages/OfflineKits.tsx"));
 
 // The legal and utility pages are tiny; keep them eager so the strings ship
 // in the shell and there is no separate round-trip on the rare deep link.
@@ -244,6 +246,16 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
     title: "Settings — Manthan",
     description: "Your class, board, subjects, appearance and privacy controls.",
   },
+  "/mistakes": {
+    title: "Mistake Bank — Manthan",
+    description:
+      "Retry the quiz and practice answers you actually missed, and clear them one by one.",
+  },
+  "/offline": {
+    title: "Offline kits — Manthan",
+    description:
+      "Downloaded summaries, flashcards and quizzes you can read without a connection.",
+  },
   "/pricing": {
     title: "Plans — Manthan",
     description: "What is free, what Manthan Plus adds, and how billing works.",
@@ -416,12 +428,21 @@ createRoot(document.getElementById("root")!).render(
                   </RequireAuth>
                 }
               />
+              <Route
+                path="/mistakes"
+                element={
+                  <RequireAuth>
+                    <Mistakes />
+                  </RequireAuth>
+                }
+              />
               <Route path="/about" element={<About />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/honor" element={<Honor />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/feedback" element={<Feedback />} />
+              <Route path="/offline" element={<OfflineKits />} />
               <Route path="/s/:token" element={<SharedMaterial />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

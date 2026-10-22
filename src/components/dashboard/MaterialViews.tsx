@@ -221,7 +221,17 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
 
 /* ------------------------------- quiz ------------------------------- */
 
-export function QuizView({ payload }: { payload: QuizPayload }) {
+export function QuizView({
+  payload,
+  onWrongAnswer,
+}: {
+  payload: QuizPayload;
+  /** Called once, on the first wrong choice for a question. */
+  onWrongAnswer?: (answer: {
+    question: QuizPayload["questions"][number];
+    pickedIndex: number;
+  }) => void;
+}) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [score, setScore] = useState(0);
@@ -291,6 +301,7 @@ export function QuizView({ payload }: { payload: QuizPayload }) {
                 onClick={() => {
                   setPicked(i);
                   if (isAnswer) setScore((s) => s + 1);
+                  else onWrongAnswer?.({ question, pickedIndex: i });
                 }}
                 className={
                   "flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-[15px] transition-colors sm:text-sm " +

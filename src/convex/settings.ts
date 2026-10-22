@@ -123,7 +123,34 @@ export const deleteAccount = mutation({
       .query("materials")
       .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .collect();
-    for (const material of materials) await ctx.db.delete(material._id);
+    for (const material of materials) {
+      const translations = await ctx.db
+        .query("materialTranslations")
+        .withIndex("by_material", (q) => q.eq("materialId", material._id))
+        .collect();
+      for (const translation of translations) {
+        await ctx.db.delete(translation._id);
+      }
+      await ctx.db.delete(material._id);
+    }
+
+    const shares = await ctx.db
+      .query("sharedMaterials")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const share of shares) await ctx.db.delete(share._id);
+
+    const studyMistakes = await ctx.db
+      .query("studyMistakes")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const row of studyMistakes) await ctx.db.delete(row._id);
+
+    const progress = await ctx.db
+      .query("syllabusProgress")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const row of progress) await ctx.db.delete(row._id);
 
     const notebooks = await ctx.db
       .query("notebooks")

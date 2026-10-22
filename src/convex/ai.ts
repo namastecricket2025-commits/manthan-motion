@@ -603,6 +603,56 @@ export function languageDirective(lang: "hi" | "en"): string[] {
   ];
 }
 
+const TRANSLATE_SYSTEM = [
+  "You are Manthan's translation engine for Indian school study material.",
+  "Translate the student-facing strings into Hindi written in Devanagari.",
+  "Preserve the JSON shape, every key, the array order, numeric answer indexes and source file names exactly.",
+  "Never translate LaTeX, mathematical notation, chemical formulae, code, or a source filename.",
+  "Do not add, remove or explain anything. Return a single JSON object and nothing else.",
+].join(" ");
+
+function buildTranslationPrompt(kind: Kind, title: string, payload: unknown) {
+  return [
+    `Material: ${title}`,
+    `Kind: ${kind}`,
+    "Translate every student-facing value into Hindi (Devanagari script).",
+    "Keep all keys and the exact structure. For quiz options, keep the same length and order; never change the numeric `answer` index.",
+    "If a term has no settled Hindi equivalent, keep that term in Latin script but write the sentence around it in Hindi.",
+    "Do not translate LaTeX commands, maths, chemical formulae, code, or `source` values.",
+    "Return only the translated JSON object.",
+    "INPUT JSON:",
+    JSON.stringify(payload),
+  ].join("\n");
+}
+
+/** Validate a model payload against the same schema the generator uses. */
+function parsePayload(kind: Kind, json: unknown) {
+  const parsed =
+    kind === "summary"
+      ? summarySchema.parse(json)
+      : kind === "flashcards"
+        ? flashcardsSchema.parse(json)
+        : kind === "quiz"
+          ? quizSchema.parse(json)
+          : kind === "mindmap"
+            ? mindmapSchema.parse(json)
+            : slidesSchema.parse(json);
+
+  if (kind === "quiz") {
+    const quiz = parsed as z.infer<typeof quizSchema>;
+    for (const question of quiz.questions) {
+      if (
+        !Number.isInteger(question.answer) ||
+        question.answer < 0 ||
+        question.answer >= question.options.length
+      ) {
+        question.answer = 0;
+      }
+    }
+  }
+  return parsed;
+}
+
 function buildPrompt(
   kind: Kind,
   notebookName: string,
@@ -623,6 +673,74 @@ function buildPrompt(
     languageLock(lang),
   ].join("\n");
 }
+
+/**
+ * Translate one generated material into Hindi, once.
+ *
+ * The result is cached in `materialTranslations`, so the second click (and the
+ * next page load) is free. The original row is never touched. Spend is metered
+ * through the same ledger as generation — a translation is a model call too.
+ */
+export const translateMaterial = action({
+  args: { materialId: v.id("materials") },
+  handler: async (ctx, { materialId }): Promise<{ payload: unknown; cached: boolean }> => {
+    const userId = await ctx.runQuery(internal.materials.assertMaterialOwner, {
+      materialId,
+    });
+
+    const cached = await ctx.runQuery(internal.translations.getInternal, {
+      materialId,
+      lang: "hi",
+    });
+    if (cached) return { payload: cached.payload, cached: true };
+
+    const material = await ctx.runQuery(internal.materials.getForTranslation, {
+      materialId,
+    });
+    if (!material) throw new Error("Study material not found.");
+
+    const usage = await ctx.runQuery(internal.usage.ensureWithinQuota, {
+      userId,
+    });
+    if (usage.used >= usage.limit) {
+      throw new Error(
+        usage.window === "month"
+          ? "Monthly allowance reached — the Hindi version can be made after the reset."
+          : "Daily allowance reached — the Hindi version can be made after the reset at midnight UTC.",
+      );
+    }
+
+    const candidates = await resolveCandidates();
+    const prompt = buildTranslationPrompt(
+      material.kind,
+      material.title,
+      material.payload,
+    );
+    const { text: raw, model, provider, tokens } = await callModel(
+      candidates,
+      TRANSLATE_SYSTEM,
+      prompt,
+    );
+
+    const parsed = parsePayload(material.kind, parseJsonLoose(raw));
+    const spent =
+      tokens ?? Math.round((prompt.length + raw.length) / CHARS_PER_TOKEN);
+    await ctx.runMutation(internal.usage.record, {
+      userId,
+      tokens: spent,
+      requests: 1,
+    });
+
+    await ctx.runMutation(internal.translations.save, {
+      materialId,
+      lang: "hi",
+      payload: parsed,
+      model: `${provider}:${model}`,
+    });
+
+    return { payload: parsed, cached: false };
+  },
+});
 
 function fallbackTitle(kind: Kind, payload: unknown, notebook: string, lang: "hi" | "en") {
   if (kind === "summary" || kind === "slides") {

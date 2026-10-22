@@ -1868,6 +1868,14 @@ function WeakSpots({ onOpenMathLab }: { onOpenMathLab: () => void }) {
           slip the checker flags lands here, and repeats climb the list.
         </div>
       )}
+
+      <Link
+        to="/mistakes"
+        className="inline-flex items-center gap-1.5 self-start text-[11.5px] font-medium text-text-dim transition-colors hover:text-foreground"
+      >
+        Quiz and practice mistakes you can retry
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </motion.section>
   );
 }

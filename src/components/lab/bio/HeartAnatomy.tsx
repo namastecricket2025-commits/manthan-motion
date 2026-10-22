@@ -9,6 +9,7 @@ import { sfx } from "../lab-sound";
 import { CursorTip, useCursorTip } from "../CursorTip";
 import { ExamSketchPanel, useExamSketch, type ExamStep } from "../ExamSketch";
 import { disposeSurfaceMaps, muscleMaps, vesselMaps, tissueMaterial } from "../lab-textures";
+import { LabelDrillHud, useLabelDrill } from "./LabelDrill";
 
 const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   ra: { name: "Right atrium", def: "Thin-walled chamber that collects deoxygenated blood from the superior and inferior venae cavae. It contracts weakly, topping up the right ventricle.", accent: "#38bdf8" },
@@ -35,6 +36,21 @@ const PARTS: Record<string, { name: string; def: string; accent: string }> = {
   aorticValve: { name: "Aortic valve", def: "Three-cusped valve at the exit of the left ventricle. It opens when the ventricle contracts and snaps shut to keep blood in the aorta.", accent: "#a78bfa" },
   pulmValve: { name: "Pulmonary valve", def: "Three-cusped valve guarding the exit of the right ventricle into the pulmonary trunk. It prevents backflow from the pulmonary artery.", accent: "#a78bfa" },
 };
+
+/** The structures a student is expected to label on a board diagram. */
+const HEART_DRILL_PARTS = [
+  "Right atrium",
+  "Right ventricle",
+  "Left atrium",
+  "Left ventricle",
+  "Interventricular septum",
+  "Aortic arch",
+  "Pulmonary trunk",
+  "Superior vena cava",
+  "Inferior vena cava",
+  "Tricuspid valve",
+  "Mitral valve",
+];
 
 const EXAM_STEPS: ExamStep[] = [
   { t: "Block in the ventricles", d: "Draw one large tilted oval leaning about 30° to the right — that is the ventricular mass, and the apex points down-left." },
@@ -116,6 +132,14 @@ export default function HeartAnatomy() {
   const [quizDone, setQuizDone] = useState(false);
   const { tip, show: showTip, hide: hideTip } = useCursorTip();
   const [exam, setExam] = useState(false);
+  const drill = useLabelDrill(HEART_DRILL_PARTS);
+
+  useEffect(() => {
+    if (!drill.drill) return;
+    hideTip();
+    setHover(null);
+    hoverId.current = null;
+  }, [drill.drill, hideTip]);
 
   const { ref: canvasRef, size } = useCanvasSize<HTMLCanvasElement>();
   const vp = useViewport();
@@ -130,6 +154,7 @@ export default function HeartAnatomy() {
   const target = useRef({ yaw: 0.5, pitch: -0.06, dist: 32, panX: 0, panY: 0 });
   const lastInteract = useRef(performance.now());
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const downAt = useRef<{ x: number; y: number } | null>(null);
   const dragging = useRef<"rotate" | "pan" | null>(null);
   const pinch = useRef<number | null>(null);
   const raycaster = useRef(new THREE.Raycaster());
@@ -384,20 +409,28 @@ export default function HeartAnatomy() {
     };
   }, [canvasRef]);
 
-  /* ── hover picking ── */
-  const setHoverFromRay = (clientX: number, clientY: number) => {
+  /* ── picking ── */
+  const partAt = (clientX: number, clientY: number) => {
     const c = canvasRef.current;
-    if (!c || !camera.current || !rootGroup.current) return;
+    if (!c || !camera.current || !rootGroup.current) return null;
     const r = c.getBoundingClientRect();
     const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     rootGroup.current.updateMatrixWorld(true);
     raycaster.current.setFromCamera(ndc, camera.current);
     const hits = raycaster.current.intersectObjects(pickables.current.map((p) => p.mesh), false);
-    if (hits.length > 0) {
-      const mesh = hits[0].object as THREE.Mesh;
-      const id = (mesh.userData.id as string) || "";
-      const part = PARTS[id];
-      if (!part) return;
+    if (hits.length === 0) return null;
+    const mesh = hits[0].object as THREE.Mesh;
+    const id = (mesh.userData.id as string) || "";
+    const part = PARTS[id];
+    return part ? { id, part } : null;
+  };
+
+  const setHoverFromRay = (clientX: number, clientY: number) => {
+    /* During a drill the hover card would print the answer. */
+    if (drill.drill) return;
+    const hit = partAt(clientX, clientY);
+    if (hit) {
+      const { id, part } = hit;
       const same = id === hoverId.current;
       hoverId.current = id;
       setHover(id);
@@ -499,6 +532,7 @@ export default function HeartAnatomy() {
   const onDown = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    downAt.current = { x: e.clientX, y: e.clientY };
     dragging.current = e.button === 2 ? "pan" : "rotate";
     lastInteract.current = performance.now();
     if (e.pointerType === "touch") setHoverFromRay(e.clientX, e.clientY);
@@ -529,9 +563,20 @@ export default function HeartAnatomy() {
     }
   };
   const onUp = (e: React.PointerEvent) => {
+    const down = downAt.current;
+    downAt.current = null;
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) pinch.current = null;
     if (pointers.current.size === 0) dragging.current = null;
+
+    /* A clean tap during a drill is an answer. */
+    if (
+      down &&
+      drill.drill &&
+      Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6
+    ) {
+      drill.answer(partAt(e.clientX, e.clientY)?.part.name ?? "");
+    }
   };
 
   const resetView = () => {
@@ -574,6 +619,17 @@ export default function HeartAnatomy() {
             </p>
           </div>
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => (drill.drill ? drill.stop() : drill.start())}
+              className={`lab-btn !px-2.5 ${drill.drill ? "lab-btn--active" : ""}`}
+              title="Find the named structure on the model"
+            >
+              <Info className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                {drill.drill ? "Exit drill" : "Label drill"}
+              </span>
+            </button>
             <button type="button" onClick={() => setPaused(!paused)} className="lab-btn !px-2.5">
               {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">{paused ? "Play" : "Pause"}</span>
@@ -626,6 +682,12 @@ export default function HeartAnatomy() {
             </span>
           </div>
           <CursorTip tip={tip} hostRef={wrapRef} width={262} />
+          <LabelDrillHud
+            drill={drill.drill}
+            accent="#aab3ff"
+            onNext={drill.next}
+            onStop={drill.stop}
+          />
         </div>
 
         {/* pressure gauges — side by side under the model, compact */}

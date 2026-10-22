@@ -149,6 +149,40 @@ const schema = defineSchema(
       .index("by_owner", ["ownerId"])
       .index("by_owner_created", ["ownerId", "createdAt"]),
 
+    // A wrong answer worth revisiting. Quiz rows keep their option list so the
+    // question can be reattempted exactly; practice rows keep the answer and
+    // create a route back into a fresh set. Maths Check-My-Work rows stay in
+    // `mathMistakes` and are surfaced alongside these in the Mistake Bank.
+    studyMistakes: defineTable({
+      ownerId: v.id("users"),
+      source: v.union(v.literal("quiz"), v.literal("practice")),
+      prompt: v.string(),
+      options: v.optional(v.array(v.string())),
+      answerIndex: v.optional(v.number()),
+      correctAnswer: v.optional(v.string()),
+      givenAnswer: v.optional(v.string()),
+      explanation: v.optional(v.string()),
+      materialId: v.optional(v.id("materials")),
+      chapter: v.optional(v.string()),
+      createdAt: v.number(),
+      resolvedAt: v.optional(v.number()),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_created", ["ownerId", "createdAt"]),
+
+    // One cached translation of a generated material. Translation is a model
+    // call, so it is stored once per (material, language) and reused; the
+    // original payload is never overwritten, so switching back is free.
+    materialTranslations: defineTable({
+      materialId: v.id("materials"),
+      lang: v.string(),
+      payload: v.any(),
+      model: v.string(),
+      createdAt: v.number(),
+    })
+      .index("by_material_lang", ["materialId", "lang"])
+      .index("by_material", ["materialId"]),
+
     // A read-only public link to one generated material. The token is the
     // capability: anyone holding it can read the sheet, and revoking it makes
     // every existing copy of the link stop working. Only the owner can create
@@ -162,7 +196,8 @@ const schema = defineSchema(
       revokedAt: v.optional(v.number()),
     })
       .index("by_token", ["token"])
-      .index("by_material", ["materialId"]),
+      .index("by_material", ["materialId"])
+      .index("by_owner", ["ownerId"]),
 
     // One row per chapter a student has marked as revised. Progress is stored
     // on the account (not in localStorage) so it follows the student to a new

@@ -4,6 +4,18 @@ import { clamp, syncViewport, useCanvasSize, useRaf, useViewport } from "../use-
 import { animDt } from "@/lib/app-settings";
 import { useTelemetryPublisher } from "../PhysicsSim";
 import { CursorTip } from "../CursorTip";
+import { LabelDrillHud, useLabelDrill } from "./LabelDrill";
+
+/** Parts that are registered as pickable on both cell types. */
+const CELL_DRILL_PARTS = [
+  "Nucleus",
+  "Mitochondrion",
+  "Golgi apparatus",
+  "Rough ER",
+  "Smooth ER",
+  "Cytoskeleton",
+  "Centrosome",
+];
 
 // ─── ion defs
 type IonKind = "K+" | "Ca2+";
@@ -146,6 +158,12 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
   const organelleHoverRay = useRef(new THREE.Raycaster());
   const [tooltip, setTooltip] = useState<{ name: string; def: string; x: number; y: number } | null>(null);
   const [lookInside, setLookInside] = useState(false);
+  const drill = useLabelDrill(CELL_DRILL_PARTS);
+
+  /* A hint card left open when the drill starts would name the answer. */
+  useEffect(() => {
+    if (drill.drill) setTooltip(null);
+  }, [drill.drill]);
   const [selected, setSelected] = useState<{ name: string; def: string } | null>(null);
   const selectedMesh = useRef<THREE.Object3D | null>(null);
   const activeMesh = useRef<THREE.Object3D | null>(null);
@@ -1432,6 +1450,10 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
       return;
     }
 
+    /* A labelling tap is a tap, not the start of an ion drag. Orbit still
+       works because the move handler does not need this branch. */
+    if (drill.drill) return;
+
     // check ion hit via raycaster
     const ndc = getNDC(e.clientX, e.clientY);
     if (!ndc || !camera.current || !cellGroup.current) return;
@@ -1474,7 +1496,14 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     if (!cam) return;
 
     // hover feedback for ions + organelles when not dragging
-    if (!dragIon.current && !dragging.current && ndc) {
+    if (drill.drill) {
+      /* Hover labels would give the answer away; the drill owns the cursor. */
+      setTooltip(null);
+      setHoverIon(null);
+      if (!dragging.current) {
+        (e.currentTarget as HTMLElement).style.cursor = "crosshair";
+      }
+    } else if (!dragIon.current && !dragging.current && ndc) {
       raycaster.current.setFromCamera(ndc, cam);
       if (cellGroup.current) cellGroup.current.updateMatrixWorld(true);
       const ionHits = raycaster.current.intersectObjects(ionMeshes.current, false);
@@ -1620,6 +1649,10 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
     // a clean tap (no drag) selects the organelle under the finger / cursor
     if (down && !dragIon.current && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) {
       const hit = pickOrganelle(e.clientX, e.clientY);
+      if (drill.drill) {
+        drill.answer(hit?.name ?? "");
+        return;
+      }
       if (hit) {
         selectedMesh.current = hit.mesh;
         activeMesh.current = hit.mesh;
@@ -1696,6 +1729,14 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            onClick={() => (drill.drill ? drill.stop() : drill.start())}
+            className={`lab-btn !px-2.5 !py-1 text-[11px] ${drill.drill ? "lab-btn--active" : ""}`}
+            title="Find the named organelle on the model"
+          >
+            {drill.drill ? "Exit label drill" : "Label drill"}
+          </button>
+          <button
+            type="button"
             onClick={() => setLookInside((v) => !v)}
             className={`lab-btn !px-2.5 !py-1 text-[11px] ${lookInside ? "lab-btn--active" : ""}`}
             title="Slice the outer membrane away to look inside the cell"
@@ -1718,6 +1759,13 @@ export default function Cell3D({ cellType }: { cellType: "animal" | "plant" }) {
         onPointerCancel={endPointer}
         onPointerLeave={endPointer}
         onContextMenu={e => e.preventDefault()}
+      />
+
+      <LabelDrillHud
+        drill={drill.drill}
+        accent="#67e8f9"
+        onNext={drill.next}
+        onStop={drill.stop}
       />
 
 
