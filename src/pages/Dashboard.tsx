@@ -200,6 +200,9 @@ export default function Dashboard() {
       return;
     }
     if (key === "lab") navigate("/lab");
+    else if (key === "review") navigate("/review");
+    else if (key === "exam") navigate("/exam");
+    else if (key === "viva") navigate("/viva");
     else if (key === "settings") navigate("/settings");
     else if (key === "about") navigate("/about");
     else if (key === "pricing") navigate("/pricing");

@@ -2,9 +2,14 @@ import { useAction } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import {
+  SourcePeekDialog,
+  type Citation,
+} from "@/components/dashboard/SourcePeek";
+import {
   ArrowUp,
   BookOpenCheck,
   Compass,
+  FileSearch,
   Loader2,
   Play,
   Sparkles,
@@ -36,6 +41,7 @@ interface Turn {
   role: "student" | "lab";
   text: string;
   sources?: string[];
+  citations?: Citation[];
 }
 
 export function NotebookChat({
@@ -53,6 +59,7 @@ export function NotebookChat({
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [peek, setPeek] = useState<Citation | null>(null);
   const scroller = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -75,7 +82,7 @@ export function NotebookChat({
       const reply = await ask({ notebookId, question: value, mode, history });
       setTurns((current) => [
         ...current,
-        { role: "lab", text: reply.answer, sources: reply.sources },
+        { role: "lab", text: reply.answer, sources: reply.sources, citations: reply.citations },
       ]);
     } catch (err) {
       setError(
@@ -170,7 +177,24 @@ export function NotebookChat({
                 <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">
                   {turn.text}
                 </p>
-                {turn.sources && turn.sources.length > 0 ? (
+                {turn.citations && turn.citations.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-text-dim">From</span>
+                    {turn.citations.map((citation) => (
+                      <button
+                        key={citation.name}
+                        type="button"
+                        onClick={() => setPeek(citation)}
+                        title="See the exact passage this answer came from"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-2 py-1 text-[10px] font-medium text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
+                      >
+                        <FileSearch className="h-3 w-3 shrink-0" />
+                        {citation.name}
+                        <span className="text-[9px] text-[var(--signal)]">peek</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : turn.sources && turn.sources.length > 0 ? (
                   <p className="text-[10px] leading-relaxed text-text-dim">
                     From {turn.sources.join(" · ")}
                   </p>
@@ -238,6 +262,8 @@ export function NotebookChat({
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
         </button>
       </form>
+
+      <SourcePeekDialog citation={peek} onClose={() => setPeek(null)} />
     </div>
   );
 }

@@ -132,6 +132,23 @@ export const remove = mutation({
       .collect();
     for (const material of materials) await ctx.db.delete(material._id);
 
+    // Study tools are scoped to the notebook too. Leaving their rows behind
+    // would keep deleted material in the review queue and past papers in the
+    // exam library, so they go with it.
+    const reviewCards = await ctx.db
+      .query("reviewCards")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const card of reviewCards) {
+      if (card.notebookId === notebookId) await ctx.db.delete(card._id);
+    }
+
+    const exams = await ctx.db
+      .query("mockExams")
+      .withIndex("by_notebook", (q) => q.eq("notebookId", notebookId))
+      .collect();
+    for (const exam of exams) await ctx.db.delete(exam._id);
+
     await ctx.db.delete(notebookId);
   },
 });

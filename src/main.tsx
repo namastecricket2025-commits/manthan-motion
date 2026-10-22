@@ -29,6 +29,9 @@ const Settings = lazy(() => import("./pages/Settings.tsx"));
 const SharedMaterial = lazy(() => import("./pages/SharedMaterial.tsx"));
 const Mistakes = lazy(() => import("./pages/Mistakes.tsx"));
 const OfflineKits = lazy(() => import("./pages/OfflineKits.tsx"));
+const Review = lazy(() => import("./pages/Review.tsx"));
+const Viva = lazy(() => import("./pages/Viva.tsx"));
+const Exam = lazy(() => import("./pages/Exam.tsx"));
 
 // The legal and utility pages are tiny; keep them eager so the strings ship
 // in the shell and there is no separate round-trip on the rare deep link.
@@ -256,6 +259,21 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
     description:
       "Downloaded summaries, flashcards and quizzes you can read without a connection.",
   },
+  "/review": {
+    title: "Daily review — Manthan",
+    description:
+      "A spaced-repetition queue built from your flashcards, quizzes and Maths mistakes.",
+  },
+  "/viva": {
+    title: "Voice viva — Manthan",
+    description:
+      "Explain a topic aloud and let an examiner probe what is missing.",
+  },
+  "/exam": {
+    title: "Mock exam — Manthan",
+    description:
+      "Sit a timed paper built from your notebook, with a duration you choose and marked written answers.",
+  },
   "/pricing": {
     title: "Plans — Manthan",
     description: "What is free, what Manthan Plus adds, and how billing works.",
@@ -433,6 +451,30 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <Mistakes />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/review"
+                element={
+                  <RequireAuth>
+                    <Review />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/viva"
+                element={
+                  <RequireAuth>
+                    <Viva />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/exam"
+                element={
+                  <RequireAuth>
+                    <Exam />
                   </RequireAuth>
                 }
               />

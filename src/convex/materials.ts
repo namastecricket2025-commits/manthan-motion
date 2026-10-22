@@ -111,7 +111,16 @@ export const save = internalMutation({
       .withIndex("by_notebook", (q) => q.eq("notebookId", args.notebookId))
       .collect();
     for (const row of existing) {
-      if (row.kind === args.kind) await ctx.db.delete(row._id);
+      if (row.kind === args.kind) {
+        const cards = await ctx.db
+          .query("reviewCards")
+          .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+          .collect();
+        for (const card of cards) {
+          if (card.materialId === row._id) await ctx.db.delete(card._id);
+        }
+        await ctx.db.delete(row._id);
+      }
     }
 
     return await ctx.db.insert("materials", {
@@ -134,6 +143,13 @@ export const remove = mutation({
     const material = await ctx.db.get(materialId);
     if (!material || material.ownerId !== userId) {
       throw new Error("Material not found.");
+    }
+    const cards = await ctx.db
+      .query("reviewCards")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const card of cards) {
+      if (card.materialId === materialId) await ctx.db.delete(card._id);
     }
     await ctx.db.delete(materialId);
   },

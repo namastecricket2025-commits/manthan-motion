@@ -152,6 +152,18 @@ export const deleteAccount = mutation({
       .collect();
     for (const row of progress) await ctx.db.delete(row._id);
 
+    const reviewCards = await ctx.db
+      .query("reviewCards")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const row of reviewCards) await ctx.db.delete(row._id);
+
+    const exams = await ctx.db
+      .query("mockExams")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const row of exams) await ctx.db.delete(row._id);
+
     const notebooks = await ctx.db
       .query("notebooks")
       .withIndex("by_owner", (q) => q.eq("ownerId", userId))

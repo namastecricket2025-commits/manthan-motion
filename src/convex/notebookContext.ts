@@ -10,6 +10,7 @@ import { v } from "convex/values";
  */
 
 export interface SourceSlice {
+  id: Id<"sources">;
   name: string;
   text: string;
 }
@@ -45,7 +46,11 @@ export const studioContext = internalQuery({
 
     const readable = sources
       .filter((source) => source.status === "ready" && (source.text?.length ?? 0) > 40)
-      .map((source) => ({ name: source.name, text: source.text ?? "" }));
+      .map((source) => ({
+        id: source._id,
+        name: source.name,
+        text: source.text ?? "",
+      }));
 
     return { name: notebook.name, ownerId: user._id, sources: readable };
   },

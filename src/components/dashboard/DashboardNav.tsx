@@ -3,13 +3,16 @@ import { useSpringTransition } from "@/lib/motion";
 import { useMutation, useQuery } from "convex/react";
 import {
   Check,
+  ClipboardCheck,
   FlaskConical,
   Info,
   LayoutDashboard,
+  Mic,
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Repeat,
   Settings2,
   Sigma,
   Tag,
@@ -28,6 +31,9 @@ import { toast } from "sonner";
 export type DashboardSection =
   | "dashboard"
   | "notebooks"
+  | "review"
+  | "exam"
+  | "viva"
   | "mathlab"
   | "lab"
   | "settings"
@@ -41,6 +47,9 @@ const ITEMS: {
 }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "notebooks", label: "Notebooks", icon: NotebookPen },
+  { key: "review", label: "Daily review", icon: Repeat },
+  { key: "exam", label: "Mock exam", icon: ClipboardCheck },
+  { key: "viva", label: "Voice viva", icon: Mic },
   { key: "mathlab", label: "Math Lab", icon: Sigma },
   { key: "lab", label: "STEM Lab", icon: FlaskConical },
   { key: "pricing", label: "Plans & Pricing", icon: Tag },

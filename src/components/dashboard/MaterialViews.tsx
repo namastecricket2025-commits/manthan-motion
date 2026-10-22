@@ -59,7 +59,14 @@ const sectionOrdinal = (i: number) => String(i + 1).padStart(2, "0");
 
 /* ------------------------------ summary ------------------------------ */
 
-export function SummaryView({ payload }: { payload: SummaryPayload }) {
+export function SummaryView({
+  payload,
+  onSourcePeek,
+}: {
+  payload: SummaryPayload;
+  /** Opens the exact passage in the source behind a section. */
+  onSourcePeek?: (sourceName: string, focus?: string) => void;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -100,11 +107,22 @@ export function SummaryView({ payload }: { payload: SummaryPayload }) {
                 </li>
               ))}
             </ul>
-            {section.source && (
-              <span className="mt-1 inline-block max-w-full truncate rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[10px] font-medium text-text-dim">
-                {section.source}
-              </span>
-            )}
+            {section.source &&
+              (onSourcePeek ? (
+                <button
+                  type="button"
+                  onClick={() => onSourcePeek(section.source as string, section.heading)}
+                  title="See the exact passage this section came from"
+                  className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[10px] font-medium text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
+                >
+                  {section.source}
+                  <span className="text-[9px] text-[var(--signal)]">peek</span>
+                </button>
+              ) : (
+                <span className="mt-1 inline-block max-w-full truncate rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[10px] font-medium text-text-dim">
+                  {section.source}
+                </span>
+              ))}
           </div>
         ))}
       </div>
@@ -224,6 +242,7 @@ export function FlashcardsView({ payload }: { payload: FlashcardsPayload }) {
 export function QuizView({
   payload,
   onWrongAnswer,
+  onSourcePeek,
 }: {
   payload: QuizPayload;
   /** Called once, on the first wrong choice for a question. */
@@ -231,6 +250,8 @@ export function QuizView({
     question: QuizPayload["questions"][number];
     pickedIndex: number;
   }) => void;
+  /** Opens the exact passage in the source behind a question. */
+  onSourcePeek?: (sourceName: string, focus?: string) => void;
 }) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
@@ -343,6 +364,17 @@ export function QuizView({
               {question.explanation}
             </p>
           )}
+          {question.source && onSourcePeek ? (
+            <button
+              type="button"
+              onClick={() => onSourcePeek(question.source as string, question.question)}
+              title="See the exact passage this question came from"
+              className="mt-2 inline-flex max-w-full items-center gap-1 truncate rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-medium text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
+            >
+              {question.source}
+              <span className="text-[9px] text-[var(--signal)]">peek</span>
+            </button>
+          ) : null}
           <MovingBorderButton
             onClick={() => {
               if (index + 1 >= total) setDone(true);

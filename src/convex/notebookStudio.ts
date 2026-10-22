@@ -13,6 +13,7 @@ import {
   parseJsonLoose,
 } from "./ai";
 import { cleanProse } from "./mathPrompts";
+import { sourceExcerpt } from "./sourceExcerpt";
 
 /**
  * The notebook's studio: a conversation grounded in the student's own sources,
@@ -150,7 +151,12 @@ export const notebookChat = action({
   handler: async (
     ctx,
     { notebookId, question, mode, history },
-  ): Promise<{ answer: string; sources: string[]; model: string }> => {
+  ): Promise<{
+    answer: string;
+    sources: string[];
+    citations: { sourceId: Id<"sources">; name: string; excerpt: string }[];
+    model: string;
+  }> => {
     const trimmed = question.trim();
     if (!trimmed) throw new Error("Ask something about this notebook first.");
 
@@ -199,14 +205,214 @@ export const notebookChat = action({
     }
 
     // Cite only the sources the answer actually names, so the line under the
-    // reply is a receipt rather than the whole library restated.
-    const cited = sources
-      .filter((source) => answer.toLowerCase().includes(source.name.toLowerCase()))
-      .map((source) => source.name);
+    // reply is a receipt rather than the whole library restated. The excerpt
+    // is copied from that source, not written by the model: clicking a citation
+    // must show what the source really says.
+    const citations = sources
+      .filter((source) =>
+        answer.toLowerCase().includes(source.name.toLowerCase()),
+      )
+      .map((source) => ({
+        sourceId: source.id,
+        name: source.name,
+        excerpt: sourceExcerpt(source.text, answer),
+      }));
 
     return {
       answer,
-      sources: cited,
+      sources: citations.map((citation) => citation.name),
+      citations,
+      model: reply.model,
+    };
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* Teach-it-back viva                                                  */
+/* ------------------------------------------------------------------ */
+
+const VIVA_START_SYSTEM = [
+  "You are the oral examiner inside Manthan, a study app for Indian school students in Classes 8 to 12.",
+  "Ask one question that makes the student explain an idea in their own words, not recall a single word or date.",
+  "The question must be answerable from the supplied sources alone, and must be specific enough that a vague answer is visibly incomplete.",
+  "Question wording should sound like a friendly viva, not a written exam: 'Walk me through…', 'Why does…', 'What would happen if…'.",
+  "Also list the three to five key points a strong answer should contain. These are for grading, never read out to the student.",
+  "Work only from the sources. Never ask about a fact the sources do not support.",
+  "Reply with a single JSON object and nothing else.",
+].join(" ");
+
+const vivaStartSchema = z.object({
+  question: z.string().min(1),
+  focus: z.string().min(1),
+  expected: z.array(z.string().min(1)).min(2).max(6),
+});
+
+const VIVA_REPLY_SYSTEM = [
+  "You are the oral examiner inside Manthan, grading a student's spoken explanation against the notebook's sources.",
+  "Be fair and specific. A correct idea in the student's own words earns credit even when the wording differs from the source; a keyword without an explanation does not.",
+  "Score out of 5: 5 is complete and precise, 3 is mostly right with one real gap, 1 is a fragment, 0 is absent or wrong.",
+  "Feedback is two or three short sentences: name what was right, then the single most important thing missing. Never shame the student.",
+  "If there are more turns, ask ONE short follow-up that probes the gap you just found, grounded in the sources. If this was the last turn, set nextQuestion to null and write a short overall summary.",
+  "Reply with a single JSON object and nothing else.",
+].join(" ");
+
+const vivaReplySchema = z.object({
+  score: z.number(),
+  feedback: z.string().min(1),
+  missed: z.array(z.string()).optional(),
+  nextQuestion: z.string().nullable().optional(),
+  nextFocus: z.string().nullable().optional(),
+  nextExpected: z.array(z.string()).optional(),
+  overall: z.string().nullable().optional(),
+});
+
+/** Start a short oral examination grounded in one notebook. */
+export const vivaStart = action({
+  args: {
+    notebookId: v.id("notebooks"),
+    topic: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    { notebookId, topic },
+  ): Promise<{
+    question: string;
+    focus: string;
+    expected: string[];
+    sources: string[];
+    model: string;
+  }> => {
+    const { name, ownerId, sources } = await ctx.runQuery(
+      internal.notebookContext.studioContext,
+      { notebookId },
+    );
+    if (!sources.length) {
+      throw new Error(
+        "Add a readable source first — the viva can only ask about what is in this notebook.",
+      );
+    }
+    await assertAllowance(ctx, ownerId);
+
+    const language = detectLanguage(sources.map((source) => source.text.slice(0, 500)));
+    const prompt = [
+      `NOTEBOOK: ${name}`,
+      topic?.trim() ? `TOPIC THE STUDENT CHOSE: ${topic.trim()}` : "",
+      `SOURCES:\n${corpusFor(sources)}`,
+      "Ask the first question of a three-question viva. It should take about thirty seconds to answer aloud.",
+      "Return exactly: {\"question\":string,\"focus\":string,\"expected\":[string]}.",
+      ...languageDirective(language),
+      languageLock(language),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const candidates = await resolveCandidates();
+    const reply = await callModel(candidates, VIVA_START_SYSTEM, prompt, undefined, 0.45);
+    await meter(ctx, ownerId, prompt, reply);
+    const parsed = vivaStartSchema.parse(parseJsonLoose(reply.text));
+
+    return {
+      question: cleanSpoken(parsed.question),
+      focus: cleanSpoken(parsed.focus),
+      expected: parsed.expected.map(cleanSpoken).slice(0, 6),
+      sources: sources.map((source) => source.name).slice(0, 4),
+      model: reply.model,
+    };
+  },
+});
+
+/** Grade one spoken answer and, unless this was the last turn, ask the next. */
+export const vivaRespond = action({
+  args: {
+    notebookId: v.id("notebooks"),
+    topic: v.optional(v.string()),
+    question: v.string(),
+    expected: v.array(v.string()),
+    answer: v.string(),
+    turn: v.number(),
+    history: v.optional(
+      v.array(
+        v.object({
+          question: v.string(),
+          answer: v.string(),
+          score: v.number(),
+          feedback: v.string(),
+        }),
+      ),
+    ),
+  },
+  handler: async (
+    ctx,
+    { notebookId, topic, question, expected, answer, turn, history },
+  ): Promise<{
+    score: number;
+    feedback: string;
+    missed: string[];
+    nextQuestion: string | null;
+    nextFocus: string | null;
+    nextExpected: string[];
+    overall: string | null;
+    model: string;
+  }> => {
+    const spoken = answer.replace(/\s+/g, " ").trim();
+    if (spoken.length < 12) {
+      throw new Error("Say a little more — even one full sentence gives the examiner something to work with.");
+    }
+
+    const { name, ownerId, sources } = await ctx.runQuery(
+      internal.notebookContext.studioContext,
+      { notebookId },
+    );
+    if (!sources.length) {
+      throw new Error("This notebook has no readable sources to grade against.");
+    }
+    await assertAllowance(ctx, ownerId);
+
+    const language = detectLanguage(sources.map((source) => source.text.slice(0, 500)));
+    const transcript = (history ?? [])
+      .map(
+        (entry, index) =>
+          `Q${index + 1}: ${entry.question}\nStudent: ${entry.answer}\nExaminer: ${entry.feedback} (${entry.score}/5)`,
+      )
+      .join("\n\n");
+    const last = turn >= 3;
+    const prompt = [
+      `NOTEBOOK: ${name}`,
+      topic?.trim() ? `TOPIC: ${topic.trim()}` : "",
+      `SOURCES:\n${corpusFor(sources)}`,
+      transcript ? `EARLIER IN THIS VIVA:\n${transcript}` : "",
+      `THE QUESTION: ${question}`,
+      `WHAT A STRONG ANSWER SHOULD CONTAIN:\n- ${expected.join("\n- ")}`,
+      `THE STUDENT SAID: ${spoken}`,
+      last
+        ? "This is the final turn. Grade it, then write a two-sentence overall summary for the whole viva in `overall`, and set nextQuestion to null."
+        : "Grade it, then ask one follow-up that probes the biggest gap. Provide its focus and expected points too.",
+      "Return exactly: {\"score\":number,\"feedback\":string,\"missed\":[string],\"nextQuestion\":string|null,\"nextFocus\":string|null,\"nextExpected\":[string],\"overall\":string|null}.",
+      ...languageDirective(language),
+      languageLock(language),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const candidates = await resolveCandidates();
+    const reply = await callModel(candidates, VIVA_REPLY_SYSTEM, prompt, undefined, 0.35);
+    await meter(ctx, ownerId, prompt, reply);
+    const parsed = vivaReplySchema.parse(parseJsonLoose(reply.text));
+    const score = Math.max(0, Math.min(5, Math.round(parsed.score)));
+    const nextQuestion = last ? null : cleanSpoken(parsed.nextQuestion ?? "") || null;
+
+    return {
+      score,
+      feedback: cleanAnswer(parsed.feedback),
+      missed: (parsed.missed ?? []).map(cleanSpoken).slice(0, 6),
+      nextQuestion,
+      nextFocus: nextQuestion
+        ? cleanSpoken(parsed.nextFocus ?? "") || null
+        : null,
+      nextExpected: nextQuestion
+        ? (parsed.nextExpected ?? expected).map(cleanSpoken).slice(0, 6)
+        : [],
+      overall: last ? cleanAnswer(parsed.overall ?? parsed.feedback) : null,
       model: reply.model,
     };
   },

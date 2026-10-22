@@ -1,4 +1,5 @@
 import { getAuthUserId, requireAuthUserId } from "./identity";
+import { sourceExcerpt } from "./sourceExcerpt";
 import { v } from "convex/values";
 import {
   internalMutation,
@@ -128,6 +129,66 @@ export const addText = mutation({
       status: "ready",
       createdAt: Date.now(),
     });
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* Source peek                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The exact extract behind a material's source chip.
+ *
+ * Only sources the material was actually built from are considered, and the
+ * body text never leaves this query in full: the UI receives one small window
+ * around the most relevant passage, plus the source name it can trust.
+ */
+export const peek = query({
+  args: {
+    materialId: v.id("materials"),
+    sourceName: v.optional(v.string()),
+    focus: v.optional(v.string()),
+  },
+  handler: async (ctx, { materialId, sourceName, focus }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const material = await ctx.db.get(materialId);
+    if (!material || material.ownerId !== userId) return null;
+
+    const sources = (
+      await Promise.all(material.sourceIds.map((id) => ctx.db.get(id)))
+    ).flatMap((source) => (source ? [source] : []));
+
+    if (sources.length === 0) return null;
+
+    const wanted = sourceName?.trim().toLowerCase();
+    const source =
+      (wanted
+        ? sources.find((entry) => entry.name.toLowerCase() === wanted)
+        : undefined) ??
+      sources.find((entry) => entry.status === "ready" && entry.text) ??
+      sources[0];
+
+    if (!source) return null;
+
+    if (!source.text || source.status === "failed") {
+      return {
+        name: source.name,
+        kind: source.kind,
+        excerpt: "",
+        characters: 0,
+        unavailable: true as const,
+      };
+    }
+
+    return {
+      name: source.name,
+      kind: source.kind,
+      excerpt: sourceExcerpt(source.text, focus),
+      characters: source.text.length,
+      unavailable: false as const,
+    };
   },
 });
 

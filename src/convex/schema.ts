@@ -199,6 +199,72 @@ const schema = defineSchema(
       .index("by_material", ["materialId"])
       .index("by_owner", ["ownerId"]),
 
+    // One card in the daily spaced-repetition queue. Cards are materialised
+    // from real study material and Math Lab mistakes, never invented; `key` is
+    // stable across regeneration so a rebuilding pass updates the schedule
+    // instead of duplicating the card.
+    reviewCards: defineTable({
+      ownerId: v.id("users"),
+      key: v.string(),
+      notebookId: v.optional(v.id("notebooks")),
+      materialId: v.optional(v.id("materials")),
+      mistakeId: v.optional(v.id("studyMistakes")),
+      kind: v.union(
+        v.literal("flashcard"),
+        v.literal("quiz"),
+        v.literal("practice"),
+      ),
+      prompt: v.string(),
+      answer: v.string(),
+      options: v.optional(v.array(v.string())),
+      answerIndex: v.optional(v.number()),
+      explanation: v.optional(v.string()),
+      source: v.optional(v.string()),
+      dueAt: v.number(),
+      intervalDays: v.number(),
+      ease: v.number(),
+      reps: v.number(),
+      lapses: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_due", ["ownerId", "dueAt"])
+      .index("by_owner_key", ["ownerId", "key"]),
+
+    // One generated mock paper. Questions and answers stay server-side: while
+    // an attempt is in progress the public query strips answer keys so the
+    // browser cannot read the marking scheme before submitting.
+    mockExams: defineTable({
+      ownerId: v.id("users"),
+      notebookId: v.id("notebooks"),
+      title: v.string(),
+      instructions: v.optional(v.string()),
+      pattern: v.union(v.literal("objective"), v.literal("board")),
+      durationMinutes: v.number(),
+      totalMarks: v.number(),
+      questions: v.any(),
+      status: v.union(
+        v.literal("ready"),
+        v.literal("in_progress"),
+        v.literal("submitted"),
+        v.literal("graded"),
+      ),
+      startedAt: v.optional(v.number()),
+      endsAt: v.optional(v.number()),
+      submittedAt: v.optional(v.number()),
+      responses: v.optional(v.any()),
+      objectiveScore: v.optional(v.number()),
+      score: v.optional(v.number()),
+      report: v.optional(v.any()),
+      model: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_created", ["ownerId", "createdAt"])
+      .index("by_notebook", ["notebookId"]),
+
     // One row per chapter a student has marked as revised. Progress is stored
     // on the account (not in localStorage) so it follows the student to a new
     // device, and `chapterName` is kept beside the index because curriculum

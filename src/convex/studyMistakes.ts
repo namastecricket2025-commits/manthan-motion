@@ -109,6 +109,15 @@ export const resolve = mutation({
     await ctx.db.patch(mistakeId, {
       resolvedAt: resolved ? Date.now() : undefined,
     });
+    if (resolved) {
+      const cards = await ctx.db
+        .query("reviewCards")
+        .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+        .collect();
+      for (const card of cards) {
+        if (card.mistakeId === mistakeId) await ctx.db.delete(card._id);
+      }
+    }
     return { resolved };
   },
 });
@@ -119,6 +128,13 @@ export const remove = mutation({
     const userId = await requireAuthUserId(ctx);
     const row = await ctx.db.get(mistakeId);
     if (!row || row.ownerId !== userId) throw new Error("Mistake not found.");
+    const cards = await ctx.db
+      .query("reviewCards")
+      .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+      .collect();
+    for (const card of cards) {
+      if (card.mistakeId === mistakeId) await ctx.db.delete(card._id);
+    }
     await ctx.db.delete(mistakeId);
   },
 });

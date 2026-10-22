@@ -10,7 +10,7 @@ import {
 } from "@/lib/motion";
 
 import { getTier } from "@/lib/plans";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   ArrowDownRight,
   ArrowRight,
@@ -18,15 +18,18 @@ import {
   BookOpen,
   ChevronRight,
   Check,
+  ClipboardCheck,
   Clock,
   FileText,
   Flame,
   Gauge,
   Layers,
   ListChecks,
+  Mic,
   Network,
   NotebookPen,
   Play,
+  Repeat,
   Presentation,
   Sparkles,
   Target,
@@ -1883,6 +1886,89 @@ function WeakSpots({ onOpenMathLab }: { onOpenMathLab: () => void }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Study tools                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The three retrieval tools, in the order they should be used: review what is
+ * due, sit a timed paper, then explain a topic aloud. The due count is read
+ * from the same scheduled rows the /review page uses.
+ */
+function StudyTools() {
+  const summary = useQuery(api.review.summary);
+  const ensure = useMutation(api.review.ensure);
+  const built = useRef(false);
+  const due = summary?.due ?? 0;
+
+  // Materialise the queue once on the dashboard so the due count is honest
+  // before the student has opened /review for the first time.
+  useEffect(() => {
+    if (built.current) return;
+    built.current = true;
+    void ensure({}).catch(() => {
+      /* The card can still link to the queue if this fails. */
+    });
+  }, [ensure]);
+
+  const tools = [
+    {
+      to: "/review",
+      icon: Repeat,
+      title: "Daily review",
+      body:
+        due > 0
+          ? `${due} card${due === 1 ? "" : "s"} due right now`
+          : "Cards scheduled from your decks and mistakes",
+      badge: due > 0 ? `${due} due` : "Up to date",
+    },
+    {
+      to: "/exam",
+      icon: ClipboardCheck,
+      title: "Mock exam",
+      body: "Choose the time a real paper gives you, then sit it in one go",
+      badge: "Timed",
+    },
+    {
+      to: "/viva",
+      icon: Mic,
+      title: "Voice viva",
+      body: "Explain a topic aloud and find the gaps",
+      badge: "Speak",
+    },
+  ];
+
+  return (
+    <section aria-label="Study tools" className="grid gap-3 sm:grid-cols-3">
+      {tools.map((tool) => (
+        <Link
+          key={tool.to}
+          to={tool.to}
+          className="dashboard-bento group flex flex-col gap-3 p-4 transition-colors hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)]"
+        >
+          <span className="flex items-start justify-between gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--card-border)] text-[var(--signal)]">
+              <tool.icon className="h-4 w-4" />
+            </span>
+            <span className="rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[9.5px] font-medium text-text-dim">
+              {tool.badge}
+            </span>
+          </span>
+          <span>
+            <span className="flex items-center gap-1.5 font-display text-[13.5px] font-bold tracking-tight">
+              {tool.title}
+              <ArrowRight className="h-3 w-3 text-text-dim transition-transform group-hover:translate-x-0.5" />
+            </span>
+            <span className="mt-1 block text-[11px] leading-relaxed text-text-dim">
+              {tool.body}
+            </span>
+          </span>
+        </Link>
+      ))}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Overview                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -2000,6 +2086,9 @@ export function DashboardOverview({
           onOpenLast={() => openWorkspace()}
         />
       )}
+
+      {/* 0b. The retrieval loop: review, exam, viva. */}
+      <StudyTools />
 
       {/* 1. The focal block: the notebook last worked in. */}
       {resumeTarget && (

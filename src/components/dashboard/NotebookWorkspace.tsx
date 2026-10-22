@@ -14,6 +14,7 @@ import {
 import { CramMode } from "@/components/dashboard/CramMode";
 import { MindmapView } from "@/components/dashboard/MindmapView";
 import { NotebookChat } from "@/components/dashboard/NotebookChat";
+import { MaterialSourcePeek } from "@/components/dashboard/SourcePeek";
 import { AudioOverview } from "@/components/dashboard/AudioOverview";
 import { setRecentKind } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { usePlan } from "@/components/plans/PlanProvider";
@@ -133,6 +134,7 @@ export function NotebookWorkspace({
   const [translating, setTranslating] = useState(false);
   const [offlineSaved, setOfflineSaved] = useState(false);
   const [savingOffline, setSavingOffline] = useState(false);
+  const [peekSource, setPeekSource] = useState<string | null>(null);
   const createShare = useMutation(api.shares.create);
   const revokeShare = useMutation(api.shares.revoke);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
@@ -1054,7 +1056,10 @@ export function NotebookWorkspace({
 
                 <div className="material-print-area mt-5">
                   {activeKind === "summary" && (
-                    <SummaryView payload={shownPayload as SummaryPayload} />
+                    <SummaryView
+                      payload={shownPayload as SummaryPayload}
+                      onSourcePeek={setPeekSource}
+                    />
                   )}
                   {activeKind === "flashcards" && (
                     <FlashcardsView
@@ -1064,6 +1069,7 @@ export function NotebookWorkspace({
                   {activeKind === "quiz" && (
                     <QuizView
                       payload={shownPayload as QuizPayload}
+                      onSourcePeek={setPeekSource}
                       onWrongAnswer={({ question, pickedIndex }) => {
                         if (!active) return;
                         void recordMistake({
@@ -1094,6 +1100,15 @@ export function NotebookWorkspace({
           </>
         )}
       </div>
+
+      {active && peekSource ? (
+        <MaterialSourcePeek
+          materialId={active._id}
+          sourceName={peekSource}
+          focus={active.title}
+          onClose={() => setPeekSource(null)}
+        />
+      ) : null}
     </div>
   );
 }
