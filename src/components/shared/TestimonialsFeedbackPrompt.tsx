@@ -175,7 +175,9 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
   const [text, setText] = React.useState("");
   const [displayName, setDisplayName] = React.useState("");
   const [classLabel, setClassLabel] = React.useState("");
-  const [consent, setConsent] = React.useState(false);
+  // Reviews are published by default — the product asks for feedback so it can
+  // show it. The box stays visible so anyone can opt out before sending.
+  const [consent, setConsent] = React.useState(true);
   const [submitted, setSubmitted] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -309,7 +311,7 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
           />
           <span className="text-xs leading-relaxed text-text-dim">
             Show this on the website — it appears in the homepage reviews
-            straight away
+            straight away. Untick to keep it private.
           </span>
         </label>
 

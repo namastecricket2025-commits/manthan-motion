@@ -1,18 +1,20 @@
 import { Moon, Sun } from "lucide-react";
 import { useState } from "react";
+import { useResolvedTheme } from "@/lib/app-settings";
 
 /**
  * The bench light/dark switch.
  *
- * Every bench carries its own theme instead of following the app theme: the
- * STEM Lab is a dark room by design, so a student lights one bench to read a
- * plate in daylight without flipping the whole site. Each bench starts dark,
- * matching the room it sits in, and remembers nothing between visits — the
- * switch is about the bench in front of you.
+ * The lab used to start every bench in the dark even when the rest of the site
+ * was on paper, which meant a light-mode student was dropped into a black room
+ * with an amber glow. The bench now starts on the site's own theme, and the
+ * switch still belongs to the bench: lighting one bench does not flip the
+ * whole dashboard.
  */
 export function useLabTheme() {
+  const appTheme = useResolvedTheme();
   const [chosen, setChosen] = useState<"dark" | "light" | null>(null);
-  const theme: "dark" | "light" = chosen ?? "dark";
+  const theme: "dark" | "light" = chosen ?? appTheme;
   return {
     theme,
     toggle: () => setChosen(theme === "dark" ? "light" : "dark"),
@@ -42,7 +44,9 @@ export function LabThemeToggle({
       ) : (
         <Moon className="h-3.5 w-3.5" />
       )}
-      <span className="hidden sm:inline">{next === "light" ? "Light bench" : "Dark bench"}</span>
+      <span className="hidden sm:inline">
+        {next === "light" ? "Light bench" : "Dark bench"}
+      </span>
     </button>
   );
 }

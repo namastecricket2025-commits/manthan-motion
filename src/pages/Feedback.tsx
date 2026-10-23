@@ -27,8 +27,9 @@ export default function Feedback() {
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-dim">
               Tell us what worked and what did not. A rating is enough; a line
-              about the specific chapter helps more. Nothing is published unless
-              you tick the consent box, and even then it is reviewed first.
+              about the specific chapter helps more. Your review appears in the
+              homepage reviews section straight away — untick the box on the
+              form if you would rather keep it private.
             </p>
           </header>
 

@@ -15,6 +15,7 @@ import { CramMode } from "@/components/dashboard/CramMode";
 import { MindmapView } from "@/components/dashboard/MindmapView";
 import { NotebookChat } from "@/components/dashboard/NotebookChat";
 import { MaterialSourcePeek } from "@/components/dashboard/SourcePeek";
+import { MaterialPrint } from "@/components/print/MaterialPrint";
 import { AudioOverview } from "@/components/dashboard/AudioOverview";
 import { setRecentKind } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { usePlan } from "@/components/plans/PlanProvider";
@@ -137,6 +138,7 @@ export function NotebookWorkspace({
   const [peek, setPeek] = useState<{ sourceName: string; focus?: string } | null>(
     null,
   );
+  const [printing, setPrinting] = useState(false);
   const createShare = useMutation(api.shares.create);
   const revokeShare = useMutation(api.shares.revoke);
   const regenerateRef = useCdPill<HTMLButtonElement>(running.length > 0);
@@ -236,16 +238,13 @@ export function NotebookWorkspace({
   }
 
   /**
-   * Print the material that is on screen, not the whole dashboard. The body
-   * class scopes the print stylesheet; `afterprint` clears it even if the
-   * dialog is cancelled, so the screen never stays half-printed.
+   * Print a clean document built from the material that is on screen. The
+   * dashboard is hidden from layout while the dialog is open, so the paper
+   * carries the sheet and nothing else — no blank leading pages, no cards cut
+   * across a page frame.
    */
   function printMaterial() {
-    const cleanup = () => document.body.classList.remove("material-printing");
-    document.body.classList.add("material-printing");
-    window.addEventListener("afterprint", cleanup, { once: true });
-    window.print();
-    window.setTimeout(cleanup, 1500);
+    setPrinting(true);
   }
 
   async function submitLink() {
@@ -1113,6 +1112,18 @@ export function NotebookWorkspace({
           sourceName={peek.sourceName}
           focus={peek.focus ?? active.title}
           onClose={() => setPeek(null)}
+        />
+      ) : null}
+
+      {printing && active ? (
+        <MaterialPrint
+          kind={activeKind}
+          payload={shownPayload}
+          title={active.title}
+          notebookName={notebookName}
+          sourceCount={active.sourceIds.length}
+          createdAt={active.createdAt}
+          onDone={() => setPrinting(false)}
         />
       ) : null}
     </div>

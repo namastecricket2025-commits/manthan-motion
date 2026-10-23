@@ -66,11 +66,11 @@ export function CursorTip({
           <span
             className="lab-tip__dot"
             style={{
-              background: tip.accent ?? "var(--signal)",
-              boxShadow: `0 0 10px ${tip.accent ?? "var(--signal)"}`,
+              background: tip.accent ?? "var(--lab-ink)",
+              boxShadow: `0 0 10px ${tip.accent ?? "var(--lab-ink)"}`,
             }}
           />
-          <p className="lab-tip__title" style={{ color: tip.accent ?? "var(--signal)" }}>
+          <p className="lab-tip__title" style={{ color: tip.accent ?? "var(--lab-ink)" }}>
             {tip.title}
           </p>
           {tip.body && <p className="lab-tip__body">{tip.body}</p>}

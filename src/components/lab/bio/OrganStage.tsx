@@ -1031,7 +1031,7 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
             <span className="apple-lab-chip">
               <span
                 className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ background: ready ? "var(--signal)" : "var(--lab-amber, #fbbf24)" }}
+                style={{ background: ready ? "var(--lab-ink)" : "var(--lab-ink-micro)" }}
               />
               {ready ? `${definition.parts.length} structures` : "building model…"}
             </span>
@@ -1261,7 +1261,7 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
                 <div className="apple-lab-card px-3.5 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="apple-lab-micro flex items-center gap-2">
-                      <HeartPulse className="h-3.5 w-3.5" style={{ color: "var(--signal)" }} />
+                      <HeartPulse className="h-3.5 w-3.5" style={{ color: "var(--lab-ink)" }} />
                       Heart rate
                     </span>
                     <span className="apple-lab-value text-[13px]">{bpm} bpm</span>
@@ -1308,12 +1308,12 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
                   <p className="apple-lab-micro mb-1.5">What the rate changes</p>
                   <ul className="space-y-1.5 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
                     <li className="flex gap-2">
-                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--signal)]" />
+                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--lab-ink)]" />
                       The chambers bulge and relax once per beat — systole then
                       diastole — so the model speeds up with the slider.
                     </li>
                     <li className="flex gap-2">
-                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--signal)]" />
+                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--lab-ink)]" />
                       Cardiac output is rate × stroke volume: 70 mL per beat is about
                       5 L/min at rest.
                     </li>
@@ -1327,7 +1327,7 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
                 <div className="apple-lab-card px-3.5 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="apple-lab-micro flex items-center gap-2">
-                      <Wind className="h-3.5 w-3.5" style={{ color: "var(--signal)" }} />
+                      <Wind className="h-3.5 w-3.5" style={{ color: "var(--lab-ink)" }} />
                       Lung inflation
                     </span>
                     <span className="apple-lab-value text-[13px] tabular-nums">
@@ -1391,12 +1391,12 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
                   <p className="apple-lab-micro mb-1.5">What the slider changes</p>
                   <ul className="space-y-1.5 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
                     <li className="flex gap-2">
-                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--signal)]" />
+                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--lab-ink)]" />
                       It scales each lobe about its own centre, so the lungs fill like
                       balloons while the airway stays put.
                     </li>
                     <li className="flex gap-2">
-                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--signal)]" />
+                      <MousePointer2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--lab-ink)]" />
                       Turn on the cycle and the slider becomes breath depth: the rate
                       sets how often, the slider sets how deep.
                     </li>
@@ -1410,7 +1410,7 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
                 <div className="apple-lab-card px-3.5 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="apple-lab-micro flex items-center gap-2">
-                      <Droplets className="h-3.5 w-3.5" style={{ color: "var(--signal)" }} />
+                      <Droplets className="h-3.5 w-3.5" style={{ color: "var(--lab-ink)" }} />
                       Filtration rate
                     </span>
                     <span className="apple-lab-value text-[13px] tabular-nums">

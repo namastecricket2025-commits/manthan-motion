@@ -2230,51 +2230,329 @@ html {
    ============================================================ */
 /* The dashboard is a dark, chrome-heavy screen; a photocopy of it is not
    study material. `printMaterial()` puts `material-printing` on <body> for
-   the duration of the dialog, and this block prints only the active sheet on
-   white, with the controls that make no sense on paper hidden. */
+   the duration of the dialog and mounts a separate white sheet, so the only
+   thing left on paper is that sheet. The old rules hid the app with
+   `visibility: hidden`, which kept every dashboard card, portal and spacer in
+   the layout — that is what produced several blank pages before the content.
+   The print block below now removes every body-level sibling of the sheet
+   from layout instead. */
+
+/* ============================================================
+   The printed sheet — a real document, not a screenshot of an app
+   ============================================================
+   `MaterialPrint` mounts a white document directly under <body> while the
+   dialog is open. The app root is removed from layout (not merely hidden, which
+   kept every dashboard card in the flow and produced blank leading pages), so
+   the only content on paper is the sheet below. Everything here is sized in
+   millimetres or points, because paper does not have a viewport.
+   ============================================================ */
+
+.material-print-root {
+  display: none;
+}
+
 @media print {
   @page {
-    margin: 16mm;
+    size: A4 portrait;
+    margin: 14mm 14mm 16mm;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   body.material-printing {
-    background: #fff !important;
+    display: block !important;
+    position: static !important;
   }
 
-  body.material-printing * {
-    visibility: hidden !important;
-  }
-
-  body.material-printing .material-print-area,
-  body.material-printing .material-print-area * {
-    visibility: visible !important;
-  }
-
-  body.material-printing .material-print-area {
-    position: absolute !important;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  body.material-printing .material-print-area * {
-    color: #111 !important;
-    background: transparent !important;
-    border-color: #ddd !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-  }
-
-  body.material-printing .material-print-area button,
-  body.material-printing .material-print-area [role="button"],
-  body.material-printing .material-print-area svg.lucide {
+  /* Everything except the sheet leaves the flow. `visibility: hidden` kept the
+     full dashboard (and every portal/hidden toast) occupying page boxes, so
+     the sheet began three or four pages in and none of those pages printed
+     anything. Removing the siblings themselves is the actual fix. */
+  body.material-printing > *:not(.material-print-root) {
     display: none !important;
   }
 
-  body.material-printing .material-print-area a {
-    text-decoration: underline;
+  body.material-printing .material-print-root {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    color: #111111;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    /* The mind map is drawn with app tokens; on paper every one of them is
+       ink, so it prints as a line drawing rather than a dark-mode panel. */
+    --signal: #111111;
+    --signal-strong: #111111;
+    --text-main: #111111;
+    --text-dim: #333333;
+    --card: #ffffff;
+    --card-border: #cfcfcf;
+    --panel: #ffffff;
+    --primary-foreground: #ffffff;
+  }
+
+  .material-print-root button,
+  .material-print-root [role="button"],
+  .material-print-root .print-hide {
+    display: none !important;
+  }
+
+  .print-sheet-head {
+    border-bottom: 1.5pt solid #111111;
+    padding-bottom: 4mm;
+    margin-bottom: 6mm;
+  }
+
+  .print-brand {
+    margin: 0 0 1.5mm;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #555555;
+  }
+
+  .print-sheet-title {
+    margin: 0;
+    font-size: 20pt;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #111111;
+  }
+
+  .print-meta {
+    margin: 2mm 0 0;
+    font-size: 8.5pt;
+    color: #555555;
+  }
+
+  .print-lead {
+    margin: 0 0 5mm;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #222222;
+  }
+
+  .print-heading {
+    margin: 0 0 2mm;
+    font-size: 13pt;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #111111;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-ordinal {
+    display: inline-block;
+    margin-right: 2.5mm;
+    font-size: 8.5pt;
+    letter-spacing: 0.08em;
+    color: #777777;
+    vertical-align: 0.1em;
+  }
+
+  .print-block {
+    margin: 0 0 5mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-list {
+    margin: 0;
+    padding-left: 5mm;
+  }
+
+  .print-list li {
+    margin: 0 0 1.4mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-source {
+    margin: 1.5mm 0 0;
+    font-size: 7.5pt;
+    color: #666666;
+    font-style: italic;
+  }
+
+  .print-terms {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2mm 6mm;
+  }
+
+  .print-term {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-left: 1pt solid #cccccc;
+    padding-left: 2.5mm;
+  }
+
+  .print-term dt {
+    font-weight: 700;
+    color: #111111;
+  }
+
+  .print-term dd {
+    margin: 0.5mm 0 0;
+    color: #333333;
+  }
+
+  .print-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+  }
+
+  .print-card {
+    border: 0.75pt solid #cccccc;
+    border-radius: 2mm;
+    padding: 3mm 3.5mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-card-index {
+    margin: 0 0 1mm;
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #777777;
+  }
+
+  .print-card-front {
+    margin: 0 0 1.5mm;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #111111;
+  }
+
+  .print-card-back {
+    margin: 0;
+    color: #333333;
+  }
+
+  .print-questions {
+    margin: 0;
+    padding-left: 6mm;
+  }
+
+  .print-question {
+    margin: 0 0 5mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-question-text {
+    margin: 0 0 1.5mm;
+    font-weight: 600;
+    color: #111111;
+  }
+
+  .print-options {
+    margin: 0;
+    padding-left: 6mm;
+    color: #333333;
+  }
+
+  .print-options li {
+    margin-bottom: 0.8mm;
+  }
+
+  .print-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .print-answer-key {
+    column-count: 2;
+    column-gap: 8mm;
+    font-size: 8.5pt;
+    line-height: 1.4;
+  }
+
+  .print-answer-key p {
+    margin: 0 0 2mm;
+    break-inside: avoid;
+  }
+
+  .print-slide {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-slide:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .print-slide-number {
+    margin: 0 0 1mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #777777;
+  }
+
+  .print-notes {
+    margin: 3mm 0 0;
+    padding-top: 2mm;
+    border-top: 0.5pt solid #dddddd;
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #555555;
+  }
+
+  .print-mindmap {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-mindmap svg {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 215mm;
+    min-width: 0 !important;
+    height: auto;
+    margin: 0 !important;
+  }
+
+  .print-mindmap p {
+    font-size: 8.5pt;
+    color: #555555;
+  }
+
+  .print-footer {
+    margin-top: 8mm;
+    padding-top: 3mm;
+    border-top: 0.5pt solid #dddddd;
+    font-size: 7.5pt;
+    color: #777777;
   }
 }
 

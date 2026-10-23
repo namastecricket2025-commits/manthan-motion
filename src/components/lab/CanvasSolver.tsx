@@ -307,7 +307,7 @@ export function CanvasSolver() {
             }}
             className={"tool-dropzone mt-4" + (dragOver ? " is-over" : "")}
           >
-            <ScanSearch className="h-6 w-6 text-[var(--signal)]" />
+            <ScanSearch className="h-6 w-6 text-[var(--lab-ink)]" />
             <span className="text-sm font-medium">
               Drop an equation sheet or diagram
             </span>

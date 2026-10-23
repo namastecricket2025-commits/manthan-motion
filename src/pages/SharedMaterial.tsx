@@ -14,9 +14,10 @@ import {
   type SummaryPayload,
 } from "@/components/dashboard/MaterialViews";
 import { MindmapView } from "@/components/dashboard/MindmapView";
+import { MaterialPrint } from "@/components/print/MaterialPrint";
 import { useQuery } from "convex/react";
 import { Loader2, Lock, Printer, Share2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 
 /**
@@ -40,13 +41,7 @@ export default function SharedMaterial() {
     };
   }, [material]);
 
-  function printSheet() {
-    const cleanup = () => document.body.classList.remove("material-printing");
-    document.body.classList.add("material-printing");
-    window.addEventListener("afterprint", cleanup, { once: true });
-    window.print();
-    window.setTimeout(cleanup, 1500);
-  }
+  const [printing, setPrinting] = useState(false);
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -100,7 +95,7 @@ export default function SharedMaterial() {
               </div>
               <button
                 type="button"
-                onClick={printSheet}
+                onClick={() => setPrinting(true)}
                 className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-3.5 py-2 text-[11.5px] font-medium text-text-dim transition-colors hover:text-foreground"
               >
                 <Printer className="h-3.5 w-3.5" />
@@ -154,6 +149,17 @@ export default function SharedMaterial() {
         )}
       </main>
       <Footer />
+      {printing && material ? (
+        <MaterialPrint
+          kind={material.kind}
+          payload={material.payload}
+          title={material.title}
+          notebookName={material.notebookName}
+          sourceCount={material.sourceCount}
+          createdAt={material.createdAt}
+          onDone={() => setPrinting(false)}
+        />
+      ) : null}
     </div>
   );
 }
