@@ -35,6 +35,7 @@ import {
 } from "@/components/mathlab/solution";
 import "@/components/mathlab/mathlab.css";
 import { stopSpeaking } from "@/components/voice/avia";
+import { createDictation, type Dictation } from "@/components/voice/dictation";
 import {
   ArrowRight,
   Calculator,
@@ -300,7 +301,7 @@ export function MathLab() {
   const [calcOpen, setCalcOpen] = useState(false);
   const [historyId, setHistoryId] = useState<Id<"mathSolutions"> | null>(null);
   const mathInputRef = useRef<MathInputHandle | null>(null);
-  const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
+  const dictationRef = useRef<Dictation | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const copiedTimer = useRef<number | null>(null);
   const locked = !can("mathLabBasic");
@@ -344,7 +345,8 @@ export function MathLab() {
   }, [stopNarration]);
 
   useEffect(() => () => {
-    recognitionRef.current?.abort();
+    dictationRef.current?.abort();
+    dictationRef.current = null;
     stopSpeaking();
     if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
   }, []);
@@ -524,25 +526,35 @@ export function MathLab() {
   }, [askEngine, generateUploadUrl, hush]);
 
   const toggleMic = useCallback(() => {
-    if (listening) { recognitionRef.current?.stop(); return; }
-    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!Recognition) { setEngineError("This browser has no speech recognition — type the problem instead."); return; }
-    const recognition = new Recognition();
-    recognition.lang = "en-IN";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.onresult = (event: AviaSpeechRecognitionEvent) => {
-      let heard = "";
-      for (let i = 0; i < event.results.length; i += 1) heard += event.results[i][0].transcript;
-      setFormula(heard.trim());
-    };
-    recognition.onerror = () => { setListening(false); setEngineError("I did not catch that. Tap the microphone again, or type the problem."); };
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
+    if (dictationRef.current) {
+      dictationRef.current.stop();
+      return;
+    }
+    if (typeof window === "undefined" || (!window.SpeechRecognition && !window.webkitSpeechRecognition)) {
+      setEngineError("This browser has no speech recognition — type the problem instead.");
+      return;
+    }
     setEngineError(null);
-    setListening(true);
-    recognition.start();
-  }, [listening]);
+
+    const dictation = createDictation({
+      lang: "en-IN",
+      // A spoken problem is one sentence; stop soon after the student does.
+      silenceMs: 1600,
+      terms: MATH_TERMS,
+      repair: MATH_TERMS,
+      onText: (text) => setFormula(text),
+      onListening: setListening,
+      onStop: (reason) => {
+        dictationRef.current = null;
+        setListening(false);
+        if (reason === "error") {
+          setEngineError("I did not catch that. Tap the microphone again, or type the problem.");
+        }
+      },
+    });
+    dictationRef.current = dictation;
+    dictation.start();
+  }, []);
 
   const totalSteps = useMemo(
     () => (solution ? solution.problems.reduce((sum, problem) => sum + problem.steps.length, 0) : 0),

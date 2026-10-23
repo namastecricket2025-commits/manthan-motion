@@ -95,8 +95,13 @@ export const list = query({
       id: exam._id,
       title: exam.title,
       instructions: exam.instructions ?? "",
-      notebookId: exam.notebookId,
-      notebookName: names.get(exam.notebookId) ?? "Notebook",
+      notebookId: exam.notebookId ?? null,
+      notebookName: exam.notebookId
+        ? (names.get(exam.notebookId) ?? "Notebook")
+        : exam.syllabus
+          ? `Class ${exam.syllabus.className} · ${exam.syllabus.subject}`
+          : "Mock paper",
+      syllabus: exam.syllabus ?? null,
       pattern: exam.pattern,
       durationMinutes: exam.durationMinutes,
       totalMarks: exam.totalMarks,
@@ -121,12 +126,18 @@ export const get = query({
 
     const questions = asQuestions(exam.questions);
     const hideAnswers = exam.status === "ready" || exam.status === "in_progress";
-    const notebook = await ctx.db.get(exam.notebookId);
+    const notebook = exam.notebookId
+      ? await ctx.db.get(exam.notebookId)
+      : null;
+    const syllabus = exam.syllabus ?? null;
 
     return {
       id: exam._id,
-      notebookId: exam.notebookId,
-      notebookName: notebook?.name ?? "Notebook",
+      notebookId: exam.notebookId ?? null,
+      notebookName:
+        notebook?.name ??
+        (syllabus ? `Class ${syllabus.className} · ${syllabus.subject}` : "Mock paper"),
+      syllabus,
       title: exam.title,
       instructions: exam.instructions ?? "",
       pattern: exam.pattern,
@@ -316,7 +327,15 @@ export const getForGrading = internalQuery({
 export const insertExam = internalMutation({
   args: {
     ownerId: v.id("users"),
-    notebookId: v.id("notebooks"),
+    notebookId: v.optional(v.id("notebooks")),
+    syllabus: v.optional(
+      v.object({
+        className: v.string(),
+        subject: v.string(),
+        chapters: v.array(v.string()),
+        paperKind: v.string(),
+      }),
+    ),
     title: v.string(),
     instructions: v.optional(v.string()),
     pattern: v.union(v.literal("objective"), v.literal("board")),
@@ -330,6 +349,7 @@ export const insertExam = internalMutation({
     return await ctx.db.insert("mockExams", {
       ownerId: args.ownerId,
       notebookId: args.notebookId,
+      syllabus: args.syllabus,
       title: args.title,
       instructions: args.instructions,
       pattern: args.pattern,

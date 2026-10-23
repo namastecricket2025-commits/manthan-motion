@@ -237,7 +237,17 @@ const schema = defineSchema(
     // browser cannot read the marking scheme before submitting.
     mockExams: defineTable({
       ownerId: v.id("users"),
-      notebookId: v.id("notebooks"),
+      // A paper comes either from a notebook the student built or from the
+      // school syllabus; the second kind has no notebook at all.
+      notebookId: v.optional(v.id("notebooks")),
+      syllabus: v.optional(
+        v.object({
+          className: v.string(),
+          subject: v.string(),
+          chapters: v.array(v.string()),
+          paperKind: v.string(),
+        }),
+      ),
       title: v.string(),
       instructions: v.optional(v.string()),
       pattern: v.union(v.literal("objective"), v.literal("board")),

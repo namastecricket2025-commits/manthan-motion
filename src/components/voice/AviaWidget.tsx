@@ -9,6 +9,7 @@ import {
   speakText,
   stopSpeaking,
 } from "@/components/voice/avia";
+import { createDictation, studyTerms, type Dictation } from "@/components/voice/dictation";
 import { renderBlocks, toSpokenText } from "@/components/voice/format";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -89,11 +90,9 @@ export function AviaWidget() {
   const idRef = useRef(1);
   const turnsRef = useRef(turns);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
-  const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
-  /** What the recogniser has heard this session, and the pause timer. */
-  const heardRef = useRef("");
-  const silenceRef = useRef<number | null>(null);
-  const sentRef = useRef(false);
+  /** The live take, and the text it has produced so far. */
+  const dictationRef = useRef<Dictation | null>(null);
+  const transcriptRef = useRef("");
   const queuedRef = useRef(0);
   const greetedRef = useRef(false);
   const openRef = useRef(false);
@@ -217,153 +216,96 @@ export function AviaWidget() {
 
   /* ---------------- listening ----------------
 
-     The recogniser fires a result the moment IT thinks the speaker paused,
-     which on the first word is almost immediately — the old build sent "so"
-     as a message while the student was still asking their question. Waiting is
-     the entire job here, so the technique is:
+     All of the accumulation lives in `createDictation`, because the viva had
+     the same bug this panel did: a phone re-reports the same sentence at a new
+     result index, and appending the whole result list printed it five times.
+     What the panel owns is the hand-off:
 
-       1. `interimResults` and `continuous` both ON: the engine keeps listening
-          through the small pauses inside a sentence, and hands over its best
-          guess as it revises it.
-       2. Every result rebuilds one buffer (settled results plus the one still
-          being revised) and that buffer is written into the composer, so the
-          student can watch the sentence being taken down.
-       3. Nothing is sent until the room is actually quiet: a silence timer is
-          re-armed on every result and only fires when no new words arrive for
-          SILENCE_MS. Tapping the mic while it listens commits immediately,
-          because that tap means "that's what I said".
-       4. If the browser ends the session on its own (Safari does, Chrome does
-          after about a minute), whatever was heard is committed rather than
-          dropped. */
+       - the live transcript is mirrored into the composer while the student
+         talks, so they can watch the sentence being taken down;
+       - nothing is sent until the room is quiet for SILENCE_MS, or until the
+         mic is tapped again (that tap means "that's what I said");
+       - closing the panel or starting a new chat drops the take entirely. */
 
-  const clearSilence = useCallback(() => {
-    if (silenceRef.current !== null) {
-      window.clearTimeout(silenceRef.current);
-      silenceRef.current = null;
-    }
+  /** Words from the last couple of turns, used to bias and repair dictation. */
+  const vocabulary = useCallback(() => {
+    return turnsRef.current
+      .filter((turn) => turn.from === "student")
+      .slice(-2)
+      .flatMap((turn) => turn.text.split(/[^A-Za-z0-9'-]+/))
+      .filter((word) => word.length > 3);
   }, []);
 
-  /** Hand the accumulated speech to Avia — at most once per listening session. */
-  const commit = useCallback(() => {
-    clearSilence();
-    const recognition = recognitionRef.current;
-    recognitionRef.current = null;
-    try {
-      recognition?.stop();
-    } catch {
-      // Already stopped or never started; nothing to do.
-    }
-    setListening(false);
-    const heard = heardRef.current;
-    const transcript = heard.replace(/\s+/g, " ").trim();
-    heardRef.current = "";
-    /* Clear the composer only while it is still showing the live transcript —
-       never wipe something the student typed over the top of it. */
-    setDraft((current) => (current === heard ? "" : current));
-    if (!transcript || sentRef.current) return;
-    sentRef.current = true;
-    void sendRef.current(transcript);
-  }, [clearSilence]);
-
-  /** Drop the session without sending anything (closing the panel, new chat). */
+  /** Drop the take without sending anything (closing the panel, new chat). */
   const stopListening = useCallback(() => {
-    clearSilence();
-    const recognition = recognitionRef.current;
-    recognitionRef.current = null;
-    try {
-      recognition?.stop();
-    } catch {
-      // See `commit`.
-    }
-    heardRef.current = "";
+    const dictation = dictationRef.current;
+    dictationRef.current = null;
+    transcriptRef.current = "";
+    dictation?.abort();
     setListening(false);
-  }, [clearSilence]);
+  }, []);
 
   const startListening = useCallback(() => {
     if (typeof window === "undefined") return;
-    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!Ctor) {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
       setNote(
         "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
       );
       return;
     }
-    if (recognitionRef.current) {
-      // Already listening: this tap means "I'm done" — send what she has.
-      commit();
+
+    // Already listening: this tap means "I'm done" — send what she has.
+    if (dictationRef.current) {
+      dictationRef.current.stop();
       return;
     }
 
     stopSpeaking();
-    const recognition = new Ctor();
-    recognition.lang = "en-US";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    setNote(null);
+    transcriptRef.current = "";
+    /* Tapping the mic pulls up a fresh take; anything already in the composer
+       was typed by the student and is replaced only once speech arrives. */
 
-    heardRef.current = "";
-    sentRef.current = false;
-    /* The draft is NOT cleared here, and neither is it cleared when a session
-       ends empty: anything the student had typed is theirs, and the live
-       transcript simply replaces the box once the first word arrives
-       (`setDraft(heardRef.current)` in onresult). */
+    const dictation = createDictation({
+      lang: "en-IN",
+      silenceMs: SILENCE_MS,
+      terms: () => [...studyTerms(), ...vocabulary()],
+      repair: vocabulary,
+      onText: (text) => {
+        transcriptRef.current = text;
+        if (text) setDraft(text);
+      },
+      onListening: (on) => setListening(on),
+      onStop: (reason, text) => {
+        dictationRef.current = null;
+        setListening(false);
+        const transcript = text.replace(/\s+/g, " ").trim();
+        transcriptRef.current = "";
+        const willSend =
+          transcript.length > 0 && (reason === "silence" || reason === "user");
+        /* Clear the composer only while it still shows a take being sent. */
+        setDraft((current) => (willSend && current === transcript ? "" : current));
 
-    /** Re-arm the pause timer: it is the only thing that sends a message. */
-    const armSilence = () => {
-      clearSilence();
-      silenceRef.current = window.setTimeout(() => commit(), SILENCE_MS);
-    };
+        if (!transcript) {
+          if (reason === "unsupported") {
+            setNote(
+              "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
+            );
+          } else if (reason === "error") {
+            setNote(
+              "I need microphone permission to hear you. Allow it in the address bar and try again.",
+            );
+          }
+          return;
+        }
 
-    recognition.onstart = () => {
-      setListening(true);
-      setNote(null);
-    };
-    recognition.onresult = (event) => {
-      let settled = "";
-      let pending = "";
-      for (let i = 0; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        const text = result?.[0]?.transcript ?? "";
-        if (result?.isFinal) settled += text + " ";
-        else pending += text + " ";
-      }
-      heardRef.current = (settled + pending).replace(/\s+/g, " ").trim();
-      setDraft(heardRef.current);
-      armSilence();
-    };
-    recognition.onerror = (event) => {
-      recognitionRef.current = null;
-      setListening(false);
-      clearSilence();
-      if (heardRef.current.trim()) {
-        // Whatever reached us before the error is still their question.
-        commit();
-        return;
-      }
-      setNote(
-        event.error === "not-allowed"
-          ? "I need microphone permission to hear you. Allow it in the address bar and try again."
-          : event.error === "no-speech"
-            ? "I didn't hear anything. Tap the mic when you're ready."
-            : "I didn't catch that. Give the mic another tap and speak clearly.",
-      );
-    };
-    recognition.onend = () => {
-      recognitionRef.current = null;
-      clearSilence();
-      /* The engine ended the session itself. Anything it did hand over is the
-         student's question, so it is committed, not discarded. */
-      if (heardRef.current.trim()) commit();
-      else setListening(false);
-    };
+        if (willSend) void sendRef.current(transcript);
+      },
+    });
 
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-    } catch {
-      recognitionRef.current = null;
-    }
-  }, [clearSilence, commit]);
+    dictationRef.current = dictation;
+    dictation.start();
+  }, [vocabulary]);
 
   listenRef.current = startListening;
 
@@ -371,9 +313,8 @@ export function AviaWidget() {
 
   useEffect(
     () => () => {
-      if (silenceRef.current !== null) window.clearTimeout(silenceRef.current);
-      recognitionRef.current?.abort();
-      recognitionRef.current = null;
+      dictationRef.current?.abort();
+      dictationRef.current = null;
       stopSpeaking();
     },
     [],
@@ -577,7 +518,11 @@ export function AviaWidget() {
             >
               <input
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                  // Typing over a live transcript edits the take, not the mic.
+                  dictationRef.current?.setSeed(event.target.value);
+                  setDraft(event.target.value);
+                }}
                 placeholder={supported ? "Or type to Avia…" : "Type to Avia…"}
                 className="avia-input"
                 aria-label="Type a message to Avia"

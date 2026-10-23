@@ -1925,7 +1925,7 @@ function StudyTools() {
       to: "/exam",
       icon: ClipboardCheck,
       title: "Mock exam",
-      body: "Choose the time a real paper gives you, then sit it in one go",
+      body: "Class 8–10 papers by subject and chapter, or from your own notebook",
       badge: "Timed",
     },
     {

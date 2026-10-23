@@ -12,17 +12,39 @@ import {
   languageLock,
   parseJsonLoose,
 } from "./ai";
+import {
+  findClass,
+  findSubject,
+  paperPlan,
+  scopeLine,
+  type ExamPattern,
+  type PaperKind,
+} from "../lib/curriculum";
+import { boardBank, type BankQuestion } from "../lib/boardBank";
 
 /**
  * Mock-paper generation and marking.
  *
- * Generation is one model call that returns the whole paper. Marking is a
- * second call for the written section only: objective answers are scored by the
- * `exams.submit` mutation, where the answer key never leaves the server.
+ * A paper is written one section at a time. That is deliberate: a 60-minute
+ * objective test or a three-hour board simulation would need thirty to sixty
+ * questions, and a single model reply that long is where JSON gets truncated
+ * and questions get dropped. Each batch is a small, independently valid reply,
+ * and the batches are merged at the end.
+ *
+ * Two sources feed a paper:
+ *
+ *  - `notebook` — the student's own sources, as before.
+ *  - `syllabus` — a CBSE class, subject and chapter list, so an account with
+ *    no sources can still sit a paper. For Class 10 "board simulation" papers,
+ *    real questions from the 2020–2025 board papers are inserted first and the
+ *    model writes the rest around them.
  */
 
 const MAX_CORPUS_CHARS = 16_000;
 const CHARS_PER_TOKEN = 4;
+
+/** Questions per model call, by type — small enough that JSON never overruns. */
+const BATCH_SIZE = { mcq: 18, short: 8, long: 6 } as const;
 
 type QuestionType = "mcq" | "short" | "long";
 
@@ -75,32 +97,13 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function countsFor(durationMinutes: number, pattern: "objective" | "board") {
-  if (pattern === "objective") {
-    return {
-      mcq: clamp(Math.round(durationMinutes / 1.5), 5, 30),
-      short: 0,
-      long: 0,
-    };
-  }
-  // A full board paper is too much JSON for one response. This is a condensed
-  // paper: enough questions to make the chosen clock feel real, while keeping
-  // the reply inside a single reliable model response.
-  return {
-    mcq: clamp(Math.round(durationMinutes / 12), 4, 15),
-    short: clamp(Math.round(durationMinutes / 35), 2, 6),
-    long: clamp(Math.round(durationMinutes / 60), 1, 3),
-  };
+function normalisePrompt(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]+/g, " ").trim();
 }
 
-function corpusFor(
-  sources: { name: string; text: string }[],
-): string {
+function corpusFor(sources: { name: string; text: string }[]): string {
   if (sources.length === 0) return "";
-  const share = Math.max(
-    1200,
-    Math.floor(MAX_CORPUS_CHARS / sources.length),
-  );
+  const share = Math.max(1200, Math.floor(MAX_CORPUS_CHARS / sources.length));
   return sources
     .map(
       (source) =>
@@ -109,19 +112,29 @@ function corpusFor(
     .join("\n\n");
 }
 
-const PAPER_SYSTEM = [
+const NOTEBOOK_SYSTEM = [
   "You are Manthan's mock-exam setter for Indian school students in Classes 8 to 12 (CBSE and ICSE).",
   "Build a paper ONLY from the supplied notebook sources. Never add a fact, figure, formula or example that the sources do not support.",
   "Questions must be answerable from those sources alone. A question that needs outside knowledge is a bad question here.",
   "For multiple-choice questions, write exactly four plausible options and set answerIndex to the 0-based correct option. Distractors should be believable mistakes, not jokes.",
   "For written questions, provide a complete modelAnswer and two to four markingPoints a teacher could tick.",
-  "Group the paper into named sections. The paper should feel like a real school paper, not a list of trivia.",
+  "Write mathematical expressions in plain text with Unicode symbols (x², √3, ½, 30°, ∠ABC), never LaTeX, $ signs or Markdown.",
   "Reply with a single JSON object and nothing else — no prose before or after it.",
 ].join(" ");
 
-const paperQuestionSchema = z.object({
-  type: z.string(),
-  marks: z.number().optional(),
+const SYLLABUS_SYSTEM = [
+  "You are a senior CBSE paper setter in India, writing a mock examination from the NCERT syllabus.",
+  "Write questions at the standard of the named class and subject, the way a real school or board paper is written: precise, syllabus-bound, with no trivia and no question that needs a diagram you cannot supply.",
+  "Use the NCERT terminology for that chapter. Do not lift a question from a textbook exercise word for word; write fresh questions in the board's style.",
+  "For multiple-choice questions write exactly four plausible options and set answerIndex to the 0-based correct option. Distractors must be the mistakes students actually make.",
+  "For written questions, give a complete modelAnswer and two to five markingPoints that a CBSE examiner would tick.",
+  "Write mathematical expressions in plain text with Unicode symbols (x², √3, ½, 30°, ∠ABC), never LaTeX, $ signs or Markdown.",
+  "Reply with a single JSON object and nothing else — no prose before or after it.",
+].join(" ");
+
+const questionSchema = z.object({
+  type: z.string().optional().catch(undefined),
+  marks: z.number().optional().catch(undefined),
   prompt: z.string().min(1),
   options: z.array(z.string()).optional().catch(undefined),
   answerIndex: z.number().optional().catch(undefined),
@@ -131,112 +144,228 @@ const paperQuestionSchema = z.object({
   source: z.string().optional().catch(undefined),
 });
 
-const paperSchema = z.object({
-  title: z.string().optional().catch(undefined),
-  instructions: z.string().optional().catch(undefined),
-  sections: z
-    .array(
-      z.object({
-        name: z.string().optional().catch(undefined),
-        questions: z.array(paperQuestionSchema).min(1),
-      }),
-    )
-    .min(1),
+const listSchema = z.object({
+  questions: z.array(questionSchema).min(1),
 });
 
-function normalisePaper(
-  parsed: z.infer<typeof paperSchema>,
-): { questions: PaperQuestion[]; totalMarks: number } {
-  const questions: PaperQuestion[] = [];
-  parsed.sections.forEach((section, sectionIndex) => {
-    const sectionName =
-      cleanLine(section.name ?? "") || `Section ${String.fromCharCode(65 + sectionIndex)}`;
-    section.questions.forEach((raw) => {
-      if (questions.length >= 40) return;
-      const lowered = cleanLine(raw.type).toLowerCase();
-      const type: QuestionType | null =
-        lowered.includes("mcq") || lowered.includes("multiple")
-          ? "mcq"
-          : lowered.includes("short") || lowered.includes("brief")
-            ? "short"
-            : lowered.includes("long") || lowered.includes("essay")
-              ? "long"
-              : null;
-      if (!type) return;
+/** Turn one raw model question into the stored shape, forcing the asked type. */
+function normalise(
+  raw: z.infer<typeof questionSchema>,
+  type: QuestionType,
+  section: string,
+  marks: number,
+): PaperQuestion | null {
+  const prompt = cleanLine(raw.prompt ?? "");
+  if (!prompt) return null;
 
-      const prompt = cleanLine(raw.prompt);
-      if (!prompt) return;
+  if (type === "mcq") {
+    const options = (raw.options ?? [])
+      .map((option) => cleanLine(option))
+      .filter(Boolean)
+      .slice(0, 4);
+    if (options.length < 2) return null;
+    return {
+      id: "",
+      section,
+      type,
+      marks,
+      prompt,
+      options,
+      answerIndex: clamp(Math.round(raw.answerIndex ?? 0), 0, options.length - 1),
+      explanation: raw.explanation ? cleanLine(raw.explanation) : undefined,
+      source: raw.source ? cleanLine(raw.source) : undefined,
+    };
+  }
 
-      if (type === "mcq") {
-        const options = (raw.options ?? [])
-          .map((option) => cleanLine(option))
-          .filter(Boolean)
-          .slice(0, 4);
-        if (options.length < 2) return;
-        const answerIndex = clamp(
-          Math.round(raw.answerIndex ?? 0),
-          0,
-          options.length - 1,
-        );
-        questions.push({
-          id: `q${questions.length + 1}`,
-          section: sectionName,
-          type,
-          marks: 1,
-          prompt,
-          options,
-          answerIndex,
-          explanation: raw.explanation
-            ? cleanLine(raw.explanation)
-            : undefined,
-          source: raw.source ? cleanLine(raw.source) : undefined,
-        });
-        return;
-      }
-
-      const markingPoints = (raw.markingPoints ?? [])
-        .map((point) => cleanLine(point))
-        .filter(Boolean)
-        .slice(0, 5);
-      const modelAnswer = raw.modelAnswer
-        ? cleanLine(raw.modelAnswer)
-        : markingPoints.join("; ");
-      if (!modelAnswer) return;
-
-      questions.push({
-        id: `q${questions.length + 1}`,
-        section: sectionName,
-        type,
-        marks: type === "short" ? 3 : 5,
-        prompt,
-        modelAnswer,
-        markingPoints,
-        source: raw.source ? cleanLine(raw.source) : undefined,
-      });
-    });
-  });
+  const markingPoints = (raw.markingPoints ?? [])
+    .map((point) => cleanLine(point))
+    .filter(Boolean)
+    .slice(0, 6);
+  const modelAnswer = raw.modelAnswer
+    ? cleanLine(raw.modelAnswer)
+    : markingPoints.join("; ");
+  if (!modelAnswer && markingPoints.length === 0) return null;
 
   return {
-    questions,
-    totalMarks: questions.reduce((total, question) => total + question.marks, 0),
+    id: "",
+    section,
+    type,
+    marks,
+    prompt,
+    modelAnswer: modelAnswer || markingPoints.join("; "),
+    markingPoints,
+    source: raw.source ? cleanLine(raw.source) : undefined,
+  };
+}
+
+interface BatchRequest {
+  type: QuestionType;
+  count: number;
+  section: string;
+  marks: number;
+}
+
+/** One model call, one type of question, with a schema-shaped reply. */
+async function writeBatch(
+  ctx: ActionCtx,
+  ownerId: Id<"users">,
+  system: string,
+  brief: string[],
+  request: BatchRequest,
+  avoid: string[],
+): Promise<{ questions: PaperQuestion[]; model: string }> {
+  const style =
+    request.type === "mcq"
+      ? [
+          `Write exactly ${request.count} multiple-choice question${request.count === 1 ? "" : "s"}, ${request.marks} mark each.`,
+          "Each question has four options and exactly one correct option.",
+          'Return JSON: {"questions":[{"prompt":string,"options":[string,string,string,string],"answerIndex":number,"explanation":string}]}',
+        ]
+      : [
+          `Write exactly ${request.count} ${request.type === "short" ? "short-answer" : "long-answer"} question${request.count === 1 ? "" : "s"}, ${request.marks} marks each.`,
+          request.type === "short"
+            ? "A short answer is answerable in three or four sentences."
+            : "A long answer is answerable in a structured paragraph of six to ten sentences.",
+          'Return JSON: {"questions":[{"prompt":string,"modelAnswer":string,"markingPoints":[string]}]}',
+        ];
+
+  const prompt = [
+    ...brief,
+    style[0],
+    style[1],
+    avoid.length > 0
+      ? `Do not repeat or rephrase any of these questions already on the paper:\n- ${avoid.slice(-24).join("\n- ")}`
+      : "",
+    style[2],
+    "No preamble, no explanation outside the JSON object.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const candidates = await resolveCandidates();
+
+  const attempt = async (extra: string | null) => {
+    const full = extra ? `${prompt}\n\n${extra}` : prompt;
+    const reply = await callModel(candidates, system, full, undefined, 0.55);
+    await meter(ctx, ownerId, full, reply);
+    const parsed = listSchema.parse(parseJsonLoose(reply.text));
+    return {
+      model: reply.model,
+      questions: parsed.questions
+        .map((raw) =>
+          normalise(raw, request.type, request.section, request.marks),
+        )
+        .filter((question): question is PaperQuestion => question !== null),
+    };
+  };
+
+  try {
+    return await attempt(null);
+  } catch {
+    return await attempt(
+      "CORRECTION: the previous reply was not the required JSON object. Return one complete JSON object only, with the `questions` array.",
+    );
+  }
+}
+
+/**
+ * How many of each type a paper needs, and how many marks each carries.
+ * Objective papers are all one-mark MCQs; board papers follow CBSE's
+ * 1 / 3 / 5-mark weighting.
+ */
+function planSections(
+  plan: ReturnType<typeof paperPlan>,
+  pattern: ExamPattern,
+): BatchRequest[] {
+  if (pattern === "objective") {
+    return [
+      { type: "mcq", count: plan.mcq, section: "Section A · Multiple choice", marks: 1 },
+    ];
+  }
+  return [
+    { type: "mcq", count: plan.mcq, section: "Section A · Multiple choice", marks: 1 },
+    { type: "short", count: plan.short, section: "Section B · Short answer", marks: 3 },
+    { type: "long", count: plan.long, section: "Section C · Long answer", marks: 5 },
+  ];
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const output: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    output.push(items.slice(index, index + size));
+  }
+  return output;
+}
+
+/**
+ * Real past-paper questions for the chosen chapters, split by type and capped
+ * to what each section still needs.
+ */
+function pickBank(
+  classId: string,
+  subjectId: string,
+  chapters: string[],
+  plan: ReturnType<typeof paperPlan>,
+): BankQuestion[] {
+  const picked = new Set(chapters);
+  const pool = boardBank(classId, subjectId).filter(
+    (item) => chapters.length === 0 || picked.has(item.chapter),
+  );
+  if (pool.length === 0) return [];
+
+  const shuffle = <T,>(items: T[]) => {
+    const copy = [...items];
+    for (let index = copy.length - 1; index > 0; index -= 1) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [copy[index], copy[swap]] = [copy[swap], copy[index]];
+    }
+    return copy;
+  };
+
+  const mcq = shuffle(pool.filter((item) => item.type === "mcq")).slice(0, plan.mcq);
+  const short = shuffle(pool.filter((item) => item.type === "short")).slice(0, plan.short);
+  const long = shuffle(pool.filter((item) => item.type === "long")).slice(0, plan.long);
+  return [...mcq, ...short, ...long];
+}
+
+function bankToQuestion(item: BankQuestion, section: string): PaperQuestion {
+  return {
+    id: "",
+    section,
+    type: item.type,
+    marks: item.marks,
+    prompt: item.prompt,
+    options: item.options,
+    answerIndex: item.answerIndex,
+    explanation: item.explanation,
+    modelAnswer: item.modelAnswer,
+    markingPoints: item.markingPoints,
+    source: item.origin,
   };
 }
 
 export const generate = action({
   args: {
-    notebookId: v.id("notebooks"),
+    /** Notebook paper — the original mode. */
+    notebookId: v.optional(v.id("notebooks")),
+    /** School-syllabus paper. */
+    className: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    chapters: v.optional(v.array(v.string())),
+    paperKind: v.optional(v.union(v.literal("practice"), v.literal("board"))),
     durationMinutes: v.number(),
     pattern: v.union(v.literal("objective"), v.literal("board")),
   },
   handler: async (
     ctx,
-    { notebookId, durationMinutes, pattern },
+    { notebookId, className, subject, chapters, paperKind, durationMinutes, pattern },
   ): Promise<{
     examId: Id<"mockExams">;
     title: string;
     totalMarks: number;
     questionCount: number;
     durationMinutes: number;
+    boardQuestions: number;
   }> => {
     const duration = Math.round(durationMinutes);
     if (!Number.isFinite(duration) || duration < 5 || duration > 300) {
@@ -248,94 +377,219 @@ export const generate = action({
       );
     }
 
-    const ownerId = await ctx.runQuery(internal.materials.assertOwner, {
-      notebookId,
-    });
-    const context = await ctx.runQuery(internal.materials.sourceContext, {
-      notebookId,
-    });
-    const usable = context.sources.filter(
-      (source) => source.status !== "failed" && source.text.trim().length > 40,
-    );
-    if (usable.length === 0) {
-      throw new Error(
-        "Add a readable source first — a mock paper has to come from your notebook, not the internet.",
-      );
+    const plan = paperPlan(duration, pattern);
+    const syllabusClass = findClass(className);
+    const syllabusSubject = findSubject(className, subject);
+    const kind: PaperKind = paperKind ?? "practice";
+
+    if (!notebookId && !syllabusClass) {
+      throw new Error("Choose a class, or pick a notebook to make the paper from.");
     }
+    if (!notebookId && !syllabusSubject) {
+      throw new Error("Choose a subject for the paper.");
+    }
+
+    /* ---------------- owner, scope and allowance ---------------- */
+    let ownerId: Id<"users">;
+    let brief: string[];
+    let system = SYLLABUS_SYSTEM;
+    let chaptersUsed: string[] = [];
+    let language: "hi" | "en" = "en";
+
+    if (notebookId) {
+      ownerId = await ctx.runQuery(internal.materials.assertOwner, { notebookId });
+      const context = await ctx.runQuery(internal.materials.sourceContext, {
+        notebookId,
+      });
+      const usable = context.sources.filter(
+        (source) => source.status !== "failed" && source.text.trim().length > 40,
+      );
+      if (usable.length === 0) {
+        throw new Error(
+          "Add a readable source first — a mock paper has to come from your notebook, not the internet.",
+        );
+      }
+      language = detectLanguage(usable.map((source) => source.text.slice(0, 500)));
+      system = NOTEBOOK_SYSTEM;
+      brief = [
+        `NOTEBOOK: ${context.notebookName}`,
+        `TIME ALLOWED: ${duration} minutes.`,
+        pattern === "objective"
+          ? "PATTERN: objective only — every question is multiple choice."
+          : "PATTERN: board-style paper with multiple-choice, short-answer and long-answer sections.",
+        "Use the sources below. Do not ask anything the sources do not teach.",
+        `SOURCES:\n${corpusFor(usable)}`,
+        ...languageDirective(language),
+        languageLock(language),
+      ];
+    } else {
+      const userId = await ctx.runQuery(internal.identity.currentUserId, {});
+      if (!userId) throw new Error("Sign in first.");
+      ownerId = userId;
+
+      chaptersUsed = (chapters ?? [])
+        .map((chapter) => chapter.trim())
+        .filter((chapter) => syllabusSubject!.chapters.includes(chapter));
+
+      language = syllabusSubject!.id === "hindi" ? "hi" : "en";
+      brief = [
+        `CLASS: ${syllabusClass!.label} (CBSE).`,
+        `SUBJECT: ${syllabusSubject!.name}.`,
+        `SYLLABUS SCOPE: ${scopeLine(chaptersUsed)}.`,
+        `TIME ALLOWED: ${duration} minutes.`,
+        pattern === "objective"
+          ? "PATTERN: objective test — every question is multiple choice."
+          : `PATTERN: ${kind === "board" && syllabusClass!.hasBoard ? "full board pattern" : "school annual exam pattern"} with multiple-choice, short-answer and long-answer sections.`,
+        chaptersUsed.length > 0
+          ? "Every question must come from the syllabus scope above. Do not wander into chapters the student did not choose."
+          : "Cover the whole subject evenly across its chapters.",
+        kind === "board"
+          ? "This is a full exam simulation: include application and case-based questions, not only recall, and keep the difficulty of a real annual paper."
+          : "This is a chapter practice test: mix recall with understanding, and keep every question fair to the chapters chosen.",
+        "Questions must be answerable in writing, without a diagram, graph or photograph.",
+        ...(language === "hi"
+          ? [
+              "LANGUAGE (critical): write every question, option, model answer and marking point in Hindi, in Devanagari script, the way the NCERT Hindi textbook does. Keep standard technical terms as the textbook writes them and never mix English sentences in.",
+            ]
+          : []),
+        languageLock(language),
+      ];
+    }
+
     await assertAllowance(ctx, ownerId);
 
-    const counts = countsFor(duration, pattern);
-    const language = detectLanguage(usable.map((source) => source.text.slice(0, 500)));
-    const prompt = [
-      `NOTEBOOK: ${context.notebookName}`,
-      `TIME ALLOWED: ${duration} minutes.`,
-      pattern === "objective"
-        ? "PATTERN: objective only — every question is multiple choice."
-        : "PATTERN: board-style paper with multiple-choice, short-answer and long-answer sections.",
-      `Write exactly ${counts.mcq} multiple-choice question${counts.mcq === 1 ? "" : "s"} (1 mark each)${counts.short > 0 ? `, ${counts.short} short-answer question${counts.short === 1 ? "" : "s"} (3 marks each), and ${counts.long} long-answer question${counts.long === 1 ? "" : "s"} (5 marks each)` : ""}.`,
-      pattern === "board"
-        ? "Put the MCQs in Section A, short answers in Section B and long answers in Section C."
-        : "Put all questions in one section.",
-      "Use the sources below. Do not ask anything the sources do not teach.",
-      `SOURCES:\n${corpusFor(usable)}`,
-      ...languageDirective(language),
-      "Return exactly this JSON shape:",
-      '{"title":string,"instructions":string,"sections":[{"name":string,"questions":[{"type":"mcq"|"short"|"long","prompt":string,"options":[string,string,string,string],"answerIndex":number,"explanation":string,"modelAnswer":string,"markingPoints":[string],"source":string}]}]}',
-      "For MCQ, include options, answerIndex and explanation; omit modelAnswer and markingPoints. For short/long, include modelAnswer and markingPoints; omit options and answerIndex.",
-      "Every `source` is the exact source name the question came from.",
-      languageLock(language),
-    ].join("\n\n");
+    /* ---------------- real board questions first ---------------- */
+    const bank =
+      !notebookId && kind === "board" && syllabusClass?.hasBoard
+        ? pickBank(syllabusClass.id, syllabusSubject!.id, chaptersUsed, plan)
+        : [];
 
-    const candidates = await resolveCandidates();
-    const reply = await callModel(candidates, PAPER_SYSTEM, prompt, undefined, 0.3);
-    await meter(ctx, ownerId, prompt, reply);
+    const sections = planSections(plan, pattern);
+    const questions: PaperQuestion[] = [];
+    const seen = new Set<string>();
+    let model = "mixed";
 
-    let parsed: z.infer<typeof paperSchema>;
-    try {
-      parsed = paperSchema.parse(parseJsonLoose(reply.text));
-    } catch {
-      const retryPrompt = [
-        prompt,
-        "CORRECTION: the previous reply was not the required JSON object. Return one complete JSON object only.",
-      ].join("\n\n");
-      const retry = await callModel(candidates, PAPER_SYSTEM, retryPrompt, undefined, 0.2);
-      await meter(ctx, ownerId, retryPrompt, retry);
-      parsed = paperSchema.parse(parseJsonLoose(retry.text));
+    for (const item of bank) {
+      const question = bankToQuestion(item, sectionForType(item.type, pattern));
+      if (seen.has(normalisePrompt(question.prompt))) continue;
+      seen.add(normalisePrompt(question.prompt));
+      questions.push(question);
     }
 
-    const paper = normalisePaper(parsed);
-    if (paper.questions.length === 0) {
+    /* ---------------- the rest, one section at a time ---------------- */
+    for (const section of sections) {
+      const bankCount = questions.filter(
+        (question) => question.type === section.type,
+      ).length;
+      const remaining = Math.max(0, section.count - bankCount);
+      if (remaining === 0) continue;
+
+      const batches = chunk(
+        Array.from({ length: remaining }, () => section.type),
+        BATCH_SIZE[section.type],
+      );
+
+      for (const batch of batches) {
+        const avoid = questions.map((question) => question.prompt);
+        try {
+          const written = await writeBatch(
+            ctx,
+            ownerId,
+            system,
+            brief,
+            { ...section, count: batch.length },
+            avoid,
+          );
+          model = written.model;
+          for (const question of written.questions) {
+            const key = normalisePrompt(question.prompt);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            questions.push(question);
+            if (questions.length >= plan.mcq + plan.short + plan.long) break;
+          }
+        } catch {
+          /* One failed batch should not throw away the rest of the paper. */
+        }
+      }
+    }
+
+    if (questions.length === 0) {
       throw new Error(
-        "The paper came back without usable questions. Try again — your allowance was charged for the attempt.",
+        notebookId
+          ? "The paper came back without usable questions. Try again — your allowance was charged for the attempt."
+          : "The paper could not be written this time. Try again, or pick fewer chapters.",
       );
     }
 
-    const title =
-      cleanLine(parsed.title ?? "") ||
-      `${context.notebookName} · ${duration}-minute mock`;
+    /* ---------------- order, marks and storage ---------------- */
+    const ordered = ["mcq", "short", "long"].flatMap((type) =>
+      questions.filter((question) => question.type === type),
+    );
+    ordered.forEach((question, index) => {
+      question.id = `q${index + 1}`;
+    });
+    const totalMarks = ordered.reduce(
+      (total, question) => total + question.marks,
+      0,
+    );
+
+    const title = notebookId
+      ? `${duration}-minute mock`
+      : `${syllabusSubject!.name} · ${
+          chaptersUsed.length === 0
+            ? "Full syllabus"
+            : chaptersUsed.length <= 2
+              ? chaptersUsed.join(" & ")
+              : `${chaptersUsed.length} chapters`
+        } · ${duration} min`;
+
     const examId = await ctx.runMutation(internal.exams.insertExam, {
       ownerId,
       notebookId,
+      syllabus:
+        !notebookId && syllabusClass && syllabusSubject
+          ? {
+              className: syllabusClass.id,
+              subject: syllabusSubject.name,
+              chapters: chaptersUsed,
+              paperKind: kind,
+            }
+          : undefined,
       title,
-      instructions: parsed.instructions
-        ? cleanLine(parsed.instructions)
-        : undefined,
+      instructions: [
+        "All questions are compulsory.",
+        "Marks for each question are shown against it.",
+        "Write written answers in your own words — marks are for the idea, not the wording.",
+      ].join(" "),
       pattern,
       durationMinutes: duration,
-      totalMarks: paper.totalMarks,
-      questions: paper.questions,
-      model: reply.model,
+      totalMarks,
+      questions: ordered,
+      model,
     });
 
     return {
       examId,
       title,
-      totalMarks: paper.totalMarks,
-      questionCount: paper.questions.length,
+      totalMarks,
+      questionCount: ordered.length,
       durationMinutes: duration,
+      boardQuestions: bank.length,
     };
   },
 });
+
+function sectionForType(type: QuestionType, pattern: ExamPattern): string {
+  if (pattern === "objective") return "Section A · Multiple choice";
+  if (type === "mcq") return "Section A · Multiple choice";
+  if (type === "short") return "Section B · Short answer";
+  return "Section C · Long answer";
+}
+
+/* ------------------------------------------------------------------ */
+/* Marking                                                             */
+/* ------------------------------------------------------------------ */
 
 const gradeSchema = z.object({
   results: z.array(
@@ -430,7 +684,7 @@ export const grade = action({
             studentAnswer: String(responses[question.id] ?? ""),
           })),
         )}`,
-        "Mark every item. Return exactly: {\"results\":[{\"id\":string,\"score\":number,\"feedback\":string}],\"summary\":string}.",
+        'Mark every item. Return exactly: {"results":[{"id":string,"score":number,"feedback":string}],"summary":string}.',
         "Score may be a decimal only when the question's marks allow it; otherwise use whole marks.",
       ].join("\n\n");
 

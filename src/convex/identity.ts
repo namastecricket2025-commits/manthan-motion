@@ -1,3 +1,4 @@
+import { internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -69,6 +70,15 @@ export async function getAuthUserId(ctx: Ctx): Promise<Id<"users"> | null> {
   const row = await lookup(ctx, identity.subject);
   return row?._id ?? null;
 }
+
+/**
+ * The same lookup for actions, which cannot read the database directly.
+ * Returns null for a signed-in account that has never written anything.
+ */
+export const currentUserId = internalQuery({
+  args: {},
+  handler: async (ctx) => await getAuthUserId(ctx),
+});
 
 /**
  * Write-path variant: the row is created on first use and its cached name and

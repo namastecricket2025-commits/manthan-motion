@@ -33,11 +33,22 @@ declare global {
     readonly message: string;
   }
 
+  /** One entry of the contextual-biasing list (Chrome 142+, experimental). */
+  interface AviaSpeechPhrase {
+    readonly phrase: string;
+    readonly boost: number;
+  }
+
   interface AviaSpeechRecognition extends EventTarget {
     lang: string;
     continuous: boolean;
     interimResults: boolean;
     maxAlternatives: number;
+    /**
+     * Hints for words the engine would otherwise guess wrong — "eye lens"
+     * instead of "islands". Optional: most browsers still omit it.
+     */
+    phrases?: AviaSpeechPhrase[];
     start(): void;
     stop(): void;
     abort(): void;
@@ -54,6 +65,7 @@ declare global {
   interface Window {
     SpeechRecognition?: new () => AviaSpeechRecognition;
     webkitSpeechRecognition?: new () => AviaSpeechRecognition;
+    SpeechRecognitionPhrase?: new (phrase: string, boost?: number) => AviaSpeechPhrase;
   }
 }
 

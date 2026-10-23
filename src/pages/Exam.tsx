@@ -15,16 +15,29 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  CLASSES,
+  describePlan,
+  findClass,
+  findSubject,
+  paperPlan,
+  type ClassId,
+  type PaperKind,
+  type SubjectId,
+} from "@/lib/curriculum";
+import { boardBank, hasBoardQuestions } from "@/lib/boardBank";
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
   FileText,
+  GraduationCap,
   Loader2,
   Play,
   RotateCcw,
@@ -77,9 +90,17 @@ type Report = {
   gradedAt: number;
 };
 
+type SyllabusMeta = {
+  className: string;
+  subject: string;
+  chapters: string[];
+  paperKind: string;
+};
+
 type Exam = {
   id: Id<"mockExams">;
-  notebookId: Id<"notebooks">;
+  notebookId: Id<"notebooks"> | null;
+  syllabus: SyllabusMeta | null;
   notebookName: string;
   title: string;
   instructions: string;
@@ -102,6 +123,7 @@ type ExamRow = {
   id: Id<"mockExams">;
   title: string;
   notebookName: string;
+  syllabus: SyllabusMeta | null;
   pattern: "objective" | "board";
   durationMinutes: number;
   totalMarks: number;
@@ -150,6 +172,11 @@ export default function Exam() {
   const saveResponses = useMutation(api.exams.saveResponses);
   const submitExam = useMutation(api.exams.submit);
 
+  const [source, setSource] = useState<"syllabus" | "notebook">("syllabus");
+  const [className, setClassName] = useState<ClassId>("10");
+  const [subjectId, setSubjectId] = useState<SubjectId>("science");
+  const [chapters, setChapters] = useState<string[]>([]);
+  const [paperKind, setPaperKind] = useState<PaperKind>("board");
   const [notebookId, setNotebookId] = useState("");
   const [duration, setDuration] = useState(60);
   const [customDuration, setCustomDuration] = useState("");
@@ -179,6 +206,21 @@ export default function Exam() {
     effectiveDuration >= 5 &&
     effectiveDuration <= 300 &&
     (pattern === "objective" || effectiveDuration >= 15);
+
+  const syllabusClass = findClass(className);
+  const syllabusSubject = findSubject(className, subjectId);
+  // A half-typed custom duration must not print "NaN questions".
+  const plan = paperPlan(
+    Number.isFinite(effectiveDuration) ? effectiveDuration : duration,
+    pattern,
+  );
+  const availableBank = boardBank(className, subjectId).filter(
+    (item) => chapters.length === 0 || chapters.includes(item.chapter),
+  ).length;
+  const realQuestions = hasBoardQuestions(className, subjectId, chapters);
+  const readyToGenerate =
+    durationValid &&
+    (source === "syllabus" ? Boolean(syllabusSubject) : Boolean(notebookId));
 
   useEffect(() => {
     if (!notebookId && notebooks && notebooks.length > 0) {
@@ -231,7 +273,7 @@ export default function Exam() {
   }, [questions]);
 
   async function createPaper() {
-    if (!notebookId || generating) return;
+    if (!readyToGenerate || generating) return;
     if (!durationValid) {
       toast.error("Choose a duration between 5 and 300 minutes.", {
         description: "Board-style papers need at least 15 minutes.",
@@ -240,16 +282,36 @@ export default function Exam() {
     }
     setGenerating(true);
     try {
-      const result = await generatePaper({
-        notebookId: notebookId as Id<"notebooks">,
-        durationMinutes: effectiveDuration,
-        pattern,
-      });
+      const result =
+        source === "syllabus"
+          ? await generatePaper({
+              className,
+              subject: subjectId,
+              chapters,
+              paperKind,
+              durationMinutes: effectiveDuration,
+              pattern,
+            })
+          : await generatePaper({
+              notebookId: notebookId as Id<"notebooks">,
+              paperKind,
+              durationMinutes: effectiveDuration,
+              pattern,
+            });
       setExamId(result.examId);
       setIndex(0);
       setResponses({});
       toast.success("Paper ready", {
-        description: `${result.questionCount} questions · ${result.totalMarks} marks · ${result.durationMinutes} minutes. Start when you are ready.`,
+        description: [
+          `${result.questionCount} questions`,
+          `${result.totalMarks} marks`,
+          `${result.durationMinutes} minutes`,
+          result.boardQuestions > 0
+            ? `${result.boardQuestions} real board question${result.boardQuestions === 1 ? "" : "s"}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
       });
     } catch (error) {
       toast.error("Could not make that paper", {
@@ -444,10 +506,11 @@ export default function Exam() {
                 A real paper. A real clock.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-text-dim">
-                Pick a notebook, choose the time a real paper would give you,
-                and sit the whole thing in one go. The timer is enforced on the
-                server, answers save as you write, and written answers are marked
-                against a scheme.
+                Pick your class, subject and chapters, then choose the time a
+                real paper would give you. The timer is enforced on the server,
+                answers save as you write, and written answers are marked
+                against a scheme. Class 10 papers can include real CBSE board
+                questions from 2020–2025.
               </p>
 
               <section className="mt-7 rounded-2xl border border-[var(--card-border)] bg-[var(--panel)] p-5 sm:p-7">
@@ -456,11 +519,230 @@ export default function Exam() {
                   Paper settings
                 </div>
 
-                {notebooks === undefined ? (
+                <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      {
+                        id: "syllabus" as const,
+                        title: "Class 8–10 syllabus",
+                        body: "Class, subject and chapters. No sources needed.",
+                        icon: GraduationCap,
+                      },
+                      {
+                        id: "notebook" as const,
+                        title: "From my notebook",
+                        body: "A paper grounded only in sources you added.",
+                        icon: BookOpen,
+                      },
+                    ] as const
+                  ).map((option) => {
+                    const Icon = option.icon;
+                    const active = source === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setSource(option.id)}
+                        className={
+                          "rounded-xl border px-3.5 py-3 text-left transition-colors " +
+                          (active
+                            ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                            : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                        }
+                      >
+                        <span className="flex items-center gap-2 text-[12.5px] font-semibold">
+                          <Icon className="h-4 w-4 text-[var(--signal)]" />
+                          {option.title}
+                        </span>
+                        <span className="mt-1 block text-[10.5px] leading-relaxed text-text-dim">
+                          {option.body}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {source === "syllabus" ? (
+                  <div className="mt-5 flex flex-col gap-5">
+                    <div>
+                      <p className="text-[11px] font-medium text-text-dim">Class</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {CLASSES.map((entry) => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            aria-pressed={className === entry.id}
+                            onClick={() => {
+                              setClassName(entry.id);
+                              setSubjectId(entry.subjects[0].id);
+                              setChapters([]);
+                            }}
+                            className={
+                              "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
+                              (className === entry.id
+                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                            }
+                          >
+                            {entry.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                        {syllabusClass?.note}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-medium text-text-dim">Subject</p>
+                      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                        {(syllabusClass?.subjects ?? []).map((entry) => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            aria-pressed={subjectId === entry.id}
+                            onClick={() => {
+                              setSubjectId(entry.id);
+                              setChapters([]);
+                            }}
+                            className={
+                              "rounded-xl border px-3 py-2 text-left text-[11.5px] font-medium transition-colors " +
+                              (subjectId === entry.id
+                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                                : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                            }
+                          >
+                            {entry.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-text-dim">
+                          Chapters
+                          <span className="ml-2 font-normal opacity-70">
+                            {chapters.length === 0
+                              ? "whole subject"
+                              : `${chapters.length} selected`}
+                          </span>
+                        </p>
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setChapters(syllabusSubject?.chapters ?? [])
+                            }
+                            className="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10.5px] text-text-dim transition-colors hover:text-foreground"
+                          >
+                            Select all
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChapters([])}
+                            className="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10.5px] text-text-dim transition-colors hover:text-foreground"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-[var(--card-border)] p-2">
+                        {(syllabusSubject?.chapters ?? []).map((chapter) => {
+                          const on = chapters.includes(chapter);
+                          return (
+                            <button
+                              key={chapter}
+                              type="button"
+                              aria-pressed={on}
+                              onClick={() =>
+                                setChapters((current) =>
+                                  on
+                                    ? current.filter((item) => item !== chapter)
+                                    : [...current, chapter],
+                                )
+                              }
+                              className={
+                                "rounded-full border px-2.5 py-1 text-[10.5px] transition-colors " +
+                                (on
+                                  ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                  : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                              }
+                            >
+                              {chapter}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                        Leave every chapter off to set the paper across the whole
+                        subject.
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] font-medium text-text-dim">
+                        Kind of paper
+                      </p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        {(
+                          [
+                            {
+                              id: "practice" as const,
+                              title: "Fresh practice",
+                              body: "New questions written across the chapters you picked.",
+                            },
+                            {
+                              id: "board" as const,
+                              title:
+                                className === "10"
+                                  ? "Board simulation"
+                                  : "Exam simulation",
+                              body:
+                                className === "10"
+                                  ? "Real CBSE board questions from 2020–2025, filled out in the board pattern."
+                                  : "The section pattern and marking weights your annual exam uses.",
+                            },
+                          ] as const
+                        ).map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-pressed={paperKind === option.id}
+                            onClick={() => setPaperKind(option.id)}
+                            className={
+                              "rounded-xl border px-3.5 py-3 text-left transition-colors " +
+                              (paperKind === option.id
+                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                                : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                            }
+                          >
+                            <span className="block text-[12px] font-semibold">
+                              {option.title}
+                            </span>
+                            <span className="mt-0.5 block text-[10.5px] leading-relaxed text-text-dim">
+                              {option.body}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      {paperKind === "board" && className === "10" ? (
+                        <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                          {realQuestions
+                            ? `${availableBank} real board question${availableBank === 1 ? "" : "s"} match your chapters and go into the paper first. 2021 papers were cancelled and 2022 was term-based, so the bank covers 2020, 2023, 2024 and 2025.`
+                            : "No saved board question covers those chapters yet — the paper keeps the board pattern, marks and wording style instead. Real questions cover most of Science, Mathematics and History."}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {source === "notebook" && notebooks === undefined ? (
                   <p className="mt-5 flex items-center gap-2 text-sm text-text-dim">
                     <Loader2 className="h-4 w-4 animate-spin" /> Loading notebooks…
                   </p>
-                ) : notebooks.length === 0 ? (
+                ) : source === "notebook" && (notebooks?.length ?? 0) === 0 ? (
                   <div className="mt-5 rounded-xl border border-dashed border-[var(--card-border)] px-4 py-8 text-center">
                     <p className="text-sm font-medium">No notebook to examine yet.</p>
                     <p className="mt-1 text-xs leading-relaxed text-text-dim">
@@ -475,6 +757,7 @@ export default function Exam() {
                   </div>
                 ) : (
                   <div className="mt-5 flex flex-col gap-5">
+                    {source === "notebook" ? (
                     <label className="flex flex-col gap-1.5">
                       <span className="text-[11px] font-medium text-text-dim">
                         Notebook
@@ -484,7 +767,7 @@ export default function Exam() {
                         onChange={(event) => setNotebookId(event.target.value)}
                         className="w-full rounded-xl border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-sm outline-none focus:border-[var(--signal)]"
                       >
-                        {notebooks.map((notebook) => (
+                        {(notebooks ?? []).map((notebook) => (
                           <option key={notebook.id} value={notebook.id}>
                             {notebook.name} · {notebook.sourceCount} source
                             {notebook.sourceCount === 1 ? "" : "s"}
@@ -492,6 +775,7 @@ export default function Exam() {
                         ))}
                       </select>
                     </label>
+                    ) : null}
 
                     <div>
                       <p className="text-[11px] font-medium text-text-dim">
@@ -548,7 +832,7 @@ export default function Exam() {
                           [
                             {
                               id: "board" as const,
-                              title: "Board pattern",
+                              title: "Full paper",
                               body: "MCQs, short answers and long answers, marked against a scheme.",
                             },
                             {
@@ -583,14 +867,15 @@ export default function Exam() {
 
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-3">
                       <p className="max-w-md text-[11.5px] leading-relaxed text-text-dim">
-                        {pattern === "board"
-                          ? `About ${effectiveDuration} minutes of paper. Written answers are marked when you submit.`
-                          : `About ${effectiveDuration} minutes of multiple-choice questions.`}
+                        {describePlan(plan, pattern)} · {effectiveDuration} min
+                        {source === "syllabus"
+                          ? ` · ${syllabusClass?.label ?? ""} ${syllabusSubject?.name ?? ""}`
+                          : " · from your notebook"}
                       </p>
                       <button
                         type="button"
                         onClick={() => void createPaper()}
-                        disabled={generating || !notebookId || !durationValid}
+                        disabled={generating || !readyToGenerate}
                         className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--signal-strong)] px-5 py-2.5 text-[12.5px] font-semibold text-[var(--primary-foreground)] transition-opacity disabled:opacity-40"
                       >
                         {generating ? (
@@ -603,8 +888,9 @@ export default function Exam() {
                     </div>
                     {generating ? (
                       <p className="text-[11px] leading-relaxed text-text-dim">
-                        Reading your sources and setting the paper. This can take
-                        up to a minute; the timer has not started yet.
+                        {source === "syllabus"
+                          ? `Setting ${plan.mcq + plan.short + plan.long} questions one section at a time. A long paper can take a minute or two; the timer has not started yet.`
+                          : "Reading your sources and setting the paper. This can take up to a minute; the timer has not started yet."}
                       </p>
                     ) : null}
                   </div>
@@ -698,6 +984,19 @@ export default function Exam() {
                     {exam.notebookName} · {exam.questions.length} questions ·{" "}
                     {exam.totalMarks} marks
                   </p>
+                  {exam.syllabus ? (
+                    <p className="mt-1 text-[10.5px] leading-relaxed text-text-dim">
+                      {exam.syllabus.paperKind === "board"
+                        ? exam.syllabus.className === "10"
+                          ? "Board simulation"
+                          : "Exam simulation"
+                        : "Fresh practice"}{" "}
+                      ·{" "}
+                      {exam.syllabus.chapters.length > 0
+                        ? exam.syllabus.chapters.join(" · ")
+                        : "Full syllabus"}
+                    </p>
+                  ) : null}
                 </div>
                 <button
                   type="button"
@@ -739,6 +1038,20 @@ export default function Exam() {
                 <div className="mt-5 rounded-xl border border-[var(--card-border)] px-4 py-3 text-[12px] leading-relaxed text-text-dim">
                   {exam.instructions}
                 </div>
+              ) : null}
+
+              {exam.questions.some((question) =>
+                question.source?.startsWith("CBSE"),
+              ) ? (
+                <p className="mt-5 rounded-xl border border-[var(--signal)]/30 bg-[color-mix(in_srgb,var(--signal)_6%,transparent)] px-4 py-3 text-[11.5px] leading-relaxed text-text-dim">
+                  {
+                    exam.questions.filter((question) =>
+                      question.source?.startsWith("CBSE"),
+                    ).length
+                  }{" "}
+                  of these questions are reproduced from real CBSE board papers
+                  (2020–2025). Their paper code is shown on each question.
+                </p>
               ) : null}
 
               <div className="mt-5 rounded-xl border border-[var(--card-border)] px-4 py-3">
@@ -806,8 +1119,15 @@ export default function Exam() {
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-semibold text-text-dim">
                         {current.section} · Question {index + 1}
                       </span>
-                      <span className="text-[10.5px] text-text-dim">
-                        {current.marks} mark{current.marks === 1 ? "" : "s"}
+                      <span className="flex shrink-0 items-center gap-2">
+                        {current.source?.startsWith("CBSE") ? (
+                          <span className="rounded-full border border-[var(--signal)]/40 px-2 py-0.5 text-[9.5px] font-medium text-[var(--signal)]">
+                            {current.source}
+                          </span>
+                        ) : null}
+                        <span className="text-[10.5px] text-text-dim">
+                          {current.marks} mark{current.marks === 1 ? "" : "s"}
+                        </span>
                       </span>
                     </div>
 

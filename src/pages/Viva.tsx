@@ -8,6 +8,11 @@ import {
   speakText,
   stopSpeaking,
 } from "@/components/voice/avia";
+import {
+  createDictation,
+  studyTerms,
+  type Dictation,
+} from "@/components/voice/dictation";
 import { useAction, useQuery } from "convex/react";
 import {
   ArrowRight,
@@ -40,7 +45,8 @@ type StartResult = {
   sources: string[];
 };
 
-const SILENCE_MS = 1800;
+/** Long enough to think between sentences, short enough to end the turn. */
+const SILENCE_MS = 2800;
 
 export default function Viva() {
   const notebooks = useQuery(api.notebooks.list);
@@ -64,9 +70,7 @@ export default function Viva() {
   const [note, setNote] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
 
-  const recognitionRef = useRef<AviaSpeechRecognition | null>(null);
-  const silenceRef = useRef<number | null>(null);
-  const heardRef = useRef("");
+  const dictationRef = useRef<Dictation | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
 
   const supported = useMemo(
@@ -116,101 +120,69 @@ export default function Viva() {
 
   useEffect(
     () => () => {
-      if (silenceRef.current !== null) window.clearTimeout(silenceRef.current);
-      recognitionRef.current?.abort();
-      recognitionRef.current = null;
+      dictationRef.current?.abort();
+      dictationRef.current = null;
       stopSpeaking();
     },
     [],
   );
 
-  function clearSilence() {
-    if (silenceRef.current !== null) {
-      window.clearTimeout(silenceRef.current);
-      silenceRef.current = null;
-    }
-  }
-
   function stopListening() {
-    clearSilence();
-    const recognition = recognitionRef.current;
-    recognitionRef.current = null;
-    try {
-      recognition?.stop();
-    } catch {
-      /* Already stopped. */
-    }
+    dictationRef.current?.stop();
+    dictationRef.current = null;
     setListening(false);
   }
 
+  /**
+   * The vocabulary this answer is likely to contain: the topic the student set,
+   * the examiner's focus, and the points the answer is expected to make. It
+   * both biases the recogniser ("eye lens" instead of "islands") and powers the
+   * repair pass for near misses.
+   */
+  function lexicon(): string[] {
+    const phrases = [topic, focus, ...expected];
+    const words = phrases
+      .join(" ")
+      .split(/[^A-Za-z0-9'-]+/)
+      .filter((word) => word.length > 3);
+    return [...phrases.filter(Boolean), ...words];
+  }
+
   function startListening() {
-    if (typeof window === "undefined") return;
-    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!Ctor) {
-      setNote(
-        "This browser cannot listen in. Chrome, Edge and Safari can. You can still type your answer.",
-      );
-      return;
-    }
-    if (recognitionRef.current) {
+    if (dictationRef.current) {
       stopListening();
       return;
     }
-
     stopSpeaking();
-    const recognition = new Ctor();
-    recognition.lang = "en-IN";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    heardRef.current = "";
-    setAnswer("");
     setNote(null);
+    // Speaking again after a pause continues the answer instead of wiping it.
+    const seed = answer.trim();
 
-    const armSilence = () => {
-      clearSilence();
-      silenceRef.current = window.setTimeout(() => stopListening(), SILENCE_MS);
-    };
+    const dictation = createDictation({
+      lang: "en-IN",
+      silenceMs: SILENCE_MS,
+      terms: () => [...studyTerms(), ...lexicon()],
+      repair: lexicon,
+      onText: (text) => setAnswer(text),
+      onListening: (on) => setListening(on),
+      onStop: (reason) => {
+        dictationRef.current = null;
+        setListening(false);
+        if (reason === "unsupported") {
+          setNote(
+            "This browser cannot listen in. Chrome, Edge and Safari can. You can still type your answer.",
+          );
+        } else if (reason === "error") {
+          setNote(
+            "The microphone stopped. Allow access in the address bar, or type your answer.",
+          );
+        }
+      },
+    });
 
-    recognition.onstart = () => setListening(true);
-    recognition.onresult = (event) => {
-      let settled = "";
-      let pending = "";
-      for (let index = 0; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        const text = result?.[0]?.transcript ?? "";
-        if (result?.isFinal) settled += text + " ";
-        else pending += text + " ";
-      }
-      heardRef.current = (settled + pending).replace(/\s+/g, " ").trim();
-      setAnswer(heardRef.current);
-      armSilence();
-    };
-    recognition.onerror = (event) => {
-      recognitionRef.current = null;
-      setListening(false);
-      clearSilence();
-      if (!heardRef.current.trim()) {
-        setNote(
-          event.error === "not-allowed"
-            ? "Microphone permission is needed. Allow it in the address bar, or type your answer."
-            : "I did not catch that. Try again, or type your answer.",
-        );
-      }
-    };
-    recognition.onend = () => {
-      recognitionRef.current = null;
-      clearSilence();
-      setListening(false);
-    };
-
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-    } catch {
-      recognitionRef.current = null;
-      setNote("Could not start the microphone. You can type your answer instead.");
-    }
+    dictationRef.current = dictation;
+    dictation.start();
+    if (seed) dictation.setSeed(seed);
   }
 
   async function begin() {
@@ -517,7 +489,8 @@ export default function Viva() {
                 <textarea
                   value={answer}
                   onChange={(event) => {
-                    heardRef.current = "";
+                    // Typing over a live transcript edits the take, not the mic.
+                    dictationRef.current?.setSeed(event.target.value);
                     setAnswer(event.target.value);
                   }}
                   rows={5}
