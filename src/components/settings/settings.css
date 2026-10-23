@@ -1002,10 +1002,10 @@ html:not(.dark) .set-root.set-root--bare {
 }
 /* The primary action uses the app's own filled pair — `--primary` as the body
    and `--primary-foreground` as the label. It used to be a gradient of
-   `--signal` with white type, and since `--signal` is near-white in the dark
-   theme, that rendered a white label on a white pill: the settings page had an
-   invisible primary button at night. The tokens cannot drift, because these
-   are the exact two the app's `<Button>` paints with. */
+   `--signal` with white type; `--signal` changes hue between themes (honey at
+   night, caramel by day), so a hardcoded white label on that fill has already
+   shipped invisible once. The tokens cannot drift, because these are the
+   exact two the app's `<Button>` paints with. */
 .set-btn--primary {
   border: 1px solid color-mix(in srgb, var(--primary) 60%, transparent);
   color: var(--primary-foreground);

@@ -1097,7 +1097,9 @@ function TitrationTab() {
             <button
               type="button"
               onClick={() => setRunning((value) => !value)}
-              className="apple-lab-btn apple-lab-btn--solid !px-3 !py-2"
+              className={`apple-lab-btn ${
+                running ? "apple-lab-btn--stop" : "apple-lab-btn--run"
+              } !px-3 !py-2`}
             >
               {running ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               <span>{running ? "Pause" : "Resume"}</span>
@@ -1733,7 +1735,7 @@ function ReactionsTab() {
                 setFlash(true);
               }}
               disabled={!canReact}
-              className="apple-lab-btn apple-lab-btn--solid !px-3.5 !py-2"
+              className="apple-lab-btn apple-lab-btn--run !px-3.5 !py-2"
             >
               React ▸
             </button>

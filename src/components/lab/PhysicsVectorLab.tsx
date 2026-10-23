@@ -1274,8 +1274,11 @@ function MotionSandbox() {
             <button
               type="button"
               onClick={run}
-              data-active={phase === "running"}
-              className="apple-lab-btn apple-lab-btn--solid !px-3.5 !py-2"
+              /* No data-active: the red/green transport colour IS the pressed
+                 state, and the generic glass pressed style would paint over it. */
+              className={`apple-lab-btn ${
+                phase === "running" ? "apple-lab-btn--stop" : "apple-lab-btn--run"
+              } !px-3.5 !py-2`}
             >
               {phase === "running" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               <span>{phase === "running" ? "Pause" : phase === "paused" ? "Resume" : "Run"}</span>

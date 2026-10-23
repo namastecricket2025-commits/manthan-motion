@@ -184,7 +184,11 @@ html[data-comfort="on"] .apple-lab::after {
   border-color: rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.075);
 }
-.apple-lab-btn[data-active="true"] {
+/* Every control that reports its state does it through `data-active` or
+   `aria-pressed`; both spellings get the same pressed treatment, so a toggle
+   that only sets one of them still reads as ON after it is clicked. */
+.apple-lab-btn[data-active="true"],
+.apple-lab-btn[aria-pressed="true"] {
   border-color: rgba(255, 255, 255, 0.38);
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
@@ -195,7 +199,8 @@ html[data-comfort="on"] .apple-lab::after {
    the only button in the room that is not glass. */
 .apple-lab-btn--solid,
 .apple-lab-btn--solid:hover,
-.apple-lab-btn--solid[data-active="true"] {
+.apple-lab-btn--solid[data-active="true"],
+.apple-lab-btn--solid[aria-pressed="true"] {
   border-color: transparent;
   background: var(--lab-ink);
   color: var(--lab-canvas);
@@ -203,6 +208,46 @@ html[data-comfort="on"] .apple-lab::after {
 }
 .apple-lab-btn--solid:hover {
   background: color-mix(in srgb, var(--lab-ink) 86%, var(--lab-canvas));
+}
+
+/* ---- Transport: green to start, red to stop --------------------
+   The Run/Release and Pause/Hold pair is the one control on a bench that has
+   to be readable at a glance while a thing is moving on screen, and two white
+   pills that swap their label do not pass that test. They carry the two
+   universally read colours instead: green starts the run, red stops it, in
+   both themes (a deeper green/red on paper so white labels keep contrast).
+   Every other button in the room stays ink. */
+.apple-lab-btn--run:not(:disabled),
+.apple-lab-btn--run:not(:disabled):hover,
+.apple-lab-btn--run[aria-pressed="true"] {
+  border-color: transparent;
+  background: #16a34a;
+  color: #f4fff7;
+}
+.apple-lab-btn--run:not(:disabled):hover {
+  background: #22c55e;
+}
+.apple-lab-btn--stop:not(:disabled),
+.apple-lab-btn--stop:not(:disabled):hover,
+.apple-lab-btn--stop[aria-pressed="true"] {
+  border-color: transparent;
+  background: #ef4444;
+  color: #fff5f5;
+}
+.apple-lab-btn--stop:not(:disabled):hover {
+  background: #f87171;
+}
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--run:not(:disabled),
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--run:not(:disabled):hover,
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--run[aria-pressed="true"] {
+  background: #15803d;
+  color: #f4fff7;
+}
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--stop:not(:disabled),
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--stop:not(:disabled):hover,
+.apple-lab [data-lab-theme="light"] .apple-lab-btn--stop[aria-pressed="true"] {
+  background: #b91c1c;
+  color: #fff5f5;
 }
 
 .apple-lab-btn:disabled,
@@ -881,7 +926,8 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
   border-color: rgba(16, 16, 16, 0.32);
   background: rgba(16, 16, 16, 0.06);
 }
-.apple-lab [data-lab-theme="light"] .apple-lab-btn[data-active="true"] {
+.apple-lab [data-lab-theme="light"] .apple-lab-btn[data-active="true"],
+.apple-lab [data-lab-theme="light"] .apple-lab-btn[aria-pressed="true"] {
   border-color: rgba(16, 16, 16, 0.42);
   background: rgba(16, 16, 16, 0.1);
   color: #0b0b0b;
@@ -1014,7 +1060,8 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
 }
 
 /* An active control keeps its ink keyline and gains the halo. */
-.apple-lab-btn[data-active="true"] {
+.apple-lab-btn[data-active="true"],
+.apple-lab-btn[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--lab-ink) 34%, transparent);
   color: var(--lab-ink);
   box-shadow: 0 10px 24px -18px var(--lab-glow);
@@ -1053,7 +1100,8 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
   color: #111111;
 }
 
-.apple-lab [data-lab-theme="light"] .apple-lab-btn[data-active="true"] {
+.apple-lab [data-lab-theme="light"] .apple-lab-btn[data-active="true"],
+.apple-lab [data-lab-theme="light"] .apple-lab-btn[aria-pressed="true"] {
   border-color: rgba(16, 16, 16, 0.3);
   color: #111111;
 }
@@ -1067,6 +1115,31 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
   box-shadow:
     0 0 0 4px rgba(16, 16, 16, 0.14),
     0 2px 10px rgba(16, 16, 16, 0.25);
+}
+
+/* ============================================================
+   The top glow — the same light the math lab opens with
+
+   /math-lab and /dashboard both open with `.dot-field` + `.glow-aura`: two
+   radial washes whose centres sit ABOVE the top of the viewport, so only the
+   dim outer half ever shows — a lift on the top edge that is spent before the
+   first panel. The lab kept its dot grid (`.apple-lab::before`) but lost the
+   wash, which is why the room read as a flat black box by comparison. This is
+   that wash, drawn from the site's own halo tokens (so it follows the theme:
+   white by night, warm paper light by day) and sitting above the fixed layers
+   but below every panel.
+   ============================================================ */
+
+.apple-lab-glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: min(440px, 62vh);
+  z-index: 1;
+  pointer-events: none;
+  opacity: var(--bg-glow-opacity, 1);
+  background:
+    radial-gradient(68% 300px at 50% -46%, var(--halo-near), transparent 74%),
+    radial-gradient(110% 420px at 50% -58%, var(--halo-far), transparent 80%);
 }
 
 /* ============================================================

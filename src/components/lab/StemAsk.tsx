@@ -23,6 +23,19 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CLASSES } from "@/lib/curriculum";
+import { ChoiceSelect } from "@/components/ui/choice-select";
+
+/** The one selected/unalive treatment shared by every pill row in here. */
+const pillCls = (active: boolean) =>
+  "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors " +
+  (active ? "bg-[var(--text-main)] text-[var(--panel)]" : "text-text-dim hover:text-foreground");
+
+/** Board only makes sense where there is a board: CBSE boards start at X. */
+const LEVELS: Array<{ id: "easy" | "medium" | "board"; label: string }> = [
+  { id: "easy", label: "Easy" },
+  { id: "medium", label: "Medium" },
+  { id: "board", label: "Board" },
+];
 
 export type LabSubject = "physics" | "chemistry" | "biology";
 
@@ -360,20 +373,30 @@ export function StemAsk({
                 );
               })}
             </div>
-            <label className="ml-auto flex items-center gap-1.5 text-[11px] text-text-dim">
-              Class
-              <select
-                value={className}
-                onChange={(event) => setClassName(event.target.value)}
-                className="rounded-lg border border-[var(--card-border)] bg-transparent px-2 py-1 text-[12px] text-foreground outline-none focus:border-[var(--text-main)]"
-              >
+            <div className="ml-auto flex items-center gap-2 text-[11px] text-text-dim">
+              <span>Class</span>
+              <div className="inline-flex rounded-full border border-[var(--card-border)] p-0.5">
                 {["8", "9", "10"].map((value) => (
-                  <option key={value} value={value}>
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={className === value}
+                    onClick={() => {
+                      setClassName(value);
+                      // A board-pattern paper only exists in Class 10 — CBSE
+                      // boards start at X. A student who drops to 8 or 9 keeps
+                      // the level they had if it still applies.
+                      if (value !== "10" && difficulty === "board") {
+                        setDifficulty("medium");
+                      }
+                    }}
+                    className={pillCls(className === value)}
+                  >
                     {value}
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
           </div>
 
           {mode === "ask" ? (
@@ -434,64 +457,60 @@ export function StemAsk({
               ) : null}
             </div>
           ) : (
-            <div className="mt-4 flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5 text-[11px] text-text-dim">
-                Chapter
-                <select
+            <div className="mt-4 flex flex-col gap-3.5">
+              <div className="flex flex-col gap-1.5 text-[11px] text-text-dim">
+                <span>Chapter</span>
+                <ChoiceSelect
                   value={selectedChapter}
-                  onChange={(event) => setChapter(event.target.value)}
-                  className="rounded-lg border border-[var(--card-border)] bg-transparent px-2.5 py-2 text-[12.5px] text-foreground outline-none focus:border-[var(--text-main)]"
-                >
-                  <option value="">Any chapter in this subject</option>
-                  {chapters.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setChapter}
+                  ariaLabel="Chapter"
+                  options={[
+                    { value: "", label: "Any chapter in this subject" },
+                    ...chapters.map((name) => ({ value: name, label: name })),
+                  ]}
+                />
+              </div>
 
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1.5 text-[11px] text-text-dim">
-                  Questions
-                  <select
-                    value={count}
-                    onChange={(event) => setCount(event.target.value)}
-                    className="rounded-lg border border-[var(--card-border)] bg-transparent px-2.5 py-2 text-[12.5px] text-foreground outline-none focus:border-[var(--text-main)]"
-                  >
-                    {[5, 10, 15].map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex flex-col gap-1.5 text-[11px] text-text-dim">
+              <div className="flex flex-col gap-1.5 text-[11px] text-text-dim">
+                <span>Questions</span>
+                <div className="inline-flex self-start rounded-full border border-[var(--card-border)] p-0.5">
+                  {[5, 10, 15].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={count === String(value)}
+                      onClick={() => setCount(String(value))}
+                      className={pillCls(count === String(value))}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5 text-[11px] text-text-dim">
+                <span>
                   Level
-                  <div className="inline-flex rounded-full border border-[var(--card-border)] p-0.5">
-                    {(
-                      [
-                        { id: "easy", label: "Easy" },
-                        { id: "medium", label: "Medium" },
-                        { id: "board", label: "Board" },
-                      ] as const
-                    ).map((entry) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        onClick={() => setDifficulty(entry.id)}
-                        aria-pressed={difficulty === entry.id}
-                        className={
-                          "rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors " +
-                          (difficulty === entry.id
-                            ? "bg-[var(--text-main)] text-[var(--panel)]"
-                            : "text-text-dim hover:text-foreground")
-                        }
-                      >
-                        {entry.label}
-                      </button>
-                    ))}
-                  </div>
+                  {className !== "10" ? (
+                    <span className="ml-1.5 opacity-70">
+                      · board papers start at Class 10
+                    </span>
+                  ) : null}
+                </span>
+                <div className="inline-flex self-start rounded-full border border-[var(--card-border)] p-0.5">
+                  {LEVELS.filter(
+                    (entry) => className === "10" || entry.id !== "board",
+                  ).map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => setDifficulty(entry.id)}
+                      aria-pressed={difficulty === entry.id}
+                      className={pillCls(difficulty === entry.id)}
+                    >
+                      {entry.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

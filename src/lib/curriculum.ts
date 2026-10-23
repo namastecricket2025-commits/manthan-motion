@@ -26,7 +26,8 @@ export type SubjectId =
   | "social-science"
   | "english"
   | "hindi"
-  | "computer";
+  | "computer"
+  | "ai";
 
 export type ExamPattern = "objective" | "board";
 
@@ -162,6 +163,40 @@ const CLASS_8_COMPUTER = [
   "Cyber Safety and Digital Citizenship",
 ];
 
+/**
+ * Artificial Intelligence.
+ *
+ * Skill subject code 417 is a CBSE secondary-school subject — Classes IX and X
+ * only. CBSE does not run 417 at the middle-school level; Class 8 is taught
+ * from the board's own AI facilitator handbook, whose five chapters are the
+ * list below (no class 8 board exists, so there is no paper pattern to follow
+ * there). Employability Skills units are kept because Part A of the 417 paper
+ * is drawn from them.
+ *
+ * Sources: cbseacademic.nic.in 417 AI IX and X curriculum, 2025–26; the CBSE
+ * Class VIII AI Facilitators' Handbook.
+ */
+const CLASS_8_AI = [
+  "AI · Excite — meeting artificial intelligence",
+  "AI · Relate — artificial intelligence around us",
+  "AI · Purpose — problems AI is used for",
+  "AI · Possibilities — what AI can and cannot do",
+  "AI · Ethics — using AI responsibly",
+];
+
+const CLASS_9_AI = [
+  "AI Reflection, Project Cycle and Ethics",
+  "Data Literacy",
+  "Math for AI — Statistics and Probability",
+  "Introduction to Generative AI",
+  "Introduction to Python",
+  "Employability Skills · Communication Skills–I",
+  "Employability Skills · Self-Management Skills–I",
+  "Employability Skills · ICT Skills–I",
+  "Employability Skills · Entrepreneurial Skills–I",
+  "Employability Skills · Green Skills–I",
+];
+
 const CLASS_9_SCIENCE = [
   "Matter in Our Surroundings",
   "Is Matter Around Us Pure?",
@@ -273,6 +308,21 @@ const CLASS_9_IT = [
   "Electronic Spreadsheets",
   "Digital Presentation",
   "Cyber Safety",
+];
+
+const CLASS_10_AI = [
+  "Revisiting the AI Project Cycle and Ethical Frameworks",
+  "Advanced Concepts of Modelling in AI",
+  "Evaluating Models",
+  "Statistical Data",
+  "Computer Vision",
+  "Natural Language Processing",
+  "Advanced Python",
+  "Employability Skills · Communication Skills–II",
+  "Employability Skills · Self-Management Skills–II",
+  "Employability Skills · ICT Skills–II",
+  "Employability Skills · Entrepreneurial Skills–II",
+  "Employability Skills · Green Skills–II",
 ];
 
 const CLASS_10_SCIENCE = [
@@ -408,6 +458,7 @@ export const CLASSES: ClassSyllabus[] = [
       { id: "english", name: "English", chapters: CLASS_8_ENGLISH },
       { id: "hindi", name: "Hindi", chapters: CLASS_8_HINDI },
       { id: "computer", name: "Computer / IT", chapters: CLASS_8_COMPUTER },
+      { id: "ai", name: "Artificial Intelligence", chapters: CLASS_8_AI },
     ],
   },
   {
@@ -423,6 +474,7 @@ export const CLASSES: ClassSyllabus[] = [
       { id: "english", name: "English", chapters: CLASS_9_ENGLISH },
       { id: "hindi", name: "Hindi", chapters: CLASS_9_HINDI },
       { id: "computer", name: "Information Technology (402)", chapters: CLASS_9_IT },
+      { id: "ai", name: "Artificial Intelligence (417)", chapters: CLASS_9_AI },
     ],
   },
   {
@@ -438,6 +490,7 @@ export const CLASSES: ClassSyllabus[] = [
       { id: "english", name: "English", chapters: CLASS_10_ENGLISH },
       { id: "hindi", name: "Hindi", chapters: CLASS_10_HINDI },
       { id: "computer", name: "Information Technology (402)", chapters: CLASS_10_IT },
+      { id: "ai", name: "Artificial Intelligence (417)", chapters: CLASS_10_AI },
     ],
   },
 ];

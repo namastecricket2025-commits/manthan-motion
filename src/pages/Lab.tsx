@@ -74,6 +74,9 @@ export default function Lab() {
 
   return (
     <div className="apple-lab" data-lab-theme={theme}>
+      {/* The math lab's top wash, in the lab's own room: two radials centred
+          above the viewport edge, spent before the first panel arrives. */}
+      <div className="apple-lab-glow" aria-hidden="true" />
       <div
         className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 md:py-8"
         data-lab-theme={theme}

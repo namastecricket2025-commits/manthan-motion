@@ -301,8 +301,8 @@
      One colour per generated artefact kind, plus the three source kinds.
      Amber leads the ramp because it is the brand, and the rest step away from
      it and from each other: teal, plum, sage, clay. Every one is a deep step,
-     because the dark theme's grey set sits close to paper and reads washed
-     out here. Dark keeps the grey ramp it was tuned against. */
+     because a lighter set reads washed out on paper. Dark runs the same five
+     hues at night saturation (see the .dark block). */
   --kind-summary: #b45309;
   --kind-flashcards: #2f6f6b;
   --kind-quiz: #a3546b;
@@ -365,27 +365,26 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — pure black canvas, white light, no colour cast.
+  /* Brand palette (dark) — pure black canvas, honey light.
 
-     The night theme is deliberately MONOCHROME: a #000 page, white type and
-     white-alpha hairlines, where the only "colour" is light itself — the
-     ambient glows, the gradient display type, the lit top lip on each panel.
-     Saturated colour is reserved for meaning (a wrong answer, a failed read),
-     which is exactly what makes it read as a signal instead of decoration.
+     The night theme now runs the SAME amber as the day theme, at night
+     strength, so the product has one accent in both themes: `--signal` is the
+     honey #fbbf24 (12.6:1 on the ink, 11.9:1 on a panel) and
+     `--signal-strong` is that amber as the FILLED action's body carrying a
+     near-black label via `--primary-foreground` — the amber button on black.
+     The page stays a #000 canvas with white-alpha hairlines; colour appears
+     where the day theme puts it (accents, charts, artefact ramps) rather than
+     washing every surface.
 
-     Two neutrals are in play on purpose:
-       --signal         the luminous one: text accents, hairlines, rings,
-                        chart strokes, glow tints. 19.6:1 on the ink.
-       --signal-strong  the filled one: the primary action's body. In this
-                        theme it is WHITE and its label is near-black via
-                        `--primary-foreground` — the Vercel button. Anything
-                        that paints text over this token MUST use
-                        `--primary-foreground`; a hardcoded white label on it
-                        is invisible. */
+     Two rules that keep this honest:
+       - Anything that paints text over `--signal-strong` MUST use
+         `--primary-foreground`; a hardcoded white label on amber is unreadable.
+       - Red stays reserved for meaning (a wrong answer, a failed read) —
+         colour in the accent is brand, colour in red is still a fault. */
   --ink: #000000;
-  --signal: #f5f5f7;
-  --signal-strong: #ffffff;
-  --signal-2: #e4e4e7;
+  --signal: #fbbf24;
+  --signal-strong: #ffc233;
+  --signal-2: #c98a06;
   /* Amber at the strength a black canvas allows: honey (#fbbf24), which is
      12.6:1 here and 11.9:1 on a #0a0a0a panel. It stops well short of the
      lemon (#ffd60a) this token first shipped as — at that brightness the
@@ -445,21 +444,18 @@
 
   /* Accent-word gradient stops (dark): the accent word starts in the exact
      heading warm-white (`--text-main`) and holds it for just over half the
-     word, then blends through two neutral mid stops into the final grey —
-     the night theme's accent is light itself, so the tail dims rather than
-     changing hue. Matching the heading colour exactly plus two intermediate
-     stops keeps the word reading as heading text while the tail settles
-     smoothly. The two mid stops live in the `.dark .gradient-text` rule
-     below. */
+     word, then blends through two honey mid stops into the brand amber on the
+     final letters — the same sweep the day theme runs, lifted for night.
+     The two mid stops live in the `.dark .gradient-text` rule below. */
   --gt-head: #ffffff;
-  --gt-tail: #a1a1aa;
+  --gt-tail: #fbbf24;
 
-  /* Stroke-text display gradient (dark): a white-to-grey arc-lamp sweep,
-     bright enough to read as lit metal against the pure black canvas without
-     introducing a hue. */
-  --stroke-a: #ffffff;
-  --stroke-b: #e4e4e7;
-  --stroke-c: #a1a1aa;
+  /* Stroke-text display gradient (dark): a warm arc-lamp sweep, white-hot at
+     the top and settling into caramel, bright enough to read as lit metal
+     against the pure black canvas. */
+  --stroke-a: #ffdf8a;
+  --stroke-b: #f0b429;
+  --stroke-c: #b4740b;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -474,15 +470,15 @@
   ----chart-crosshair: rgba(255, 255, 255, 0.18);
   ----chart-label: var(--text-dim);
   ----chart-line-primary: var(--signal);
-  ----chart-line-secondary: #a1a1aa;
+  ----chart-line-secondary: #2dd4bf;
   ----chart-tooltip-background: #17171a;
   ----chart-tooltip-foreground: var(--text-main);
   ----chart-tooltip-muted: var(--text-dim);
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(255, 255, 255, 0.12);
-  ----chart-segment-line: rgba(255, 255, 255, 0.3);
+  ----chart-segment-background: rgba(251, 191, 36, 0.12);
+  ----chart-segment-line: rgba(251, 191, 36, 0.32);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -497,7 +493,7 @@
      are fully visible the moment the panel appears. */
   --popover: #0e0e10;
   --popover-foreground: rgba(255, 255, 255, 0.95);
-  /* The Vercel button: a WHITE body with a near-black label. */
+  /* The filled action: an amber body with a near-black label. */
   --primary: var(--signal-strong);
   --primary-foreground: #09090b;
   --secondary: #17171a;
@@ -515,22 +511,26 @@
   --border: rgba(255, 255, 255, 0.12);
   --input: rgba(255, 255, 255, 0.14);
   --ring: var(--signal);
-  /* A grey ramp, not a rainbow: the series are told apart by LIGHTNESS. */
-  --chart-1: #fafafa;
-  --chart-2: #a1a1aa;
-  --chart-3: #d4d4d8;
-  --chart-4: #71717a;
-  --chart-5: #8f8f98;
-  /* Artefact + source ramp (dark) — the same grey ramp, one lightness step
-     apart per kind so a legend (or a mind-map node) stays separable. */
-  --kind-summary: #fafafa;
-  --kind-flashcards: #8f8f98;
-  --kind-quiz: #d4d4d8;
-  --kind-mindmap: #a1a1aa;
-  --kind-slides: #71717a;
-  --src-files: #fafafa;
-  --src-links: #a1a1aa;
-  --src-notes: #71717a;
+  /* A coloured ramp at night saturation: amber leads because it is the
+     brand, and the rest step away from it and from each other — teal, rose,
+     violet, sky — so series, legends and mind-map nodes are told apart by
+     hue, the same way the day theme tells them apart. */
+  --chart-1: #fbbf24;
+  --chart-2: #2dd4bf;
+  --chart-3: #fb7185;
+  --chart-4: #a78bfa;
+  --chart-5: #60a5fa;
+  /* Artefact + source ramp (dark) — one hue per generated artefact kind and
+     per source kind, so a legend (or a mind-map node, or a notebook tab) is
+     separable by colour, exactly as in the day theme. */
+  --kind-summary: #fbbf24;
+  --kind-flashcards: #2dd4bf;
+  --kind-quiz: #fb7185;
+  --kind-mindmap: #a78bfa;
+  --kind-slides: #60a5fa;
+  --src-files: #fbbf24;
+  --src-links: #2dd4bf;
+  --src-notes: #f472b6;
   --sidebar: #0b0b0c;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
@@ -547,7 +547,7 @@
   --chart-foreground: rgba(255, 255, 255, 0.95);
   --chart-foreground-muted: rgba(255, 255, 255, 0.9);
   --chart-line-primary: var(--signal);
-  --chart-line-secondary: #a1a1aa;
+  --chart-line-secondary: #2dd4bf;
   --chart-crosshair: rgba(255, 255, 255, 0.26);
   --chart-grid: rgba(255, 255, 255, 0.12);
   --chart-brush-border: var(--chart-grid);
@@ -558,18 +558,18 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: rgba(255, 255, 255, 0.95);
   --chart-label: rgba(255, 255, 255, 0.9);
-  --chart-scale-01: rgba(255, 255, 255, 0.12);
-  --chart-scale-02: rgba(255, 255, 255, 0.2);
-  --chart-scale-03: rgba(255, 255, 255, 0.3);
-  --chart-scale-04: rgba(255, 255, 255, 0.44);
-  --chart-scale-05: rgba(255, 255, 255, 0.62);
-  --chart-scale-pattern-color: rgba(255, 255, 255, 0.1);
+  --chart-scale-01: rgba(251, 191, 36, 0.1);
+  --chart-scale-02: rgba(251, 191, 36, 0.18);
+  --chart-scale-03: rgba(251, 191, 36, 0.3);
+  --chart-scale-04: rgba(251, 191, 36, 0.46);
+  --chart-scale-05: rgba(251, 191, 36, 0.64);
+  --chart-scale-pattern-color: rgba(251, 191, 36, 0.1);
 
   /* ---- Dashboard ink + selection surfaces (dark) ---------------------- */
   --dash-chart-label: rgba(255, 255, 255, 0.9);
   --dash-chart-grid: rgba(255, 255, 255, 0.12);
   --dash-series-primary: var(--signal);
-  --dash-series-secondary: #a1a1aa;
+  --dash-series-secondary: #2dd4bf;
   /* The frosted spline's fill: glass translucency, top to bottom. */
   --dash-frost-top: rgba(255, 255, 255, 0.15);
   --dash-frost-bottom: rgba(255, 255, 255, 0);
@@ -607,8 +607,8 @@
      therefore without the nesting the downlevelled rule needs) renders the
      opaque disc this pass removed. A third token removes the branch, so the
      gradient is byte-identical in every browser. */
-  --halo-mid: rgba(255, 255, 255, 0.065);
-  --halo-far: rgba(255, 255, 255, 0.06);
+  --halo-mid: rgba(251, 191, 36, 0.07);
+  --halo-far: rgba(251, 191, 36, 0.055);
 
   /* The pointer light on a card (see the light-theme note). White at 8% on
      the night theme: enough to lift a #0a0a0a panel where the pointer is,
@@ -1222,8 +1222,8 @@ body::-webkit-scrollbar-thumb:hover {
       180deg,
       var(--gt-head) 0%,
       var(--gt-head) 32%,
-      #d4d4d8 68%,
-      #b6b6be 84%,
+      #ffd764 68%,
+      #f5b316 84%,
       var(--gt-tail) 100%
     );
   }

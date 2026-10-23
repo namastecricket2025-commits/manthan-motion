@@ -242,11 +242,15 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
               }}
               onClick={() => pick(a.id)}
               style={{ background: a.color, display: "none" }}
-              className={`absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${pin === a.id ? "z-10 scale-125" : ""}`}
+              className={`absolute left-0 top-0 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${
+                pin === a.id
+                  ? "z-10 -ml-3.5 -mt-3.5 h-7 w-7 ring-2 ring-white/70"
+                  : "-ml-3 -mt-3 h-6 w-6"
+              }`}
             >
               {i + 1}
               {(all || pin === a.id) && (
-                <span className="absolute left-7 top-0.5 whitespace-nowrap rounded-md bg-black/85 px-2 py-0.5 text-[10px] font-medium text-white">
+                <span className="absolute left-8 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-0.5 text-[10px] font-medium text-white">
                   {a.name}
                 </span>
               )}
