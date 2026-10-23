@@ -140,7 +140,9 @@ export default function Viva() {
    * repair pass for near misses.
    */
   function lexicon(): string[] {
-    const phrases = [topic, focus, ...expected];
+    // The question itself is the strongest hint: a viva asking about the eye
+    // lens should repair "islands" even if the examiner's focus line is short.
+    const phrases = [topic, focus, question, ...expected];
     const words = phrases
       .join(" ")
       .split(/[^A-Za-z0-9'-]+/)

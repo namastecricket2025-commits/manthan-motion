@@ -7,6 +7,11 @@
  * can check it against the original. When Class 10 sits a "Board simulation",
  * these are used first and the model writes the rest of the paper.
  *
+ * Coverage spans all six Class 10 subjects: Science, Mathematics (Standard),
+ * Social Science, English (Language and Literature), Hindi (Course B) and
+ * Information Technology (402). A chapter with no entry is not fabricated —
+ * the setter writes a fresh question in the board's pattern instead.
+ *
  * Two honesty notes shape the data:
  *
  *  - The 2021 board papers were cancelled, and 2022 used a two-term format, so
@@ -557,10 +562,457 @@ const SOCIAL_SCIENCE: BankQuestion[] = [
   },
 ];
 
+/*
+ * English (Language and Literature, 2/x/x). The 2023–2025 pages reproduce
+ * these literature questions by year but do not print the paper set beside
+ * each item, so `origin` names the year and the paper rather than inventing a
+ * set code.
+ */
+const ENGLISH: BankQuestion[] = [
+  {
+    chapter: "Prose · Two Stories about Flying",
+    type: "short",
+    marks: 3,
+    prompt:
+      "The young seagull's fear of flying and reluctance to leave his ledge contribute to the development of the theme of independence and courage in the story. Justify.",
+    modelAnswer:
+      "The seagull's fear keeps him frozen on the ledge, calling out to his family while they fly and feed themselves. Hunger finally overcomes that fear, and the moment he drops and finds his wings holding him, the story shows that courage is not the absence of fear but action taken in spite of it. His independence begins only when he stops waiting to be fed and trusts himself.",
+    markingPoints: [
+      "Fear and reluctance are shown through his refusal to leave the ledge.",
+      "Hunger forces the first act of courage.",
+      "Flight brings independence and confidence, which is the theme.",
+    ],
+    origin: "CBSE 2025 · English · literature",
+  },
+  {
+    chapter: "Prose · Two Stories about Flying",
+    type: "short",
+    marks: 3,
+    prompt:
+      "Briefly bring out the contrast between the young seagull's initial attempts to fly and his first successful flight.",
+    modelAnswer:
+      "At first he merely flaps his wings on the ledge and runs to its brink, then draws back out of fear, so his attempts end in hesitation rather than flight. In his first real flight he drops into the air, feels the wind under his wings, and is soon soaring, diving at the sea and catching fish with his brothers and sister. The contrast is between timid, unfinished movement and joyful, confident flight.",
+    markingPoints: [
+      "Initial attempts: flapping, running to the edge, drawing back in fear.",
+      "First flight: drops, wings hold him, he soars and dives.",
+      "Contrast in confidence and outcome.",
+    ],
+    origin: "CBSE 2024 · English · literature",
+  },
+  {
+    chapter: "Prose · Two Stories about Flying",
+    type: "short",
+    marks: 3,
+    prompt:
+      "Flying is a natural act in birds. Then why was the young seagull 'exhausted by the strange exercise'? Justify the given statement with reference to the baby seagull's fear.",
+    modelAnswer:
+      "Although flight comes naturally to birds, the seagull had never used his wings before, so the first flight demanded effort and nerve he had not built up. His fear had kept him on the ledge for a long time, and the sudden plunge, the beating of wings and the unfamiliar control of wind and balance tired him. The exercise was strange because it was new, not because it was unnatural.",
+    markingPoints: [
+      "He had never flown before, so the first effort was unfamiliar.",
+      "Fear had kept him inactive and unprepared.",
+      "The physical effort of the first flight left him exhausted.",
+    ],
+    origin: "CBSE 2024 · English · literature",
+  },
+  {
+    chapter: "Prose · Two Stories about Flying",
+    type: "short",
+    marks: 3,
+    prompt:
+      "'Family played a vital role in the first flight of the young seagull.' Give examples to substantiate the above statement.",
+    modelAnswer:
+      "His parents encouraged him to fly and then deliberately withheld food, so hunger pushed him off the ledge. His mother flew close with a piece of fish and stopped just out of reach, tempting him into the air, and his brothers and sister had already flown, showing him what was possible. Their teasing and their example made him attempt the flight.",
+    markingPoints: [
+      "Parents urged him and withheld food.",
+      "Mother tempted him with fish just out of reach.",
+      "Siblings had already flown and set an example.",
+    ],
+    origin: "CBSE 2023 · English · literature",
+  },
+  {
+    chapter: "Prose · Two Stories about Flying",
+    type: "long",
+    marks: 6,
+    prompt:
+      "You have been asked to present an evaluation of the approaches of both the baby seagull and the pilot who was lost in the clouds towards achieving their dreams of conquering the skies. Write this presentation draft including your insights, comparing the approaches of both.",
+    modelAnswer:
+      "Both the seagull and the pilot want the same thing — to fly — but they reach it by opposite routes. The seagull begins in fear, clinging to his ledge and refusing to try until hunger and his family's encouragement push him into the air; his courage is forced on him, and once he drops he discovers that the sky will hold him. The pilot, by contrast, sets out confidently, but when clouds close in and his compass and radio fail, he is saved by trusting a fellow pilot who guides him down. The seagull's lesson is that fear has to be met with action; the pilot's is that confidence is not self-sufficiency, and that accepting help is part of skill. In both stories the dream is achieved when the flier stops relying only on himself.",
+    markingPoints: [
+      "Both aim to fly but start from different attitudes.",
+      "Seagull: fear, hunger, family encouragement, first flight.",
+      "Pilot: confidence, lost instruments, guided by another pilot.",
+      "Insight: courage may need a push; skill may need help.",
+      "Comparison drawn explicitly, in a presentation tone.",
+    ],
+    origin: "CBSE 2024 · English · literature",
+  },
+  {
+    chapter: "Prose · Two Stories about Flying",
+    type: "long",
+    marks: 6,
+    prompt:
+      "Motivation plays an important role in taking risks in life and in succeeding. Do you agree? Discuss with reference to the pilot of the old Dakota and the young seagull.",
+    modelAnswer:
+      "Yes — in both stories the risk is taken because something makes it worth taking. The seagull's motivation is hunger and the example of his family; once he drops from the ledge, that motivation carries him through the frightening first moments into flight. The pilot's motivation is to reach home and, when his instruments fail, to trust the voice guiding him; his desire to land safely keeps him steady enough to follow instructions. Motivation does not remove the danger, but it makes the danger bearable and the effort possible.",
+    markingPoints: [
+      "Agrees that motivation drives risk-taking.",
+      "Seagull: hunger and family example lead him to fly.",
+      "Pilot: wanting to reach home and trusting guidance.",
+      "Concludes that motivation makes risk bearable and success possible.",
+    ],
+    origin: "CBSE 2023 · English · literature",
+  },
+  {
+    chapter: "Prose · From the Diary of Anne Frank",
+    type: "mcq",
+    marks: 1,
+    prompt: "The first education of Anne started at:",
+    options: [
+      "Some Kindergarten School",
+      "A Nursery School",
+      "Montessori Nursery School",
+      "Elementary School",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Anne says she was sent to the Montessori nursery school at the age of six and stayed there until she was eleven, before moving to the Jewish Lyceum.",
+    origin: "CBSE 2024 · English · answer key",
+  },
+  {
+    chapter: "Prose · Nelson Mandela: Long Walk to Freedom",
+    type: "mcq",
+    marks: 1,
+    prompt: "The system of racial domination has been replaced by a system that:",
+    options: [
+      "confirms the education of the Blacks",
+      "recognises the rights and freedoms of all people",
+      "recollects the bitter experiences",
+      "focuses on personality development",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Mandela says the apartheid system has been replaced by one that recognises the rights and freedoms of all people, regardless of the colour of their skin.",
+    origin: "CBSE 2024 · English · answer key",
+  },
+];
+
+/* Mathematics (Standard, 30/x/x) — chapter gaps the 2020–2025 bank left. */
+const MATHS_MORE: BankQuestion[] = [
+  {
+    chapter: "Quadratic Equations",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "If the roots of ax² + bx + c = 0, a ≠ 0, are real and equal, which relation is true?",
+    options: ["a = b²/c", "b² = ac", "ac = b²/4", "c = b²/a"],
+    answerIndex: 2,
+    explanation:
+      "Equal real roots need the discriminant b² − 4ac = 0, which rearranges to ac = b²/4.",
+    origin: "CBSE 2024 · 30/1/2 · Q11",
+  },
+  {
+    chapter: "Triangles",
+    type: "short",
+    marks: 2,
+    prompt:
+      "Diagonals AC and BD of a trapezium ABCD, with AB ∥ DC, intersect at O. If DO/OB = 1/2, show that AB = 2CD.",
+    modelAnswer:
+      "In triangles AOB and COD, ∠AOB = ∠COD (vertically opposite angles) and ∠OAB = ∠OCD (alternate angles, AB ∥ DC). So ΔAOB ~ ΔCOD by AA similarity, giving AB/CD = OB/DO. Since DO/OB = 1/2, OB/DO = 2, hence AB/CD = 2 and AB = 2CD.",
+    markingPoints: [
+      "∠AOB = ∠COD and ∠OAB = ∠OCD, so ΔAOB ~ ΔCOD.",
+      "AB/CD = OB/DO = 2.",
+      "Hence AB = 2CD.",
+    ],
+    origin: "CBSE 2024 · 30/1/2 · Q21",
+  },
+  {
+    chapter: "Statistics",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "For data x₁, x₂, …, xₙ with frequencies f₁, f₂, …, fₙ, the value of Σfᵢ(xᵢ − x̄) is:",
+    options: ["n x̄", "1", "Σfᵢ", "0"],
+    answerIndex: 3,
+    explanation:
+      "The deviations of values from the mean cancel out when weighted by their frequencies, so Σfᵢ(xᵢ − x̄) = 0.",
+    origin: "CBSE 2024 · 30/1/2 · Q14",
+  },
+  {
+    chapter: "Circles",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "For a circle with centre O and radius 5 cm, which of these statements is true?",
+    options: [
+      "P: The distance between every pair of parallel tangents is 5 cm.",
+      "Q: The distance between every pair of parallel tangents is 10 cm.",
+      "R: It must be between 5 cm and 10 cm.",
+      "S: There is no point outside the circle from which a tangent of length 5 cm can be drawn.",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Parallel tangents touch the circle at opposite ends of a diameter, so the distance between them is 2 × 5 = 10 cm.",
+    origin: "CBSE 2025 · 30/6/1 · Q10",
+  },
+  {
+    chapter: "Surface Areas and Volumes",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "A cone of the greatest possible volume is hollowed out from a solid wooden cylinder. What is the ratio of the volume of the remaining wood to the volume of the cone hollowed out?",
+    options: ["1 : 1", "1 : 3", "2 : 1", "3 : 1"],
+    answerIndex: 2,
+    explanation:
+      "Cone: (1/3)πr²h. Remaining wood: πr²h − (1/3)πr²h = (2/3)πr²h. The ratio is 2 : 1.",
+    origin: "CBSE 2025 · 30/6/1 · Q14",
+  },
+  {
+    chapter: "Introduction to Trigonometry",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "In right triangle ABC, right-angled at A, if sin B = 1/4, then sec B equals:",
+    options: ["4", "√15/4", "√15", "4/√15"],
+    answerIndex: 3,
+    explanation:
+      "cos B = √(1 − sin²B) = √(15/16) = √15/4, so sec B = 4/√15.",
+    origin: "CBSE 2025 · 30/6/1 · trigonometry",
+  },
+];
+
+/* Social Science — Civics and Economics, the two sections the bank lacked. */
+const SOCIAL_SCIENCE_MORE: BankQuestion[] = [
+  {
+    chapter: "Civics · Power-sharing",
+    type: "short",
+    marks: 2,
+    prompt: "Why is power sharing desirable?",
+    modelAnswer:
+      "Power sharing reduces the chance of conflict between social groups by giving each a stake in how they are governed, and it prevents one group from imposing its will on the rest. It also makes government more responsive and stable, because decisions are taken with the consent of those affected.",
+    markingPoints: [
+      "Reduces conflict and the possibility of majority domination.",
+      "Gives groups a stake and makes government stable and responsive.",
+    ],
+    origin: "CBSE 2024 · 32/1/1 · social science",
+  },
+  {
+    chapter: "Economics · Money and Credit",
+    type: "short",
+    marks: 3,
+    prompt: "How is credit essential for economic activities? Explain with examples.",
+    modelAnswer:
+      "Credit lets producers start or expand work before they have the money from sales. A farmer borrows for seeds, fertiliser and irrigation and repays after harvest, so credit raises output and income. A small manufacturer borrows for raw material and wages during the production cycle, and a shopkeeper uses credit to stock goods before the selling season. Without credit, most of these activities would have to stay small or wait for savings to accumulate.",
+    markingPoints: [
+      "Credit finances inputs before returns arrive.",
+      "Farmer example: seeds, fertiliser, irrigation, repaid after harvest.",
+      "Business example: working capital, stock, expansion.",
+      "Raises production, income and employment.",
+    ],
+    origin: "CBSE 2024 · 32/1/1 · social science",
+  },
+  {
+    chapter: "Economics · Money and Credit",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Why does it become difficult for farmers in rural areas to take loans from formal banks?",
+    options: [
+      "They have no identity documents.",
+      "They cannot offer collateral as security.",
+      "Banks are not allowed to lend to farmers.",
+      "Formal loans carry no interest.",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Formal lenders demand collateral such as land or a deposit. Many small farmers lack clear title or enough assets, so they turn to moneylenders at high interest.",
+    origin: "CBSE 2025 · 32/1/1 · economics",
+  },
+];
+
+/* Hindi (Course B, 4/x/x) — literature questions, transcribed from the papers. */
+const HINDI: BankQuestion[] = [
+  {
+    chapter: "कबीर की साखियाँ",
+    type: "short",
+    marks: 2,
+    prompt:
+      "तन और वस्त्रों की स्वच्छता तो साबुन-पानी से की जा सकती है, स्वभाव को किस प्रकार स्वच्छ किया जा सकता है? कबीर की साखी के संदर्भ में लिखिए।",
+    modelAnswer:
+      "कबीर कहते हैं कि बाहरी स्वच्छता केवल पानी से होती है, पर मन की मैल को हरि-भक्ति और सत्संग से धोना पड़ता है। जब मन में क्रोध, लोभ और द्वेष नहीं रहते और जीव सबको समान मानता है, तब स्वभाव स्वच्छ होता है।",
+    markingPoints: [
+      "बाहरी स्वच्छता पानी से, भीतरी स्वच्छता साधना से।",
+      "हरि-भक्ति, सत्संग और सदाचार से स्वभाव शुद्ध होता है।",
+      "क्रोध, लोभ और द्वेष का त्याग।",
+    ],
+    origin: "CBSE 2025 · 4/1/2 · साहित्य",
+  },
+  {
+    chapter: "मीरा के पद",
+    type: "short",
+    marks: 2,
+    prompt:
+      "श्रीकृष्ण की चाकरी करने के पीछे मीराबाई की क्या अभिलाषा थी?",
+    modelAnswer:
+      "मीराबाई चाकरी द्वारा कृष्ण के निकट रहकर उनका सान्निध्य पाना चाहती हैं। उनकी अभिलाषा संसार की सुख-सुविधा नहीं, बल्कि गिरधर नागर के चरणों में रहकर भवसागर पार उतरना है।",
+    markingPoints: [
+      "कृष्ण के निकट रहने की अभिलाषा।",
+      "चरण-सेवा और सान्निध्य से भवसागर पार उतरना।",
+      "सांसारिक सुखों की उपेक्षा।",
+    ],
+    origin: "CBSE 2025 · 4/1/2 · साहित्य",
+  },
+  {
+    chapter: "मीरा के पद",
+    type: "short",
+    marks: 3,
+    prompt:
+      "मीरा अपने आराध्य कृष्ण से क्या विनती करती हैं और उन्हें उनके कर्तव्य का स्मरण करवाने के लिए क्या करती हैं?",
+    modelAnswer:
+      "मीरा कृष्ण से विनती करती हैं कि वे उन्हें अपना दासी बना लें और सदा अपने निकट रखें। वे उनके कर्तव्य का स्मरण कराने के लिए कहती हैं कि दीन-दुखियों की रक्षा करना उनका काम है — जब कोई शरण में आए तो उसे लज्जित न लौटाएँ — और वे स्वयं को उनकी शरण में बताकर उन्हें पुकारती हैं।",
+    markingPoints: [
+      "कृष्ण को दासी बनाने की विनती।",
+      "दीन-दुखियों की रक्षा के कर्तव्य का स्मरण।",
+      "शरणागत को लज्जित न लौटाने की पुकार।",
+    ],
+    origin: "CBSE 2024 · 4/1/3 · साहित्य",
+  },
+  {
+    chapter: "संचयन · हरिहर काका",
+    type: "short",
+    marks: 3,
+    prompt:
+      "आपके पड़ोसी काका की स्थिति हरिहर काका से मिलती-जुलती है। आप उन्हें कैसे समझाएँगे और मदद करेंगे?",
+    modelAnswer:
+      "मैं उन्हें स्नेह से समझाऊँगा कि जो लोग ज़मीन के लालच में उनकी सेवा का ढोंग रचते हैं, उनसे सावधान रहें। उन्हें अपनी संपत्ति का कागज़ी हिस्सा अपने नाम पर सुरक्षित रखने, हस्ताक्षर करने से पहले सलाह लेने और किसी एक पुत्र के भरोसे पूरी ज़मीन न देने की सलाह दूँगा। साथ ही मैं स्वयं उनके पास आता-जाता रहूँगा, उनके भोजन और दवा का ध्यान रखूँगा और गाँव के भरोसेमंद लोगों को इस बात में शामिल करूँगा।",
+    markingPoints: [
+      "लालची रिश्तेदारों के व्यवहार को समझाना।",
+      "संपत्ति और हस्ताक्षर को लेकर सतर्क करना।",
+      "नियमित देखभाल, भोजन-दवा और भरोसेमंद लोगों की मदद।",
+    ],
+    origin: "CBSE 2024 · 4/1/3 · साहित्य",
+  },
+  {
+    chapter: "मनुष्यता — मैथिलीशरण गुप्त",
+    type: "short",
+    marks: 3,
+    prompt:
+      "'घटे न हेलमेल हाँ, बढ़े न भिन्नता कभी' — 'मनुष्यता' कविता से ली गई इस पंक्ति के माध्यम से कवि ने जीवन रूपी मार्ग पर आगे बढ़ते समय क्या याद रखने को कहा है और क्यों?",
+    modelAnswer:
+      "कवि कहते हैं कि मनुष्यों में आपसी प्रेम और मेल-जोल कभी कम नहीं होना चाहिए और भेदभाव कभी नहीं बढ़ना चाहिए। जब सब लोग एक-दूसरे के साथ समानता और सहयोग से रहते हैं, तब समाज आगे बढ़ता है; भेदभाव विसंगति और कलह को जन्म देता है। इसलिए मानवता का मार्ग एकता और सद्भाव का मार्ग है।",
+    markingPoints: [
+      "आपसी प्रेम और सहयोग बना रहे, भेदभाव न बढ़े।",
+      "मेल-जोल से समाज आगे बढ़ता है।",
+      "भेदभाव से कलह और विसंगति फैलती है।",
+    ],
+    origin: "CBSE 2023 · 4/4/1 · साहित्य",
+  },
+  {
+    chapter: "पर्वत प्रदेश में पावस — सुमित्रानंदन पंत",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "'पर्वत प्रदेश में पावस' कविता के आधार पर बताइए कि पर्वतों की ऊँचाई से गिरने वाले झरने किसके यश का गुणगान कर रहे हैं?",
+    options: [
+      "धरती के शिव की",
+      "पर्वत के शिखर की",
+      "मेघों के बरसते जल का",
+      "वर्षा ऋतु की शोभा का",
+    ],
+    answerIndex: 0,
+    explanation:
+      "कविता में ऊँची पर्वत-चोटी से झरते जल के प्रवाह को 'शिव' के यश का गीत गाते हुए चित्रित किया गया है।",
+    origin: "CBSE 2023 · 4/6/1 · साहित्य",
+  },
+];
+
+/* Information Technology (402) — 2023–2025 board papers. */
+const IT: BankQuestion[] = [
+  {
+    chapter: "Digital Documentation (Advanced)",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "How many levels of headings does OpenOffice Writer evaluate to build the Table of Contents?",
+    options: ["6", "8", "10", "12"],
+    answerIndex: 2,
+    explanation:
+      "Writer's Table of Contents dialog evaluates up to 10 heading levels, though most documents use the first two or three.",
+    origin: "CBSE 2023 · IT 402",
+  },
+  {
+    chapter: "Electronic Spreadsheets (Advanced)",
+    type: "mcq",
+    marks: 1,
+    prompt: "Which feature of Calc is used to test 'what-if' questions?",
+    options: ["Goal Seek", "Scenarios", "Subtotals", "Data Pilot"],
+    answerIndex: 1,
+    explanation:
+      "Scenarios store alternative sets of input values so the effect of different assumptions can be compared without rewriting the sheet.",
+    origin: "CBSE 2023 · IT 402",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "short",
+    marks: 2,
+    prompt: "What is self-awareness? Also, give any two benefits of self-awareness.",
+    modelAnswer:
+      "Self-awareness is the ability to recognise one's own thoughts, feelings, strengths, weaknesses, beliefs and values, and to see how they affect behaviour. Two benefits: it helps a person set realistic goals and improve, and it makes communication and teamwork better because one understands one's own reactions.",
+    markingPoints: [
+      "Recognising one's own feelings, strengths and weaknesses.",
+      "Benefit: realistic goals and self-improvement.",
+      "Benefit: better relationships and communication.",
+    ],
+    origin: "CBSE 2023 · IT 402",
+  },
+  {
+    chapter: "Database Management System",
+    type: "short",
+    marks: 2,
+    prompt: "Give any two benefits of creating relationships between tables in a database.",
+    modelAnswer:
+      "Relationships avoid storing the same data in several places, so the data stays consistent when it is edited. They also let information from two tables be combined in a query or form, which makes reports and lookups possible and reduces typing errors.",
+    markingPoints: [
+      "Avoids duplication and keeps data consistent.",
+      "Allows combined queries, forms and reports.",
+    ],
+    origin: "CBSE 2024 · IT 402",
+  },
+  {
+    chapter: "Web Applications and Web Security",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "________ are text files with small pieces of data, like a username and password.",
+    options: ["Cookies", "Macros", "Plug-ins", "Digital certificates"],
+    answerIndex: 0,
+    explanation:
+      "Cookies are small text files a website stores on the browser to remember information such as a login or a preference.",
+    origin: "CBSE 2024 · IT 402",
+  },
+  {
+    chapter: "Electronic Spreadsheets (Advanced)",
+    type: "short",
+    marks: 2,
+    prompt:
+      "What is a Macro? Give any two rules that should be followed while naming a Macro or module in Calc.",
+    modelAnswer:
+      "A macro is a saved set of commands that can be run with one action, used to repeat a task automatically. Naming rules: begin the name with a letter, not a digit or punctuation; use only letters, digits and underscores, with no spaces; and avoid names that match a cell reference such as A1.",
+    markingPoints: [
+      "Macro: recorded or written set of commands that automates a task.",
+      "Name begins with a letter; no spaces.",
+      "Avoid names that look like cell references.",
+    ],
+    origin: "CBSE 2025 · IT 402",
+  },
+];
+
 const BANK: Record<string, BankQuestion[]> = {
   "10:science": SCIENCE,
-  "10:maths": MATHS,
-  "10:social-science": SOCIAL_SCIENCE,
+  "10:maths": [...MATHS, ...MATHS_MORE],
+  "10:social-science": [...SOCIAL_SCIENCE, ...SOCIAL_SCIENCE_MORE],
+  "10:english": ENGLISH,
+  "10:hindi": HINDI,
+  "10:computer": IT,
 };
 
 /** Every real board question available for a class + subject. */

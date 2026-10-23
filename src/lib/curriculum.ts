@@ -467,10 +467,17 @@ function clamp(value: number, min: number, max: number) {
 /**
  * How many questions a given clock should carry.
  *
- * CBSE's own ratio is about 2 minutes per mark for a board paper (80 marks in
- * 180 minutes, reading time included), and about a minute per objective
- * question. Both are scaled here, then bounded so a very long paper stays
- * inside what one sitting can generate and mark.
+ * The shape of a CBSE Class 10 paper is fixed — 20 MCQs, about 9 short answers
+ * and 7 long answers across 80 marks and 180 minutes — so each section is
+ * scaled from that paper's share of the clock: one MCQ per ~4.5 minutes, one
+ * short answer per ~20, one long answer per ~26. A 15-minute paper therefore
+ * gets a small complete paper (not four questions), and a 60-minute one gets
+ * roughly a third of a board paper. Nothing is scaled below one written
+ * question per section, and the section sizes are capped at the real paper's
+ * maximum so a 5-hour request does not become an unmarkable monster.
+ *
+ * Objective papers follow the other real ratio: about one MCQ per 1.25
+ * minutes.
  */
 export function paperPlan(
   durationMinutes: number,
@@ -483,11 +490,9 @@ export function paperPlan(
     return { mcq, short: 0, long: 0, totalMarks: mcq };
   }
 
-  const marks = clamp(Math.round(duration / 2.25), 15, 80);
-  const mcq = clamp(Math.round(marks * 0.25), 4, 20);
-  const remaining = Math.max(12, marks - mcq);
-  const long = clamp(Math.round((remaining * 0.62) / 5), 1, 8);
-  const short = clamp(Math.round((remaining * 0.38) / 3), 1, 8);
+  const mcq = clamp(Math.round(duration * 0.22), 4, 20);
+  const short = clamp(Math.round(duration * 0.05), 1, 9);
+  const long = clamp(Math.round(duration * 0.04), 1, 7);
 
   return {
     mcq,

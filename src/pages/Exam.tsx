@@ -731,7 +731,7 @@ export default function Exam() {
                         <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
                           {realQuestions
                             ? `${availableBank} real board question${availableBank === 1 ? "" : "s"} match your chapters and go into the paper first. 2021 papers were cancelled and 2022 was term-based, so the bank covers 2020, 2023, 2024 and 2025.`
-                            : "No saved board question covers those chapters yet — the paper keeps the board pattern, marks and wording style instead. Real questions cover most of Science, Mathematics and History."}
+                            : "No saved board question covers those chapters yet — the paper keeps the board pattern, marks and wording style instead. Real questions cover all six Class 10 subjects; chapters without one get a board-pattern question instead."}
                         </p>
                       ) : null}
                     </div>

@@ -85,6 +85,22 @@ const VIEW_TABS = [
 ] as const;
 type ViewId = (typeof VIEW_TABS)[number]["id"];
 
+/**
+ * What a spoken problem is likely to contain: operation words, the topics of
+ * the school course, and the symbols students read aloud. Used to bias the
+ * recogniser and to repair a near-miss word, never to rewrite a clear one.
+ */
+const MATH_TERMS = [
+  "solve for x", "quadratic equation", "linear equation", "simultaneous equations",
+  "polynomial", "factorise", "factorize", "discriminant", "square root", "cube root",
+  "sine", "cosine", "tangent", "theta", "hypotenuse", "perpendicular", "base",
+  "area", "perimeter", "circumference", "radius", "diameter", "volume",
+  "surface area", "probability", "mean", "median", "mode", "arithmetic progression",
+  "coordinate", "slope", "intercept", "parabola", "vertex", "logarithm",
+  "integral", "derivative", "limit", "matrix", "determinant", "vector",
+  "plus", "minus", "times", "divided by", "equals", "squared", "cubed", "root",
+];
+
 /** Three real entry points, one per kind of question the lab is good at. */
 const EXAMPLES: Array<{ label: string; value: string }> = [
   { label: "2/3 + 1/6", value: "\\frac{2}{3} + \\frac{1}{6}" },
@@ -540,8 +556,8 @@ export function MathLab() {
       lang: "en-IN",
       // A spoken problem is one sentence; stop soon after the student does.
       silenceMs: 1600,
-      terms: MATH_TERMS,
-      repair: MATH_TERMS,
+      terms: () => MATH_TERMS,
+      repair: () => MATH_TERMS,
       onText: (text) => setFormula(text),
       onListening: setListening,
       onStop: (reason) => {

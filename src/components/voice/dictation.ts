@@ -2,23 +2,34 @@
  * Dictation — the listening half of every voice feature, in one place.
  *
  * The Web Speech API hands us a *growing list* of results, not a stream of new
- * words. The old handlers concatenated the whole list on every event, which is
- * why a phone could show the same sentence five or six times: Android ends and
- * restarts the recogniser constantly, and each restart begins a fresh list with
- * the same indices. Three rules fix that:
+ * words. Two bugs came out of treating that list as a stream:
  *
- *   1. Final results are stored **by index**, so a result delivered twice
- *      overwrites instead of appending, and re-emitted duplicates are dropped.
- *   2. Interim text is rebuilt from scratch on every event — never accumulated.
- *   3. When the browser ends a session on its own (mobile does this after every
- *      phrase), the finals are committed once and a new session starts, so the
- *      student can keep talking without tapping the mic again.
+ *   - A phone ends and restarts the recogniser after almost every phrase, and
+ *     each restart begins a fresh list at index 0 with the same sentence in
+ *     it. Appending every list printed the sentence five or six times.
+ *   - Interim results were appended to the finals, so the last few words were
+ *     written twice while the student was still speaking.
  *
- * On top of that, `collapseRepeats` removes genuine back-to-back repetitions
- * that slip through as separate results ("lens lens lens lens"), and
- * `repairTerms` fixes near-miss words against the vocabulary of the current
- * question ("islands" → "eye lens"), which is the other complaint: a recogniser
- * that has never heard of "eye lens" hears "islands" every time.
+ * This module keeps one map of results per session, keyed by the engine's own
+ * index, and folds results into a single string with an overlap-aware merge:
+ * a sentence that begins with the words the transcript already ends with is
+ * stitched, not repeated. Finals are committed by index, so a result delivered
+ * twice overwrites rather than appends.
+ *
+ * On top of that:
+ *
+ *   - alternatives are scored against the vocabulary of the current question,
+ *     so when the engine offers both "islands" and "eye lens", the one the
+ *     topic supports wins;
+ *   - `repairTerms` fixes near-miss words against that vocabulary, plus a
+ *     small table of context-gated homophones ("islands" → "eye lens" only
+ *     when the talk is about the eye);
+ *   - `collapseRepeats` removes back-to-back repetitions that slip through as
+ *     separate results ("lens lens lens lens").
+ *
+ * Vocabulary is only ever a hint. A word the topic does not support is left
+ * exactly as heard — rewriting "islands" to "eye lens" in a geography answer
+ * would be worse than the misrecognition.
  */
 
 export type DictationStopReason = "silence" | "user" | "error" | "unsupported";
@@ -31,9 +42,8 @@ export interface DictationOptions {
   terms?: () => string[];
   /**
    * Words that may be repaired. Kept separate from `terms` on purpose: biasing
-   * tolerates a broad vocabulary, but silently rewriting "islands" to "eye
-   * lens" every time somebody mentions Lakshadweep would be worse than the
-   * misrecognition.
+   * tolerates a broad vocabulary, but silently rewriting a word the student
+   * actually said would be worse than the misrecognition.
    */
   repair?: () => string[];
   onText: (text: string) => void;
@@ -75,19 +85,17 @@ const STUDY_TERMS = [
 ];
 
 /**
- * Recogniser homophones that are worth undoing when the topic makes it
- * unambiguous. Keys are what the engine writes; values are what was said.
+ * Recogniser slips that are worth undoing. Keys are what the engine writes;
+ * values are what was said. Applied only when the target word is part of the
+ * current question's vocabulary, so a chat about islands stays about islands.
  */
 const HOMOPHONES: Record<string, string> = {
-  islands: "eye lens",
-  island: "eye lens",
-  iland: "eye lens",
-  ilands: "eye lens",
   meniscus: "meniscus",
   maniscus: "meniscus",
   miniscus: "meniscus",
   burret: "burette",
   burett: "burette",
+  buret: "burette",
   pipet: "pipette",
   pippet: "pipette",
   solonoid: "solenoid",
@@ -100,10 +108,82 @@ const HOMOPHONES: Record<string, string> = {
   rawlatt: "rowlatt",
   khalifat: "khilafat",
   khilafath: "khilafat",
+  phtosynthesis: "photosynthesis",
+  photosyntesis: "photosynthesis",
+  mitocondria: "mitochondria",
+  chlorophyl: "chlorophyll",
+  nefron: "nephron",
+  myopiea: "myopia",
+  hypermetropya: "hypermetropia",
+  hipotenuse: "hypotenuse",
+  discriminate: "discriminant",
 };
 
+/**
+ * Whole-phrase repairs that need topic support. Each pair is applied only when
+ * one of its hints appears in the vocabulary or in the words being repaired —
+ * "islands" becomes "eye lens" in an optics answer and nowhere else.
+ */
+const CONTEXT_REPAIRS: {
+  hints: string[];
+  pairs: [string, string][];
+}[] = [
+  {
+    hints: [
+      "eye", "lens", "retina", "cornea", "pupil", "iris", "optic", "vision",
+      "myopia", "hypermetropia", "presbyopia", "cataract", "accommodation",
+      "focal", "refraction", "ciliary",
+    ],
+    pairs: [
+      ["islands", "eye lens"],
+      ["island", "eye lens"],
+      ["ilands", "eye lens"],
+      ["iland", "eye lens"],
+      ["eye lands", "eye lens"],
+      ["eye land", "eye lens"],
+      ["is lens", "eye lens"],
+      ["i land", "eye lens"],
+      ["eye lens's", "eye lens"],
+    ],
+  },
+  {
+    hints: ["axis", "graph", "coordinate", "plot", "symmetry", "parabola", "vertex"],
+    pairs: [
+      ["x access", "x-axis"],
+      ["y access", "y-axis"],
+      ["excess", "x-axis"],
+      ["ex axis", "x-axis"],
+      ["why axis", "y-axis"],
+    ],
+  },
+  {
+    hints: ["triangle", "angle", "trigonometry", "sine", "cosine", "theta"],
+    pairs: [
+      ["sign theta", "sin θ"],
+      ["sine theta", "sin θ"],
+      ["sine theater", "sin θ"],
+      ["sign theater", "sin θ"],
+      ["cost theta", "cos θ"],
+      ["because theta", "cos θ"],
+      ["tan theater", "tan θ"],
+    ],
+  },
+];
+
 function normaliseWord(word: string): string {
-  return word.toLowerCase().replace(/[^a-z0-9']/g, "");
+  // Unicode-aware: a Hindi or Sanskrit term must survive normalisation, and
+  // must never normalise to the empty string (which would make every word
+  // look like a repeat of every other).
+  return word.toLowerCase().replace(/[^\p{L}\p{N}']/gu, "");
+}
+
+function words(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean);
+}
+
+function sameWords(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((word, index) => normaliseWord(word) === normaliseWord(b[index]));
 }
 
 function sameBlock(
@@ -129,7 +209,7 @@ function sameBlock(
  * the first copy is preserved.
  */
 export function collapseRepeats(input: string): string {
-  const tokens = input.split(/\s+/).filter(Boolean);
+  const tokens = words(input);
   const output: string[] = [];
   let index = 0;
 
@@ -172,6 +252,32 @@ export function collapseRepeats(input: string): string {
   return output.join(" ");
 }
 
+/**
+ * Append a new chunk of transcript, stitching an overlap instead of repeating
+ * it. A phone restarts the recogniser after each phrase and often re-reports
+ * the phrase that just ended, so "the eye lens" followed by "eye lens focuses
+ * light" must read as one sentence, not two.
+ *
+ * The overlap is capped at twenty words — longer than a phone's usual restart
+ * echo — and requires whole-word agreement, so near matches are never stitched.
+ */
+export function mergeTranscript(base: string, addition: string): string {
+  const left = words(base);
+  const right = words(addition);
+  if (left.length === 0) return right.join(" ");
+  if (right.length === 0) return left.join(" ");
+
+  const limit = Math.min(20, left.length, right.length);
+  for (let size = limit; size >= 1; size -= 1) {
+    if (
+      sameWords(left.slice(left.length - size), right.slice(0, size))
+    ) {
+      return [...left, ...right.slice(size)].join(" ");
+    }
+  }
+  return [...left, ...right].join(" ");
+}
+
 /** Consonant skeleton — "lense" and "lens" share one. */
 function skeleton(word: string): string {
   return word.replace(/[aeiouy]/g, "");
@@ -199,19 +305,43 @@ function distance(a: string, b: string, ceiling: number): number {
   return previous[b.length];
 }
 
+/** Replace a phrase case-insensitively, keeping the rest of the text intact. */
+function replacePhrase(input: string, from: string, to: string): string {
+  const pattern = new RegExp(
+    `(^|[^a-z0-9])(${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})(?=$|[^a-z0-9])`,
+    "gi",
+  );
+  return input.replace(pattern, (_match, lead: string) => `${lead}${to}`);
+}
+
 /**
  * Repair near-miss words against the vocabulary of the current question.
  *
- * Only words that are *close* to a term the student is demonstrably talking
- * about are touched: an exact homophone from the table above, or a word whose
- * consonant skeleton matches a term of at least five letters. Anything else is
- * left exactly as heard.
+ * Three passes, each conservative:
+ *
+ *   1. Context repairs — whole-phrase homophones with a topic gate, so "eye
+ *      lens" is restored only while the conversation is about the eye.
+ *   2. Per-word homophones from the table above, when the corrected word is
+ *      part of the vocabulary.
+ *   3. Skeleton and edit-distance matching for words of four letters or more,
+ *      never touching inflected verbs.
  */
 export function repairTerms(input: string, terms: string[]): string {
   const vocabulary = [...new Set(terms.map((term) => term.toLowerCase().trim()))].filter(
     (term) => term.length > 2,
   );
-  if (vocabulary.length === 0) return input;
+
+  let text = input;
+  const context = `${vocabulary.join(" ")} ${text}`.toLowerCase();
+
+  for (const group of CONTEXT_REPAIRS) {
+    if (!group.hints.some((hint) => context.includes(hint))) continue;
+    for (const [from, to] of group.pairs) {
+      text = replacePhrase(text, from, to);
+    }
+  }
+
+  if (vocabulary.length === 0) return text;
 
   const singleWords = new Set(
     vocabulary.flatMap((term) => term.split(/[\s-]+/)).filter((word) => word.length > 2),
@@ -227,10 +357,11 @@ export function repairTerms(input: string, terms: string[]): string {
       });
   });
 
-  const words = input.split(/\s+/).filter(Boolean);
   const repaired: string[] = [];
 
-  words.forEach((raw) => {
+  words(text).forEach((raw) => {
+    // Multi-word replacements above may have inserted a space or a symbol;
+    // only plain words are examined here.
     const word = normaliseWord(raw);
     if (word.length < 3) {
       repaired.push(raw);
@@ -239,7 +370,7 @@ export function repairTerms(input: string, terms: string[]): string {
 
     const homophone = HOMOPHONES[word];
     if (homophone) {
-      const target = homophone.split(/\s+/);
+      const target = homophone.split(/[\s-]+/);
       const covered = target.some((part) => singleWords.has(part));
       if (covered) {
         repaired.push(homophone);
@@ -280,21 +411,51 @@ function cleanWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/** A vocabulary flattened once per result event, so scoring stays cheap. */
+interface VocabProfile {
+  words: Set<string>;
+  phrases: Set<string>;
+}
+
+function buildProfile(terms: string[]): VocabProfile {
+  const profile: VocabProfile = { words: new Set(), phrases: new Set() };
+  for (const term of terms) {
+    const parts = words(term.toLowerCase())
+      .map(normaliseWord)
+      .filter(Boolean);
+    if (parts.length === 0) continue;
+    parts.forEach((part) => {
+      if (part.length >= 3) profile.words.add(part);
+    });
+    for (let index = 0; index + 1 < parts.length; index += 1) {
+      profile.phrases.add(`${parts[index]} ${parts[index + 1]}`);
+    }
+  }
+  return profile;
+}
+
 /**
- * Drop finals the engine re-delivered. Android can report the same sentence at
- * a new index after a restart; those are duplicates, not new speech.
+ * How well a candidate transcript fits the current question. Used to choose
+ * between the recogniser's alternatives: given "islands" and "eye lens", the
+ * optics answer scores the phrase that belongs.
  */
-function repeatKind(previous: string, next: string): "drop" | "replace" | "keep" {
-  const a = cleanWhitespace(previous).toLowerCase();
-  const b = cleanWhitespace(next).toLowerCase();
-  if (!a || !b) return "keep";
-  if (a === b) return "drop";
-  // Only treat a prefix as a re-delivery once it is a real clause; short
-  // answers like "yes" followed by "yes it works" are two utterances.
-  const shortest = Math.min(a.length, b.length);
-  if (shortest >= 20 && b.startsWith(a)) return "replace";
-  if (shortest >= 20 && a.startsWith(b)) return "drop";
-  return "keep";
+function vocabularyScore(text: string, profile: VocabProfile): number {
+  const tokens = words(text.toLowerCase())
+    .map(normaliseWord)
+    .filter(Boolean);
+  let score = 0;
+  for (const token of tokens) {
+    if (profile.words.has(token)) score += 2;
+  }
+  for (let index = 0; index + 1 < tokens.length; index += 1) {
+    if (profile.phrases.has(`${tokens[index]} ${tokens[index + 1]}`)) score += 5;
+  }
+  return score;
+}
+
+interface SessionResult {
+  text: string;
+  final: boolean;
 }
 
 export function createDictation(options: DictationOptions): Dictation {
@@ -307,8 +468,8 @@ export function createDictation(options: DictationOptions): Dictation {
   let starting = false;
   let recognition: AviaSpeechRecognition | null = null;
   let committed = "";
-  let finals = new Map<number, string>();
-  let interim = "";
+  /** Results of the *current* recognition session, keyed by engine index. */
+  let session = new Map<number, SessionResult>();
   let silenceTimer: number | null = null;
   let restartTimer: number | null = null;
   let finished = true;
@@ -331,16 +492,24 @@ export function createDictation(options: DictationOptions): Dictation {
     }
   }
 
-  function orderedFinals(): string[] {
-    return [...finals.entries()]
+  function orderedSession(includeInterim: boolean): string[] {
+    return [...session.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([, text]) => text)
+      .filter(([, entry]) => includeInterim || entry.final)
+      .map(([, entry]) => entry.text)
       .filter(Boolean);
+  }
+
+  function sessionText(includeInterim: boolean): string {
+    return orderedSession(includeInterim).reduce(
+      (merged, text) => mergeTranscript(merged, text),
+      "",
+    );
   }
 
   function transcript(): string {
     const raw = cleanWhitespace(
-      [committed, ...orderedFinals(), interim].filter(Boolean).join(" "),
+      mergeTranscript(committed, sessionText(true)),
     );
     if (!raw) return "";
     return repairTerms(collapseRepeats(raw), repairList());
@@ -369,14 +538,31 @@ export function createDictation(options: DictationOptions): Dictation {
     silenceTimer = window.setTimeout(() => finish("silence"), delay);
   }
 
-  /** Move this session's finals into the durable buffer. */
+  /** Move this session's finals into the durable buffer, stitching any echo. */
   function commitSession() {
-    const text = cleanWhitespace(orderedFinals().join(" "));
-    if (text) {
-      committed = cleanWhitespace([committed, text].filter(Boolean).join(" "));
+    const text = sessionText(false);
+    if (text) committed = mergeTranscript(committed, text);
+    session = new Map();
+  }
+
+  /** Best alternative for one result, by how well it fits the question. */
+  function bestAlternative(result: AviaSpeechResult, profile: VocabProfile): string {
+    let bestText = result?.[0]?.transcript ?? "";
+    if (result.length <= 1) return bestText;
+
+    let bestScore = -1;
+    for (let index = 0; index < result.length; index += 1) {
+      const candidate = result[index]?.transcript ?? "";
+      if (!candidate.trim()) continue;
+      const score = vocabularyScore(candidate, profile);
+      // Alternative 0 is the engine's own pick, so a tie must not move away
+      // from it; `>` keeps the earlier alternative on equal scores.
+      if (score > bestScore) {
+        bestScore = score;
+        bestText = candidate;
+      }
     }
-    finals = new Map();
-    interim = "";
+    return bestText;
   }
 
   function bindPhrases(target: AviaSpeechRecognition) {
@@ -419,6 +605,11 @@ export function createDictation(options: DictationOptions): Dictation {
     want = false;
     clearSilence();
     clearRestart();
+    // A tap on the mic or a quiet room means "that is what I said": keep the
+    // pending hypothesis too. An error keeps only what the engine settled.
+    if (reason === "user" || reason === "silence") {
+      session.forEach((entry, index) => session.set(index, { ...entry, final: true }));
+    }
     commitSession();
     stopEngine();
     options.onListening?.(false);
@@ -453,7 +644,10 @@ export function createDictation(options: DictationOptions): Dictation {
     next.lang = options.lang ?? "en-IN";
     next.continuous = true;
     next.interimResults = true;
-    next.maxAlternatives = 1;
+    // Five alternatives are scored against the question's vocabulary — the
+    // only reliable way to prefer "eye lens" when the engine also offers
+    // "islands".
+    next.maxAlternatives = 5;
     bindPhrases(next);
 
     starting = true;
@@ -467,37 +661,39 @@ export function createDictation(options: DictationOptions): Dictation {
     };
 
     next.onresult = (event) => {
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        const text = result?.[0]?.transcript ?? "";
-        if (!result?.isFinal) continue;
-        const previous = finals.get(index) ?? "";
-        if (text.trim().length >= previous.trim().length) finals.set(index, text);
-      }
-
-      // Rebuild the pending text from scratch — it is a hypothesis, and old
-      // hypotheses must not survive into the final transcript.
-      interim = "";
+      // A stopped session can still deliver one last event on Android; its
+      // indices belong to the old list, not the new one.
+      if (recognition !== next) return;
+      const profile = buildProfile([...terms(), ...repairList()]);
       for (let index = 0; index < event.results.length; index += 1) {
         const result = event.results[index];
-        if (!result?.isFinal) interim += ` ${result?.[0]?.transcript ?? ""}`;
+        if (!result) continue;
+        const text = bestAlternative(result, profile).trim();
+        if (!text) continue;
+        const previous = session.get(index);
+        if (previous?.final && !result.isFinal) {
+          // A late interim at a final index is the engine rewinding; the
+          // settled words win.
+          continue;
+        }
+        if (
+          previous?.final &&
+          !sameWords(words(previous.text), words(text))
+        ) {
+          // Some devices reset their result list without firing `end`, then
+          // report the next sentence at index 0. Keep both by giving the new
+          // words the next index instead of overwriting the settled ones.
+          const nextIndex =
+            Math.max(...[...session.keys()], -1) + 1;
+          session.set(nextIndex, { text, final: result.isFinal });
+          continue;
+        }
+        if (previous && !result.isFinal && text.length < previous.text.length) {
+          // Hypotheses may shrink while they are re-scored; keep the words.
+          continue;
+        }
+        session.set(index, { text, final: result.isFinal });
       }
-      interim = cleanWhitespace(interim);
-
-      // A re-delivered sentence arrives at the next free index.
-      const ordered = [...finals.entries()].sort((a, b) => a[0] - b[0]);
-      const deduped = new Map<number, string>();
-      let last = "";
-      let lastIndex = -1;
-      for (const [index, text] of ordered) {
-        const kind = repeatKind(last, text);
-        if (kind === "drop") continue;
-        if (kind === "replace") deduped.delete(lastIndex);
-        deduped.set(index, text);
-        last = text;
-        lastIndex = index;
-      }
-      finals = deduped;
 
       emit();
       armSilence();
@@ -510,11 +706,11 @@ export function createDictation(options: DictationOptions): Dictation {
       starting = false;
       if (recognition !== next) return;
       recognition = null;
-      const heard = cleanWhitespace(
-        [committed, ...orderedFinals()].filter(Boolean).join(" "),
-      );
-      if (heard) {
-        clearSilence();
+      // The session is over, so whatever it heard is all it will produce:
+      // settle the finals *and* the last hypothesis. Phones end a session
+      // mid-sentence, and dropping the hypothesis would lose those words.
+      if (session.size > 0) {
+        session.forEach((entry, index) => session.set(index, { ...entry, final: true }));
         commitSession();
         emit();
       }
@@ -524,6 +720,15 @@ export function createDictation(options: DictationOptions): Dictation {
       if (want) scheduleRestart();
       else options.onListening?.(false);
     };
+
+    // Anything left in the map never reached `onend` as a final. Keep it — a
+    // phone can end a session mid-sentence — by settling it before the new
+    // index space begins; the overlap merge prevents an echo.
+    if (session.size > 0) {
+      session.forEach((entry, index) => session.set(index, { ...entry, final: true }));
+      commitSession();
+      emit();
+    }
 
     recognition = next;
     try {
@@ -540,8 +745,7 @@ export function createDictation(options: DictationOptions): Dictation {
     isListening: () => want,
     setSeed: (text: string) => {
       committed = cleanWhitespace(text);
-      finals = new Map();
-      interim = "";
+      session = new Map();
     },
     start: () => {
       if (!supported) {
@@ -552,8 +756,7 @@ export function createDictation(options: DictationOptions): Dictation {
       want = true;
       finished = false;
       committed = "";
-      finals = new Map();
-      interim = "";
+      session = new Map();
       startSession();
     },
     stop: () => finish("user"),
@@ -563,8 +766,7 @@ export function createDictation(options: DictationOptions): Dictation {
       clearSilence();
       clearRestart();
       committed = "";
-      finals = new Map();
-      interim = "";
+      session = new Map();
       stopEngine();
       options.onListening?.(false);
     },
