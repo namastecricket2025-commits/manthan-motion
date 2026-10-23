@@ -20,7 +20,7 @@ import {
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CLASSES } from "@/lib/curriculum";
 
@@ -67,10 +67,10 @@ function chapterSubject(chapter: string): LabSubject | "both" {
   if (/chemical|acid|base|salt|metal|atom|molecule|matter|carbon|periodic|fibre|coal|petroleum|combustion/i.test(chapter)) {
     return "chemistry";
   }
-  if (/light|sound|force|motion|gravitation|electric|magnetic|energy|pressure|friction|stars|natural phenomena|current|wave/i.test(chapter)) {
+  if (/light|sound|force|motion|gravitation|electric|magnetic|energy|pressure|friction|stars|natural phenomena|current|wave|human eye|eye/i.test(chapter)) {
     return "physics";
   }
-  if (/cell|tissue|life|reproduction|heredity|environment|resources|food|microorganism|crop|conservation|adolescence|control|coordination|diversity|pollution/i.test(chapter)) {
+  if (/cell|tissue|life|reproduction|heredity|environment|resources|food|microorganism|crop|conservation|adolescence|control|coordination|diversity|pollution|fall ill/i.test(chapter)) {
     return "biology";
   }
   return "both";
@@ -170,7 +170,6 @@ export function StemAsk({
   subject: initialSubject,
   mode: initialMode = "ask",
   seed,
-  onSeedUsed,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -179,14 +178,15 @@ export function StemAsk({
   mode?: AskMode;
   /** A question from a suggested chip, typed in and submitted by the student. */
   seed?: string | null;
-  onSeedUsed?: () => void;
 }) {
   const ask = useAction(api.stemLab.ask);
   const drill = useAction(api.stemLab.drill);
+  /* The parent mounts this component fresh for each visit, so every field
+     starts from the props — no effect has to copy them into state. */
   const [mode, setMode] = useState<AskMode>(initialMode);
   const [subject, setSubject] = useState<LabSubject>(initialSubject);
   const [className, setClassName] = useState("10");
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(seed ?? "");
   const [chapter, setChapter] = useState("");
   const [count, setCount] = useState("10");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "board">("medium");
@@ -195,23 +195,6 @@ export function StemAsk({
   const [result, setResult] = useState<AskResult | null>(null);
   const [drillResult, setDrillResult] = useState<DrillResult | null>(null);
   const [picked, setPicked] = useState<Record<number, number>>({});
-
-  useEffect(() => {
-    if (!open) return;
-    setSubject(initialSubject);
-    setMode(initialMode);
-  }, [initialSubject, initialMode, open]);
-
-  useEffect(() => {
-    if (!open || !seed) return;
-    setMode("ask");
-    setQuestion(seed);
-    setResult(null);
-    setDrillResult(null);
-    setPicked({});
-    setError(null);
-    onSeedUsed?.();
-  }, [open, seed, onSeedUsed]);
 
   /** The science chapter list for the chosen class (STEM subjects share it). */
   const chapters = useMemo(() => {
@@ -224,12 +207,15 @@ export function StemAsk({
     });
   }, [className, subject]);
 
-  useEffect(() => {
-    if (chapter && !chapters.includes(chapter)) setChapter("");
-  }, [chapter, chapters]);
+  /* A chapter picked for Chemistry must not survive a switch to Physics —
+     the value simply falls back to "any chapter" while the list changes. */
+  const selectedChapter = chapters.includes(chapter) ? chapter : "";
 
-  const shownQuestions =
-    mode === "drill" ? (drillResult?.questions ?? []) : (result?.questions ?? []);
+  const shownQuestions = useMemo(
+    () =>
+      mode === "drill" ? (drillResult?.questions ?? []) : (result?.questions ?? []),
+    [mode, drillResult, result],
+  );
 
   const score = useMemo(
     () =>
@@ -273,7 +259,7 @@ export function StemAsk({
       const reply = await drill({
         subject,
         className,
-        chapter: chapter || undefined,
+        chapter: selectedChapter || undefined,
         count: Number(count),
         difficulty,
       });
@@ -452,7 +438,7 @@ export function StemAsk({
               <label className="flex flex-col gap-1.5 text-[11px] text-text-dim">
                 Chapter
                 <select
-                  value={chapter}
+                  value={selectedChapter}
                   onChange={(event) => setChapter(event.target.value)}
                   className="rounded-lg border border-[var(--card-border)] bg-transparent px-2.5 py-2 text-[12.5px] text-foreground outline-none focus:border-[var(--text-main)]"
                 >

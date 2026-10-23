@@ -292,14 +292,21 @@ export default function Lab() {
         </footer>
       </div>
 
-      <StemAsk
-        open={askOpen}
-        onOpenChange={setAskOpen}
-        subject={subject}
-        mode={askMode}
-        seed={askSeed}
-        onSeedUsed={() => setAskSeed(null)}
-      />
+      {/* Mounted only while open: each visit starts from the subject, mode
+          and seed in hand, and the seed is spent on close so reopening "Ask
+          the lab" gives a clean box instead of the old chip's question. */}
+      {askOpen ? (
+        <StemAsk
+          open
+          onOpenChange={(next) => {
+            setAskOpen(next);
+            if (!next) setAskSeed(null);
+          }}
+          subject={subject}
+          mode={askMode}
+          seed={askSeed}
+        />
+      ) : null}
     </div>
   );
 }

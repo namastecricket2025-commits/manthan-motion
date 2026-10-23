@@ -89,6 +89,13 @@ export function MaterialPrint({
       if (cancelled) return;
       document.body.classList.add("material-printing");
       window.addEventListener("afterprint", cleanup, { once: true });
+      // One frame with the sheet in layout before the snapshot: the sheet was
+      // `display: none` until the class landed, and printing a document whose
+      // first layout pass has not happened is how a page prints empty.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      if (cancelled || !document.body.classList.contains("material-printing")) return;
       window.print();
       // Safari does not always fire `afterprint`; never leave the app hidden.
       window.setTimeout(cleanup, 1500);
@@ -101,8 +108,9 @@ export function MaterialPrint({
       window.removeEventListener("afterprint", cleanup);
     };
     // Mounted once per print request; `onDone` is read through the ref so a
-    // live-query re-render cannot open the dialog a second time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // live-query re-render cannot open the dialog a second time. StrictMode's
+    // first pass is cancelled by its own cleanup before the dialog opens, so
+    // the second pass is the one that prints.
   }, []);
 
   const date = createdAt

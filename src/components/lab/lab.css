@@ -1195,9 +1195,10 @@ html:not(.dark) .lab-root .text-\[\#ff8a9a\] {
 
 /* Legacy colour chrome inside the lab explorers (tags, live pills, telemetry
    accents) still carries literal rose utilities in the 3D views. Rather than
-   rewriting every scene, retint those fragments here so the whole bench speaks
-   the single amber accent — the red that remains in the models is anatomy
-   (blood, heart muscle, polymerase), never interface. */
+   rewriting every scene, retint those fragments here: white on the dark
+   bench, a dark red on paper — red is the only interface colour left, and it
+   is kept because the red inside the models is anatomy (blood, heart muscle,
+   polymerase), never decoration. */
 .lab-root [class*="text-[#ff8a9a]"],
 .lab-root [class*="text-[#ff647c]"],
 .lab-root [class*="text-[#ff3b5c]"] {
