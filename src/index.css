@@ -607,8 +607,9 @@
      therefore without the nesting the downlevelled rule needs) renders the
      opaque disc this pass removed. A third token removes the branch, so the
      gradient is byte-identical in every browser. */
-  --halo-mid: rgba(251, 191, 36, 0.07);
-  --halo-far: rgba(251, 191, 36, 0.055);
+  --halo-near: rgba(255, 255, 255, 0.22);
+  --halo-mid: rgba(255, 255, 255, 0.065);
+  --halo-far: rgba(255, 255, 255, 0.06);
 
   /* The pointer light on a card (see the light-theme note). White at 8% on
      the night theme: enough to lift a #0a0a0a panel where the pointer is,
