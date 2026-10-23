@@ -230,7 +230,7 @@ export function MindmapView({ payload }: { payload: MindmapPayload }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="print-hide flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] leading-relaxed text-text-dim">
           Root idea in the middle — branches on both sides, each leaf in its own
           column.

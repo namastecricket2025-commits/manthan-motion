@@ -847,7 +847,11 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
   --lab-diagram-plate: 255, 255, 255;
   --lab-diagram-violet: #111111;
   --lab-diagram-cyan: #0e7490;
-  --lab-diagram-amber: #b45309;
+  /* The old light mapping was the site's caramel amber. On a white bench it
+     read as a warning light, so the second data series is a deep violet now.
+     It still separates cleanly from the teal and rose series without bringing
+     the orange glow back. */
+  --lab-diagram-amber: #6d28d9;
   --lab-diagram-mint: #0f766e;
   --lab-diagram-rose: #be123c;
   --lab-diagram-lilac: #3a3a3a;

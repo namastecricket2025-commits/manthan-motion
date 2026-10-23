@@ -56,6 +56,26 @@ const SUBJECTS: { id: LabSubject; label: string; icon: typeof Atom }[] = [
   { id: "biology", label: "Biology", icon: Dna },
 ];
 
+/**
+ * Which lab a NCERT science chapter belongs to. The exam syllabus keeps
+ * science as one subject, but the lab is split into three benches; offering a
+ * chemistry chapter under Physics would make the generated questions wrong.
+ * Chemistry is tested first because "Chemical Effects of Electric Current"
+ * contains both words.
+ */
+function chapterSubject(chapter: string): LabSubject | "both" {
+  if (/chemical|acid|base|salt|metal|atom|molecule|matter|carbon|periodic|fibre|coal|petroleum|combustion/i.test(chapter)) {
+    return "chemistry";
+  }
+  if (/light|sound|force|motion|gravitation|electric|magnetic|energy|pressure|friction|stars|natural phenomena|current|wave/i.test(chapter)) {
+    return "physics";
+  }
+  if (/cell|tissue|life|reproduction|heredity|environment|resources|food|microorganism|crop|conservation|adolescence|control|coordination|diversity|pollution/i.test(chapter)) {
+    return "biology";
+  }
+  return "both";
+}
+
 const PROMPTS: Record<LabSubject, string[]> = {
   physics: [
     "Why does the current fall when I add a bulb in series?",
@@ -198,8 +218,15 @@ export function StemAsk({
     const science = CLASSES.find((entry) => entry.id === className)?.subjects.find(
       (entry) => entry.id === "science",
     );
-    return science?.chapters ?? [];
-  }, [className]);
+    return (science?.chapters ?? []).filter((name) => {
+      const owner = chapterSubject(name);
+      return owner === subject || owner === "both";
+    });
+  }, [className, subject]);
+
+  useEffect(() => {
+    if (chapter && !chapters.includes(chapter)) setChapter("");
+  }, [chapter, chapters]);
 
   const shownQuestions =
     mode === "drill" ? (drillResult?.questions ?? []) : (result?.questions ?? []);
@@ -522,7 +549,7 @@ export function StemAsk({
             </div>
           ) : null}
 
-          {result ? (
+          {result && mode === "ask" ? (
             <div className="mt-5 flex flex-col gap-5">
               <section className="rounded-2xl border border-[var(--card-border)] p-4 sm:p-5">
                 <h3 className="font-display text-lg font-bold tracking-tight">
@@ -599,7 +626,7 @@ export function StemAsk({
             </div>
           ) : null}
 
-          {drillResult ? (
+          {drillResult && mode === "drill" ? (
             <div className="mt-5 flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">

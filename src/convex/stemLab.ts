@@ -30,14 +30,14 @@ const SYSTEM = [
   "Be concrete: name the law or process, then show the cause and effect the student can see on a lab bench.",
   "Never invent a formula or a constant. If the question is outside school science, say so and answer the nearest syllabus idea.",
   "Write plain text with Unicode symbols (Ω, °C, cm³, 10⁻³), never LaTeX, Markdown or asterisks.",
-  "Then write exactly three multiple-choice questions that test the same idea, each with four options, one correct zero-based answerIndex and a one-sentence explanation.",
+  "When the request asks for practice, write exactly the number of multiple-choice questions asked for (or three when no number is given), each with four options, one correct zero-based answerIndex and a one-sentence explanation.",
   "Reply with a single JSON object and nothing else.",
 ].join(" ");
 
 const questionSchema = z.object({
   question: z.string().min(1),
   options: z.array(z.string()).min(2),
-  answerIndex: z.number().optional().catch(0),
+  answerIndex: z.coerce.number().optional().catch(0),
   explanation: z.string().optional().catch(undefined),
 });
 

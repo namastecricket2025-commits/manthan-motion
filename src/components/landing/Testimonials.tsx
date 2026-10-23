@@ -124,7 +124,7 @@ function ReviewCard({
     <figure className="glass-panel card-surface spot-card flex h-full flex-col p-6">
       <Stars rating={review.rating} />
       <blockquote className="mt-4 flex-1 whitespace-pre-line text-[14px] leading-relaxed text-foreground/90">
-        “{review.text}”
+        “{review.text.trim() || `Rated Manthan ${review.rating} out of 5.`}”
       </blockquote>
       <figcaption className="mt-6 flex items-center gap-3 border-t border-[var(--panel-line)] pt-4">
         <InitialAvatar name={review.displayName} size={44} colorIndex={colorIndex} />
@@ -486,7 +486,7 @@ export function TestimonialStrip({ className }: { className?: string }) {
             >
               <Stars rating={review.rating} size={12} />
               <blockquote className="mt-3 line-clamp-3 flex-1 whitespace-pre-line text-[13px] leading-relaxed text-foreground/85">
-                “{review.text}”
+                “{review.text.trim() || `Rated Manthan ${review.rating} out of 5.`}”
               </blockquote>
               <figcaption className="mt-4 flex items-center gap-2.5">
                 <InitialAvatar
