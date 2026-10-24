@@ -365,29 +365,22 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — black canvas, two accents.
+  /* Brand palette (dark) — black canvas, honey light, white structure.
 
-     The night theme used to run the day amber at full strength (#fbbf24): a
-     94%-saturation yellow at the top of its blue channel, under every button,
-     icon, rail and mind-map root at once. Bright, but tiring for an hour of
-     revision. Flattening it to one clay tone fixed the glare and cost the
-     theme its pulse — every screen became a warm grey.
+     The amber is the product's one colour and it stays yellow: `--signal` is
+     the honey #fbbf24 the day theme runs as caramel, and `--signal-strong` is
+     that amber as the FILLED action's body carrying a near-black label.
 
-     So the dark theme keeps TWO accents instead of one:
+     What changed after the "everything is yellow" pass is the AMOUNT, not the
+     hue. The biggest yellow blocks were the landing icon tiles, which filled
+     the whole 44px tile with amber on every card in the grid — that is what
+     put yellow under every mark at once. In the dark theme those tiles are now
+     white with the ink glyph (the way Vercel fills its own cards), so structure
+     is neutral and the action stays yellow. Charts, swatches, pipeline bars and
+     stars keep the brand amber, because there it is data and not decoration.
 
-       --signal   the warm light. A soft honey (#e3b05a) — the same yellow the
-                  product has always used, taken from 96% saturation down to
-                  about 70%. Still unmistakably gold, still 9.6:1 as text on
-                  the ink, no longer glowing.
-       --brand    the cool counterweight. A muted teal (#66b3a6) used for the
-                  marks and fills that sit BESIDE the action — landing icon
-                  tiles, pipeline bars, swatches, check beads. It is the same
-                  teal the charts already run, so the two families agree.
-
-     The split is what keeps either colour from taking over: actions and
-     emphasis are honey, structure and marks are teal, and the page itself is
-     still black with white-alpha hairlines. `--brand-mark` stays white, so the
-     logo does not change colour with the theme.
+     No new hue is introduced anywhere: the two steps are amber and the black /
+     white ramp.
 
      Two rules that keep this honest:
        - Anything that paints text over `--signal-strong` or a filled
@@ -396,18 +389,21 @@
        - Red stays reserved for meaning (a wrong answer, a failed read) —
          colour in the accent is brand, colour in red is still a fault. */
   --ink: #000000;
-  --signal: #e3b05a;
-  --signal-strong: #dfab53;
-  --signal-2: #9c6c2a;
-  --brand: #66b3a6;
-  --brand-soft: rgba(102, 179, 166, 0.16);
-  --brand-line: rgba(102, 179, 166, 0.34);
+  --signal: #fbbf24;
+  --signal-strong: #ffc233;
+  --signal-2: #c98a06;
+  --brand: #fbbf24;
+  --brand-soft: rgba(251, 191, 36, 0.14);
+  --brand-line: rgba(251, 191, 36, 0.32);
   /* One white mark in both themes: the hero circle and the logo dot are the
-     theme's "light", not a colour, so the two accents above can change without
-     the brand asset changing with them. */
+     theme's "light", not a colour, so the brand asset does not change with
+     the accent. */
   --brand-mark: var(--text-main);
-  /* Teal as text on `--brand-soft`: 8:1 on its own 16% tint over the ink. */
-  --brand-ink: #9ed3c8;
+  /* Amber as text on `--brand-soft`. On this canvas the brand step already
+     measures 9.3:1 on its own tint, so the "ink" case and the brand are the
+     same colour; the token exists so the two themes answer the same question
+     the same way (see the light-theme note). */
+  --brand-ink: #fbbf24;
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -451,14 +447,14 @@
      final letters — the same sweep the day theme runs, lifted for night.
      The two mid stops live in the `.dark .gradient-text` rule below. */
   --gt-head: #ffffff;
-  --gt-tail: #e3b05a;
+  --gt-tail: #fbbf24;
 
   /* Stroke-text display gradient (dark): a warm arc-lamp sweep, white-hot at
      the top and settling into caramel, bright enough to read as lit metal
      against the pure black canvas. */
-  --stroke-a: #f3ddb6;
-  --stroke-b: #e3b05a;
-  --stroke-c: #96652a;
+  --stroke-a: #ffdf8a;
+  --stroke-b: #f0b429;
+  --stroke-c: #b4740b;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -480,8 +476,8 @@
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(227, 176, 90, 0.12);
-  ----chart-segment-line: rgba(227, 176, 90, 0.32);
+  ----chart-segment-background: rgba(251, 191, 36, 0.12);
+  ----chart-segment-line: rgba(251, 191, 36, 0.32);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -526,7 +522,7 @@
      series and started shouting. These are the same hues mixed down toward the
      page — still clearly teal / rose / violet / sky, still 7:1 or better for
      text — one step quieter so no single series competes with the accent. */
-  --chart-1: #e3b05a;
+  --chart-1: #fbbf24;
   --chart-2: #6cc9be;
   --chart-3: #cf8f9e;
   --chart-4: #b8a6e0;
@@ -534,12 +530,12 @@
   /* Artefact + source ramp (dark) — one hue per generated artefact kind and
      per source kind, so a legend (or a mind-map node, or a notebook tab) is
      separable by colour, exactly as in the day theme. */
-  --kind-summary: #e3b05a;
+  --kind-summary: #fbbf24;
   --kind-flashcards: #6cc9be;
   --kind-quiz: #cf8f9e;
   --kind-mindmap: #b8a6e0;
   --kind-slides: #8fb8e6;
-  --src-files: #e3b05a;
+  --src-files: #fbbf24;
   --src-links: #6cc9be;
   --src-notes: #d99ab8;
   --sidebar: #0b0b0c;
@@ -569,12 +565,12 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: rgba(255, 255, 255, 0.95);
   --chart-label: rgba(255, 255, 255, 0.9);
-  --chart-scale-01: rgba(227, 176, 90, 0.1);
-  --chart-scale-02: rgba(227, 176, 90, 0.18);
-  --chart-scale-03: rgba(227, 176, 90, 0.3);
-  --chart-scale-04: rgba(227, 176, 90, 0.46);
-  --chart-scale-05: rgba(227, 176, 90, 0.64);
-  --chart-scale-pattern-color: rgba(227, 176, 90, 0.1);
+  --chart-scale-01: rgba(251, 191, 36, 0.1);
+  --chart-scale-02: rgba(251, 191, 36, 0.18);
+  --chart-scale-03: rgba(251, 191, 36, 0.3);
+  --chart-scale-04: rgba(251, 191, 36, 0.46);
+  --chart-scale-05: rgba(251, 191, 36, 0.64);
+  --chart-scale-pattern-color: rgba(251, 191, 36, 0.1);
 
   /* ---- Dashboard ink + selection surfaces (dark) ---------------------- */
   --dash-chart-label: rgba(255, 255, 255, 0.9);
@@ -741,10 +737,10 @@ html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
   --halo-near: rgba(255, 236, 205, 0.22);
   --halo-mid: rgba(255, 236, 205, 0.07);
   --halo-far: rgba(255, 236, 205, 0.05);
-  --brand: #66b3a6;
-  --brand-soft: rgba(102, 179, 166, 0.16);
-  --brand-line: rgba(102, 179, 166, 0.3);
-  --brand-ink: #9ed3c8;
+  --brand: #fbbf24;
+  --brand-soft: rgba(251, 191, 36, 0.14);
+  --brand-line: rgba(251, 191, 36, 0.3);
+  --brand-ink: #fbbf24;
 }
 
 /* The veil: one pointer-transparent amber wash above every layer, including
@@ -1234,8 +1230,8 @@ body::-webkit-scrollbar-thumb:hover {
       180deg,
       var(--gt-head) 0%,
       var(--gt-head) 32%,
-      #f0d9ae 68%,
-      #e3b05a 84%,
+      #ffd764 68%,
+      #f5b316 84%,
       var(--gt-tail) 100%
     );
   }
@@ -1387,7 +1383,11 @@ body::-webkit-scrollbar-thumb:hover {
        an amber glyph on a pale amber wash measures about 1.3:1 — a shape you
        cannot see. Filling the tile keeps the mark the same yellow the button
        uses and puts `--primary-foreground` on top of it, exactly like the
-       button does. */
+       button does.
+
+       Dark mode is the exception: a grid of amber tiles beside amber buttons
+       was the largest block of yellow on the site, so at night the tile uses
+       the neutral ramp instead. See the note at the end of this file. */
     background: var(--brand);
     color: var(--primary-foreground);
     transition: background 150ms ease-out, border-color 150ms ease-out;
@@ -2566,5 +2566,32 @@ html {
     font-size: 7.5pt;
     color: #777777;
   }
+}
+
+/* ------------------------------------------------
+   Landing icon tiles at night
+
+   In the day theme a tile is a filled amber square with the ink glyph: one
+   warm mark per card, and amber is the only colour on that page. At night the
+   same tile sat beside amber buttons, amber eyebrow labels and amber rails, so
+   a grid of them is a grid of yellow squares — the largest single block of the
+   colour on the site, and the thing that made the page feel loud. Here the
+   tile hands itself to the neutral ramp instead: white fill, near-black glyph,
+   no colour. The accent stays on the actions; structure goes monochrome.
+   Scoped to dark, so paper keeps the amber tile it was designed around.
+   ------------------------------------------------ */
+html.dark .card-tile,
+html[data-theme="dark"] .card-tile {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: var(--text-main);
+  color: #09090b;
+}
+
+html.dark .feature-card:hover .card-tile,
+html.dark .how-card:hover .card-tile,
+html[data-theme="dark"] .feature-card:hover .card-tile,
+html[data-theme="dark"] .how-card:hover .card-tile {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: #ffffff;
 }
 
