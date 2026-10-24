@@ -367,20 +367,21 @@
 [data-theme="dark"] {
   /* Brand palette (dark) — black canvas, honey light, white structure.
 
-     The amber is the product's one colour and it stays yellow: `--signal` is
-     the honey #fbbf24 the day theme runs as caramel, and `--signal-strong` is
-     that amber as the FILLED action's body carrying a near-black label.
+     The amber is the product's one colour: `--signal` stays the honey #fbbf24
+     the day theme runs as caramel, and that is the step all the ACCENTS are
+     made of — the mark, the accent word, an active rail, a streak flame, a
+     chart series, a data dot.
 
-     What changed after the "everything is yellow" pass is the AMOUNT, not the
-     hue. The biggest yellow blocks were the landing icon tiles, which filled
-     the whole 44px tile with amber on every card in the grid — that is what
-     put yellow under every mark at once. In the dark theme those tiles are now
-     white with the ink glyph (the way Vercel fills its own cards), so structure
-     is neutral and the action stays yellow. Charts, swatches, pipeline bars and
-     stars keep the brand amber, because there it is data and not decoration.
+     `--signal-strong` — the FILLED action's body — is NOT amber here any more.
+     Filled pills are the largest solid areas on a screen, and a dashboard with
+     a yellow Resume, a yellow Add-source, a yellow New-notebook and a yellow
+     Get-started at once is a yellow page with black text on it, not a black
+     page with an accent. So at night the fill moves to the white ramp (white
+     body, near-black label — the way Vercel fills its own buttons) and the
+     amber keeps the small, deliberate marks where it identifies something.
 
-     No new hue is introduced anywhere: the two steps are amber and the black /
-     white ramp.
+     No new hue is introduced anywhere: the accent is amber and everything
+     structural is the black / white ramp.
 
      Two rules that keep this honest:
        - Anything that paints text over `--signal-strong` or a filled
@@ -390,7 +391,7 @@
          colour in the accent is brand, colour in red is still a fault. */
   --ink: #000000;
   --signal: #fbbf24;
-  --signal-strong: #ffc233;
+  --signal-strong: #f4f4f6;
   --signal-2: #c98a06;
   --brand: #fbbf24;
   --brand-soft: rgba(251, 191, 36, 0.14);
@@ -1315,12 +1316,11 @@ body::-webkit-scrollbar-thumb:hover {
      does it. No filter, so nothing bleeds outside the pill. */
   .moving-border:hover .cd-face,
   .moving-border:focus-visible .cd-face {
-    background: var(--signal-2);
+    /* One step off whatever the fill is: deeper caramel on paper, a soft grey
+       at night. Derived from `--primary` so the hover can never be an amber
+       step under a white body (or the reverse). */
+    background: color-mix(in srgb, var(--primary) 88%, #000);
     color: var(--primary-foreground);
-  }
-  html:not(.dark) .moving-border:hover .cd-face,
-  html:not(.dark) .moving-border:focus-visible .cd-face {
-    background: color-mix(in srgb, var(--signal-strong) 88%, #000);
   }
   .moving-border:disabled {
     /* Dimmed, but still a button: no disc to freeze any more. */
@@ -1644,7 +1644,10 @@ body::-webkit-scrollbar-thumb:hover {
     position: absolute;
     inset: 0 auto 0 0;
     border-radius: 999px;
-    background: var(--signal);
+    /* The meter follows the action, not the accent: caramel on paper, white at
+       night. A yellow bar under a white number was the other half of the
+       "everything is yellow" read. */
+    background: var(--primary);
   }
 
   /* Resume-block completion timeline. */
@@ -1654,8 +1657,8 @@ body::-webkit-scrollbar-thumb:hover {
   .dashboard-timeline__fill {
     background: linear-gradient(
       90deg,
-      color-mix(in srgb, var(--signal) 60%, transparent),
-      var(--signal)
+      color-mix(in srgb, var(--primary) 55%, transparent),
+      var(--primary)
     );
   }
 
@@ -1675,7 +1678,7 @@ body::-webkit-scrollbar-thumb:hover {
     touch-action: manipulation;
   }
   .dashboard-resume:hover {
-    background: var(--signal-2);
+    background: color-mix(in srgb, var(--primary) 88%, #000);
   }
 
   /* ------------------------------------------------
@@ -1747,7 +1750,7 @@ body::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
   }
   .dash-action--primary:hover {
-    background: var(--signal-2);
+    background: color-mix(in srgb, var(--primary) 88%, #000);
   }
   .dash-action--secondary {
     padding: 0.55rem 1rem;
@@ -1765,7 +1768,9 @@ body::-webkit-scrollbar-thumb:hover {
     position: absolute;
     inset: 0;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--signal) 15%, transparent);
+    /* Neutral, because it sits behind a row of neutral buttons: an amber wash
+       here reads as a fourth yellow control in the row. */
+    background: color-mix(in srgb, var(--text-main) 10%, transparent);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
@@ -1774,7 +1779,7 @@ body::-webkit-scrollbar-thumb:hover {
     transition: background-color 200ms ease;
   }
   .dash-librow:hover {
-    background: color-mix(in srgb, var(--signal) 8%, transparent);
+    background: color-mix(in srgb, var(--text-main) 6%, transparent);
   }
   .dash-librow:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--signal) 72%, transparent);

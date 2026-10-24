@@ -612,7 +612,11 @@ html:not(.dark) .set-root.set-root--bare {
   height: 10px;
   width: 10px;
   border-radius: 999px;
-  background: var(--set-accent);
+  /* The accent mark inside the little theme thumbnails. It is a fixed picture
+     of the brand, not a control, so it stays the amber `--signal` rather than
+     `--set-accent`: that alias follows the filled-action tone, which is white
+     at night — a white dot on the light preview would disappear. */
+  background: var(--signal);
 }
 .set-theme__label {
   position: relative;
