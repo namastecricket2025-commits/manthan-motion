@@ -1,4 +1,4 @@
-import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
+import { useLabTheme } from "@/components/lab/lab-theme";
 import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
 import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
 import { useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
@@ -1269,7 +1269,7 @@ function DnaHelix() {
 
 export function BiologyVectorLab() {
   const transition = useSpringTransition();
-  const { theme, toggle } = useLabTheme();
+  const theme = useLabTheme();
   const [plate, setPlate] = useState<Plate>("cell");
   const [plant, setPlant] = useState(false);
 
@@ -1374,7 +1374,6 @@ export function BiologyVectorLab() {
               {plant ? "Animal cell" : "Plant cell"}
             </button>
           )}
-          <LabThemeToggle theme={theme} subject="biology" onToggle={toggle} />
         </div>
       </div>
 

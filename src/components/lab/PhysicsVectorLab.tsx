@@ -1,7 +1,7 @@
 import { AMBER, CYAN, MINT, Picker, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
 import DynamicsBench from "@/components/lab/DynamicsBench";
 import { CircuitsBench } from "@/components/lab/CircuitDiagram";
-import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
+import { useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
 import { Pause, Play, Power, RotateCcw } from "lucide-react";
@@ -1756,7 +1756,7 @@ function WaveBench() {
 export function PhysicsVectorLab() {
   const [bench, setBench] = useState<Bench>("circuits");
   const transition = useSpringTransition();
-  const { theme, toggle } = useLabTheme();
+  const theme = useLabTheme();
 
   return (
     <div data-lab-theme={theme} className="flex flex-col gap-5">
@@ -1781,12 +1781,9 @@ export function PhysicsVectorLab() {
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="apple-lab-note hidden max-w-sm text-right md:block">
-            Ultra-clean vector engines: real equations, drawn as lines.
-          </p>
-          <LabThemeToggle theme={theme} subject="physics" onToggle={toggle} />
-        </div>
+        <p className="apple-lab-note hidden max-w-sm text-right md:block">
+          Ultra-clean vector engines: real equations, drawn as lines.
+        </p>
       </div>
 
       <AnimatePresence mode="wait" initial={false}>

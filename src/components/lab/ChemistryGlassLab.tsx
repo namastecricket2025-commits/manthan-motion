@@ -10,7 +10,7 @@ import {
   type Category,
   type ElementData,
 } from "@/components/lab/periodic-data";
-import { LabThemeToggle, useLabTheme } from "@/components/lab/lab-theme";
+import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
@@ -1971,13 +1971,12 @@ function ReactionsTab() {
 export function ChemistryGlassLab() {
   const [tab, setTab] = useState<SubTab>("table");
   const [selected, setSelected] = useState<number | null>(null);
-  const { theme, toggle } = useLabTheme();
+  const theme = useLabTheme();
   const transition = useSpringTransition();
   const stagger = useStagger(0.05);
 
   return (
     <div data-lab-theme={theme} className="rounded-[28px] pb-6">
-      {/* Sub-tab rail + bench theme toggle. */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="apple-lab-tabrail" role="tablist" aria-label="Chemistry sections">
           {SUBTABS.map((entry) => {
@@ -2003,8 +2002,6 @@ export function ChemistryGlassLab() {
             );
           })}
         </div>
-
-        <LabThemeToggle theme={theme} subject="chemistry" onToggle={toggle} />
       </div>
 
       {/* Sub-tab cross-fade — the same AnimatePresence "wait" pattern the
