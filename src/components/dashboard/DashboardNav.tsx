@@ -79,7 +79,7 @@ function NotebookRow({
       className={
         "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors " +
         (selected
-          ? "bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+          ? "bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)] text-foreground"
           : "text-text-dim hover:text-foreground")
       }
     >
@@ -197,13 +197,13 @@ export function DashboardNav({
                   ? "justify-center px-0 py-2.5 "
                   : "gap-3 px-3.5 py-2.5 ") +
                 (isActive
-                  ? "border-[var(--card-border)] bg-[color-mix(in_srgb,var(--signal)_12%,transparent)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                  : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--signal)_45%,transparent)] hover:text-foreground")
+                  ? "border-[color-mix(in_srgb,var(--text-main)_24%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                  : "border-transparent text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
               }
             >
               <motion.span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[var(--signal)]"
+                className="pointer-events-none absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[var(--text-main)]"
                 initial={false}
                 animate={{
                   opacity: isActive ? 1 : 0,
@@ -214,7 +214,7 @@ export function DashboardNav({
               <item.icon
                 className={
                   "h-4 w-4 shrink-0 " +
-                  (isActive ? "text-[var(--signal)]" : "")
+                  (isActive ? "text-[var(--text-main)]" : "")
                 }
               />
               {collapsed ? null : item.label}

@@ -113,7 +113,7 @@ export function ProgressMap({
                   className={
                     "flex items-center justify-between rounded-lg px-2 py-1.5 text-[12px] " +
                     (entry.id === grade.id
-                      ? "bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] font-medium text-foreground"
+                      ? "bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)] font-medium text-foreground"
                       : "text-text-dim")
                   }
                 >
@@ -151,7 +151,7 @@ export function ProgressMap({
                 className={
                   "group flex items-start gap-3 rounded-xl border px-3 py-3 transition-colors " +
                   (isCurrent
-                    ? "border-[var(--signal)]/50 bg-[color-mix(in_srgb,var(--signal)_5%,transparent)]"
+                    ? "border-[color-mix(in_srgb,var(--text-main)_40%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_5%,transparent)]"
                     : "border-[var(--card-border)] hover:border-[var(--panel-line-strong)]")
                 }
               >
@@ -164,8 +164,8 @@ export function ProgressMap({
                   className={
                     "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors " +
                     (isDone
-                      ? "border-[var(--signal)] bg-[var(--signal)] text-[var(--panel)]"
-                      : "border-[var(--card-border)] text-transparent hover:border-[var(--signal)]")
+                      ? "border-[var(--text-main)] bg-[var(--text-main)] text-[var(--panel)]"
+                      : "border-[var(--card-border)] text-transparent hover:border-[color-mix(in_srgb,var(--text-main)_40%,transparent)]")
                   }
                 >
                   {pending === index ? (
@@ -186,7 +186,7 @@ export function ProgressMap({
                       {index + 1}. {chapter.name}
                     </p>
                     {isCurrent ? (
-                      <span className="rounded-full border border-[var(--signal)]/40 px-2 py-0.5 text-[9.5px] font-medium text-[var(--signal)]">
+                      <span className="rounded-full border border-[color-mix(in_srgb,var(--text-main)_30%,transparent)] px-2 py-0.5 text-[9.5px] font-medium text-[var(--text-main)]">
                         Selected
                       </span>
                     ) : null}

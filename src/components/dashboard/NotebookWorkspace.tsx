@@ -532,8 +532,8 @@ export function NotebookWorkspace({
             className={
               "inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[12.5px] font-semibold transition-colors sm:min-h-0 sm:px-0 " +
               (tool === "cram"
-                ? "text-[var(--signal)]"
-                : "text-text-dim hover:text-[var(--signal)]")
+                ? "text-[var(--text-main)]"
+                : "text-text-dim hover:text-[var(--text-main)]")
             }
           >
             <Zap className="h-3.5 w-3.5" />
@@ -858,7 +858,7 @@ export function NotebookWorkspace({
                   className={
                     "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors " +
                     (on
-                      ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                      ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
                       : "border-[var(--card-border)]")
                   }
                 >
@@ -866,7 +866,7 @@ export function NotebookWorkspace({
                     className={
                       "flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border " +
                       (on
-                        ? "border-[var(--signal)] text-[var(--signal)]"
+                        ? "border-[color-mix(in_srgb,var(--text-main)_58%,transparent)] text-[var(--text-main)]"
                         : "border-[var(--card-border)]")
                     }
                   >

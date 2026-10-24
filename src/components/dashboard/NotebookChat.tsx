@@ -128,7 +128,7 @@ export function NotebookChat({
               className={
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-medium transition-colors " +
                 (active
-                  ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                  ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                   : "border-[var(--card-border)] text-text-dim hover:text-foreground")
               }
             >

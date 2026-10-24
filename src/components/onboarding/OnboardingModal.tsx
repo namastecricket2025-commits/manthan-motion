@@ -187,8 +187,8 @@ export function OnboardingModal() {
                         className={
                           "rounded-xl border py-3 text-sm font-semibold transition-colors " +
                           (grade === entry
-                            ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
-                            : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                            ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
+                            : "border-[var(--card-border)] text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
                         }
                       >
                         {entry}
@@ -209,8 +209,8 @@ export function OnboardingModal() {
                         className={
                           "rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors " +
                           (board === entry
-                            ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
-                            : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                            ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
+                            : "border-[var(--card-border)] text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
                         }
                       >
                         {entry}
@@ -250,8 +250,8 @@ export function OnboardingModal() {
                           className={
                             "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors " +
                             (active
-                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
-                              : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                              ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
+                              : "border-[var(--card-border)] text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
                           }
                         >
                           {active ? <Check className="h-3.5 w-3.5" /> : null}

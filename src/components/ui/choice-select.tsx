@@ -100,7 +100,7 @@ export function ChoiceSelect({
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--signal)_38%,transparent)]",
+          "flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-main)_38%,transparent)]",
           open
             ? "border-[color-mix(in_srgb,var(--text-main)_42%,transparent)] text-foreground"
             : "border-[var(--card-border)] text-foreground hover:border-[color-mix(in_srgb,var(--text-main)_30%,transparent)]",
@@ -171,9 +171,9 @@ export function ChoiceSelect({
                       close();
                     }}
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-[13px] leading-snug transition-colors outline-none focus-visible:bg-[color-mix(in_srgb,var(--signal)_16%,transparent)]",
+                      "flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-[13px] leading-snug transition-colors outline-none focus-visible:bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)]",
                       isSelected
-                        ? "bg-[color-mix(in_srgb,var(--signal)_14%,transparent)] font-medium text-foreground"
+                        ? "bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)] font-medium text-foreground"
                         : "text-text-dim hover:bg-[color-mix(in_srgb,var(--text-main)_7%,transparent)] hover:text-foreground",
                     )}
                   >
@@ -186,7 +186,7 @@ export function ChoiceSelect({
                       ) : null}
                     </span>
                     {isSelected ? (
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-main)]" />
                     ) : null}
                   </button>
                 );

@@ -376,8 +376,8 @@ export default function Viva() {
                       className={
                         "rounded-xl border px-3.5 py-3 text-left transition-colors " +
                         (chosen
-                          ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                          : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                          ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                          : "border-[var(--card-border)] hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)]")
                       }
                     >
                       <span className="flex items-center gap-2 text-[12.5px] font-semibold">
@@ -410,7 +410,7 @@ export default function Viva() {
                           className={
                             "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
                             (classId === entry.id
-                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                              ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                               : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                           }
                         >
@@ -440,8 +440,8 @@ export default function Viva() {
                           className={
                             "rounded-xl border px-3 py-2 text-left text-[11.5px] font-medium transition-colors " +
                             (subjectId === subject.id
-                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                              : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                              ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                              : "border-[var(--card-border)] text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
                           }
                         >
                           {subject.name}
@@ -495,7 +495,7 @@ export default function Viva() {
                             className={
                               "rounded-full border px-2.5 py-1 text-[10.5px] transition-colors " +
                               (chosen
-                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                                 : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                             }
                           >
@@ -719,7 +719,7 @@ export default function Viva() {
                       "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-medium transition-colors " +
                       (listening
                         ? "border-rose-400/50 bg-rose-500/10 text-rose-300"
-                        : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                        : "border-[var(--card-border)] text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
                     }
                   >
                     {listening ? (

@@ -244,7 +244,7 @@ export function MindmapView({ payload }: { payload: MindmapPayload }) {
               onClick={() => setFontStep(step)}
               className={
                 "glass-chip inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold transition-colors " +
-                (fontStep === step ? "text-[var(--signal)]" : "text-text-dim")
+                (fontStep === step ? "text-[var(--text-main)]" : "text-text-dim")
               }
             >
               {label}

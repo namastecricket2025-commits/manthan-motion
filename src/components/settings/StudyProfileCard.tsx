@@ -133,7 +133,7 @@ export function StudyProfileCard() {
               className={
                 "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors " +
                 (active
-                  ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                  ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                   : "border-[var(--card-border)] text-text-dim hover:text-foreground")
               }
             >

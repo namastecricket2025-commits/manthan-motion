@@ -372,7 +372,7 @@ export function CommandPalette() {
                         className={
                           "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors " +
                           (index === active
-                            ? "bg-[color-mix(in_srgb,var(--signal)_10%,transparent)]"
+                            ? "bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)]"
                             : "hover:bg-[color-mix(in_srgb,var(--text-main)_5%,transparent)]")
                         }
                       >
@@ -380,7 +380,7 @@ export function CommandPalette() {
                           className={
                             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border " +
                             (index === active
-                              ? "border-[var(--signal)] text-[var(--signal)]"
+                              ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] text-[var(--text-main)]"
                               : "border-[var(--card-border)] text-text-dim")
                           }
                         >

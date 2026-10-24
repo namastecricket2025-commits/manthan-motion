@@ -380,7 +380,7 @@ export default function Mistakes() {
                   className={
                     "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
                     (filter === tab.id
-                      ? "border-[var(--signal)] text-foreground"
+                      ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] text-foreground"
                       : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                   }
                 >

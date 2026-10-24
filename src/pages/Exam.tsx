@@ -547,8 +547,8 @@ export default function Exam() {
                         className={
                           "rounded-xl border px-3.5 py-3 text-left transition-colors " +
                           (active
-                            ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                            : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                            ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                            : "border-[var(--card-border)] hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)]")
                         }
                       >
                         <span className="flex items-center gap-2 text-[12.5px] font-semibold">
@@ -581,7 +581,7 @@ export default function Exam() {
                             className={
                               "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
                               (className === entry.id
-                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                                 : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                             }
                           >
@@ -609,8 +609,8 @@ export default function Exam() {
                             className={
                               "rounded-xl border px-3 py-2 text-left text-[11.5px] font-medium transition-colors " +
                               (subjectId === entry.id
-                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                                ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                                : "border-[var(--card-border)] text-text-dim hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:text-foreground")
                             }
                           >
                             {entry.name}
@@ -666,7 +666,7 @@ export default function Exam() {
                               className={
                                 "rounded-full border px-2.5 py-1 text-[10.5px] transition-colors " +
                                 (on
-                                  ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                  ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                                   : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                               }
                             >
@@ -714,8 +714,8 @@ export default function Exam() {
                             className={
                               "rounded-xl border px-3.5 py-3 text-left transition-colors " +
                               (paperKind === option.id
-                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                                ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                                : "border-[var(--card-border)] hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)]")
                             }
                           >
                             <span className="block text-[12px] font-semibold">
@@ -796,7 +796,7 @@ export default function Exam() {
                               className={
                                 "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
                                 (active
-                                  ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                  ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
                                   : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                               }
                             >
@@ -850,8 +850,8 @@ export default function Exam() {
                             className={
                               "rounded-xl border px-3.5 py-3 text-left transition-colors " +
                               (pattern === option.id
-                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                                ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                                : "border-[var(--card-border)] hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)]")
                             }
                           >
                             <span className="block text-[12.5px] font-semibold">
@@ -1153,15 +1153,15 @@ export default function Exam() {
                                 className={
                                   "flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left text-[13.5px] leading-snug transition-colors " +
                                   (selected
-                                    ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
-                                    : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                                    ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]"
+                                    : "border-[var(--card-border)] hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)]")
                                 }
                               >
                                 <span
                                   className={
                                     "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] " +
                                     (selected
-                                      ? "border-[var(--signal)] text-[var(--signal)]"
+                                      ? "border-[color-mix(in_srgb,var(--text-main)_58%,transparent)] text-[var(--text-main)]"
                                       : "border-[var(--card-border)] text-text-dim")
                                   }
                                 >
@@ -1242,7 +1242,7 @@ export default function Exam() {
                           className={
                             "flex h-8 items-center justify-center rounded-lg border text-[11px] font-medium tabular-nums transition-colors " +
                             (questionIndex === index
-                              ? "border-[var(--signal)] bg-[var(--signal)] text-[var(--panel)]"
+                              ? "border-[var(--text-main)] bg-[var(--text-main)] text-[var(--panel)]"
                               : done
                                 ? "border-[var(--signal)]/50 text-[var(--signal)]"
                                 : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)]")

@@ -568,13 +568,14 @@ html:not(.dark) .set-root.set-root--bare {
 .set-theme:hover {
   background: var(--set-glass-strong);
 }
-/* The chosen card simply states itself: a hairline in the accent, a faint
-   accent wash and its tick. No travelling pill — a selection this small does
-   not need an object moving between the three options. */
+/* The chosen card simply states itself: a hairline in the page's ink, a faint
+   ink wash and its tick. No travelling pill — a selection this small does not
+   need an object moving between the three options. The accent stays out of it:
+   amber is the brand's mark, not the colour of "picked". */
 .set-theme--on,
 .set-theme--on:hover {
-  border-color: color-mix(in srgb, var(--signal) 38%, transparent);
-  background: color-mix(in srgb, var(--signal) 6%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 38%, transparent);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
 }
 .set-theme__preview {
   position: relative;
@@ -636,7 +637,7 @@ html:not(.dark) .set-root.set-root--bare {
   position: absolute;
   top: 10px;
   right: 10px;
-  color: var(--set-accent-text);
+  color: var(--set-title);
 }
 
 /* --- text comfort steps: same borderless-to-glowing-ring language --- */
@@ -663,8 +664,8 @@ html:not(.dark) .set-root.set-root--bare {
   transform: translateY(-1px);
 }
 .set-step--on {
-  background: color-mix(in srgb, var(--signal) 7%, transparent);
-  border-color: color-mix(in srgb, var(--signal) 30%, transparent);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 30%, transparent);
   box-shadow: var(--set-ring);
 }
 .set-step__label {
@@ -674,7 +675,7 @@ html:not(.dark) .set-root.set-root--bare {
   color: var(--set-dim);
 }
 .set-step--on .set-step__label {
-  color: var(--set-neon-text);
+  color: var(--set-title);
 }
 .set-step__scale {
   display: block;
@@ -1321,13 +1322,13 @@ html:not(.dark) .set-root {
   background: var(--ink);
 }
 html:not(.dark) .set-theme--on {
-  background: color-mix(in srgb, var(--signal) 4%, transparent);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
 }
 html:not(.dark) .set-step--on {
-  background: color-mix(in srgb, var(--signal) 5%, transparent);
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
 }
 html:not(.dark) .set-step--on .set-step__label {
-  color: color-mix(in srgb, var(--signal) 78%, #000);
+  color: var(--text-main);
 }
 html:not(.dark) .set-device--current {
   background: color-mix(in srgb, var(--signal) 4%, transparent);
