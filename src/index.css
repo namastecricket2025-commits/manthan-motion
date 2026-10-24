@@ -365,46 +365,46 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — pure black canvas, honey light.
+  /* Brand palette (dark) — pure black canvas, warm clay light.
 
-     The night theme now runs the SAME amber as the day theme, at night
-     strength, so the product has one accent in both themes: `--signal` is the
-     honey #fbbf24 (12.6:1 on the ink, 11.9:1 on a panel) and
-     `--signal-strong` is that amber as the FILLED action's body carrying a
-     near-black label via `--primary-foreground` — the amber button on black.
-     The page stays a #000 canvas with white-alpha hairlines; colour appears
-     where the day theme puts it (accents, charts, artefact ramps) rather than
-     washing every surface.
+     The night accent used to be the day amber at full night strength:
+     #fbbf24, a 94%-saturation yellow at the top of its blue channel. On pure
+     black that is the brightest object in a dark room, and it sat under every
+     button, icon, progress rail and mind-map root at once — clean at 12.6:1,
+     tiring to look at for an hour of revision.
+
+     The dark theme now runs a clay accent instead: the same warm family as
+     the day caramel, taken down nearly two thirds in saturation (#d9a37f).
+     It still clears 9.5:1 as text on the ink (8.9:1 on a #0a0a0a panel), and
+     the filled action under its near-black label measures 10.9:1, so nothing
+     became harder to read — it simply stopped glowing. The PAGE still gets
+     its light from the white halo, and colour still appears only where the
+     day theme puts it (accents, charts, artefact ramps) rather than washing
+     every surface.
 
      Two rules that keep this honest:
        - Anything that paints text over `--signal-strong` MUST use
-         `--primary-foreground`; a hardcoded white label on amber is unreadable.
+         `--primary-foreground`; a hardcoded white label on the fill is
+         unreadable.
        - Red stays reserved for meaning (a wrong answer, a failed read) —
          colour in the accent is brand, colour in red is still a fault. */
   --ink: #000000;
-  --signal: #fbbf24;
-  --signal-strong: #ffc233;
-  --signal-2: #c98a06;
-  /* Amber at the strength a black canvas allows: honey (#fbbf24), which is
-     12.6:1 here and 11.9:1 on a #0a0a0a panel. It stops well short of the
-     lemon (#ffd60a) this token first shipped as — at that brightness the
-     accent read as neon rather than as a brand — and it is the same hue the
-     light theme runs as caramel, so the product has one accent, not two.
-     Its 14% tint over the panel composites to #2c230e: a warm charcoal, with
-     the amber icon on top still measuring 9.3:1 against that fill. */
-  --brand: #fbbf24;
-  --brand-soft: rgba(251, 191, 36, 0.14);
-  --brand-line: rgba(251, 191, 36, 0.32);
+  --signal: #d9a37f;
+  --signal-strong: #e4b795;
+  --signal-2: #a06a4b;
+  --brand: #d9a37f;
+  --brand-soft: rgba(217, 163, 127, 0.14);
+  --brand-line: rgba(217, 163, 127, 0.32);
   /* Same amber as the light theme's mark (see that block): one brand colour.
      At night the hero circle itself stays white — the theme's "light is the
      accent" — so this token is the one place the two themes deliberately
      differ. */
   --brand-mark: var(--text-main);
-  /* Amber as text on `--brand-soft`. On this canvas the brand step already
-     measures 9.3:1 on its own tint, so the "ink" case and the brand are the
-     same colour; the token exists so the two themes answer the same question
-     the same way (see the light-theme note). */
-  --brand-ink: #fbbf24;
+  /* Clay as text on `--brand-soft`. On this canvas the brand step already
+     measures about 8.4:1 on its own 14% tint, so the "ink" case and the brand
+     are the same colour; the token exists so the two themes answer the same
+     question the same way (see the light-theme note). */
+  --brand-ink: #d9a37f;
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -448,14 +448,14 @@
      final letters — the same sweep the day theme runs, lifted for night.
      The two mid stops live in the `.dark .gradient-text` rule below. */
   --gt-head: #ffffff;
-  --gt-tail: #fbbf24;
+  --gt-tail: #d9a37f;
 
   /* Stroke-text display gradient (dark): a warm arc-lamp sweep, white-hot at
      the top and settling into caramel, bright enough to read as lit metal
      against the pure black canvas. */
-  --stroke-a: #ffdf8a;
-  --stroke-b: #f0b429;
-  --stroke-c: #b4740b;
+  --stroke-a: #f0d3c1;
+  --stroke-b: #d9a37f;
+  --stroke-c: #8f5638;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -477,8 +477,8 @@
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(251, 191, 36, 0.12);
-  ----chart-segment-line: rgba(251, 191, 36, 0.32);
+  ----chart-segment-background: rgba(217, 163, 127, 0.12);
+  ----chart-segment-line: rgba(217, 163, 127, 0.32);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -522,21 +522,21 @@
      all five on screen at once, which is where colour stopped identifying a
      series and started shouting. These are the same hues mixed down toward the
      page — still clearly teal / rose / violet / sky, still 7:1 or better for
-     text — one step quieter so the amber accent stays the loudest thing. */
-  --chart-1: #fbbf24;
+     text — one step quieter so no single series competes with the accent. */
+  --chart-1: #d9a37f;
   --chart-2: #6cc9be;
-  --chart-3: #e79aa6;
+  --chart-3: #cf8f9e;
   --chart-4: #b8a6e0;
   --chart-5: #8fb8e6;
   /* Artefact + source ramp (dark) — one hue per generated artefact kind and
      per source kind, so a legend (or a mind-map node, or a notebook tab) is
      separable by colour, exactly as in the day theme. */
-  --kind-summary: #fbbf24;
+  --kind-summary: #d9a37f;
   --kind-flashcards: #6cc9be;
-  --kind-quiz: #e79aa6;
+  --kind-quiz: #cf8f9e;
   --kind-mindmap: #b8a6e0;
   --kind-slides: #8fb8e6;
-  --src-files: #fbbf24;
+  --src-files: #d9a37f;
   --src-links: #6cc9be;
   --src-notes: #d99ab8;
   --sidebar: #0b0b0c;
@@ -566,12 +566,12 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: rgba(255, 255, 255, 0.95);
   --chart-label: rgba(255, 255, 255, 0.9);
-  --chart-scale-01: rgba(251, 191, 36, 0.1);
-  --chart-scale-02: rgba(251, 191, 36, 0.18);
-  --chart-scale-03: rgba(251, 191, 36, 0.3);
-  --chart-scale-04: rgba(251, 191, 36, 0.46);
-  --chart-scale-05: rgba(251, 191, 36, 0.64);
-  --chart-scale-pattern-color: rgba(251, 191, 36, 0.1);
+  --chart-scale-01: rgba(217, 163, 127, 0.1);
+  --chart-scale-02: rgba(217, 163, 127, 0.18);
+  --chart-scale-03: rgba(217, 163, 127, 0.3);
+  --chart-scale-04: rgba(217, 163, 127, 0.46);
+  --chart-scale-05: rgba(217, 163, 127, 0.64);
+  --chart-scale-pattern-color: rgba(217, 163, 127, 0.1);
 
   /* ---- Dashboard ink + selection surfaces (dark) ---------------------- */
   --dash-chart-label: rgba(255, 255, 255, 0.9);
@@ -738,10 +738,10 @@ html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
   --halo-near: rgba(255, 236, 205, 0.22);
   --halo-mid: rgba(255, 236, 205, 0.07);
   --halo-far: rgba(255, 236, 205, 0.05);
-  --brand: #e9ac33;
-  --brand-soft: rgba(233, 172, 51, 0.14);
-  --brand-line: rgba(233, 172, 51, 0.3);
-  --brand-ink: #e9ac33;
+  --brand: #d9a37f;
+  --brand-soft: rgba(217, 163, 127, 0.14);
+  --brand-line: rgba(217, 163, 127, 0.3);
+  --brand-ink: #d9a37f;
 }
 
 /* The veil: one pointer-transparent amber wash above every layer, including
@@ -1231,8 +1231,8 @@ body::-webkit-scrollbar-thumb:hover {
       180deg,
       var(--gt-head) 0%,
       var(--gt-head) 32%,
-      #ffd764 68%,
-      #f5b316 84%,
+      #f0cdb6 68%,
+      #d9a37f 84%,
       var(--gt-tail) 100%
     );
   }
