@@ -365,46 +365,49 @@
    ============================================================ */
 .dark,
 [data-theme="dark"] {
-  /* Brand palette (dark) — pure black canvas, warm clay light.
+  /* Brand palette (dark) — black canvas, two accents.
 
-     The night accent used to be the day amber at full night strength:
-     #fbbf24, a 94%-saturation yellow at the top of its blue channel. On pure
-     black that is the brightest object in a dark room, and it sat under every
-     button, icon, progress rail and mind-map root at once — clean at 12.6:1,
-     tiring to look at for an hour of revision.
+     The night theme used to run the day amber at full strength (#fbbf24): a
+     94%-saturation yellow at the top of its blue channel, under every button,
+     icon, rail and mind-map root at once. Bright, but tiring for an hour of
+     revision. Flattening it to one clay tone fixed the glare and cost the
+     theme its pulse — every screen became a warm grey.
 
-     The dark theme now runs a clay accent instead: the same warm family as
-     the day caramel, taken down nearly two thirds in saturation (#d9a37f).
-     It still clears 9.5:1 as text on the ink (8.9:1 on a #0a0a0a panel), and
-     the filled action under its near-black label measures 10.9:1, so nothing
-     became harder to read — it simply stopped glowing. The PAGE still gets
-     its light from the white halo, and colour still appears only where the
-     day theme puts it (accents, charts, artefact ramps) rather than washing
-     every surface.
+     So the dark theme keeps TWO accents instead of one:
+
+       --signal   the warm light. A soft honey (#e3b05a) — the same yellow the
+                  product has always used, taken from 96% saturation down to
+                  about 70%. Still unmistakably gold, still 9.6:1 as text on
+                  the ink, no longer glowing.
+       --brand    the cool counterweight. A muted teal (#66b3a6) used for the
+                  marks and fills that sit BESIDE the action — landing icon
+                  tiles, pipeline bars, swatches, check beads. It is the same
+                  teal the charts already run, so the two families agree.
+
+     The split is what keeps either colour from taking over: actions and
+     emphasis are honey, structure and marks are teal, and the page itself is
+     still black with white-alpha hairlines. `--brand-mark` stays white, so the
+     logo does not change colour with the theme.
 
      Two rules that keep this honest:
-       - Anything that paints text over `--signal-strong` MUST use
-         `--primary-foreground`; a hardcoded white label on the fill is
-         unreadable.
+       - Anything that paints text over `--signal-strong` or a filled
+         `--brand` MUST use `--primary-foreground`; a hardcoded white label on
+         the fill is unreadable.
        - Red stays reserved for meaning (a wrong answer, a failed read) —
          colour in the accent is brand, colour in red is still a fault. */
   --ink: #000000;
-  --signal: #d9a37f;
-  --signal-strong: #e4b795;
-  --signal-2: #a06a4b;
-  --brand: #d9a37f;
-  --brand-soft: rgba(217, 163, 127, 0.14);
-  --brand-line: rgba(217, 163, 127, 0.32);
-  /* Same amber as the light theme's mark (see that block): one brand colour.
-     At night the hero circle itself stays white — the theme's "light is the
-     accent" — so this token is the one place the two themes deliberately
-     differ. */
+  --signal: #e3b05a;
+  --signal-strong: #dfab53;
+  --signal-2: #9c6c2a;
+  --brand: #66b3a6;
+  --brand-soft: rgba(102, 179, 166, 0.16);
+  --brand-line: rgba(102, 179, 166, 0.34);
+  /* One white mark in both themes: the hero circle and the logo dot are the
+     theme's "light", not a colour, so the two accents above can change without
+     the brand asset changing with them. */
   --brand-mark: var(--text-main);
-  /* Clay as text on `--brand-soft`. On this canvas the brand step already
-     measures about 8.4:1 on its own 14% tint, so the "ink" case and the brand
-     are the same colour; the token exists so the two themes answer the same
-     question the same way (see the light-theme note). */
-  --brand-ink: #d9a37f;
+  /* Teal as text on `--brand-soft`: 8:1 on its own 16% tint over the ink. */
+  --brand-ink: #9ed3c8;
   --text-main: #f7f7f8;
   /* Standard text on dark glass is high-contrast light slate by rule, not by
      component: 90% white clears 7:1 on the ink while `--text-main` stays the
@@ -448,14 +451,14 @@
      final letters — the same sweep the day theme runs, lifted for night.
      The two mid stops live in the `.dark .gradient-text` rule below. */
   --gt-head: #ffffff;
-  --gt-tail: #d9a37f;
+  --gt-tail: #e3b05a;
 
   /* Stroke-text display gradient (dark): a warm arc-lamp sweep, white-hot at
      the top and settling into caramel, bright enough to read as lit metal
      against the pure black canvas. */
-  --stroke-a: #f0d3c1;
-  --stroke-b: #d9a37f;
-  --stroke-c: #8f5638;
+  --stroke-a: #f3ddb6;
+  --stroke-b: #e3b05a;
+  --stroke-c: #96652a;
 
   /* Bklit chart tokens (dark) — mapped to the Manthan palette */
   ----chart-1: var(--chart-1);
@@ -477,8 +480,8 @@
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(217, 163, 127, 0.12);
-  ----chart-segment-line: rgba(217, 163, 127, 0.32);
+  ----chart-segment-background: rgba(227, 176, 90, 0.12);
+  ----chart-segment-line: rgba(227, 176, 90, 0.32);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -523,7 +526,7 @@
      series and started shouting. These are the same hues mixed down toward the
      page — still clearly teal / rose / violet / sky, still 7:1 or better for
      text — one step quieter so no single series competes with the accent. */
-  --chart-1: #d9a37f;
+  --chart-1: #e3b05a;
   --chart-2: #6cc9be;
   --chart-3: #cf8f9e;
   --chart-4: #b8a6e0;
@@ -531,12 +534,12 @@
   /* Artefact + source ramp (dark) — one hue per generated artefact kind and
      per source kind, so a legend (or a mind-map node, or a notebook tab) is
      separable by colour, exactly as in the day theme. */
-  --kind-summary: #d9a37f;
+  --kind-summary: #e3b05a;
   --kind-flashcards: #6cc9be;
   --kind-quiz: #cf8f9e;
   --kind-mindmap: #b8a6e0;
   --kind-slides: #8fb8e6;
-  --src-files: #d9a37f;
+  --src-files: #e3b05a;
   --src-links: #6cc9be;
   --src-notes: #d99ab8;
   --sidebar: #0b0b0c;
@@ -566,12 +569,12 @@
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: rgba(255, 255, 255, 0.95);
   --chart-label: rgba(255, 255, 255, 0.9);
-  --chart-scale-01: rgba(217, 163, 127, 0.1);
-  --chart-scale-02: rgba(217, 163, 127, 0.18);
-  --chart-scale-03: rgba(217, 163, 127, 0.3);
-  --chart-scale-04: rgba(217, 163, 127, 0.46);
-  --chart-scale-05: rgba(217, 163, 127, 0.64);
-  --chart-scale-pattern-color: rgba(217, 163, 127, 0.1);
+  --chart-scale-01: rgba(227, 176, 90, 0.1);
+  --chart-scale-02: rgba(227, 176, 90, 0.18);
+  --chart-scale-03: rgba(227, 176, 90, 0.3);
+  --chart-scale-04: rgba(227, 176, 90, 0.46);
+  --chart-scale-05: rgba(227, 176, 90, 0.64);
+  --chart-scale-pattern-color: rgba(227, 176, 90, 0.1);
 
   /* ---- Dashboard ink + selection surfaces (dark) ---------------------- */
   --dash-chart-label: rgba(255, 255, 255, 0.9);
@@ -738,10 +741,10 @@ html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
   --halo-near: rgba(255, 236, 205, 0.22);
   --halo-mid: rgba(255, 236, 205, 0.07);
   --halo-far: rgba(255, 236, 205, 0.05);
-  --brand: #d9a37f;
-  --brand-soft: rgba(217, 163, 127, 0.14);
-  --brand-line: rgba(217, 163, 127, 0.3);
-  --brand-ink: #d9a37f;
+  --brand: #66b3a6;
+  --brand-soft: rgba(102, 179, 166, 0.16);
+  --brand-line: rgba(102, 179, 166, 0.3);
+  --brand-ink: #9ed3c8;
 }
 
 /* The veil: one pointer-transparent amber wash above every layer, including
@@ -1231,8 +1234,8 @@ body::-webkit-scrollbar-thumb:hover {
       180deg,
       var(--gt-head) 0%,
       var(--gt-head) 32%,
-      #f0cdb6 68%,
-      #d9a37f 84%,
+      #f0d9ae 68%,
+      #e3b05a 84%,
       var(--gt-tail) 100%
     );
   }
