@@ -7,12 +7,10 @@ import {
   FlaskConical,
   Info,
   LayoutDashboard,
-  Mic,
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Repeat,
   Settings2,
   Sigma,
   Tag,
@@ -25,8 +23,10 @@ import { toast } from "sonner";
 
 /**
  * Every destination reachable from the app sidebar.
- * The workspace path runs Dashboard -> Notebooks -> STEM Lab -> Settings ->
- * About Us.
+ * The workspace path runs Dashboard -> Notebooks -> Mock exam -> Math Lab ->
+ * STEM Lab -> Plans -> Settings -> About Us. Daily review and Voice viva stay
+ * as routes, but they are reached from the dashboard cards rather than from
+ * the rail: two extra rows pushed Math Lab off the fold on a laptop.
  */
 export type DashboardSection =
   | "dashboard"
@@ -47,9 +47,7 @@ const ITEMS: {
 }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "notebooks", label: "Notebooks", icon: NotebookPen },
-  { key: "review", label: "Daily review", icon: Repeat },
   { key: "exam", label: "Mock exam", icon: ClipboardCheck },
-  { key: "viva", label: "Voice viva", icon: Mic },
   { key: "mathlab", label: "Math Lab", icon: Sigma },
   { key: "lab", label: "STEM Lab", icon: FlaskConical },
   { key: "pricing", label: "Plans & Pricing", icon: Tag },

@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   DownloadCloud,
   Calculator,
-  Command,
   FileText,
   FlaskConical,
   LayoutDashboard,
@@ -340,9 +339,6 @@ export function CommandPalette() {
                 aria-label="Search pages, chapters and notebooks"
                 className="h-14 min-w-0 flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:text-text-dim"
               />
-              <kbd className="hidden shrink-0 rounded border border-[var(--card-border)] px-1.5 py-0.5 text-[10px] text-text-dim sm:block">
-                esc
-              </kbd>
             </div>
 
             <div
@@ -398,24 +394,11 @@ export function CommandPalette() {
                             {item.subtitle}
                           </span>
                         </span>
-                        {index === active ? (
-                          <span className="hidden shrink-0 text-[10px] text-text-dim sm:block">
-                            ↵
-                          </span>
-                        ) : null}
                       </button>
                     </div>
                   );
                 })
               )}
-            </div>
-
-            <div className="flex items-center justify-between border-t border-[var(--card-border)] px-4 py-2.5 text-[10.5px] text-text-dim">
-              <span className="flex items-center gap-2">
-                <Command className="h-3 w-3" />
-                <span>⌘K to open from anywhere</span>
-              </span>
-              <span className="hidden sm:block">↑↓ to move · ↵ to open</span>
             </div>
           </motion.div>
         </motion.div>

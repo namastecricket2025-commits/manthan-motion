@@ -554,8 +554,9 @@ export function MathLab() {
 
     const dictation = createDictation({
       lang: "en-IN",
-      // A spoken problem is one sentence; stop soon after the student does.
-      silenceMs: 1600,
+      // A spoken problem is usually one sentence, but a student pauses while
+      // reading a long one aloud; four seconds keeps the whole problem.
+      silenceMs: 4000,
       terms: () => MATH_TERMS,
       repair: () => MATH_TERMS,
       onText: (text) => setFormula(text),

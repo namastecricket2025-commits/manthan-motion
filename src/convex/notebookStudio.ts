@@ -247,6 +247,34 @@ const vivaStartSchema = z.object({
   expected: z.array(z.string().min(1)).min(2).max(6),
 });
 
+/**
+ * The examiner when the viva is set from the syllabus instead of a notebook.
+ *
+ * Most students have no sources of their own on day one, so a viva that could
+ * only ask about an uploaded PDF was unusable for them. This variant is handed
+ * a class, a subject and the chapter(s) the student picked, and asks the same
+ * three-question viva from the NCERT treatment of that chapter — no notebook
+ * needed, nothing invented outside the school syllabus.
+ */
+const SYLLABUS_START_SYSTEM = [
+  "You are the oral examiner inside Manthan, a study app for Indian school students in Classes 8 to 10.",
+  "The student has named a class, a subject and the chapters to be examined; there is no uploaded text.",
+  "Ask one question that makes the student explain an idea in their own words, not recall a single word or date.",
+  "Stay strictly inside the NCERT / CBSE syllabus for that class and subject. Never ask about a fact outside that chapter.",
+  "Question wording should sound like a friendly viva: 'Walk me through…', 'Why does…', 'What would happen if…'.",
+  "Also list the three to five key points a strong answer should contain. These are for grading, never read out to the student.",
+  "Reply with a single JSON object and nothing else.",
+].join(" ");
+
+const SYLLABUS_REPLY_SYSTEM = [
+  "You are the oral examiner inside Manthan, grading a student's spoken explanation of a CBSE / NCERT chapter.",
+  "Be fair and specific. A correct idea in the student's own words earns credit even when the wording differs from the textbook; a keyword without an explanation does not.",
+  "Score out of 5: 5 is complete and precise, 3 is mostly right with one real gap, 1 is a fragment, 0 is absent or wrong.",
+  "Feedback is two or three short sentences: name what was right, then the single most important thing missing. Never shame the student.",
+  "If there are more turns, ask ONE short follow-up that probes the gap you just found, inside the same chapter. If this was the last turn, set nextQuestion to null and write a short overall summary.",
+  "Reply with a single JSON object and nothing else.",
+].join(" ");
+
 const VIVA_REPLY_SYSTEM = [
   "You are the oral examiner inside Manthan, grading a student's spoken explanation against the notebook's sources.",
   "Be fair and specific. A correct idea in the student's own words earns credit even when the wording differs from the source; a keyword without an explanation does not.",
@@ -266,15 +294,22 @@ const vivaReplySchema = z.object({
   overall: z.string().nullable().optional(),
 });
 
-/** Start a short oral examination grounded in one notebook. */
+/**
+ * Start a short oral examination.
+ *
+ * Two scopes, one examiner: either the readable sources of one notebook, or a
+ * class / subject / chapter pick from the school syllabus (`scope`), which
+ * needs no uploaded material at all.
+ */
 export const vivaStart = action({
   args: {
-    notebookId: v.id("notebooks"),
+    notebookId: v.optional(v.id("notebooks")),
+    scope: v.optional(v.string()),
     topic: v.optional(v.string()),
   },
   handler: async (
     ctx,
-    { notebookId, topic },
+    { notebookId, scope, topic },
   ): Promise<{
     question: string;
     focus: string;
@@ -282,22 +317,55 @@ export const vivaStart = action({
     sources: string[];
     model: string;
   }> => {
-    const { name, ownerId, sources } = await ctx.runQuery(
-      internal.notebookContext.studioContext,
-      { notebookId },
-    );
-    if (!sources.length) {
-      throw new Error(
-        "Add a readable source first — the viva can only ask about what is in this notebook.",
+    const syllabus = scope?.trim() ?? "";
+    let ownerId: Id<"users">;
+    let system = VIVA_START_SYSTEM;
+    let heading: string;
+    let body: string;
+    let language: ReturnType<typeof detectLanguage>;
+    let labels: string[];
+
+    if (syllabus) {
+      const userId = await ctx.runQuery(internal.identity.currentUserId, {});
+      if (!userId) throw new Error("You need to be signed in to sit a viva.");
+      ownerId = userId;
+      system = SYLLABUS_START_SYSTEM;
+      heading = `SYLLABUS: ${syllabus}`;
+      body =
+        "This viva is set from the CBSE / NCERT syllabus line above, not from an uploaded source. Ask from the standard textbook treatment of that chapter.";
+      language = detectLanguage([syllabus]);
+      labels = syllabus
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+    } else {
+      if (!notebookId) {
+        throw new Error("Choose a notebook, or pick a class, subject and chapter.");
+      }
+      const context = await ctx.runQuery(internal.notebookContext.studioContext, {
+        notebookId,
+      });
+      if (!context.sources.length) {
+        throw new Error(
+          "Add a readable source first — the viva can only ask about what is in this notebook.",
+        );
+      }
+      ownerId = context.ownerId;
+      heading = `NOTEBOOK: ${context.name}`;
+      body = `SOURCES:\n${corpusFor(context.sources)}`;
+      language = detectLanguage(
+        context.sources.map((source) => source.text.slice(0, 500)),
       );
+      labels = context.sources.map((source) => source.name).slice(0, 4);
     }
+
     await assertAllowance(ctx, ownerId);
 
-    const language = detectLanguage(sources.map((source) => source.text.slice(0, 500)));
     const prompt = [
-      `NOTEBOOK: ${name}`,
+      heading,
       topic?.trim() ? `TOPIC THE STUDENT CHOSE: ${topic.trim()}` : "",
-      `SOURCES:\n${corpusFor(sources)}`,
+      body,
       "Ask the first question of a three-question viva. It should take about thirty seconds to answer aloud.",
       "Return exactly: {\"question\":string,\"focus\":string,\"expected\":[string]}.",
       ...languageDirective(language),
@@ -307,7 +375,7 @@ export const vivaStart = action({
       .join("\n\n");
 
     const candidates = await resolveCandidates();
-    const reply = await callModel(candidates, VIVA_START_SYSTEM, prompt, undefined, 0.45);
+    const reply = await callModel(candidates, system, prompt, undefined, 0.45);
     await meter(ctx, ownerId, prompt, reply);
     const parsed = vivaStartSchema.parse(parseJsonLoose(reply.text));
 
@@ -315,7 +383,7 @@ export const vivaStart = action({
       question: cleanSpoken(parsed.question),
       focus: cleanSpoken(parsed.focus),
       expected: parsed.expected.map(cleanSpoken).slice(0, 6),
-      sources: sources.map((source) => source.name).slice(0, 4),
+      sources: labels,
       model: reply.model,
     };
   },
@@ -324,7 +392,8 @@ export const vivaStart = action({
 /** Grade one spoken answer and, unless this was the last turn, ask the next. */
 export const vivaRespond = action({
   args: {
-    notebookId: v.id("notebooks"),
+    notebookId: v.optional(v.id("notebooks")),
+    scope: v.optional(v.string()),
     topic: v.optional(v.string()),
     question: v.string(),
     expected: v.array(v.string()),
@@ -343,7 +412,7 @@ export const vivaRespond = action({
   },
   handler: async (
     ctx,
-    { notebookId, topic, question, expected, answer, turn, history },
+    { notebookId, scope, topic, question, expected, answer, turn, history },
   ): Promise<{
     score: number;
     feedback: string;
@@ -359,16 +428,42 @@ export const vivaRespond = action({
       throw new Error("Say a little more — even one full sentence gives the examiner something to work with.");
     }
 
-    const { name, ownerId, sources } = await ctx.runQuery(
-      internal.notebookContext.studioContext,
-      { notebookId },
-    );
-    if (!sources.length) {
-      throw new Error("This notebook has no readable sources to grade against.");
+    const syllabus = scope?.trim() ?? "";
+    let ownerId: Id<"users">;
+    let system = VIVA_REPLY_SYSTEM;
+    let heading: string;
+    let body: string;
+    let language: ReturnType<typeof detectLanguage>;
+
+    if (syllabus) {
+      const userId = await ctx.runQuery(internal.identity.currentUserId, {});
+      if (!userId) throw new Error("You need to be signed in to sit a viva.");
+      ownerId = userId;
+      system = SYLLABUS_REPLY_SYSTEM;
+      heading = `SYLLABUS: ${syllabus}`;
+      body =
+        "Grade against the standard CBSE / NCERT treatment of that chapter; the expected points below are the marking scheme.";
+      language = detectLanguage([syllabus]);
+    } else {
+      if (!notebookId) {
+        throw new Error("Choose a notebook, or pick a class, subject and chapter.");
+      }
+      const context = await ctx.runQuery(internal.notebookContext.studioContext, {
+        notebookId,
+      });
+      if (!context.sources.length) {
+        throw new Error("This notebook has no readable sources to grade against.");
+      }
+      ownerId = context.ownerId;
+      heading = `NOTEBOOK: ${context.name}`;
+      body = `SOURCES:\n${corpusFor(context.sources)}`;
+      language = detectLanguage(
+        context.sources.map((source) => source.text.slice(0, 500)),
+      );
     }
+
     await assertAllowance(ctx, ownerId);
 
-    const language = detectLanguage(sources.map((source) => source.text.slice(0, 500)));
     const transcript = (history ?? [])
       .map(
         (entry, index) =>
@@ -377,9 +472,9 @@ export const vivaRespond = action({
       .join("\n\n");
     const last = turn >= 3;
     const prompt = [
-      `NOTEBOOK: ${name}`,
+      heading,
       topic?.trim() ? `TOPIC: ${topic.trim()}` : "",
-      `SOURCES:\n${corpusFor(sources)}`,
+      body,
       transcript ? `EARLIER IN THIS VIVA:\n${transcript}` : "",
       `THE QUESTION: ${question}`,
       `WHAT A STRONG ANSWER SHOULD CONTAIN:\n- ${expected.join("\n- ")}`,
@@ -395,7 +490,7 @@ export const vivaRespond = action({
       .join("\n\n");
 
     const candidates = await resolveCandidates();
-    const reply = await callModel(candidates, VIVA_REPLY_SYSTEM, prompt, undefined, 0.35);
+    const reply = await callModel(candidates, system, prompt, undefined, 0.35);
     await meter(ctx, ownerId, prompt, reply);
     const parsed = vivaReplySchema.parse(parseJsonLoose(reply.text));
     const score = Math.max(0, Math.min(5, Math.round(parsed.score)));

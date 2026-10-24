@@ -13,13 +13,16 @@ import {
   studyTerms,
   type Dictation,
 } from "@/components/voice/dictation";
+import { CLASSES, findClass, findSubject } from "@/lib/curriculum";
 import { useAction, useQuery } from "convex/react";
 import {
   ArrowRight,
+  BookOpen,
   Check,
   GraduationCap,
   Loader2,
   Mic,
+  NotebookPen,
   RotateCcw,
   Sparkles,
   Square,
@@ -45,8 +48,14 @@ type StartResult = {
   sources: string[];
 };
 
-/** Long enough to think between sentences, short enough to end the turn. */
-const SILENCE_MS = 2800;
+/**
+ * How long the room has to stay quiet before the take counts as finished.
+ *
+ * Four and a half seconds: a student who pauses to think mid-answer is not
+ * done, and cutting them off at two seconds is what sent half a sentence to
+ * the examiner. Shorter than this and the viva submits itself mid-answer.
+ */
+const SILENCE_MS = 4500;
 
 export default function Viva() {
   const notebooks = useQuery(api.notebooks.list);
@@ -54,6 +63,11 @@ export default function Viva() {
   const answerViva = useAction(api.notebookStudio.vivaRespond);
 
   const [notebookId, setNotebookId] = useState<string>("");
+  /** Where the examiner draws its questions from. */
+  const [mode, setMode] = useState<"notebook" | "syllabus">("syllabus");
+  const [classId, setClassId] = useState<string>("10");
+  const [subjectId, setSubjectId] = useState<string>("science");
+  const [chapters, setChapters] = useState<string[]>([]);
   const [topic, setTopic] = useState("");
   const [phase, setPhase] = useState<"setup" | "active" | "done">("setup");
   const [starting, setStarting] = useState(false);
@@ -84,6 +98,27 @@ export default function Viva() {
     (notebook) => notebook.id === notebookId,
   );
   const readied = selectedNotebook?.sourceCount ?? 0;
+
+  const activeClass = findClass(classId) ?? CLASSES[2];
+  const activeSubject = findSubject(classId, subjectId) ?? activeClass.subjects[0];
+
+  /**
+   * What the examiner is told it is examining on, in one block of text.
+   * The class and subject are always named; chapters are named when the student
+   * picked any, so an empty selection means the whole subject.
+   */
+  const scope = useMemo(() => {
+    const lines = [`${activeClass.label} · ${activeSubject.name}`];
+    lines.push(
+      chapters.length
+        ? `Chapters: ${chapters.join("; ")}`
+        : `Chapters: the whole ${activeSubject.name} syllabus for ${activeClass.label}`,
+    );
+    return lines.join("\n");
+  }, [activeClass.label, activeSubject.name, chapters]);
+
+  const canStart =
+    mode === "syllabus" ? Boolean(activeSubject) : Boolean(notebookId) && readied > 0;
 
   useEffect(() => {
     if (!notebookId && notebooks && notebooks.length > 0) {
@@ -188,12 +223,14 @@ export default function Viva() {
   }
 
   async function begin() {
-    if (!notebookId || starting) return;
+    if (starting || (mode === "notebook" && !notebookId)) return;
     setStarting(true);
     setNote(null);
     try {
       const result = await startViva({
-        notebookId: notebookId as Id<"notebooks">,
+        notebookId:
+          mode === "notebook" ? (notebookId as Id<"notebooks">) : undefined,
+        scope: mode === "syllabus" ? scope : undefined,
         topic: topic.trim() || undefined,
       });
       setStarted(result);
@@ -221,7 +258,9 @@ export default function Viva() {
     stopListening();
     try {
       const result = await answerViva({
-        notebookId: notebookId as Id<"notebooks">,
+        notebookId:
+          mode === "notebook" ? (notebookId as Id<"notebooks">) : undefined,
+        scope: mode === "syllabus" ? scope : undefined,
         topic: topic.trim() || undefined,
         question,
         expected,
@@ -293,9 +332,10 @@ export default function Viva() {
             Say it in your own words.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-text-dim">
-            A short oral viva, grounded in one notebook. Explain the idea aloud;
-            the examiner asks two follow-ups, then tells you what was missing.
-            Speaking is the point — typing works too when you need it.
+            A short oral viva. Pick a class, subject and chapter — or examine
+            one of your own notebooks. Explain the idea aloud; the examiner
+            asks two follow-ups, then tells you what was missing. Speaking is
+            the point, and typing works too when you need it.
           </p>
 
           {phase === "setup" ? (
@@ -305,7 +345,212 @@ export default function Viva() {
                 Set the viva
               </div>
 
-              {notebooks === undefined ? (
+              {/* Same two sources of questions as the mock exam: the school
+                  syllabus, or the student's own notebook. The syllabus is the
+                  default because a new account has no notebook yet. */}
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {(
+                  [
+                    {
+                      id: "syllabus" as const,
+                      title: "Class 8–10 syllabus",
+                      body: "Class, subject and chapters. No sources needed.",
+                      icon: BookOpen,
+                    },
+                    {
+                      id: "notebook" as const,
+                      title: "From my notebook",
+                      body: "A viva grounded only in sources you added.",
+                      icon: NotebookPen,
+                    },
+                  ]
+                ).map((option) => {
+                  const OptionIcon = option.icon;
+                  const chosen = mode === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={chosen}
+                      onClick={() => setMode(option.id)}
+                      className={
+                        "rounded-xl border px-3.5 py-3 text-left transition-colors " +
+                        (chosen
+                          ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                          : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                      }
+                    >
+                      <span className="flex items-center gap-2 text-[12.5px] font-semibold">
+                        <OptionIcon className="h-4 w-4 text-[var(--signal)]" />
+                        {option.title}
+                      </span>
+                      <span className="mt-1 block text-[10.5px] leading-relaxed text-text-dim">
+                        {option.body}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {mode === "syllabus" ? (
+                <div className="mt-5 flex flex-col gap-5">
+                  <div>
+                    <p className="text-[11px] font-medium text-text-dim">Class</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {CLASSES.map((entry) => (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          aria-pressed={classId === entry.id}
+                          onClick={() => {
+                            setClassId(entry.id);
+                            setSubjectId(entry.subjects[0].id);
+                            setChapters([]);
+                          }}
+                          className={
+                            "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
+                            (classId === entry.id
+                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                              : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                          }
+                        >
+                          {entry.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                      {activeClass.note}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-medium text-text-dim">
+                      Subject
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                      {activeClass.subjects.map((subject) => (
+                        <button
+                          key={subject.id}
+                          type="button"
+                          aria-pressed={subjectId === subject.id}
+                          onClick={() => {
+                            setSubjectId(subject.id);
+                            setChapters([]);
+                          }}
+                          className={
+                            "rounded-xl border px-3 py-2 text-left text-[11.5px] font-medium transition-colors " +
+                            (subjectId === subject.id
+                              ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_8%,transparent)]"
+                              : "border-[var(--card-border)] text-text-dim hover:border-[var(--signal)] hover:text-foreground")
+                          }
+                        >
+                          {subject.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-medium text-text-dim">
+                        Chapters
+                        <span className="ml-2 font-normal opacity-70">
+                          {chapters.length === 0
+                            ? "whole subject"
+                            : `${chapters.length} selected`}
+                        </span>
+                      </p>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setChapters(activeSubject.chapters)}
+                          className="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10.5px] text-text-dim transition-colors hover:text-foreground"
+                        >
+                          Select all
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChapters([])}
+                          className="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10.5px] text-text-dim transition-colors hover:text-foreground"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-[var(--card-border)] p-2">
+                      {activeSubject.chapters.map((chapter) => {
+                        const chosen = chapters.includes(chapter);
+                        return (
+                          <button
+                            key={chapter}
+                            type="button"
+                            aria-pressed={chosen}
+                            onClick={() =>
+                              setChapters((current) =>
+                                chosen
+                                  ? current.filter((entry) => entry !== chapter)
+                                  : [...current, chapter],
+                              )
+                            }
+                            className={
+                              "rounded-full border px-2.5 py-1 text-[10.5px] transition-colors " +
+                              (chosen
+                                ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-foreground"
+                                : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                            }
+                          >
+                            {chapter}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                      Leave every chapter off to be examined across the whole
+                      subject.
+                    </p>
+                  </div>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-medium text-text-dim">
+                      Narrow it down{" "}
+                      <span className="opacity-60">(optional)</span>
+                    </span>
+                    <input
+                      value={topic}
+                      onChange={(event) => setTopic(event.target.value)}
+                      placeholder={`e.g. just the numericals in ${activeSubject.name}`}
+                      className="w-full rounded-xl border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                    />
+                  </label>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--card-border)] px-3.5 py-3">
+                    <p className="max-w-md text-[11.5px] leading-relaxed text-text-dim">
+                      One question, then two follow-ups, marked against the
+                      points a full answer needs.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void begin()}
+                      disabled={starting || !canStart}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--signal-strong)] px-5 py-2.5 text-[12.5px] font-semibold text-[var(--primary-foreground)] transition-opacity disabled:opacity-40"
+                    >
+                      {starting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mic className="h-4 w-4" />
+                      )}
+                      {starting ? "Setting the first question…" : "Start viva"}
+                    </button>
+                  </div>
+
+                  <p className="text-[10.5px] leading-relaxed text-text-dim">
+                    The examiner waits for about five seconds of quiet before it
+                    takes your answer, so a pause mid-sentence does not cut it
+                    short. Listening uses your browser's speech recognition;
+                    audio is not stored, and you can always type instead.
+                  </p>
+                </div>
+              ) : notebooks === undefined ? (
                 <p className="mt-5 flex items-center gap-2 text-sm text-text-dim">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading notebooks…
                 </p>

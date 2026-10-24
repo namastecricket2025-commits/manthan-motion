@@ -64,11 +64,12 @@ const QUICK_ACTIONS = [
 
 /**
  * How long a gap has to last before what she has heard counts as the finished
- * question. Long enough to sit through the pause inside a normal sentence
- * ("solve for x ... where x is positive"), short enough that handing over the
- * floor does not feel laggy.
+ * question. A student thinks mid-question ("solve for x ... where x is
+ * positive"), and a 1.4-second gap sent the first half of that sentence on its
+ * own. Four seconds of real quiet is the shortest gap that keeps a whole
+ * question together.
  */
-const SILENCE_MS = 1400;
+const SILENCE_MS = 4200;
 
 export function AviaWidget() {
   const askAvia = useAction(api.ai.aviaReply);

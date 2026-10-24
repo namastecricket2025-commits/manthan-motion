@@ -427,9 +427,6 @@ export function StemAsk({
                   )}
                   {busy ? "Working it out…" : "Explain + practise"}
                 </button>
-                <span className="text-[10.5px] text-text-dim">
-                  ⌘/Ctrl + Enter to send
-                </span>
                 {result ? (
                   <button
                     type="button"

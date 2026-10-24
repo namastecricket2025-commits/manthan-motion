@@ -1,24 +1,40 @@
 import BiologyVectorLab from "@/components/lab/BiologyVectorLab";
 import ChemistryGlassLab from "@/components/lab/ChemistryGlassLab";
 import PhysicsVectorLab from "@/components/lab/PhysicsVectorLab";
-import { useSpringTransition, viewVariants } from "@/lib/motion";
-import { useResolvedTheme } from "@/lib/app-settings";
+import {
+  DashboardNav,
+  SidebarCollapseButton,
+  type DashboardSection,
+} from "@/components/dashboard/DashboardNav";
+import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar";
+import { Logo } from "@/components/landing/Logo";
+import { ThemeToggle } from "@/components/landing/ThemeToggle";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { StemAsk } from "@/components/lab/StemAsk";
+import { useResolvedTheme } from "@/lib/app-settings";
+import { useSpringTransition, viewVariants } from "@/lib/motion";
+import { useAuth } from "@/hooks/use-auth";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft,
-  ArrowRight,
   Atom,
   Beaker,
   Dna,
   FlaskConical,
   ListChecks,
-  Mic,
+  LogOut,
+  Menu,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, type CSSProperties } from "react";
+import { useNavigate } from "react-router";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import "@/components/lab/apple-lab.css";
 
 type Subject = "physics" | "chemistry" | "biology";
@@ -41,263 +57,307 @@ const SUBJECTS: Array<{
 ];
 
 /**
- * The STEM Lab.
+ * /lab — the STEM Lab.
  *
- * A black room, one dot field and flat near-black panels — the same surface
- * language as the dashboard. Three environments live inside it, each one
- * vector-first:
- * Physics (circuits / motion / dynamics / waves), Chemistry (periodic table +
- * Bohr model) and Biology (structural schematics + the DNA indicator).
+ * It sits in the same shell as the dashboard and the Math Lab: the same
+ * sidebar, the same page canvas, the same dot field and the same top wash. The
+ * lab used to be a room of its own with its own header bar, which read as a
+ * different product a click away from the dashboard.
  *
- * The room follows the site theme: a dark dashboard opens a dark lab, a light
- * dashboard opens a paper one. The benches still carry their own switch for
- * reading a single plate in daylight, but nobody is dropped into a black room
- * from a light account.
+ * Three environments live inside it, each one vector-first: Physics (circuits /
+ * motion / dynamics / waves), Chemistry (periodic table + Bohr model) and
+ * Biology (structural schematics + the DNA indicator). The benches still carry
+ * their own switch for reading a single plate in daylight, while the room
+ * follows the site theme.
  *
  * Switching subject is a state shift, so it moves on the shared spring: the
- * outgoing bench lifts away and the incoming one settles in. No blur cut, no
- * white flash, no spinner.
+ * outgoing bench lifts away and the incoming one settles in.
  */
 export default function Lab() {
   const [subject, setSubject] = useState<Subject>("physics");
   const [askOpen, setAskOpen] = useState(false);
   const [askMode, setAskMode] = useState<"ask" | "drill">("ask");
   const [askSeed, setAskSeed] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
   const transition = useSpringTransition();
   const theme = useResolvedTheme();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const active = SUBJECTS.find((entry) => entry.id === subject) ?? SUBJECTS[0];
+
+  const selectSection = (key: DashboardSection) => {
+    setSheetOpen(false);
+    if (key === "dashboard") navigate("/dashboard");
+    else if (key === "notebooks") navigate("/dashboard?view=notebooks");
+    else if (key === "exam") navigate("/exam");
+    else if (key === "mathlab") navigate("/math-lab");
+    else if (key === "lab") navigate("/lab");
+    else if (key === "settings") navigate("/settings");
+    else if (key === "pricing") navigate("/pricing");
+    else if (key === "about") navigate("/about");
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   function openAssistant(mode: "ask" | "drill") {
     setAskMode(mode);
     setAskOpen(true);
   }
 
-  return (
-    <div className="apple-lab" data-lab-theme={theme}>
-      {/* The math lab's top wash, in the lab's own room: two radials centred
-          above the viewport edge, spent before the first panel arrives. */}
-      <div className="apple-lab-glow" aria-hidden="true" />
-      <div
-        className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 md:py-8"
-        data-lab-theme={theme}
-      >
-        <header className="apple-lab-glass flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              to="/dashboard"
-              className="apple-lab-btn !px-3 !py-1.5 !text-[12px]"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Link>
-            <span className="hidden h-5 w-px bg-[var(--lab-line)] sm:block" />
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-xl border"
-                style={{
-                  borderColor: "var(--lab-line)",
-                  background: "var(--lab-fill)",
-                  color: "var(--lab-ink)",
-                }}
-              >
-                <Beaker className="h-4 w-4" />
-              </span>
-              <p className="apple-lab-title truncate text-[15px] leading-tight">
-                STEM Lab
-              </p>
-            </div>
-          </div>
-          {/* The subject rail sits in the same bar as the title. It used to
-              live on its own row under the header, which left a full-width
-              line holding three small tabs and a stretch of empty glass. One
-              bar, one place to look for "which room am I in". */}
-          <div
-            className="apple-lab-tabrail order-3 w-full lg:order-none lg:w-auto"
-            role="tablist"
-            aria-label="STEM Lab subjects"
-          >
-            {SUBJECTS.map((entry) => {
-              const Icon = entry.icon;
-              const isActive = subject === entry.id;
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  className="apple-lab-tab"
-                  onClick={() => setSubject(entry.id)}
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="lab-subject-pill"
-                      className="apple-lab-pill"
-                      transition={transition}
-                    />
-                  )}
-                  <Icon
-                    className={`relative z-10 h-4 w-4 ${isActive ? "text-[var(--lab-ink)]" : ""}`}
-                  />
-                  <span className="relative z-10">{entry.label}</span>
-                </button>
-              );
-            })}
-          </div>
+  const nav = (
+    <DashboardNav active="lab" onSelect={selectSection} collapsed={collapsed} />
+  );
+  const mobileNav = <DashboardNav active="lab" onSelect={selectSection} />;
 
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <SearchWithGoogle
-              topic={`${active.label} practical experiment — NCERT CBSE explained`}
-              label="Search"
-              compact={false}
-            />
+  return (
+    <div className="relative min-h-screen bg-background text-foreground">
+      <div className="relative z-10">
+        {/* The page's own two layers, mounted exactly as the dashboard mounts
+            them: the dot field, then the top wash on top of it. */}
+        <div className="dot-field" aria-hidden="true" />
+        <div className="glow-aura" aria-hidden="true" />
+
+        {/* ---- Sidebar (desktop) ---- */}
+        <aside
+          className="fixed inset-y-0 left-0 z-30 hidden flex-col justify-between overflow-y-auto overflow-x-hidden border-r border-[var(--card-border)] bg-[var(--panel-bg)] py-5 backdrop-blur-xl transition-[width,padding] duration-300 ease-out min-[760px]:flex"
+          style={{
+            width: collapsed ? 76 : 240,
+            paddingLeft: collapsed ? 10 : 16,
+            paddingRight: collapsed ? 10 : 16,
+          }}
+        >
+          <div className="flex min-w-0 flex-col gap-7">
+            <div
+              className={
+                collapsed
+                  ? "flex justify-center"
+                  : "flex items-center justify-between gap-2"
+              }
+            >
+              {!collapsed && <Logo />}
+              <SidebarCollapseButton
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((value) => !value)}
+              />
+            </div>
+            {nav}
+          </div>
+          <div
+            className={
+              collapsed
+                ? "flex flex-col items-center gap-3 pt-6"
+                : "flex items-center justify-between pt-6"
+            }
+          >
+            <ThemeToggle />
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                title="Sign out"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--card-border)] text-text-dim transition-colors hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-[var(--card-border)] bg-transparent"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </Button>
+            )}
+          </div>
+        </aside>
+
+        {/* ---- Mobile top bar ---- */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+          <Logo />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Open menu"
+                  className="glass-chip inline-flex h-10 w-10 items-center justify-center text-foreground"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--ink)]/95 backdrop-blur-xl"
+              >
+                <SheetHeader>
+                  <SheetTitle className="text-left">
+                    <Logo />
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="px-2">{mobileNav}</div>
+                <div className="mt-auto px-4 pb-8">
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-[var(--card-border)] bg-transparent"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </header>
 
-        <section className="apple-lab-glass mt-4 rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="apple-lab-micro">Physics · Chemistry · Biology</p>
-              <h1 className="apple-lab-title mt-1 text-[24px] leading-tight sm:text-[28px]">
-                Try it, break it, then ask why.
-              </h1>
-              <p className="apple-lab-note mt-1.5 max-w-2xl">
-                Run a circuit, tilt an organ or heat a reaction — then ask the
-                lab the question the bench cannot answer. Every answer ends
-                with three questions so the idea stays.
-              </p>
+        {/* ---- Canvas ---- */}
+        <main
+          className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
+        >
+          <div className="mx-auto flex max-w-6xl flex-col gap-6">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
+                  Workspace · Physics, Chemistry, Biology
+                </p>
+                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                  STEM Lab<span className="text-[var(--signal)]">.</span>
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
+                  Run a circuit, tilt an organ or heat a reaction, then ask the
+                  lab the question the bench cannot answer. Every answer ends
+                  with three questions so the idea stays.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <SearchWithGoogle
+                  topic={`${active.label} practical experiment — NCERT CBSE explained`}
+                  label="Search"
+                  compact
+                />
+              </div>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="apple-lab-btn apple-lab-btn--solid"
-                onClick={() => openAssistant("ask")}
+
+            <div className="apple-lab apple-lab--embedded">
+              {/* The light/dark switch sits on the lab's own controls, not on
+                  the shell: every bench-level daylight rule is written as
+                  `.apple-lab [data-lab-theme="light"] …`, so the tab rail,
+                  the actions and the chip take their paper values from the
+                  same attribute the benches read. */}
+              <div
+                data-lab-theme={theme}
+                className="flex flex-wrap items-center justify-between gap-2"
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                Ask the lab
-              </button>
-              <button
-                type="button"
-                className="apple-lab-btn"
-                onClick={() => openAssistant("drill")}
+                <div
+                  className="apple-lab-tabrail"
+                  role="tablist"
+                  aria-label="STEM Lab subjects"
+                >
+                  {SUBJECTS.map((entry) => {
+                    const Icon = entry.icon;
+                    const isActive = subject === entry.id;
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        className="apple-lab-tab"
+                        onClick={() => setSubject(entry.id)}
+                      >
+                        {isActive && (
+                          <motion.span
+                            layoutId="lab-subject-pill"
+                            className="apple-lab-pill"
+                            transition={transition}
+                          />
+                        )}
+                        <Icon
+                          className={`relative z-10 h-4 w-4 ${isActive ? "text-[var(--lab-ink)]" : ""}`}
+                        />
+                        <span className="relative z-10">{entry.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="apple-lab-btn apple-lab-btn--solid"
+                    onClick={() => openAssistant("ask")}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Ask the lab
+                  </button>
+                  <button
+                    type="button"
+                    className="apple-lab-btn"
+                    onClick={() => openAssistant("drill")}
+                  >
+                    <ListChecks className="h-3.5 w-3.5" />
+                    Quick drill
+                  </button>
+                </div>
+              </div>
+
+              <div
+                data-lab-theme={theme}
+                className="mt-2 flex flex-wrap items-center gap-1.5"
               >
-                <ListChecks className="h-3.5 w-3.5" />
-                Quick drill
-              </button>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--lab-ink-micro)]">
+                  Try asking
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAskMode("ask");
+                    setAskSeed(QUICK_ASK[subject]);
+                    setAskOpen(true);
+                  }}
+                  className="apple-lab-chip max-w-full text-left transition-colors hover:text-[var(--lab-ink)]"
+                >
+                  <span className="truncate">{QUICK_ASK[subject]}</span>
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={subject}
+                    variants={viewVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    transition={transition}
+                  >
+                    {subject === "physics" && <PhysicsVectorLab />}
+                    {subject === "chemistry" && <ChemistryGlassLab />}
+                    {subject === "biology" && <BiologyVectorLab />}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
+
+            <p className="flex items-center gap-2 text-[11px] text-text-dim">
+              <Beaker className="h-3 w-3" />
+              Manthan STEM Lab
+            </p>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--lab-ink-micro)]">
-              Try asking
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setAskMode("ask");
-                setAskSeed(QUICK_ASK[subject]);
-                setAskOpen(true);
-              }}
-              className="apple-lab-chip max-w-full text-left transition-colors hover:text-[var(--lab-ink)]"
-            >
-              <span className="truncate">{QUICK_ASK[subject]}</span>
-            </button>
-          </div>
-        </section>
-
-        {/* Three things the lab can do beyond the bench. They sit above the
-            apparatus rather than in a menu, because the question a student has
-            after turning a dial is the part the dial cannot answer. */}
-        <section className="mt-3 grid gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => openAssistant("ask")}
-            className="apple-lab-card group flex items-start gap-3 rounded-2xl border border-[var(--lab-line)] p-3.5 text-left transition-colors hover:border-[color-mix(in_srgb,var(--lab-ink)_30%,transparent)]"
-          >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border"
-              style={{ borderColor: "var(--lab-line)", background: "var(--lab-fill)" }}
-            >
-              <Sparkles className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[12.5px] font-semibold text-[var(--lab-ink)]">
-                Ask any “why”
-              </span>
-              <span className="mt-0.5 block text-[11px] leading-relaxed text-[var(--lab-ink-micro)]">
-                An answer, the key points, and three checks.
-              </span>
-            </span>
-            <ArrowRight className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 opacity-40 transition-opacity group-hover:opacity-90" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openAssistant("drill")}
-            className="apple-lab-card group flex items-start gap-3 rounded-2xl border border-[var(--lab-line)] p-3.5 text-left transition-colors hover:border-[color-mix(in_srgb,var(--lab-ink)_30%,transparent)]"
-          >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border"
-              style={{ borderColor: "var(--lab-line)", background: "var(--lab-fill)" }}
-            >
-              <ListChecks className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[12.5px] font-semibold text-[var(--lab-ink)]">
-                Question drill
-              </span>
-              <span className="mt-0.5 block text-[11px] leading-relaxed text-[var(--lab-ink-micro)]">
-                5–15 MCQs from any chapter, marked instantly.
-              </span>
-            </span>
-            <ArrowRight className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 opacity-40 transition-opacity group-hover:opacity-90" />
-          </button>
-
-          <Link
-            to="/viva"
-            className="apple-lab-card group flex items-start gap-3 rounded-2xl border border-[var(--lab-line)] p-3.5 text-left transition-colors hover:border-[color-mix(in_srgb,var(--lab-ink)_30%,transparent)]"
-          >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border"
-              style={{ borderColor: "var(--lab-line)", background: "var(--lab-fill)" }}
-            >
-              <Mic className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[12.5px] font-semibold text-[var(--lab-ink)]">
-                Voice viva
-              </span>
-              <span className="mt-0.5 block text-[11px] leading-relaxed text-[var(--lab-ink-micro)]">
-                Explain it aloud and get marked on the reasoning.
-              </span>
-            </span>
-            <ArrowRight className="ml-auto mt-1 h-3.5 w-3.5 shrink-0 opacity-40 transition-opacity group-hover:opacity-90" />
-          </Link>
-        </section>
-
-        <main className="mt-4 flex-1">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={subject}
-              variants={viewVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={transition}
-            >
-              {subject === "physics" && <PhysicsVectorLab />}
-              {subject === "chemistry" && <ChemistryGlassLab />}
-              {subject === "biology" && <BiologyVectorLab />}
-            </motion.div>
-          </AnimatePresence>
         </main>
-
-        <footer className="mt-8 pb-2 text-[11px] text-[var(--lab-ink-micro)]">
-          Manthan STEM Lab
-        </footer>
       </div>
 
-      {/* Mounted only while open: each visit starts from the subject, mode
-          and seed in hand, and the seed is spent on close so reopening "Ask
-          the lab" gives a clean box instead of the old chip's question. */}
+      {/* Mounted only while open: each visit starts from the subject, mode and
+          seed in hand, and the seed is spent on close. */}
       {askOpen ? (
         <StemAsk
           open
