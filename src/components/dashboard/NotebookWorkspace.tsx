@@ -935,7 +935,7 @@ export function NotebookWorkspace({
                   className={
                     "rounded-full border px-4 py-2 text-[13.5px] font-medium transition-colors sm:py-1.5 " +
                     (activeKind === meta.kind
-                      ? "border-[var(--signal)] text-foreground"
+                      ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] text-foreground"
                       : "border-[var(--card-border)] text-text-dim hover:text-foreground")
                   }
                 >
