@@ -39,13 +39,6 @@ import "@/components/lab/apple-lab.css";
 
 type Subject = "physics" | "chemistry" | "biology";
 
-/** One question per bench, to show what "ask the lab" is for. */
-const QUICK_ASK: Record<Subject, string> = {
-  physics: "Why does the current fall when I add a bulb in series?",
-  chemistry: "Why does copper sulphate solution fade during electrolysis?",
-  biology: "How does a nephron filter blood?",
-};
-
 const SUBJECTS: Array<{
   id: Subject;
   label: string;
@@ -224,27 +217,18 @@ export default function Lab() {
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
-                  Workspace · Physics, Chemistry, Biology
-                </p>
-                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                  STEM Lab<span className="text-[var(--signal)]">.</span>
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
-                  Run a circuit, tilt an organ or heat a reaction, then ask the
-                  lab the question the bench cannot answer. Every answer ends
-                  with three questions so the idea stays.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <SearchWithGoogle
-                  topic={`${active.label} practical experiment — NCERT CBSE explained`}
-                  label="Search"
-                  compact
-                />
-              </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
+                Workspace · Physics, Chemistry, Biology
+              </p>
+              <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                STEM Lab<span className="text-[var(--signal)]">.</span>
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
+                Run a circuit, tilt an organ or heat a reaction, then ask the
+                lab the question the bench cannot answer. Every answer ends
+                with three questions so the idea stays.
+              </p>
             </div>
 
             <div className="apple-lab apple-lab--embedded">
@@ -307,30 +291,14 @@ export default function Lab() {
                     <ListChecks className="h-3.5 w-3.5" />
                     Quick drill
                   </button>
+                  <SearchWithGoogle
+                    topic={`${active.label} practical experiment — NCERT CBSE explained`}
+                    label="Search on Google"
+                  />
                 </div>
               </div>
 
-              <div
-                data-lab-theme={theme}
-                className="mt-2 flex flex-wrap items-center gap-1.5"
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--lab-ink-micro)]">
-                  Try asking
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAskMode("ask");
-                    setAskSeed(QUICK_ASK[subject]);
-                    setAskOpen(true);
-                  }}
-                  className="apple-lab-chip max-w-full text-left transition-colors hover:text-[var(--lab-ink)]"
-                >
-                  <span className="truncate">{QUICK_ASK[subject]}</span>
-                </button>
-              </div>
-
-              <div className="mt-4">
+              <div className="mt-3">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={subject}

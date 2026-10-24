@@ -20,6 +20,17 @@
 }
 
 .gs-trigger {
+  /* The mark and the word sit on ONE line. The trigger used to borrow its
+     layout from whichever chrome class was passed in, and a surface that did
+     not load that class (the STEM Lab's control row) fell back to the browser's
+     inline-block, where the block-level logo dropped onto a second line and the
+     pill grew into a circle. The layout is the component's own now. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  line-height: 1;
+  white-space: nowrap;
   background: #ffffff !important;
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
@@ -51,12 +62,15 @@
 
 .gs-trigger__text {
   font-weight: 600;
+  line-height: 1;
 }
 
 .gs-trigger__logo {
   display: block;
-  width: auto;
+  flex: 0 0 auto;
+  width: 18px;
   height: 18px;
+  object-fit: contain;
   user-select: none;
 }
 
