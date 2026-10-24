@@ -68,22 +68,20 @@ function NotebookRow({
   selected: boolean;
   onOpen: () => void;
 }) {
-  const transition = useSpringTransition();
   return (
     <motion.button
       type="button"
       onClick={onOpen}
-      whileHover={{ x: 3 }}
-      whileTap={{ scale: 0.98 }}
-      transition={transition}
       className={
-        "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors " +
+        "group flex touch-manipulation items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors " +
         (selected
           ? "bg-[color-mix(in_srgb,var(--text-main)_10%,transparent)] text-foreground"
           : "text-text-dim hover:text-foreground")
       }
     >
-      <span className="min-w-0 flex-1 truncate">{name}</span>
+      <span className="min-w-0 flex-1 truncate transition-transform duration-200 group-hover:translate-x-0.5">
+        {name}
+      </span>
       <span className="shrink-0 text-[11px] tabular-nums text-text-dim">
         {sourceCount}
       </span>
@@ -188,11 +186,8 @@ export function DashboardNav({
               aria-label={item.label}
               title={collapsed ? item.label : undefined}
               onClick={() => onSelect(item.key)}
-              whileHover={collapsed ? { scale: 1.06 } : { x: 4 }}
-              whileTap={{ scale: 0.98 }}
-              transition={transition}
               className={
-                "relative flex w-full items-center rounded-xl border text-left text-sm font-medium transition-colors " +
+                "group relative flex w-full touch-manipulation items-center rounded-xl border text-left text-sm font-medium transition-colors " +
                 (collapsed
                   ? "justify-center px-0 py-2.5 "
                   : "gap-3 px-3.5 py-2.5 ") +
@@ -213,11 +208,15 @@ export function DashboardNav({
               />
               <item.icon
                 className={
-                  "h-4 w-4 shrink-0 " +
+                  "h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 " +
                   (isActive ? "text-[var(--text-main)]" : "")
                 }
               />
-              {collapsed ? null : item.label}
+              {collapsed ? null : (
+                <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                  {item.label}
+                </span>
+              )}
             </motion.button>
 
             {/* The notebooks themselves, nested under the section entry. */}
@@ -297,13 +296,10 @@ export function DashboardNav({
                       key="new"
                       type="button"
                       onClick={() => setAdding(true)}
-                      whileHover={{ x: 3 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={transition}
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -6 }}
-                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-text-dim transition-colors hover:text-foreground"
+                      className="flex touch-manipulation items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-medium text-text-dim transition-colors hover:text-foreground"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       New notebook

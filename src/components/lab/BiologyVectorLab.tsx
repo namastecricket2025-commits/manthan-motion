@@ -3,9 +3,9 @@ import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
 import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
 import RespiratoryModelViewer from "@/components/lab/bio/RespiratoryModelViewer";
 import ExcretoryModelViewer from "@/components/lab/bio/ExcretoryModelViewer";
-import { useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
-import { AnimatePresence, motion, useAnimationFrame } from "motion/react";
-import { useRef, useState, type ReactNode } from "react";
+import { useSpringTransition, viewVariants } from "@/lib/motion";
+import { AnimatePresence, motion } from "motion/react";
+import { useState, type ReactNode } from "react";
 
 /**
  * Biology — premium structural schematics.
@@ -14,10 +14,6 @@ import { useRef, useState, type ReactNode } from "react";
  * fills, hairline strokes, no pixels to go soft when it scales. Clicking a
  * structure drops the rest of the plate to 40% ink, lights the target with an
  * inset glow and pulls a label flag out along a pointer line.
- *
- * The animated double helix is the lab's processing indicator: two strands
- * turning continuously, with a brighter band of base pairs travelling down
- * them while a workspace composes data.
  *
  * The bench carries the same light/dark switch as Chemistry: `data-lab-theme`
  * on the root, with the plates' structural ink and the accents re-tinted so a
@@ -1127,145 +1123,6 @@ function VectorDiagram({ diagram }: { diagram: Diagram }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* The processing helix                                                */
-/* ------------------------------------------------------------------ */
-
-const HELIX_W = 260;
-const HELIX_H = 320;
-const RUNGS = 26;
-
-function DnaHelix() {
-  const still = useStillMotion();
-  const strandA = useRef<SVGPathElement>(null);
-  const strandB = useRef<SVGPathElement>(null);
-  const rungRefs = useRef<(SVGLineElement | null)[]>([]);
-  const phase = useRef(0);
-  const pulse = useRef(0);
-
-  useAnimationFrame((_, delta) => {
-    const seconds = delta / 1000;
-    if (!still) {
-      phase.current += seconds * 1.15;
-      pulse.current = (pulse.current + seconds * 78) % (HELIX_H + 120);
-    }
-
-    const amplitude = 74;
-    const wave = (y: number, offset: number) =>
-      HELIX_W / 2 + amplitude * Math.sin((y / 92) * Math.PI + phase.current + offset);
-
-    const sample = (offset: number) => {
-      const points: string[] = [];
-      for (let i = 0; i <= 40; i += 1) {
-        const y = (i / 40) * HELIX_H;
-        points.push(`${i === 0 ? "M" : "L"}${wave(y, offset).toFixed(2)} ${y.toFixed(2)}`);
-      }
-      return points.join(" ");
-    };
-
-    strandA.current?.setAttribute("d", sample(0));
-    strandB.current?.setAttribute("d", sample(Math.PI));
-
-    for (let i = 0; i < RUNGS; i += 1) {
-      const node = rungRefs.current[i];
-      if (!node) continue;
-      const y = 12 + (i / RUNGS) * (HELIX_H - 24);
-      const xa = wave(y, 0);
-      const xb = wave(y, Math.PI);
-      const depth = Math.abs(Math.cos((y / 92) * Math.PI + phase.current));
-      const distance = Math.abs(y - pulse.current);
-      const heat = Math.max(0, 1 - distance / 90);
-      node.setAttribute("x1", xa.toFixed(2));
-      node.setAttribute("x2", xb.toFixed(2));
-      node.setAttribute("y1", y.toFixed(2));
-      node.setAttribute("y2", y.toFixed(2));
-      node.setAttribute("stroke-width", (0.8 + depth * 1.5).toFixed(2));
-      node.setAttribute("opacity", (0.16 + depth * 0.34 + heat * 0.5).toFixed(3));
-    }
-  });
-
-  return (
-    <div className="apple-lab-panel apple-lab-glass">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="apple-lab-micro">Processing indicator</p>
-          <h3 className="apple-lab-title mt-1 text-lg">Live double helix</h3>
-        </div>
-        <span className="apple-lab-chip">
-          <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: MINT }} />
-          {RUNGS} base pairs in view
-        </span>
-      </div>
-
-      <div className="mt-4 grid gap-5 sm:grid-cols-[260px_1fr]">
-        <svg
-          viewBox={`0 0 ${HELIX_W} ${HELIX_H}`}
-          className="h-[300px] w-full"
-          role="img"
-          aria-label="A rotating double helix with a band of base pairs travelling down it"
-        >
-          <defs>
-            <linearGradient id="lab-strand" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" style={{ stopColor: CYAN }} />
-              <stop offset="50%" style={{ stopColor: VIOLET }} />
-              <stop offset="100%" style={{ stopColor: MINT }} />
-            </linearGradient>
-            <filter id="lab-strand-glow" x="-30%" y="-20%" width="160%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {Array.from({ length: RUNGS }, (_, index) => (
-            <line
-              key={index}
-              ref={(node) => {
-                rungRefs.current[index] = node;
-              }}
-              x1={HELIX_W / 2}
-              x2={HELIX_W / 2}
-              y1={12 + (index / RUNGS) * (HELIX_H - 24)}
-              y2={12 + (index / RUNGS) * (HELIX_H - 24)}
-              strokeLinecap="round"
-              style={{ stroke: ink(0.6) }}
-            />
-          ))}
-
-          <path ref={strandA} fill="none" stroke="url(#lab-strand)" strokeWidth={2.6} strokeLinecap="round" filter="url(#lab-strand-glow)" />
-          <path ref={strandB} fill="none" stroke="url(#lab-strand)" strokeWidth={2.6} strokeLinecap="round" opacity={0.75} />
-        </svg>
-
-        <div className="flex flex-col gap-3">
-          <p className="apple-lab-note">
-            Two anti-parallel strands turn continuously while a brighter band of
-            base pairs travels down the rungs — the lab's way of saying a
-            workspace is still composing, without a spinner anywhere on screen.
-          </p>
-          <div className="grid grid-cols-3 gap-2.5">
-            {[
-              ["Strand pitch", "3.4 nm"],
-              ["Turn", "10.5 bp"],
-              ["Separation", "2.0 nm"],
-            ].map(([label, value]) => (
-              <div key={label} className="apple-lab-card px-3 py-2.5">
-                <p className="apple-lab-micro">{label}</p>
-                <p className="apple-lab-value mt-1 text-[13px] font-semibold">{value}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-[11.5px] leading-relaxed text-[var(--lab-ink-micro)]">
-            B-DNA reference proportions — the indicator is decorative, the
-            measurements are the textbook ones.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Environment                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -1422,7 +1279,6 @@ export function BiologyVectorLab() {
         )}
       </AnimatePresence>
 
-      <DnaHelix />
     </div>
   );
 }

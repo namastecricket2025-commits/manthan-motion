@@ -34,7 +34,7 @@ const PARTS: Part[] = [
 const MODEL_URL = "/models/heart.glb";
 const SCALE = 8;
 
-export default function HeartModelViewer({ label, blurb }: { label: string; blurb: string; theme?: "dark" | "light" }) {
+export default function HeartModelViewer({ label, blurb, theme }: { label: string; blurb: string; theme?: "dark" | "light" }) {
   const holder = useRef<HTMLDivElement>(null);
   const dots = useRef<Record<string, HTMLButtonElement | null>>({});
   const ctl = useRef({
@@ -187,48 +187,36 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
     setPin((current) => (current === id ? null : id));
   };
   const sel = PARTS.find((p) => p.id === pin);
+  const dark = theme === "dark";
+  const edge = dark ? "border-white/10" : "border-black/10";
+  const txt = dark ? "text-slate-100" : "text-slate-900";
+  const sub = dark ? "text-slate-400" : "text-slate-600";
+  const btn = (on: boolean) =>
+    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-      {/* ── the model ── */}
-      <div className="apple-lab-panel apple-lab-glass">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="apple-lab-micro">{label}</p>
-            <h3 className="apple-lab-title mt-1 text-lg">{blurb}</h3>
+    <div className="lab-split">
+      <div className="lab-stage-pane lab-glass p-2.5 sm:p-4">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className={`truncate text-sm font-bold ${txt}`}>{label}</p>
+            <p className={`hidden text-[11px] sm:block ${sub}`}>{blurb}</p>
           </div>
-          <button type="button" className="apple-lab-btn !px-3 !py-2" onClick={fit}>
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Fit view</span>
+          <button type="button" className={btn(false)} onClick={fit}>
+            <RotateCcw className="mr-1 inline h-3 w-3" />
+            Fit view
           </button>
         </div>
 
-        <div className="organ-viewbar mt-4">
-          <div className="organ-seg" role="group" aria-label="Heart view">
-            <button type="button" onClick={() => side(1)}>
-              Front
-            </button>
-            <button type="button" onClick={() => side(-1)}>
-              Back
-            </button>
-            <button type="button" data-active={xray} onClick={() => setXray((v) => !v)} aria-pressed={xray}>
-              X-ray
-            </button>
-          </div>
-          <span className="organ-viewhint">
-            {xray ? "The outer muscle turns glass so the chambers show through" : "A real scanned model — drag to turn it"}
-          </span>
-        </div>
-
-        <div className="apple-lab-stage mt-3 aspect-[16/10] min-h-[300px]">
+        <div className="relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
           {!ready && !failed && (
-            <div className="absolute inset-0 grid place-items-center text-sm text-[var(--lab-ink-dim)]">
+            <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">
               Loading the heart model…
             </div>
           )}
           {failed && (
-            <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-[var(--lab-ink-dim)]">
+            <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">
               The heart model could not load. Check your connection and reload the lab.
             </div>
           )}
@@ -256,63 +244,60 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
               )}
             </button>
           ))}
-          <span className="pointer-events-none absolute bottom-3 right-3 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] text-white/70 backdrop-blur-sm">
-            drag orbit · scroll zoom · click a dot
-          </span>
+          <p className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-slate-400">
+            drag orbit · scroll zoom · tap a numbered dot
+          </p>
         </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="apple-lab-micro">Heart rate</span>
-          <span className="apple-lab-value text-[12px] tabular-nums">{bpm} bpm</span>
-        </div>
-        <input
-          type="range"
-          className="apple-lab-range mt-1.5"
-          min={40}
-          max={180}
-          value={bpm}
-          aria-label="Heart rate"
-          onChange={(e) => {
-            setBpm(+e.target.value);
-            ctl.current.bpm = +e.target.value;
-          }}
-        />
       </div>
 
-      {/* ── structures ── */}
-      <div className="flex min-w-0 flex-col gap-3">
-        <div className="apple-lab-panel apple-lab-glass">
-          <div className="flex items-center justify-between gap-3">
-            <p className="apple-lab-micro">Structures</p>
-            <button
-              type="button"
-              className="apple-lab-btn !px-2.5 !py-1 !text-[10px]"
-              data-active={all}
-              aria-pressed={all}
-              onClick={() => setAll((v) => !v)}
-            >
-              {all ? "Hide labels" : "All labels"}
-            </button>
-          </div>
+      <div className="lab-deck-pane lab-glass-deep space-y-3 p-3.5">
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={btn(false)} onClick={() => side(1)}>
+            Front
+          </button>
+          <button type="button" className={btn(false)} onClick={() => side(-1)}>
+            Back
+          </button>
+          <button type="button" className={btn(xray)} onClick={() => setXray((v) => !v)} aria-pressed={xray}>
+            X-ray
+          </button>
+          <button type="button" className={btn(all)} onClick={() => setAll((v) => !v)} aria-pressed={all}>
+            All labels
+          </button>
+        </div>
 
+        <label className={`flex items-center gap-2 text-xs ${sub}`}>
+          Heart rate
+          <input
+            type="range"
+            min={40}
+            max={180}
+            value={bpm}
+            className="flex-1"
+            aria-label="Heart rate"
+            onChange={(e) => {
+              setBpm(+e.target.value);
+              ctl.current.bpm = +e.target.value;
+            }}
+          />
+          <b className={`${txt} tabular-nums`}>{bpm} bpm</b>
+        </label>
+
+        <div className={`min-h-20 rounded-xl border ${edge} p-3 text-xs leading-relaxed ${txt}`}>
           {sel ? (
-            <div
-              className="apple-lab-card mt-3 px-3.5 py-3"
-              style={{ borderColor: `color-mix(in srgb, ${sel.color} 46%, transparent)` }}
-            >
-              <p className="apple-lab-micro" style={{ color: sel.color }}>
-                {sel.side === "f" ? "Front view" : "Back view"}
-              </p>
-              <p className="apple-lab-value mt-1 text-[14px] font-semibold leading-tight">{sel.name}</p>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">{sel.fn}</p>
-            </div>
+            <>
+              <b style={{ color: sel.color }}>{sel.name}</b>
+              <br />
+              {sel.fn}
+            </>
           ) : (
-            <p className="apple-lab-note mt-2">
+            <span className={sub}>
               Tap a numbered dot on the model, or a structure below, to read what it does.
-            </p>
+            </span>
           )}
+        </div>
 
-          <div className="organ-scroll mt-2 max-h-[330px] overflow-y-auto pr-1">
+        <div className="organ-scroll max-h-[240px] overflow-y-auto pr-1">
             <div className="mt-1 flex flex-col gap-1">
               {PARTS.map((a, i) => (
                 <button
@@ -334,16 +319,13 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
                 </button>
               ))}
             </div>
-          </div>
         </div>
 
-        <div className="apple-lab-panel apple-lab-glass">
-          <p className="apple-lab-micro">Colour key</p>
-          <p className="apple-lab-note mt-2">
-            Blue vessels carry oxygen-poor blood to the lungs; red vessels carry oxygen-rich blood
-            away from them. Labels sit on one scanned model, so check them against your textbook.
-          </p>
-        </div>
+        <p className={`text-[10px] leading-relaxed ${sub}`}>
+          Blue vessels carry oxygen-poor blood to the lungs; red vessels carry oxygen-rich blood
+          away from them. Labels were placed by hand on one scanned model, so check them against
+          your textbook.
+        </p>
       </div>
     </div>
   );

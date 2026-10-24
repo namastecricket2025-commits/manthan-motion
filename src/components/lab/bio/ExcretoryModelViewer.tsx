@@ -269,12 +269,12 @@ export default function ExcretoryModelViewer({ label, blurb, theme }: { label: s
             Fit view
           </button>
         </div>
-        <div className={`relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border ${edge} ${dark ? "bg-black/25" : "bg-white/60"}`}>
+        <div className="relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
-          {!ready && !failed && <div className={`absolute inset-0 grid place-items-center text-sm ${sub}`}>Loading urinary system model…</div>}
-          {failed && <div className={`absolute inset-0 grid place-items-center px-6 text-center text-sm ${sub}`}>Could not load the urinary system model.</div>}
+          {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">Loading urinary system model…</div>}
+          {failed && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">Could not load the urinary system model.</div>}
           <div ref={tip} style={{ display: "none" }} className="pointer-events-none absolute z-10 max-w-[240px] rounded-lg bg-black/90 px-2.5 py-1.5 text-[11px] leading-snug text-white" />
-          <p className={`pointer-events-none absolute bottom-2 right-3 text-[10px] ${sub}`}>drag orbit · scroll zoom · hover or tap a part</p>
+          <p className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-slate-400">drag orbit · scroll zoom · hover or tap a part</p>
         </div>
       </div>
       <div className="lab-deck-pane lab-glass-deep space-y-3 p-3.5">

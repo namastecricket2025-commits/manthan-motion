@@ -399,21 +399,6 @@ html:not(.dark) .set-root.set-root--bare {
   justify-content: flex-end;
 }
 
-.set-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--signal) 30%, transparent);
-  background: color-mix(in srgb, var(--signal) 12%, transparent);
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--set-neon-text);
-  white-space: nowrap;
-}
-
 /* --- slider: hairline-thin rail, sharp white knob --- */
 .set-slider-wrap {
   width: 100%;

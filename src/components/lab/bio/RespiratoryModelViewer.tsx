@@ -207,10 +207,10 @@ export default function RespiratoryModelViewer({ label, blurb, theme }: { label:
             Fit view
           </button>
         </div>
-        <div className={`relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border ${edge} ${dark ? "bg-black/25" : "bg-white/60"}`}>
+        <div className="relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
-          {!ready && !failed && <div className={`absolute inset-0 grid place-items-center text-sm ${sub}`}>Loading lung model…</div>}
-          {failed && <div className={`absolute inset-0 grid place-items-center px-6 text-center text-sm ${sub}`}>Could not load the lung model.</div>}
+          {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">Loading lung model…</div>}
+          {failed && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">Could not load the lung model.</div>}
           {PARTS.map((a, i) => (
             <button
               key={a.id}
@@ -227,7 +227,7 @@ export default function RespiratoryModelViewer({ label, blurb, theme }: { label:
               {(all || pin === a.id) && <span className="absolute left-7 top-0.5 whitespace-nowrap rounded-md bg-black/90 px-2 py-0.5 text-xs">{a.name}</span>}
             </button>
           ))}
-          <p className={`pointer-events-none absolute bottom-2 right-3 text-[10px] ${sub}`}>drag orbit · scroll zoom · tap a numbered dot</p>
+          <p className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-slate-400">drag orbit · scroll zoom · tap a numbered dot</p>
         </div>
       </div>
 

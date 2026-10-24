@@ -189,14 +189,12 @@ function PanelTitle({
 function ListRow({
   title,
   hint,
-  badge,
   note,
   stack = false,
   children,
 }: {
   title: string;
   hint: string;
-  badge?: string;
   note?: string;
   /** Let the control take the full row, for controls wider than 300px. */
   stack?: boolean;
@@ -207,7 +205,6 @@ function ListRow({
       <div className="set-lrow__text">
         <div className="set-lrow__title">
           <span>{title}</span>
-          {badge ? <span className="set-badge">{badge}</span> : null}
         </div>
         <p className="set-lrow__hint">{hint}</p>
         {note ? <p className="set-lrow__note">{note}</p> : null}
@@ -536,7 +533,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                   <div className="set-lrow__text">
                     <div className="set-lrow__title">
                       <span>Appearance</span>
-                      <span className="set-badge">{THEMES.find((t) => t.key === settings.themeMode)?.label}</span>
                     </div>
                     <p className="set-lrow__hint">
                       Pick a fixed theme, or let Manthan follow your device automatically.
@@ -578,7 +574,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     than next to the type scale. */}
                 <ListRow
                   title="Eye comfort"
-                  badge={settings.eyeComfort ? "On" : "Off"}
                   hint="Warms the entire display — off-white paper, softer ink and a warm veil over every canvas — so long sessions read like paper instead of like a lamp. Works in both themes and applies instantly."
                   note={
                     settings.eyeComfort
@@ -597,7 +592,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                 <ListRow
                   stack
                   title="Text comfort"
-                  badge={COMFORT[comfortIndex]?.label}
                   hint="Scales dashboard typography, and switches the whole interface to a spaced, dyslexia-friendly letterform when you need it."
                 >
                   <div className="set-slider-wrap">
@@ -631,7 +625,6 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
                 <ListRow
                   title="Motionless mode"
-                  badge={settings.reduceMotion ? "On" : "Off"}
                   hint="Stops every idle orbit, drifting mesh and simulation loop. Content stays complete and readable — it simply stops moving. The operating system's own reduced-motion preference is honoured as well."
                 >
                   <Switch

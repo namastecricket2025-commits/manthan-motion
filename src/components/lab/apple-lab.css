@@ -985,10 +985,12 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
     0 2px 10px rgba(16, 16, 16, 0.25);
 }
 
-/* The stage backdrop becomes a paper sweep — same shape, daylight values,
-   so a studio-lit model still reads as lit rather than pasted on. */
+/* The mock exam, the STEM models and the organ stages keep the dark studio
+   backdrop in daylight too — a scanned model on white paper reads as cut out,
+   while the same model on black reads as lit. The panel around it stays paper. */
 .apple-lab [data-lab-theme="light"] .apple-lab-stage {
-  background: radial-gradient(ellipse at 50% 32%, #ffffff 0%, #e7ebf2 74%);
+  background: radial-gradient(ellipse at 50% 32%, #101010 0%, #060606 74%);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Periodic tiles: opaque paper cards so the category colours stay vivid. */
