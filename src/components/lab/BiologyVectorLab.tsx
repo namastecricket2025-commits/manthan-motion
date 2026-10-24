@@ -2,6 +2,7 @@ import { useLabTheme } from "@/components/lab/lab-theme";
 import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
 import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
 import RespiratoryModelViewer from "@/components/lab/bio/RespiratoryModelViewer";
+import ExcretoryModelViewer from "@/components/lab/bio/ExcretoryModelViewer";
 import { useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion, useAnimationFrame } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
@@ -1396,6 +1397,8 @@ export function BiologyVectorLab() {
               <HeartModelViewer label={active.label} blurb={active.blurb} theme={theme} />
             ) : plate === "respiratory" ? (
               <RespiratoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />
+            ) : plate === "excretory" ? (
+              <ExcretoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />
             ) : (
               <OrganStage
                 system={plate}
