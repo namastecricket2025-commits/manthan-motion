@@ -1503,3 +1503,44 @@ html:not(.dark) .lock-veil {
   }
 }
 
+/* ---------------------------------------------------------------- */
+/* Step badges at night                                             */
+/* ---------------------------------------------------------------- */
+
+/* A solved paper shows up to seven step badges at once, each a different
+   hue. The seven were picked for paper, where a tint is mixed into dark ink;
+   on black the same hexes are the brightest thing in the column after the
+   answer, and seven of them in a row read as a highlighter set rather than
+   as a method. The dark theme gets the same seven hues, one saturation step
+   down: still amber, rose, violet, green, blue, indigo and teal — still
+   matched to the same rule every time — just no longer lit from inside.
+   Scoped to `.dark`, so paper keeps its original contrast. */
+
+html.dark .mathlab-step[data-tone="factor"],
+html.dark .mathlab-rule[data-tone="factor"] {
+  --step-tint: #d3a45c;
+}
+html.dark .mathlab-step[data-tone="discriminant"],
+html.dark .mathlab-rule[data-tone="discriminant"] {
+  --step-tint: #d4899a;
+}
+html.dark .mathlab-step[data-tone="chain"],
+html.dark .mathlab-rule[data-tone="chain"] {
+  --step-tint: #a491d6;
+}
+html.dark .mathlab-step[data-tone="power"],
+html.dark .mathlab-rule[data-tone="power"] {
+  --step-tint: #5fae97;
+}
+html.dark .mathlab-step[data-tone="identity"],
+html.dark .mathlab-rule[data-tone="identity"] {
+  --step-tint: #6f9fc4;
+}
+html.dark .mathlab-step[data-tone="standard"],
+html.dark .mathlab-rule[data-tone="standard"] {
+  --step-tint: #8395cf;
+}
+html.dark .mathlab-step[data-tone="verify"],
+html.dark .mathlab-rule[data-tone="verify"] {
+  --step-tint: #66aaa5;
+}

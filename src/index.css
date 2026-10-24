@@ -470,7 +470,7 @@
   ----chart-crosshair: rgba(255, 255, 255, 0.18);
   ----chart-label: var(--text-dim);
   ----chart-line-primary: var(--signal);
-  ----chart-line-secondary: #2dd4bf;
+  ----chart-line-secondary: #6cc9be;
   ----chart-tooltip-background: #17171a;
   ----chart-tooltip-foreground: var(--text-main);
   ----chart-tooltip-muted: var(--text-dim);
@@ -511,26 +511,34 @@
   --border: rgba(255, 255, 255, 0.12);
   --input: rgba(255, 255, 255, 0.14);
   --ring: var(--signal);
-  /* A coloured ramp at night saturation: amber leads because it is the
+  /* A coloured ramp, toned for a black canvas: amber leads because it is the
      brand, and the rest step away from it and from each other — teal, rose,
      violet, sky — so series, legends and mind-map nodes are told apart by
-     hue, the same way the day theme tells them apart. */
+     hue, the same way the day theme tells them apart.
+
+     The first dark pass picked each hue at full chrome saturation (2dd4bf,
+     fb7185, a78bfa, 60a5fa). On #000 four of those sit at the top of their
+     channel and read as neon: a legend, a notebook tab row and a mind map put
+     all five on screen at once, which is where colour stopped identifying a
+     series and started shouting. These are the same hues mixed down toward the
+     page — still clearly teal / rose / violet / sky, still 7:1 or better for
+     text — one step quieter so the amber accent stays the loudest thing. */
   --chart-1: #fbbf24;
-  --chart-2: #2dd4bf;
-  --chart-3: #fb7185;
-  --chart-4: #a78bfa;
-  --chart-5: #60a5fa;
+  --chart-2: #6cc9be;
+  --chart-3: #e79aa6;
+  --chart-4: #b8a6e0;
+  --chart-5: #8fb8e6;
   /* Artefact + source ramp (dark) — one hue per generated artefact kind and
      per source kind, so a legend (or a mind-map node, or a notebook tab) is
      separable by colour, exactly as in the day theme. */
   --kind-summary: #fbbf24;
-  --kind-flashcards: #2dd4bf;
-  --kind-quiz: #fb7185;
-  --kind-mindmap: #a78bfa;
-  --kind-slides: #60a5fa;
+  --kind-flashcards: #6cc9be;
+  --kind-quiz: #e79aa6;
+  --kind-mindmap: #b8a6e0;
+  --kind-slides: #8fb8e6;
   --src-files: #fbbf24;
-  --src-links: #2dd4bf;
-  --src-notes: #f472b6;
+  --src-links: #6cc9be;
+  --src-notes: #d99ab8;
   --sidebar: #0b0b0c;
   --sidebar-foreground: var(--text-main);
   --sidebar-primary: var(--signal);
@@ -569,7 +577,7 @@
   --dash-chart-label: rgba(255, 255, 255, 0.9);
   --dash-chart-grid: rgba(255, 255, 255, 0.12);
   --dash-series-primary: var(--signal);
-  --dash-series-secondary: #2dd4bf;
+  --dash-series-secondary: #6cc9be;
   /* The frosted spline's fill: glass translucency, top to bottom. */
   --dash-frost-top: rgba(255, 255, 255, 0.15);
   --dash-frost-bottom: rgba(255, 255, 255, 0);
