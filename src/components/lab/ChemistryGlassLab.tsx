@@ -273,7 +273,7 @@ function ElementTile({
          the whole table is on screen at once, whether the element panel is
          open or not. Height and type shrink only enough to keep the symbol
          legible at the narrowest open-panel width. */
-      className="apple-lab-tile h-[36px] w-full min-w-0 !gap-0 !justify-between !items-stretch px-[2px] py-[2px] text-left sm:h-[42px] xl:h-[48px]"
+      className="apple-lab-tile h-[40px] w-full min-w-0 !gap-0 !justify-between !items-stretch px-[2px] py-[2px] text-left sm:h-[42px] xl:h-[48px]"
       style={{
         borderColor: isSelected ? "var(--lab-ink)" : tint(color, faint ? "30" : "59"),
         background: isSelected ? "color-mix(in srgb, var(--lab-ink) 14%, transparent)" : undefined,
@@ -509,7 +509,7 @@ function PeriodicTableTab({
                         type="button"
                         onClick={() => onSelect(series)}
                         title={rowIndex === 5 ? "Lanthanides 57–71" : "Actinides 89–103"}
-                        className="apple-lab-tile h-[36px] w-full min-w-0 !justify-center !border-dashed px-0 text-center sm:h-[42px] xl:h-[48px]"
+                        className="apple-lab-tile h-[40px] w-full min-w-0 !justify-center !border-dashed px-0 text-center sm:h-[42px] xl:h-[48px]"
                         style={{ borderColor: "var(--lab-line)" }}
                       >
                         <span className="text-[7px] leading-none text-[var(--lab-ink-micro)]">

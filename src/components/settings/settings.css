@@ -1395,4 +1395,14 @@ html:not(.dark) .set-panel-title__icon {
   .set-select {
     max-width: none;
   }
+  /* The settings title is a 30–43px clamp; one phone step down matches the
+     page titles elsewhere, and the hero loses a little bottom air so the
+     first control is closer to the fold. */
+  .set-hero {
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .set-hero__title {
+    font-size: 1.75rem;
+  }
 }

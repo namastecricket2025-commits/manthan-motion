@@ -361,7 +361,7 @@ export function LegacyCircuitsBench() {
 
         <svg
           viewBox="0 0 760 380"
-          className="mt-4 h-[320px] w-full"
+          className="mt-4 h-[320px] w-full max-sm:h-auto max-sm:aspect-[2/1]"
           role="img"
           aria-label="A circuit loop with two cells, a switch, a lamp and one or two resistors"
         >
@@ -1292,7 +1292,7 @@ function MotionSandbox() {
 
         <svg
           viewBox="0 0 900 360"
-          className="mt-4 h-[320px] w-full"
+          className="mt-4 h-[320px] w-full max-sm:h-auto max-sm:aspect-[5/2]"
           role="img"
           aria-label={`A ${body} simulation with live vectors and readouts`}
         >

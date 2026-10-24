@@ -161,7 +161,7 @@ function Hero() {
               centres against below 1280px; from 1280px up the mark is
               absolutely centred and the row below it is the only thing in
               flow, so the row centres in the full height of the hero. */}
-          <div className="relative flex flex-1 flex-col items-center justify-center gap-12 py-10 sm:py-14 xl:gap-0">
+          <div className="relative flex flex-1 flex-col items-center justify-center gap-8 py-10 sm:gap-12 sm:py-14 xl:gap-0">
             {/* THE MARK — the hero's centrepiece, at size, on its own centred
                 layer behind the copy.
 
@@ -171,7 +171,7 @@ function Hero() {
                 lit object. */}
             <div
               data-hero-fade
-              className="relative h-[clamp(180px,26vw,340px)] w-[clamp(180px,26vw,340px)] xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2"
+              className="relative h-[clamp(150px,26vw,340px)] w-[clamp(150px,26vw,340px)] xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2"
             >
               <div aria-hidden="true" className="absolute inset-0">
                 <div className="mark-halo" />
@@ -191,7 +191,7 @@ function Hero() {
                 className="w-full max-w-[560px] text-center xl:max-w-[460px] xl:text-left"
               >
                 <TextGenerate
-                  className="font-display text-[40px] font-normal leading-[1.04] tracking-[-0.04em] text-foreground sm:text-[52px] sm:leading-[1.02] lg:text-[58px] xl:text-[64px] xl:leading-[64px] xl:tracking-[-0.06em]"
+                  className="font-display text-[34px] font-normal leading-[1.06] tracking-[-0.04em] text-foreground sm:text-[52px] sm:leading-[1.02] lg:text-[58px] xl:text-[64px] xl:leading-[64px] xl:tracking-[-0.06em]"
                   delay={0.14}
                   segments={[
                     { text: "Churn your notes into" },

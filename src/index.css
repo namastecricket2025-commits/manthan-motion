@@ -2600,3 +2600,50 @@ html[data-theme="dark"] .how-card:hover .card-tile {
   background: #ffffff;
 }
 
+/* ============================================================
+   Phones — the density pass
+
+   Everything below is inside a max-width query, so the desktop composition
+   is untouched. The rules address the two things a phone actually changes:
+   there is no room for a document to be wider than the screen, and a title
+   set for a 1440px page is a poster on a 390px one.
+   ============================================================ */
+@media (max-width: 639px) {
+  /* A bench drawing, a long token or a table may scroll inside its own box,
+     but it must never drag the whole document sideways and leave the phone
+     zoomed out to fit it. `clip` (not `hidden`) keeps sticky headers working
+     and does not create a second scroll container. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+
+  /* Page titles: the app uses 30px on dashboard screens and 36px on the
+     study pages. One phone step down keeps a two-line title on the first
+     screen instead of pushing the actual task below the fold. Scoped to
+     `main` so the marketing hero keeps its own scale. */
+  main h1.font-display {
+    font-size: 1.75rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  /* The study pages reserve 112px above their title to clear the fixed
+     nav. With the title one step down that reads as a gap; 92px is still a
+     full nav-height plus breathing room. */
+  main.pt-28 {
+    padding-top: 5.75rem;
+  }
+
+  /* The About heading is a composition, not a page label (its clamps reach
+     7.4rem). At 46px on a 390px phone it reads as a poster; this is its
+     phone size only. */
+  .about-hero__title {
+    font-size: clamp(2.15rem, 10vw, 2.6rem);
+  }
+
+  .about-hero {
+    padding-top: 6.5rem;
+  }
+}
+

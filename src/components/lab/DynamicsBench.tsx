@@ -470,7 +470,7 @@ export default function DynamicsBench() {
 
         <svg
           viewBox="0 0 900 360"
-          className="mt-4 h-[320px] w-full"
+          className="mt-4 h-[320px] w-full max-sm:h-auto max-sm:aspect-[5/2]"
           role="img"
           aria-label={`A ${specBody.label} dropping ${DROP_HEIGHT} metres with live vectors`}
         >

@@ -172,7 +172,7 @@ export default function Lab() {
         </aside>
 
         {/* ---- Mobile top bar ---- */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -188,7 +188,7 @@ export default function Lab() {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--ink)]/95 backdrop-blur-xl"
+                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
               >
                 <SheetHeader>
                   <SheetTitle className="text-left">
@@ -224,7 +224,7 @@ export default function Lab() {
               <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
                 STEM Lab<span className="text-[var(--signal)]">.</span>
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
+              <p className="mt-2 hidden max-w-2xl text-sm leading-relaxed text-text-dim sm:block">
                 Run a circuit, tilt an organ or heat a reaction, then ask the
                 lab the question the bench cannot answer. Every answer ends
                 with three questions so the idea stays.

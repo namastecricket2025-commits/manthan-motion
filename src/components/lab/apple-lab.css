@@ -1176,3 +1176,104 @@ html[data-comfort="on"] .apple-lab[data-lab-theme="light"]::after {
 .apple-lab--embedded::after {
   display: none;
 }
+
+/* ============================================================
+   Phones
+
+   The benches were composed against a >760px panel: 24px corners, 20px
+   padding, 18px titles and controls sized for a mouse. On a phone that reads
+   as a page zoomed in one step, and the fixed-height bench drawings carried
+   more letterbox than drawing. This block is the phone composition only —
+   every rule here sits under `max-width: 760px`, so the desktop bench keeps
+   the values it was designed with.
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .apple-lab-panel {
+    border-radius: 18px;
+    padding: 0.85rem;
+  }
+
+  .apple-lab-glass {
+    border-radius: 18px;
+  }
+
+  .apple-lab-card {
+    border-radius: 14px;
+  }
+
+  /* The subject/bench rail takes the full column, so the three controls do
+     not sit as a small centred island, and long rails still pan. */
+  .apple-lab-tabrail {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .apple-lab-tab {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .apple-lab-tab svg {
+    height: 14px;
+    width: 14px;
+  }
+
+  /* Bench titles and microlabels step down once: 18px/10.5px was set for a
+     wide panel and wraps three lines beside a phone's control row. */
+  .apple-lab-panel h3.apple-lab-title {
+    font-size: 1rem;
+    line-height: 1.28;
+  }
+
+  .apple-lab-micro {
+    font-size: 9.5px;
+    letter-spacing: 0.13em;
+  }
+
+  .apple-lab-chip {
+    padding: 0.3rem 0.6rem;
+    font-size: 10px;
+  }
+
+  .apple-lab-btn {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.76rem;
+  }
+
+  /* Control wells and readout rows were laid out for a 300px column; on a
+     phone they get the full width by default. */
+  .apple-lab-panel .apple-lab-card {
+    min-width: 0;
+  }
+
+  /* A 16:10 stage is 214px tall on a 342px-wide phone; 4:3 gives the 3D
+     model 256px without changing its width, so the organ reads before it is
+     rotated. The renderer takes its camera aspect from this box, so the
+     picture recomposes rather than stretching. */
+  .apple-lab-stage__canvas {
+    aspect-ratio: 4 / 3;
+  }
+
+  /* Touch, not a mouse: the slider thumb and the structure rows were sized
+     for a pointer. A 14px thumb is hard to catch with a thumb, and a 28px
+     part row is under the 34px the rest of the bench uses. */
+  .apple-lab-range::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -8px;
+  }
+
+  .apple-lab-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
+
+  .organ-row {
+    padding: 0.55rem 0.5rem;
+  }
+
+  .organ-seg button {
+    padding: 0.45rem 0.7rem;
+  }
+}

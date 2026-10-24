@@ -1046,7 +1046,7 @@ export default function OrganStage({ system, label, blurb, theme }: StageProps) 
             )}
           </div>
 
-          <span className="apple-lab-chip pointer-events-none absolute bottom-3 right-3 !text-[10px]">
+          <span className="apple-lab-chip pointer-events-none absolute bottom-3 right-3 !text-[10px] max-sm:hidden">
             drag orbit · scroll zoom · right-drag pan · click to pin
           </span>
         </div>

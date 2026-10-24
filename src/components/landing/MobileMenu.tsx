@@ -132,7 +132,7 @@ export function MobileMenu() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-chip absolute right-0 top-full z-50 mt-2 w-[264px] origin-top-right rounded-2xl p-2"
+            className="glass-chip absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh_-_5.5rem)] w-[264px] origin-top-right overflow-y-auto overscroll-contain rounded-2xl bg-[var(--panel)] p-2 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.65)]"
           >
             {/* The primary action, first and unmistakable. */}
             <div className="p-1.5 pb-2">

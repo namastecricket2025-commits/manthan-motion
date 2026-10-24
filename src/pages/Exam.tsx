@@ -428,7 +428,7 @@ export default function Exam() {
       <div className="glow-aura" aria-hidden="true" />
       <div className="relative z-10">
         {inExam ? (
-          <header className="sticky top-0 z-40 border-b border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-3 backdrop-blur-xl sm:px-6">
+          <header className="sticky top-0 z-40 border-b border-[var(--card-border)] bg-[var(--panel-bg)] px-4 py-3 backdrop-blur-xl max-sm:bg-[var(--panel)] sm:px-6">
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <Logo />

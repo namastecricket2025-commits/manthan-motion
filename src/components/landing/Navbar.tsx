@@ -45,7 +45,7 @@ export default function Navbar() {
   const authUrl = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--ink)_72%,transparent)] backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--ink)_72%,transparent)] backdrop-blur-xl max-md:bg-[var(--ink)]">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         {/* The mark is the way home: navigate there from any other page,
             scroll to the top when already on the landing page. */}
