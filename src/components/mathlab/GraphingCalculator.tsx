@@ -89,15 +89,32 @@ interface Line {
 let lineCounter = 0;
 const nextId = () => `f${(lineCounter += 1)}`;
 
+/** Up to three decimals, without the trailing zeros a graph readout never needs. */
+function trimNumber(value: number) {
+  if (!Number.isFinite(value)) return "—";
+  return String(Number(value.toFixed(3)));
+}
+
 export function GraphingCalculator() {
   const [lines, setLines] = useState<Line[]>([{ id: nextId(), expr: "a*x^2 + b" }]);
   const [values, setValues] = useState<Record<string, number>>({});
   const [domain, setDomain] = useState(DEFAULT_DOMAIN);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * The coordinate readout under the pointer.
+   *
+   * function-plot draws its own label as SVG text inside the clipped plot
+   * area, so near an edge the numbers get sliced off by the canvas — exactly
+   * where a student is looking. This reads the chart's `tip:update` event
+   * instead and prints the same point in HTML outside the clip, so the
+   * coordinates are always fully on screen.
+   */
+  const [readout, setReadout] = useState<{ x: number; y: number; index: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const optionsRef = useRef<FunctionPlotOptions | null>(null);
   const chartRef = useRef<Chart | null>(null);
+  const boundChartRef = useRef<Chart | null>(null);
 
   const parameters = useMemo(() => parametersIn(lines.map((line) => line.expr)), [lines]);
 
@@ -123,7 +140,17 @@ export function GraphingCalculator() {
     const options = optionsRef.current;
     if (!options) return;
     try {
-      chartRef.current = functionPlot(options);
+      const chart = functionPlot(options);
+      chartRef.current = chart;
+      // Bind once per chart instance: redraws reuse the cached chart, a
+      // remount builds a new one that needs its own listeners.
+      if (boundChartRef.current !== chart) {
+        boundChartRef.current = chart;
+        chart.on("tip:update", (point: { x: number; y: number; index: number }) => {
+          setReadout({ x: point.x, y: point.y, index: point.index });
+        });
+        chart.on("mouseout", () => setReadout(null));
+      }
       reportError(null);
     } catch {
       // An expression the evaluator cannot read breaks the whole chart, so the
@@ -296,6 +323,15 @@ export function GraphingCalculator() {
 
       <div className="mathlab-graphcalc__canvas">
         <div ref={containerRef} className="mathlab-fp" />
+        <span
+          className="mathlab-graphcalc__readout"
+          data-live={readout !== null ? "yes" : "no"}
+          aria-live="polite"
+        >
+          {readout
+            ? `x ${trimNumber(readout.x)}   y ${trimNumber(readout.y)}`
+            : "Point anywhere on the graph for its coordinates"}
+        </span>
       </div>
 
       {parameters.length ? (
