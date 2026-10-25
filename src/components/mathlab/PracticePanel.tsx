@@ -44,7 +44,14 @@ const BOARD_GRADE = "10";
 
 const COUNTS = [1, 3, 5];
 
-const BOARDS = ["CBSE 2026", "CBSE 2025", "CBSE 2024", "CBSE (mixed)"];
+const BOARDS = [
+  "CBSE 2026",
+  "CBSE 2025",
+  "CBSE 2024",
+  "CBSE 2023",
+  "CBSE 2022",
+  "CBSE (mixed)",
+];
 
 /** A CBSE Class 10 maths paper runs three hours; this set is a section of it,
  *  so the clock is 90 minutes — enough to finish without being a mock exam. */

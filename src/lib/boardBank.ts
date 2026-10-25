@@ -8,10 +8,11 @@
  * these are mixed in first — up to half the paper — and the model writes the
  * rest of the paper.
  *
- * Coverage spans all six Class 10 subjects: Science, Mathematics (Standard),
- * Social Science, English (Language and Literature), Hindi (Course B) and
- * Information Technology (402). A chapter with no entry is not fabricated —
- * the setter writes a fresh question in the board's pattern instead.
+ * Coverage spans all seven Class 10 subjects: Science, Mathematics (Standard),
+ * Social Science, English (Language and Literature), Hindi (Course B),
+ * Information Technology (402) and Artificial Intelligence (417). A chapter
+ * with no entry is not fabricated — the setter writes a fresh question in the
+ * board's pattern instead.
  *
  * Two honesty notes shape the data:
  *
@@ -232,6 +233,34 @@ const SCIENCE: BankQuestion[] = [
     modelAnswer: "A bar magnet and a current-carrying coil (electromagnet).",
     markingPoints: ["Any two of: bar magnet, electromagnet, current-carrying wire."],
     origin: "CBSE 2020 · 31/1/1 · Q2",
+  },
+  {
+    chapter: "Light — Reflection and Refraction",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "When an object is kept within the focus of a concave mirror, an enlarged image is formed behind the mirror. This image is:",
+    options: ["real", "inverted", "virtual and inverted", "virtual and erect"],
+    answerIndex: 3,
+    explanation:
+      "An object between the pole and the focus gives a virtual, erect and enlarged image behind the mirror, which is why a concave mirror is used as a shaving mirror.",
+    origin: "CBSE 2020 · 31/1/1 · Q9 (OR)",
+  },
+  {
+    chapter: "Light — Reflection and Refraction",
+    type: "short",
+    marks: 3,
+    prompt:
+      "Differentiate between a glass slab and a glass prism. What happens when a narrow beam of (i) monochromatic light, and (ii) white light passes through (a) a glass slab and (b) a glass prism?",
+    modelAnswer:
+      "A glass slab has two parallel refracting surfaces, so the emergent ray is parallel to the incident ray; a prism has two inclined refracting surfaces, so the emergent ray is deviated from the incident direction. In a slab, monochromatic light emerges as a parallel beam and white light emerges white, with only a slight lateral shift. In a prism, monochromatic light is deviated as a whole while white light is split into its seven constituent colours because each colour has its own refractive index and bends by a different amount.",
+    markingPoints: [
+      "Slab: parallel faces, no deviation — only lateral displacement.",
+      "Prism: inclined faces, the ray is deviated.",
+      "Parallel monochromatic beam stays parallel in both, but only the prism deviates it.",
+      "White light: no dispersion in the slab, dispersion into a spectrum in the prism.",
+    ],
+    origin: "CBSE 2020 · 31/1/1 · Q21 (OR)",
   },
 ];
 
@@ -779,6 +808,83 @@ const MATHS_MORE: BankQuestion[] = [
     explanation:
       "cos B = √(1 − sin²B) = √(15/16) = √15/4, so sec B = 4/√15.",
     origin: "CBSE 2025 · 30/6/1 · trigonometry",
+  },
+  {
+    chapter: "Pair of Linear Equations in Two Variables",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "The value of k for which the system of linear equations x + 2y = 3, 5x + ky + 7 = 0 is inconsistent is:",
+    options: ["−14/3", "2/5", "5", "10"],
+    answerIndex: 3,
+    explanation:
+      "Write the equations as x + 2y − 3 = 0 and 5x + ky + 7 = 0. For no solution, 1/5 = 2/k, so k = 10; the constant ratio −3/7 is then different, which confirms the lines are parallel.",
+    origin: "CBSE 2020 · 30/2/1 · Q4",
+  },
+  {
+    chapter: "Pair of Linear Equations in Two Variables",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "The pair of linear equations 2x = 5y + 6 and 15y = 6x − 18 represents two lines which are:",
+    options: [
+      "intersecting",
+      "parallel",
+      "coincident",
+      "either intersecting or parallel",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Rewriting gives 2x − 5y − 6 = 0 and −6x + 15y + 18 = 0. All three ratios a₁/a₂, b₁/b₂ and c₁/c₂ equal −1/3, so the equations are dependent and the lines coincide.",
+    origin: "CBSE 2023 · 30/4/1 · Q7",
+  },
+  {
+    chapter: "Pair of Linear Equations in Two Variables",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "The pair of linear equations x + 2y + 5 = 0 and −3x = 6y − 1 has:",
+    options: [
+      "a unique solution",
+      "exactly two solutions",
+      "infinitely many solutions",
+      "no solution",
+    ],
+    answerIndex: 3,
+    explanation:
+      "The second equation is −3x − 6y + 1 = 0. Here a₁/a₂ = b₁/b₂ = −1/3 but c₁/c₂ = 5/1, so the lines are parallel and the system has no solution.",
+    origin: "CBSE 2024 · 30/3/1 · Q1",
+  },
+  {
+    chapter: "Pair of Linear Equations in Two Variables",
+    type: "short",
+    marks: 2,
+    prompt:
+      "Solve the following pair of equations algebraically: 101x + 102y = 304; 102x + 101y = 305.",
+    modelAnswer:
+      "Adding the equations gives 203x + 203y = 609, so x + y = 3. Subtracting the first from the second gives x − y = 1. Adding x + y = 3 and x − y = 1 gives 2x = 4, so x = 2 and y = 1.",
+    markingPoints: [
+      "Adds to get x + y = 3.",
+      "Subtracts to get x − y = 1.",
+      "x = 2, y = 1.",
+    ],
+    origin: "CBSE 2025 · 30/x/x · Q21(a)",
+  },
+  {
+    chapter: "Pair of Linear Equations in Two Variables",
+    type: "mcq",
+    marks: 1,
+    prompt: "The system of equations 2x + 1 = 0 and 3y − 5 = 0 has:",
+    options: [
+      "a unique solution",
+      "two solutions",
+      "no solution",
+      "infinitely many solutions",
+    ],
+    answerIndex: 0,
+    explanation:
+      "The equations are the vertical line x = −1/2 and the horizontal line y = 5/3. They meet at exactly one point, so the system has a unique solution.",
+    origin: "CBSE 2025 · 30/x/x · Q17",
   },
 ];
 
@@ -1449,6 +1555,108 @@ const ENGLISH_2026: BankQuestion[] = [
   },
 ];
 
+/*
+ * English literature — chapters that had no entry in the 2020–2025 bank. The
+ * questions below are transcribed from reproduced board papers; the set number
+ * is given where the reproduced paper states it, and left as the paper subject
+ * where the reproduction does not.
+ */
+const ENGLISH_MORE: BankQuestion[] = [
+  {
+    chapter: "Prose · A Letter to God",
+    type: "short",
+    marks: 3,
+    prompt:
+      "In what manner did Lencho's cornfield suffer damage? Did he hold any expectations of receiving assistance?",
+    modelAnswer:
+      "A hailstorm rained on the valley for an hour and left the field looking as if it had been whitewashed. The corn was totally destroyed — not a single leaf of the flowers remained and the crop was lost. Lencho did not panic, because he had a single, firm hope: God sees everything and would not let a hard-working man go hungry, so help would certainly come.",
+    markingPoints: [
+      "Hailstorm destroyed the ripe corn and the flowers.",
+      "The field was left white, as if covered with salt.",
+      "Lencho's unshaken faith that God would send help.",
+    ],
+    origin: "CBSE 2025 · English · reproduced paper",
+  },
+  {
+    chapter: "Prose · A Letter to God",
+    type: "short",
+    marks: 3,
+    prompt: "What are the raindrops compared to and why?",
+    modelAnswer:
+      "From his doorway Lencho compares the big raindrops to new ten-cent coins and the little ones to five-cent coins. The comparison is a farmer's way of saying that the rain was worth money to him: the crop needed water, and a good harvest would bring him the income he called the hope of a good year.",
+    markingPoints: [
+      "Big drops = ten-cent pieces, little drops = five-cent pieces.",
+      "The rain is seen as money because the harvest means income.",
+      "Links to Lencho's hope of a good crop.",
+    ],
+    origin: "CBSE 2023 · English · Outside Delhi Set 3",
+  },
+  {
+    chapter: "Poem · Dust of Snow",
+    type: "short",
+    marks: 3,
+    prompt:
+      "In the poem ‘Dust of Snow’, the ‘Hemlock Tree’ and the ‘Crow’ hold specific meanings. Elaborate on how these symbols are utilised within the context of the poem.",
+    modelAnswer:
+      "The hemlock is a poisonous, gloomy tree and the crow is a dark, harsh-sounding bird, so both carry unhappy, even deathly associations. Their appearance in the poem sets up a moment of sadness. Yet the crow shaking down a dust of snow changes the poet's mood and saves part of a day he had rued, which shows that even a gloomy symbol can deliver a small joy and that nature's simplest events can lift despair.",
+    markingPoints: [
+      "Hemlock: poisonous/negative, associated with sorrow or death.",
+      "Crow: black, harsh bird, traditionally a bad omen.",
+      "The snow shaken from the hemlock lifts the poet's mood.",
+    ],
+    origin: "CBSE 2025 · English · reproduced paper",
+  },
+  {
+    chapter: "Poem · Dust of Snow",
+    type: "long",
+    marks: 6,
+    prompt:
+      "Examine the role of nature in the poems ‘The Dust of Snow’ and ‘Fog’.",
+    modelAnswer:
+      "In ‘Dust of Snow’, nature acts on the poet: a crow shakes snow from a hemlock onto him and the small, unexpected touch changes his mood from one of regret to relief, so a part of the day he had rued is saved. Nature here is a healer that works through an almost accidental moment. In ‘Fog’, nature is the subject itself — the fog comes on little cat feet, sits looking over the harbour and the city, and then moves on. Both poems give nature a quiet agency: in the first it repairs a human mood, in the second it silently visits, watches and leaves. Neither poem uses grand scenery; both find meaning in something small and ordinary.",
+    markingPoints: [
+      "Dust of Snow: the crow and the hemlock change the poet's mood.",
+      "Nature as healer, working through a small accident.",
+      "Fog: the fog is personified as a cat, sits looking, then moves on.",
+      "Fog is silent and temporary; it changes the city without violence.",
+      "Both poems use ordinary natural detail rather than grand scenery.",
+    ],
+    origin: "CBSE 2025 · English · Set 2/6/3",
+  },
+  {
+    chapter: "Prose · The Proposal",
+    type: "short",
+    marks: 3,
+    prompt:
+      "Comment on the significance of the title ‘The Proposal’ in the play. Provide two examples from the play to support your explanation.",
+    modelAnswer:
+      "The title works on two levels. Literally, the play is about Lomov coming to Chubukov's house to propose marriage to Natalya. Ironically, the proposal is almost buried under two absurd quarrels — over Oxen Meadows and over whose dog is better, Guess or Squeezer — so the courtship becomes a business arrangement between landed neighbours. The title is therefore significant because the proposal is both the plot's engine and the joke: marriage is discussed as a settlement of property and prestige, not as love.",
+    markingPoints: [
+      "Literal proposal of marriage by Lomov.",
+      "Quarrel over Oxen Meadows, then over the dogs.",
+      "Marriage shown as a property/social arrangement.",
+      "The proposal is the plot's engine and its satire.",
+    ],
+    origin: "CBSE 2025 · English · Set 2/6/3",
+  },
+  {
+    chapter: "Prose · The Proposal",
+    type: "short",
+    marks: 3,
+    prompt:
+      "What argument do Lomov and Natalya give over the superiority of their dogs, Guess and Squeezer?",
+    modelAnswer:
+      "Lomov insists that his Guess is a fine dog — pure-bred, short in the jaw, with a good build — and worth a great deal, while Natalya and Chubukov claim Squeezer is the better animal. Each side belittles the other's dog and boasts about its own, and the quarrel grows so loud that Lomov's palpitations force him out of the room. The argument shows that pride, not affection, drives the family.",
+    markingPoints: [
+      "Lomov praises Guess: breed, jaw, build, value.",
+      "Natalya and Chubukov back Squeezer as the better dog.",
+      "The quarrel over dogs nearly ends the proposal.",
+      "Reveals pride and pettiness rather than love.",
+    ],
+    origin: "CBSE 2024 · English · official paper",
+  },
+];
+
 const HINDI_2022: BankQuestion[] = [
   {
     chapter: "मनुष्यता — मैथिलीशरण गुप्त",
@@ -1881,7 +2089,7 @@ const BANK: Record<string, BankQuestion[]> = {
     ...SOCIAL_SCIENCE_MORE,
     ...SOCIAL_SCIENCE_2026,
   ],
-  "10:english": [...ENGLISH, ...ENGLISH_2026],
+  "10:english": [...ENGLISH, ...ENGLISH_MORE, ...ENGLISH_2026],
   "10:hindi": [...HINDI, ...HINDI_2022],
   "10:computer": [...IT, ...IT_2022_26],
   "10:ai": AI_2025,

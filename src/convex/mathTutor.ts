@@ -401,14 +401,25 @@ const practiceLevelValidator = v.union(
  * chapter is eligible: putting a Statistics question in a Trigonometry set
  * would make the tag misleading.
  */
-function pickMathsBoardQuestion(chapterName?: string): BankQuestion | null {
+function pickMathsBoardQuestion(
+  chapterName?: string,
+  paperYear?: string,
+): BankQuestion | null {
   const chapter = (chapterName ?? "").trim();
   if (!chapter) return null;
   const pool = boardBank("10", "maths").filter(
     (item) => item.type !== "mcq" && item.chapter === chapter,
   );
   if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)] ?? null;
+  /* When the student picked a year, the paper tag has to agree with it — a
+     set labelled "CBSE 2024" must not open with a 2020 question. If that year
+     has no question for this chapter, any year is better than a false label. */
+  const year = (paperYear ?? "").match(/\b(20\d{2})\b/)?.[1];
+  const matching = year
+    ? pool.filter((item) => item.origin.includes(year))
+    : [];
+  const from = matching.length ? matching : pool;
+  return from[Math.floor(Math.random() * from.length)] ?? null;
 }
 
 /** A whole practice set: several questions from one topic, one level. */
@@ -445,7 +456,7 @@ export const practiceSet = action({
     const total = Math.max(1, Math.min(6, Math.round(count)));
     const realBoard =
       level === "board" && className === "10"
-        ? pickMathsBoardQuestion(chapterName)
+        ? pickMathsBoardQuestion(chapterName, boardYear)
         : null;
     const language = detectLanguage([problem]);
     const method = (steps ?? [])
