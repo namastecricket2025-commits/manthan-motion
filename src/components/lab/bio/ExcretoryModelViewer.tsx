@@ -34,8 +34,7 @@ const UR = [[-1.569, 2.41, 0.646],  [-1.619, 1.51, 0.546],  [-1.689, -0.758, 0.4
 const KZ0 = -1.785;
 const KZ1 = 0.921;
 
-export default function ExcretoryModelViewer({ label, blurb, theme }: { label: string; blurb: string; theme: "dark" | "light" }) {
-  const dark = theme === "dark";
+export default function ExcretoryModelViewer({ label, blurb }: { label: string; blurb: string; theme: "dark" | "light" }) {
   const holder = useRef<HTMLDivElement>(null);
   const tip = useRef<HTMLDivElement>(null);
   const mats = useRef<Record<string, THREE.MeshStandardMaterial>>({});
@@ -251,9 +250,14 @@ export default function ExcretoryModelViewer({ label, blurb, theme }: { label: s
     if (next && DEFS[next].inner && !xray && !cutOn) setXray(true);
   };
   const sel = pin ? DEFS[pin] : null;
-  const edge = dark ? "border-white/10" : "border-black/10";
-  const txt = dark ? "text-slate-100" : "text-slate-900";
-  const sub = dark ? "text-slate-400" : "text-slate-600";
+  /* The stage, its header and the deck below are one dark instrument face in
+     both themes — the model needs a black studio behind it, and a panel split
+     between a black stage and a paper deck read as two different tools. The
+     ink therefore stays light in light mode too; the page around the panel is
+     what follows the theme. */
+  const edge = "border-white/10";
+  const txt = "text-slate-100";
+  const sub = "text-slate-400";
   const btn = (on: boolean) => `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
 
   return (
@@ -269,12 +273,12 @@ export default function ExcretoryModelViewer({ label, blurb, theme }: { label: s
             Fit view
           </button>
         </div>
-        <div className="relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
+        <div className="lab-model-stage relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
           {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">Loading urinary system model…</div>}
           {failed && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">Could not load the urinary system model.</div>}
           <div ref={tip} style={{ display: "none" }} className="pointer-events-none absolute z-10 max-w-[240px] rounded-lg bg-black/90 px-2.5 py-1.5 text-[11px] leading-snug text-white" />
-          <p className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-slate-400">drag orbit · scroll zoom · hover or tap a part</p>
+          <p className="pointer-events-none absolute bottom-2 right-3 hidden text-[10px] text-slate-400 sm:block">drag orbit · scroll zoom · hover or tap a part</p>
         </div>
       </div>
       <div className="lab-deck-pane lab-glass-deep space-y-3 p-3.5">
@@ -300,7 +304,7 @@ export default function ExcretoryModelViewer({ label, blurb, theme }: { label: s
         <div className="flex flex-col gap-1">
           {Object.entries(DEFS).map(([id, d]) => (
             <button key={id} type="button" onClick={() => pick(id)} onMouseEnter={() => (st.current.hov = id)} onMouseLeave={() => (st.current.hov = null)}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === id ? "bg-white/10" : ""}`}>
+              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === id ? "bg-white/10" : ""}`}>
               <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: d.color }} />
               {d.name}
             </button>

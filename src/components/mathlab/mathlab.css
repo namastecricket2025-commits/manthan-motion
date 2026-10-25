@@ -3517,3 +3517,47 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
     padding: 4px 12px 10px;
   }
 }
+
+/* ================================================================== */
+/* Phones — the view bar                                               */
+/* ================================================================== */
+
+/* The tabs and the Google control shared one row on a desktop. At phone
+   width the row forced the search into a 90px island beside a scrolling tab
+   rail; stacking them gives each its own full line and leaves the tabs to
+   pan without a second control sitting on top of them. */
+@media (max-width: 759px) {
+  .mathlab-viewbar {
+    margin-bottom: 10px;
+  }
+
+  .mathlab-viewbar__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .mathlab-views {
+    width: 100%;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mathlab-view {
+    padding: 8px 12px;
+    font-size: 11.5px;
+  }
+
+  .mathlab-viewbar .gs-trigger {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mathlab-solvepage {
+    gap: 12px;
+  }
+
+  .mathlab-card {
+    border-radius: 16px;
+  }
+}

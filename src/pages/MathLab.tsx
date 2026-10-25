@@ -123,7 +123,7 @@ export default function MathLabPage() {
         </aside>
 
         {/* ---- Mobile top bar ---- */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+        <header className="app-mobile-bar sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -139,7 +139,7 @@ export default function MathLabPage() {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
+                className="app-mobile-drawer w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
               >
                 <SheetHeader>
                   <SheetTitle className="text-left">
@@ -164,13 +164,13 @@ export default function MathLabPage() {
 
         {/* ---- Canvas ---- */}
         <main
-          className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          className="app-canvas px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim max-sm:hidden">
                   Workspace · Classes 8 to 11
                 </p>
                 <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">

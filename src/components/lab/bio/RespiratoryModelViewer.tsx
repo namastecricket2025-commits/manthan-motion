@@ -33,8 +33,7 @@ const PARTS: Part[] = [
 
 const SCALE = 1;
 
-export default function RespiratoryModelViewer({ label, blurb, theme }: { label: string; blurb: string; theme: "dark" | "light" }) {
-  const dark = theme === "dark";
+export default function RespiratoryModelViewer({ label, blurb }: { label: string; blurb: string; theme: "dark" | "light" }) {
   const holder = useRef<HTMLDivElement>(null);
   const dots = useRef<Record<string, HTMLButtonElement | null>>({});
   const ctl = useRef({ auto: true, infl: 0.35, rate: 14, xray: false, fly: null as THREE.Vector3 | null, loaded: false, cam: null as THREE.PerspectiveCamera | null, controls: null as OrbitControls | null });
@@ -188,9 +187,14 @@ export default function RespiratoryModelViewer({ label, blurb, theme }: { label:
     }
   };
   const sel = PARTS.find((p) => p.id === pin);
-  const edge = dark ? "border-white/10" : "border-black/10";
-  const txt = dark ? "text-slate-100" : "text-slate-900";
-  const sub = dark ? "text-slate-400" : "text-slate-600";
+  /* The stage, its header and the deck below are one dark instrument face in
+     both themes — the model needs a black studio behind it, and a panel split
+     between a black stage and a paper deck read as two different tools. The
+     ink therefore stays light in light mode too; the page around the panel is
+     what follows the theme. */
+  const edge = "border-white/10";
+  const txt = "text-slate-100";
+  const sub = "text-slate-400";
   const btn = (on: boolean) =>
     `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
 
@@ -207,7 +211,7 @@ export default function RespiratoryModelViewer({ label, blurb, theme }: { label:
             Fit view
           </button>
         </div>
-        <div className="relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
+        <div className="lab-model-stage relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
           {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">Loading lung model…</div>}
           {failed && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">Could not load the lung model.</div>}
@@ -221,13 +225,13 @@ export default function RespiratoryModelViewer({ label, blurb, theme }: { label:
               }}
               onClick={() => pick(a.id)}
               style={{ background: a.color, display: "none" }}
-              className={`absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${pin === a.id ? "z-10 scale-125" : ""}`}
+              className={`organ-dot absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${pin === a.id ? "z-10 scale-125" : ""}`}
             >
               {i + 1}
               {(all || pin === a.id) && <span className="absolute left-7 top-0.5 whitespace-nowrap rounded-md bg-black/90 px-2 py-0.5 text-xs">{a.name}</span>}
             </button>
           ))}
-          <p className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-slate-400">drag orbit · scroll zoom · tap a numbered dot</p>
+          <p className="pointer-events-none absolute bottom-2 right-3 hidden text-[10px] text-slate-400 sm:block">drag orbit · scroll zoom · tap a numbered dot</p>
         </div>
       </div>
 
@@ -271,7 +275,7 @@ export default function RespiratoryModelViewer({ label, blurb, theme }: { label:
               key={a.id}
               type="button"
               onClick={() => pick(a.id)}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === a.id ? "bg-white/10" : ""}`}
+              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === a.id ? "bg-white/10" : ""}`}
             >
               <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: a.color }} />
               {i + 1}. {a.name}

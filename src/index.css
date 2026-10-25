@@ -2647,3 +2647,72 @@ html[data-theme="dark"] .how-card:hover .card-tile {
   }
 }
 
+/* ============================================================
+   Phones — the signed-in shell
+
+   The dashboard, Math Lab, STEM Lab and Settings share one shell; it was
+   designed against a 760px rail and only shrinks its sidebar at that point.
+   Everything below is scoped to the phone side of that breakpoint, so the
+   desktop composition is untouched.
+
+   Two things a phone actually needs from a shell:
+
+     1. A bar you can read while the page moves under it. These headers are
+        sticky, so their fill has to be a real surface, not a wash — the menu,
+        the mark and the theme control were otherwise sitting on whatever
+        panel happened to scroll behind them.
+     2. One size down. `h-10` buttons with 16px page gutters are right for a
+        pointer; on a 390px screen they eat the line before the content does.
+   ============================================================ */
+@media (max-width: 759px) {
+  .app-mobile-bar {
+    background: var(--panel);
+    padding: calc(0.45rem + env(safe-area-inset-top)) 0.85rem 0.45rem;
+    border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 10px 24px -24px rgba(0, 0, 0, 0.85);
+  }
+
+  /* The three-line trigger and the theme switch step down to 36px: still a
+     full thumb target, but no longer a row of 40px discs. */
+  .app-mobile-bar .glass-chip {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-color: var(--card-border);
+    background: transparent;
+  }
+
+  .app-mobile-bar .glass-chip:hover {
+    background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  }
+
+  /* The drawer is a page, not a window: an opaque fill edge to edge, safe
+     insets on both ends, and no blur (there is nothing behind it to blur). */
+  .app-mobile-drawer {
+    width: min(86vw, 20rem);
+    background: var(--panel) !important;
+    padding-top: calc(0.5rem + env(safe-area-inset-top));
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    backdrop-filter: none;
+  }
+
+  .app-canvas {
+    padding: 0.9rem 0.85rem calc(1.75rem + env(safe-area-inset-bottom));
+  }
+
+  .app-canvas > div {
+    gap: 1.15rem;
+  }
+
+  .app-canvas h1.font-display {
+    font-size: 1.6rem;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+  }
+
+  /* The feedback prompt is pinned to the bottom of the dashboard. Above the
+     home indicator, not under it. */
+  .feedback-prompt {
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+

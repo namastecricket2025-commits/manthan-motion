@@ -34,7 +34,7 @@ const PARTS: Part[] = [
 const MODEL_URL = "/models/heart.glb";
 const SCALE = 8;
 
-export default function HeartModelViewer({ label, blurb, theme }: { label: string; blurb: string; theme?: "dark" | "light" }) {
+export default function HeartModelViewer({ label, blurb }: { label: string; blurb: string; theme?: "dark" | "light" }) {
   const holder = useRef<HTMLDivElement>(null);
   const dots = useRef<Record<string, HTMLButtonElement | null>>({});
   const ctl = useRef({
@@ -187,10 +187,14 @@ export default function HeartModelViewer({ label, blurb, theme }: { label: strin
     setPin((current) => (current === id ? null : id));
   };
   const sel = PARTS.find((p) => p.id === pin);
-  const dark = theme === "dark";
-  const edge = dark ? "border-white/10" : "border-black/10";
-  const txt = dark ? "text-slate-100" : "text-slate-900";
-  const sub = dark ? "text-slate-400" : "text-slate-600";
+  /* The stage, its header and the deck below are one dark instrument face in
+     both themes — the model needs a black studio behind it, and a panel split
+     between a black stage and a paper deck read as two different tools. The
+     ink therefore stays light in light mode too; the page around the panel is
+     what follows the theme. */
+  const edge = "border-white/10";
+  const txt = "text-slate-100";
+  const sub = "text-slate-400";
   const btn = (on: boolean) =>
     `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
 
@@ -208,7 +212,7 @@ export default function HeartModelViewer({ label, blurb, theme }: { label: strin
           </button>
         </div>
 
-        <div className="relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
+        <div className="lab-model-stage relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
           {!ready && !failed && (
             <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">
@@ -230,7 +234,7 @@ export default function HeartModelViewer({ label, blurb, theme }: { label: strin
               }}
               onClick={() => pick(a.id)}
               style={{ background: a.color, display: "none" }}
-              className={`absolute left-0 top-0 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${
+              className={`organ-dot absolute left-0 top-0 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${
                 pin === a.id
                   ? "z-10 -ml-3.5 -mt-3.5 h-7 w-7 ring-2 ring-white/70"
                   : "-ml-3 -mt-3 h-6 w-6"
@@ -244,7 +248,7 @@ export default function HeartModelViewer({ label, blurb, theme }: { label: strin
               )}
             </button>
           ))}
-          <p className="pointer-events-none absolute bottom-2 right-3 text-[10px] text-slate-400">
+          <p className="pointer-events-none absolute bottom-2 right-3 hidden text-[10px] text-slate-400 sm:block">
             drag orbit · scroll zoom · tap a numbered dot
           </p>
         </div>

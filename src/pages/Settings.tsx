@@ -120,7 +120,7 @@ export default function Settings() {
         </aside>
 
         {/* ---- Mobile top bar ---- */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+        <header className="app-mobile-bar sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -136,7 +136,7 @@ export default function Settings() {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
+                className="app-mobile-drawer w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
               >
                 <SheetHeader>
                   <SheetTitle className="text-left">
@@ -161,7 +161,7 @@ export default function Settings() {
 
         {/* ---- Settings canvas ---- */}
         <main
-          className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          className="app-canvas px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
           <div className="mx-auto max-w-5xl">

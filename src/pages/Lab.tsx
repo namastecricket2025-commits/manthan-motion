@@ -172,7 +172,7 @@ export default function Lab() {
         </aside>
 
         {/* ---- Mobile top bar ---- */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+        <header className="app-mobile-bar sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
           <Logo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -188,7 +188,7 @@ export default function Lab() {
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
+                className="app-mobile-drawer w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
               >
                 <SheetHeader>
                   <SheetTitle className="text-left">
@@ -213,12 +213,12 @@ export default function Lab() {
 
         {/* ---- Canvas ---- */}
         <main
-          className="px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          className="app-canvas px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim max-sm:hidden">
                 Workspace · Physics, Chemistry, Biology
               </p>
               <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
@@ -239,10 +239,10 @@ export default function Lab() {
                   same attribute the benches read. */}
               <div
                 data-lab-theme={theme}
-                className="flex flex-wrap items-center justify-between gap-2"
+                className="stem-topline flex flex-wrap items-center justify-between gap-2"
               >
                 <div
-                  className="apple-lab-tabrail"
+                  className="apple-lab-tabrail stem-subject-rail"
                   role="tablist"
                   aria-label="STEM Lab subjects"
                 >
@@ -274,7 +274,7 @@ export default function Lab() {
                   })}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="stem-actions flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     className="apple-lab-btn apple-lab-btn--solid"
@@ -316,7 +316,7 @@ export default function Lab() {
               </div>
             </div>
 
-            <p className="flex items-center gap-2 text-[11px] text-text-dim">
+            <p className="hidden items-center gap-2 text-[11px] text-text-dim min-[760px]:flex">
               <Beaker className="h-3 w-3" />
               Manthan STEM Lab
             </p>

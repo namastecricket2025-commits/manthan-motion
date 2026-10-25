@@ -46,7 +46,7 @@ export default function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--ink)_72%,transparent)] backdrop-blur-xl max-md:bg-[var(--ink)]">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 max-md:h-14 sm:px-6">
         {/* The mark is the way home: navigate there from any other page,
             scroll to the top when already on the landing page. */}
         <div className="flex min-w-0 items-center gap-1 sm:gap-6">
