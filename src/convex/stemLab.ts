@@ -26,7 +26,7 @@ import { boardBank, boardLabel, type BankQuestion } from "../lib/boardBank";
 const CHARS_PER_TOKEN = 4;
 
 const SYSTEM = [
-  "You are Manthan's STEM tutor for Indian school students in CBSE Classes 8 to 10.",
+  "You are Manthan's STEM tutor for Indian school students in CBSE Classes 8 to 12.",
   "Explain at the level of the named class, using NCERT wording and SI units.",
   "Be concrete: name the law or process, then show the cause and effect the student can see on a lab bench.",
   "Never invent a formula or a constant. If the question is outside school science, say so and answer the nearest syllabus idea.",
@@ -162,7 +162,7 @@ export const ask = action({
       );
     }
 
-    const numericClass = ["8", "9", "10"].includes(args.className ?? "")
+    const numericClass = ["8", "9", "10", "11", "12"].includes(args.className ?? "")
       ? args.className
       : "10";
 
@@ -238,7 +238,7 @@ export const drill = action({
       );
     }
 
-    const numericClass = ["8", "9", "10"].includes(args.className ?? "")
+    const numericClass = ["8", "9", "10", "11", "12"].includes(args.className ?? "")
       ? args.className
       : "10";
     const chapter = clean(args.chapter ?? "").slice(0, 160);

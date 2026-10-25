@@ -30,6 +30,14 @@ const SUBJECTS = [
   "Social Science",
   "Computer Science",
   "Hindi",
+  "Accountancy",
+  "Business Studies",
+  "Economics",
+  "History",
+  "Political Science",
+  "Geography",
+  "Psychology",
+  "Sociology",
 ] as const;
 
 export function OnboardingModal() {

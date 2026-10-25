@@ -223,9 +223,17 @@ export function StemAsk({
   const [drillResult, setDrillResult] = useState<DrillResult | null>(null);
   const [picked, setPicked] = useState<Record<number, number>>({});
 
-  /** The science chapter list for the chosen class (STEM subjects share it). */
+  /** The chapter list for the chosen class and bench.
+   *  Classes 8–10 share one Science book, so the list is filtered by the bench
+   *  each chapter belongs to. Classes 11–12 have separate Physics, Chemistry
+   *  and Biology subjects, which are already bench-specific. */
   const chapters = useMemo(() => {
-    const science = CLASSES.find((entry) => entry.id === className)?.subjects.find(
+    const syllabusClass = CLASSES.find((entry) => entry.id === className);
+    const subjectBook = syllabusClass?.subjects.find(
+      (entry) => entry.id === subject,
+    );
+    if (subjectBook) return subjectBook.chapters;
+    const science = syllabusClass?.subjects.find(
       (entry) => entry.id === "science",
     );
     return (science?.chapters ?? []).filter((name) => {
@@ -329,7 +337,7 @@ export function StemAsk({
           </DialogTitle>
           <DialogDescription className="text-[12px] leading-relaxed text-text-dim">
             {mode === "ask"
-              ? "Grounded in the CBSE Class 8–10 syllabus. Every answer ends with three questions on the same idea, so you leave the bench having recalled it, not just read it."
+              ? "Grounded in the CBSE Class 8–12 syllabus. Every answer ends with three questions on the same idea, so you leave the bench having recalled it, not just read it."
               : "Pick the chapter you are revising, how many questions and how hard. NCERT wording, four options, and the marking is immediate."}
           </DialogDescription>
         </DialogHeader>
@@ -390,17 +398,17 @@ export function StemAsk({
             <div className="ml-auto flex items-center gap-2 text-[11px] text-text-dim">
               <span>Class</span>
               <div className="inline-flex rounded-full border border-[var(--card-border)] p-0.5">
-                {["8", "9", "10"].map((value) => (
+                {["8", "9", "10", "11", "12"].map((value) => (
                   <button
                     key={value}
                     type="button"
                     aria-pressed={className === value}
                     onClick={() => {
                       setClassName(value);
-                      // A board-pattern paper only exists in Class 10 — CBSE
-                      // boards start at X. A student who drops to 8 or 9 keeps
-                      // the level they had if it still applies.
-                      if (value !== "10" && difficulty === "board") {
+                      // Board-level practice makes sense from Class 10 onward —
+                      // CBSE boards start at X and the senior classes follow the
+                      // same paper style. Classes 8 and 9 drop back to medium.
+                      if (!["10", "11", "12"].includes(value) && difficulty === "board") {
                         setDifficulty("medium");
                       }
                     }}
@@ -502,7 +510,7 @@ export function StemAsk({
               <div className="flex flex-col gap-1.5 text-[11px] text-text-dim">
                 <span>
                   Level
-                  {className !== "10" ? (
+                  {!["10", "11", "12"].includes(className) ? (
                     <span className="ml-1.5 opacity-70">
                       · board papers start at Class 10
                     </span>
@@ -510,7 +518,9 @@ export function StemAsk({
                 </span>
                 <div className="inline-flex self-start rounded-full border border-[var(--card-border)] p-0.5">
                   {LEVELS.filter(
-                    (entry) => className === "10" || entry.id !== "board",
+                    (entry) =>
+                      ["10", "11", "12"].includes(className) ||
+                      entry.id !== "board",
                   ).map((entry) => (
                     <button
                       key={entry.id}

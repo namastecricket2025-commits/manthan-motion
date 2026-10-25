@@ -353,7 +353,7 @@ export default function Viva() {
                   [
                     {
                       id: "syllabus" as const,
-                      title: "Class 8–10 syllabus",
+                      title: "Class 8–12 syllabus",
                       body: "Class, subject and chapters. No sources needed.",
                       icon: BookOpen,
                     },

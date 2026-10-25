@@ -257,7 +257,7 @@ const vivaStartSchema = z.object({
  * needed, nothing invented outside the school syllabus.
  */
 const SYLLABUS_START_SYSTEM = [
-  "You are the oral examiner inside Manthan, a study app for Indian school students in Classes 8 to 10.",
+  "You are the oral examiner inside Manthan, a study app for Indian school students in Classes 8 to 12.",
   "The student has named a class, a subject and the chapters to be examined; there is no uploaded text.",
   "Ask one question that makes the student explain an idea in their own words, not recall a single word or date.",
   "Stay strictly inside the NCERT / CBSE syllabus for that class and subject. Never ask about a fact outside that chapter.",

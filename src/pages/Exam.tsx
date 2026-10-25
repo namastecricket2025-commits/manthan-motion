@@ -527,7 +527,7 @@ export default function Exam() {
                     [
                       {
                         id: "syllabus" as const,
-                        title: "Class 8–10 syllabus",
+                        title: "Class 8–12 syllabus",
                         body: "Class, subject and chapters. No sources needed.",
                         icon: GraduationCap,
                       },
@@ -698,14 +698,15 @@ export default function Exam() {
                             },
                             {
                               id: "board" as const,
-                              title:
-                                className === "10"
-                                  ? "Board simulation"
-                                  : "Exam simulation",
+                              title: syllabusClass?.hasBoard
+                                ? "Board simulation"
+                                : "Exam simulation",
                               body:
                                 className === "10"
                                   ? "Real CBSE board questions from 2020–2026, mixed with fresh questions in the same pattern."
-                                  : "The section pattern and marking weights your annual exam uses.",
+                                  : syllabusClass?.hasBoard
+                                    ? "The section pattern and marking style of the CBSE board paper for this class and subject."
+                                    : "The section pattern and marking weights your annual exam uses.",
                             },
                           ] as const
                         ).map((option) => (
@@ -735,6 +736,12 @@ export default function Exam() {
                           {realQuestions
                             ? `${availableBank} real board question${availableBank === 1 ? "" : "s"} match your chapters. Up to half the paper is filled from those papers and the rest is written fresh in the board pattern. The bank covers 2020–2026; the 2021 papers were cancelled and 2022 was term-based.`
                             : "No saved board question covers those chapters yet — the paper keeps the board pattern, marks and wording style instead. Real questions cover every Class 10 subject, including AI 417; chapters without one get a board-pattern question instead."}
+                        </p>
+                      ) : paperKind === "board" && syllabusClass?.hasBoard ? (
+                        <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                          The saved past-paper bank covers Class 10, so this paper is
+                          written fresh in the CBSE board pattern for your subject,
+                          with the same section mix and marking style.
                         </p>
                       ) : null}
                     </div>

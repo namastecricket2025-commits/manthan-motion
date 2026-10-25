@@ -1,24 +1,28 @@
 /**
- * The school syllabus behind the mock exam.
+ * The school syllabus behind the mock exam and the viva.
  *
  * Until now a paper could only come from a notebook the student had built
  * themselves, which meant an empty account could not sit a single test. This
- * file is the other half: the CBSE / NCERT chapter lists for Classes 8, 9 and
- * 10, and the arithmetic that decides how big a paper should be for a given
- * clock.
+ * file is the other half: the CBSE / NCERT chapter lists for Classes 8 to 12,
+ * and the arithmetic that decides how big a paper should be for a given clock.
  *
- * Chapter names follow the rationalised NCERT textbooks for the 2025–26
- * session (Classes 9 and 10) and the widely taught NCERT course for Class 8,
- * which has no board examination and varies from school to school. Social
- * Science and English are prefixed with their book or strand ("History ·
+ * Chapter names follow the NCERT textbooks in use in the 2026–27 session:
+ *  - Classes 8 and 9 use the new NEP books (Curiosity, Ganita Prakash,
+ *    Exploring Society for 8; Exploration, Ganita Manjari, Kaveri, Ganga and
+ *    Understanding Society for 9).
+ *  - Class 10 continues with the older rationalised books until the revised
+ *    Grade 10 books arrive in 2027–28.
+ *  - Classes 11 and 12 use the existing NCERT books; the core subjects of the
+ *    Science, Commerce and Humanities streams are listed.
+ * Social Science and English are prefixed with their book or strand ("History ·
  * Nationalism in India", "Poem · Dust of Snow") so a chapter is unambiguous in
  * a dropdown and in a prompt.
  *
- * Sources: cbseacademic.nic.in (Secondary Curriculum 2025–26) and the NCERT
- * textbook contents pages for Classes 8–10.
+ * Sources: cbseacademic.nic.in (Curriculum 2026–27) and the NCERT textbook
+ * contents pages for Classes 8–12.
  */
 
-export type ClassId = "8" | "9" | "10";
+export type ClassId = "8" | "9" | "10" | "11" | "12";
 
 export type SubjectId =
   | "science"
@@ -27,7 +31,18 @@ export type SubjectId =
   | "english"
   | "hindi"
   | "computer"
-  | "ai";
+  | "ai"
+  | "physics"
+  | "chemistry"
+  | "biology"
+  | "accountancy"
+  | "business-studies"
+  | "economics"
+  | "history"
+  | "political-science"
+  | "geography"
+  | "psychology"
+  | "sociology";
 
 export type ExamPattern = "objective" | "board";
 
@@ -56,68 +71,56 @@ export interface ClassSyllabus {
   subjects: Subject[];
 }
 
+/* Class 8 — NCERT's 2025–26 books, continuing in 2026–27. */
 const CLASS_8_SCIENCE = [
-  "Crop Production and Management",
-  "Microorganisms: Friend and Foe",
-  "Synthetic Fibres and Plastics",
-  "Materials: Metals and Non-metals",
-  "Coal and Petroleum",
-  "Combustion and Flame",
-  "Conservation of Plants and Animals",
-  "Cell — Structure and Functions",
-  "Reproduction in Animals",
-  "Reaching the Age of Adolescence",
-  "Force and Pressure",
-  "Friction",
-  "Sound",
-  "Chemical Effects of Electric Current",
-  "Some Natural Phenomena",
-  "Light",
-  "Stars and the Solar System",
-  "Pollution of Air and Water",
+  "Exploring the Investigative World of Science",
+  "The Invisible Living World: Beyond Our Naked Eye",
+  "Health: The Ultimate Treasure",
+  "Electricity: Magnetic and Heating Effects",
+  "Exploring Forces",
+  "Pressure, Winds, Storms, and Cyclones",
+  "Particulate Nature of Matter",
+  "Nature of Matter: Elements, Compounds, and Mixtures",
+  "The Amazing World of Solutes, Solvents, and Solutions",
+  "Light: Mirrors and Lenses",
+  "Keeping Time with the Skies",
+  "How Nature Works in Harmony",
+  "Our Home: Earth, a Unique Life Sustaining Planet",
 ];
 
 const CLASS_8_MATHS = [
-  "Rational Numbers",
-  "Linear Equations in One Variable",
-  "Understanding Quadrilaterals",
-  "Practical Geometry",
-  "Data Handling",
-  "Squares and Square Roots",
-  "Cubes and Cube Roots",
-  "Comparing Quantities",
-  "Algebraic Expressions and Identities",
-  "Visualising Solid Shapes",
-  "Mensuration",
-  "Exponents and Powers",
-  "Direct and Inverse Proportions",
-  "Factorisation",
-  "Introduction to Graphs",
-  "Playing with Numbers",
+  "A Square and A Cube",
+  "Power Play",
+  "A Story of Numbers",
+  "Quadrilaterals",
+  "Number Play",
+  "We Distribute, Yet Things Multiply",
+  "Proportional Reasoning 1",
+  "Fractions in Disguise",
+  "The Baudhayana-Pythagoras Theorem",
+  "Proportional Reasoning 2",
+  "Exploring Some Geometric Themes",
+  "Tales by Dots and Lines",
+  "Algebra Play",
+  "Area",
 ];
 
 const CLASS_8_SST = [
-  "History · From Trade to Territory",
-  "History · Ruling the Countryside",
-  "History · When People Rebel",
-  "History · Civilising the Native, Educating the Nation",
-  "History · Women, Caste and Reform",
-  "History · The Making of the National Movement: 1870s–1947",
-  "History · India After Independence",
-  "Geography · Resources",
-  "Geography · Land, Soil, Water, Natural Vegetation and Wildlife",
-  "Geography · Mineral and Power Resources",
-  "Geography · Agriculture",
-  "Geography · Industries",
-  "Geography · Human Resources",
-  "Civics · The Indian Constitution",
-  "Civics · Understanding Secularism",
-  "Civics · Parliament and the Making of Laws",
-  "Civics · The Judiciary",
-  "Civics · Understanding Marginalisation",
-  "Civics · Public Facilities",
-  "Economics · Factors of Production",
-  "Economics · Natural Resources and Their Use",
+  "Natural Resources and Their Use",
+  "Reshaping India's Political Map",
+  "The Rise of the Marathas",
+  "The Colonial Era in India",
+  "Universal Franchise and India's Electoral System",
+  "The Parliamentary System: Legislature and Executive",
+  "Factors of Production",
+  "World Geography: Some Glimpses",
+  "India's Long Road to Independence",
+  "A Journey Through Indian Architecture",
+  "The Role of the Judiciary in Our Society",
+  "Citizenship: Rights and Duties",
+  "Dynamics of Population",
+  "India's Urban Landscape",
+  "Cultural Currents: 13th to 17th Centuries",
 ];
 
 const CLASS_8_ENGLISH = [
@@ -197,105 +200,95 @@ const CLASS_9_AI = [
   "Employability Skills · Green Skills–I",
 ];
 
+/* Class 9 — the new NCERT books introduced for 2026–27. */
 const CLASS_9_SCIENCE = [
-  "Matter in Our Surroundings",
-  "Is Matter Around Us Pure?",
-  "Atoms and Molecules",
-  "Structure of the Atom",
-  "The Fundamental Unit of Life",
-  "Tissues",
-  "Motion",
-  "Force and Laws of Motion",
-  "Gravitation",
-  "Work and Energy",
-  "Sound",
-  "Improvement in Food Resources",
+  "Exploration: Entering the World of Secondary Science",
+  "Cell: The Building Block of Life",
+  "Tissues in Action",
+  "Describing Motion Around Us",
+  "Exploring Mixtures and their Separation",
+  "How Forces Affect Motion",
+  "Work, Energy and Simple Machines",
+  "Journey Inside the Atom",
+  "Atomic Foundations of Matter",
+  "Sound Waves: Characteristics and Applications",
+  "Reproduction: How Life Continues",
+  "Patterns in Life: Diversity and Classification",
+  "Earth as a System: Energy, Matter, and Life",
 ];
 
 const CLASS_9_MATHS = [
-  "Number Systems",
-  "Polynomials",
-  "Coordinate Geometry",
-  "Linear Equations in Two Variables",
-  "Introduction to Euclid's Geometry",
-  "Lines and Angles",
-  "Triangles",
+  "Orienting Yourself: The Use of Coordinates",
+  "Introduction to Linear Polynomials",
+  "The World of Numbers",
+  "Exploring Algebraic Identities",
+  "I'm Up and Down, and Round and Round",
+  "Measuring Space: Perimeter and Area",
+  "The Mathematics of Maybe: Introduction to Probability",
+  "Predicting What Comes Next: Exploring Sequences and Progressions",
+  "Propositions and their Converses",
+  "How Quantities Combine: Understanding Data",
+  "The World of Algorithms",
   "Quadrilaterals",
-  "Circles",
-  "Heron's Formula",
-  "Surface Areas and Volumes",
-  "Statistics",
-  "Probability",
+  "Two Variables, One Line",
+  "Math of Space: Surface Area and Volume",
 ];
 
 const CLASS_9_SST = [
-  "History · The French Revolution",
-  "History · Socialism in Europe and the Russian Revolution",
-  "History · Nazism and the Rise of Hitler",
-  "History · Forest Society and Colonialism",
-  "History · Pastoralists in the Modern World",
-  "Geography · India — Size and Location",
-  "Geography · Physical Features of India",
-  "Geography · Drainage",
-  "Geography · Climate",
-  "Geography · Natural Vegetation and Wildlife",
-  "Geography · Population",
-  "Civics · What is Democracy? Why Democracy?",
-  "Civics · Constitutional Design",
-  "Civics · Electoral Politics",
-  "Civics · Working of Institutions",
-  "Civics · Democratic Rights",
-  "Economics · The Story of Village Palampur",
-  "Economics · People as Resource",
-  "Economics · Poverty as a Challenge",
-  "Economics · Food Security in India",
+  "Understanding Social Science",
+  "Shaping of the Earth's Surface",
+  "Atmosphere and Climate",
+  "Early Humans and Beginning of Civilisation",
+  "State and Society up to 1000 CE",
+  "Democracy",
+  "Elections",
+  "Building Blocks in Economics: The Problem of Choice",
+  "The Price Puzzle: What Drives the Market",
+  "Oceans and Life",
+  "Life on Earth",
+  "Resistance and Resilience (1000–1700 CE)",
+  "Governance and Public Policy",
+  "Managing Your Personal Finances",
+  "From Ideas to Startups",
 ];
 
 const CLASS_9_ENGLISH = [
-  "Prose · The Fun They Had",
-  "Prose · The Sound of Music",
-  "Prose · The Little Girl",
-  "Prose · A Truly Beautiful Mind",
-  "Prose · The Snake and the Mirror",
-  "Prose · My Childhood",
-  "Prose · Reach for the Top",
-  "Prose · Kathmandu",
-  "Prose · If I Were You",
-  "Poem · The Road Not Taken",
-  "Poem · Wind",
-  "Poem · Rain on the Roof",
-  "Poem · The Lake Isle of Innisfree",
-  "Poem · A Legend of the Northland",
-  "Poem · No Men Are Foreign",
-  "Poem · On Killing a Tree",
-  "Poem · A Slumber Did My Spirit Seal",
-  "Supplementary · The Lost Child",
-  "Supplementary · The Adventures of Toto",
-  "Supplementary · Iswaran the Storyteller",
-  "Supplementary · In the Kingdom of Fools",
-  "Supplementary · The Happy Prince",
-  "Supplementary · Weathering the Storm in Ersama",
-  "Supplementary · The Last Leaf",
-  "Supplementary · A House Is Not a Home",
-  "Supplementary · The Beggar",
-  "Writing Skills · Letter, Diary, Story and Analytical Paragraph",
+  "Prose · How I Taught My Grandmother to Read",
+  "Prose · The Pot Maker",
+  "Prose · Winds of Change",
+  "Prose · Vitamin-M",
+  "Prose · The World of Limitless Possibilities",
+  "Prose · Twin Melodies",
+  "Prose · Carrier of Words",
+  "Prose · Follow That Dream",
+  "Poem · Bharat Our Land",
+  "Poem · Gifts of Grace: Honouring Our Vocations",
+  "Poem · Canvas of Soil",
+  "Poem · I Cannot Remember My Mother",
+  "Poem · Nine Gold Medals",
+  "Poem · A Friend Found in Music",
+  "Poem · Words",
+  "Poem · Believe in Yourself",
+  "Writing Skills · Notice, Diary, Letter and Story",
   "Grammar · Tenses, Modals, Voice and Reported Speech",
   "Reading · Unseen Comprehension",
 ];
 
 const CLASS_9_HINDI = [
-  "दुःख का अधिकार",
-  "एवरेस्ट: मेरी शिखर यात्रा",
-  "तुम कब जाओगे, अतिथि",
-  "वैज्ञानिक चेतना के वाहक: चंद्रशेखर वेंकट रामन",
-  "धर्म की आड़",
-  "शुक्रतारे के समान",
-  "रैदास के पद",
-  "रहीम के दोहे",
-  "संचयन · गिल्लू",
-  "संचयन · स्मृति",
-  "संचयन · कल्लू कुम्हार की उनाकोटी",
-  "संचयन · साँवले सपनों की याद",
+  "दो बैलों की कथा",
+  "क्या लिखूँ?",
+  "संवादहीन",
+  "ऐसी भी बातें होती हैं",
+  "आखिरी चट्टान तक",
+  "रीढ़ की हड्डी",
+  "मैं और मेरा देश",
+  "पद",
+  "राम-लक्ष्मण-परशुराम संवाद",
+  "भारति, जय, विजय करे!",
+  "झाँसी की रानी",
+  "घर की याद",
+  "निर्मल जीत सिंह सेखों",
+  "तब याद तुम्हारी आती है",
   "व्याकरण · उपसर्ग, प्रत्यय और समास",
   "रचना · अनुच्छेद, पत्र और अपठित गद्यांश",
 ];
@@ -307,7 +300,6 @@ const CLASS_9_IT = [
   "Digital Documentation",
   "Electronic Spreadsheets",
   "Digital Presentation",
-  "Cyber Safety",
 ];
 
 const CLASS_10_AI = [
@@ -441,7 +433,443 @@ const CLASS_10_IT = [
   "Electronic Spreadsheets (Advanced)",
   "Database Management System",
   "Web Applications and Web Security",
-  "Cyber Safety and Digital Citizenship",
+];
+
+/*
+ * Senior secondary — Classes 11 and 12.
+ *
+ * The three streams share one list because a student picks their own subjects
+ * and combinations are common (Economics with Mathematics, Biology with
+ * Psychology). Chapter names follow the NCERT books and the CBSE 2026–27
+ * syllabus; Accountancy, Business Studies and Economics are listed by the
+ * syllabus units, which is how CBSE prints them.
+ */
+const CLASS_11_ENGLISH = [
+  "Prose · The Portrait of a Lady",
+  "Poem · A Photograph",
+  "Prose · We're Not Afraid to Die… If We Can All Be Together",
+  "Prose · Discovering Tut: The Saga Continues",
+  "Poem · The Laburnum Top",
+  "Poem · The Voice of the Rain",
+  "Poem · Childhood",
+  "Prose · The Adventure",
+  "Prose · Silk Road",
+  "Poem · Father to Son",
+  "Supplementary · The Summer of the Beautiful White Horse",
+  "Supplementary · The Address",
+  "Supplementary · Mother's Day",
+  "Supplementary · Birth",
+  "Supplementary · The Tale of Melon City",
+  "Writing Skills · Notice, Letter, Article and Report",
+  "Grammar · Tenses, Voice, Modals and Reported Speech",
+  "Reading · Unseen Comprehension",
+];
+
+const CLASS_11_PHYSICS = [
+  "Units and Measurements",
+  "Motion in a Straight Line",
+  "Motion in a Plane",
+  "Laws of Motion",
+  "Work, Energy and Power",
+  "System of Particles and Rotational Motion",
+  "Gravitation",
+  "Mechanical Properties of Solids",
+  "Mechanical Properties of Fluids",
+  "Thermal Properties of Matter",
+  "Thermodynamics",
+  "Kinetic Theory",
+  "Oscillations",
+  "Waves",
+];
+
+const CLASS_11_CHEMISTRY = [
+  "Some Basic Concepts of Chemistry",
+  "Structure of Atom",
+  "Classification of Elements and Periodicity in Properties",
+  "Chemical Bonding and Molecular Structure",
+  "Thermodynamics",
+  "Equilibrium",
+  "Redox Reactions",
+  "Organic Chemistry – Some Basic Principles and Techniques",
+  "Hydrocarbons",
+];
+
+const CLASS_11_MATHS = [
+  "Sets",
+  "Relations and Functions",
+  "Trigonometric Functions",
+  "Complex Numbers and Quadratic Equations",
+  "Linear Inequalities",
+  "Permutations and Combinations",
+  "Binomial Theorem",
+  "Sequences and Series",
+  "Straight Lines",
+  "Conic Sections",
+  "Introduction to Three Dimensional Geometry",
+  "Limits and Derivatives",
+  "Statistics",
+  "Probability",
+];
+
+const CLASS_11_BIOLOGY = [
+  "The Living World",
+  "Biological Classification",
+  "Plant Kingdom",
+  "Animal Kingdom",
+  "Morphology of Flowering Plants",
+  "Anatomy of Flowering Plants",
+  "Structural Organisation in Animals",
+  "Cell: The Unit of Life",
+  "Biomolecules",
+  "Cell Cycle and Cell Division",
+  "Photosynthesis in Higher Plants",
+  "Respiration in Plants",
+  "Plant Growth and Development",
+  "Breathing and Exchange of Gases",
+  "Body Fluids and Circulation",
+  "Excretory Products and their Elimination",
+  "Locomotion and Movement",
+  "Neural Control and Coordination",
+  "Chemical Coordination and Integration",
+];
+
+const CLASS_11_COMPUTER = [
+  "Computer System",
+  "Encoding Schemes and Number System",
+  "Emerging Trends",
+  "Introduction to Problem Solving",
+  "Getting Started with Python",
+  "Flow of Control",
+  "Functions",
+  "Strings",
+  "Lists",
+  "Tuples and Dictionaries",
+  "Societal Impact",
+];
+
+const CLASS_11_ACCOUNTANCY = [
+  "Unit 1 · Theoretical Framework",
+  "Unit 2 · Accounting Process",
+  "Unit 3 · Financial Statements of Sole Proprietorship",
+];
+
+const CLASS_11_BUSINESS = [
+  "Unit 1 · Evolution and Fundamentals of Business",
+  "Unit 2 · Forms of Business Organisations",
+  "Unit 3 · Public, Private and Global Enterprises",
+  "Unit 4 · Business Services",
+  "Unit 5 · Emerging Modes of Business",
+  "Unit 6 · Social Responsibility of Business and Business Ethics",
+  "Unit 7 · Sources of Business Finance",
+  "Unit 8 · Small Business and Enterprises",
+  "Unit 9 · Internal Trade",
+  "Unit 10 · International Business",
+];
+
+const CLASS_11_ECONOMICS = [
+  "Unit 1 · Introduction to Economics",
+  "Unit 2 · Collection, Organisation and Presentation of Data",
+  "Unit 3 · Statistical Tools and Interpretation",
+  "Unit 4 · Introduction to Microeconomics",
+  "Unit 5 · Consumer's Equilibrium and Demand",
+  "Unit 6 · Producer Behaviour and Supply",
+  "Unit 7 · Forms of Market and Price Determination",
+];
+
+const CLASS_11_HISTORY = [
+  "Writing and City Life",
+  "An Empire Across Three Continents",
+  "Nomadic Empires",
+  "The Three Orders",
+  "Changing Cultural Traditions",
+  "Displacing Indigenous Peoples",
+  "Paths to Modernisation",
+];
+
+const CLASS_11_POLITICAL_SCIENCE = [
+  "Indian Constitution · Constitution: Why and How?",
+  "Indian Constitution · Rights in the Indian Constitution",
+  "Indian Constitution · Election and Representation",
+  "Indian Constitution · Executive",
+  "Indian Constitution · Legislature",
+  "Indian Constitution · Judiciary",
+  "Indian Constitution · Federalism",
+  "Indian Constitution · Local Governments",
+  "Indian Constitution · Constitution as a Living Document",
+  "Indian Constitution · The Philosophy of the Constitution",
+  "Political Theory · An Introduction",
+  "Political Theory · Freedom",
+  "Political Theory · Equality",
+  "Political Theory · Social Justice",
+  "Political Theory · Rights",
+  "Political Theory · Citizenship",
+  "Political Theory · Nationalism",
+  "Political Theory · Secularism",
+  "Political Theory · Peace",
+  "Political Theory · Development",
+];
+
+const CLASS_11_GEOGRAPHY = [
+  "Physical Geography · Geography as a Discipline",
+  "Physical Geography · The Origin and Evolution of the Earth",
+  "Physical Geography · Interior of the Earth",
+  "Physical Geography · Distribution of Oceans and Continents",
+  "Physical Geography · Minerals and Rocks",
+  "Physical Geography · Geomorphic Processes",
+  "Physical Geography · Landforms and their Evolution",
+  "Physical Geography · Composition and Structure of Atmosphere",
+  "Physical Geography · Solar Radiation, Heat Balance and Temperature",
+  "Physical Geography · Atmospheric Circulation and Weather Systems",
+  "Physical Geography · Water in the Atmosphere",
+  "Physical Geography · World Climate and Climate Change",
+  "Physical Geography · Water (Oceans)",
+  "Physical Geography · Movements of Ocean Water",
+  "Physical Geography · Life on the Earth",
+  "Physical Geography · Biodiversity and Conservation",
+  "India: Physical Environment · India — Location",
+  "India: Physical Environment · Structure and Physiography",
+  "India: Physical Environment · Drainage System",
+  "India: Physical Environment · Climate",
+  "India: Physical Environment · Natural Vegetation",
+  "India: Physical Environment · Soils",
+  "India: Physical Environment · Natural Hazards and Disasters",
+];
+
+const CLASS_11_PSYCHOLOGY = [
+  "What is Psychology?",
+  "Methods of Enquiry in Psychology",
+  "The Bases of Human Behaviour",
+  "Human Development",
+  "Sensory, Attentional and Perceptual Processes",
+  "Learning",
+  "Human Memory",
+  "Thinking",
+  "Motivation and Emotion",
+];
+
+const CLASS_11_SOCIOLOGY = [
+  "Introducing Sociology · Sociology and Society",
+  "Introducing Sociology · Terms, Concepts and their Use in Sociology",
+  "Introducing Sociology · Understanding Social Institutions",
+  "Introducing Sociology · Culture and Socialisation",
+  "Introducing Sociology · Doing Sociology: Research Methods",
+  "Understanding Society · Social Structure, Stratification and Social Processes",
+  "Understanding Society · Social Change and Social Order in Rural and Urban Society",
+  "Understanding Society · Environment and Society",
+  "Understanding Society · Introducing Western Sociologists",
+  "Understanding Society · Indian Sociologists",
+];
+
+const CLASS_12_ENGLISH = [
+  "Prose · The Last Lesson",
+  "Prose · Lost Spring",
+  "Prose · Deep Water",
+  "Prose · The Rattrap",
+  "Prose · Indigo",
+  "Prose · Poets and Pancakes",
+  "Prose · The Interview",
+  "Prose · Going Places",
+  "Poem · My Mother at Sixty-Six",
+  "Poem · Keeping Quiet",
+  "Poem · A Thing of Beauty",
+  "Poem · A Roadside Stand",
+  "Poem · Aunt Jennifer's Tigers",
+  "Supplementary · The Third Level",
+  "Supplementary · The Tiger King",
+  "Supplementary · Journey to the End of the Earth",
+  "Supplementary · The Enemy",
+  "Supplementary · On the Face of It",
+  "Supplementary · Memories of Childhood",
+  "Writing Skills · Notice, Letter, Article and Report",
+  "Grammar · Tenses, Voice, Modals and Reported Speech",
+  "Reading · Unseen Comprehension",
+];
+
+const CLASS_12_PHYSICS = [
+  "Electric Charges and Fields",
+  "Electrostatic Potential and Capacitance",
+  "Current Electricity",
+  "Moving Charges and Magnetism",
+  "Magnetism and Matter",
+  "Electromagnetic Induction",
+  "Alternating Current",
+  "Electromagnetic Waves",
+  "Ray Optics and Optical Instruments",
+  "Wave Optics",
+  "Dual Nature of Radiation and Matter",
+  "Atoms",
+  "Nuclei",
+  "Semiconductor Electronics: Materials, Devices and Simple Circuits",
+];
+
+const CLASS_12_CHEMISTRY = [
+  "Solutions",
+  "Electrochemistry",
+  "Chemical Kinetics",
+  "The d- and f-Block Elements",
+  "Coordination Compounds",
+  "Haloalkanes and Haloarenes",
+  "Alcohols, Phenols and Ethers",
+  "Aldehydes, Ketones and Carboxylic Acids",
+  "Amines",
+  "Biomolecules",
+];
+
+const CLASS_12_MATHS = [
+  "Relations and Functions",
+  "Inverse Trigonometric Functions",
+  "Matrices",
+  "Determinants",
+  "Continuity and Differentiability",
+  "Applications of Derivatives",
+  "Integrals",
+  "Application of Integrals",
+  "Differential Equations",
+  "Vector Algebra",
+  "Three Dimensional Geometry",
+  "Linear Programming",
+  "Probability",
+];
+
+const CLASS_12_BIOLOGY = [
+  "Sexual Reproduction in Flowering Plants",
+  "Human Reproduction",
+  "Reproductive Health",
+  "Principles of Inheritance and Variation",
+  "Molecular Basis of Inheritance",
+  "Evolution",
+  "Human Health and Disease",
+  "Microbes in Human Welfare",
+  "Biotechnology: Principles and Processes",
+  "Biotechnology and its Applications",
+  "Organisms and Populations",
+  "Ecosystem",
+  "Biodiversity and Conservation",
+];
+
+const CLASS_12_COMPUTER = [
+  "Computational Thinking and Programming – 2",
+  "Computer Networks",
+  "Database Management",
+];
+
+const CLASS_12_ACCOUNTANCY = [
+  "Unit 1 · Accounting for Partnership Firms",
+  "Unit 2 · Accounting for Companies",
+  "Unit 3 · Analysis of Financial Statements",
+  "Unit 4 · Cash Flow Statement",
+  "Unit 5 · Computerized Accounting",
+];
+
+const CLASS_12_BUSINESS = [
+  "Unit 1 · Nature and Significance of Management",
+  "Unit 2 · Principles of Management",
+  "Unit 3 · Business Environment",
+  "Unit 4 · Planning",
+  "Unit 5 · Organising",
+  "Unit 6 · Staffing",
+  "Unit 7 · Directing",
+  "Unit 8 · Controlling",
+  "Unit 9 · Financial Management",
+  "Unit 10 · Financial Markets",
+  "Unit 11 · Marketing",
+  "Unit 12 · Consumer Protection",
+];
+
+const CLASS_12_ECONOMICS = [
+  "Unit 1 · National Income and Related Aggregates",
+  "Unit 2 · Money and Banking",
+  "Unit 3 · Determination of Income and Employment",
+  "Unit 4 · Government Budget and the Economy",
+  "Unit 5 · Balance of Payments",
+  "Unit 6 · Development Experience (1947–90) and Economic Reforms since 1991",
+  "Unit 7 · Current Challenges Facing the Indian Economy",
+  "Unit 8 · Development Experience of India: A Comparison with Neighbours",
+];
+
+const CLASS_12_HISTORY = [
+  "Bricks, Beads and Bones — The Harappan Civilisation",
+  "Kings, Farmers and Towns — Early States and Economies",
+  "Kinship, Caste and Class — Early Societies",
+  "Thinkers, Beliefs and Buildings — Cultural Developments",
+  "Through the Eyes of Travellers — Perceptions of Society",
+  "Bhakti-Sufi Traditions — Changes in Religious Beliefs and Devotional Texts",
+  "An Imperial Capital: Vijayanagara",
+  "Peasants, Zamindars and the State — Agrarian Society and the Mughal Empire",
+  "Colonialism and the Countryside — Exploring Official Archives",
+  "Rebels and the Raj — The Revolt of 1857 and Its Representations",
+  "Mahatma Gandhi and the Nationalist Movement — Civil Disobedience and Beyond",
+  "Framing the Constitution — The Beginning of a New Era",
+];
+
+const CLASS_12_POLITICAL_SCIENCE = [
+  "Contemporary World Politics · The End of Bipolarity",
+  "Contemporary World Politics · Contemporary Centres of Power",
+  "Contemporary World Politics · Contemporary South Asia",
+  "Contemporary World Politics · International Organisations",
+  "Contemporary World Politics · Security in the Contemporary World",
+  "Contemporary World Politics · Environment and Natural Resources",
+  "Contemporary World Politics · Globalisation",
+  "Politics in India · Challenges of Nation-Building",
+  "Politics in India · Era of One-Party Dominance",
+  "Politics in India · Politics of Planned Development",
+  "Politics in India · India's External Relations",
+  "Politics in India · Challenges to and Restoration of the Congress System",
+  "Politics in India · The Crisis of Democratic Order",
+  "Politics in India · Regional Aspirations",
+  "Politics in India · Recent Developments in Indian Politics",
+];
+
+const CLASS_12_GEOGRAPHY = [
+  "Human Geography · Human Geography: Nature and Scope",
+  "Human Geography · The World Population: Distribution, Density and Growth",
+  "Human Geography · Population Composition",
+  "Human Geography · Human Development",
+  "Human Geography · Primary Activities",
+  "Human Geography · Secondary Activities",
+  "Human Geography · Tertiary and Quaternary Activities",
+  "Human Geography · Transport and Communication",
+  "Human Geography · International Trade",
+  "Human Geography · Human Settlements",
+  "India: People and Economy · Population: Distribution, Density, Growth and Composition",
+  "India: People and Economy · Migration: Types, Causes and Consequences",
+  "India: People and Economy · Human Development",
+  "India: People and Economy · Human Settlements",
+  "India: People and Economy · Land Resources and Agriculture",
+  "India: People and Economy · Water Resources",
+  "India: People and Economy · Mineral and Energy Resources",
+  "India: People and Economy · Manufacturing Industries",
+  "India: People and Economy · Planning and Sustainable Development",
+  "India: People and Economy · Transport and Communication",
+  "India: People and Economy · International Trade",
+  "India: People and Economy · Geographical Perspective on Selected Issues",
+];
+
+const CLASS_12_PSYCHOLOGY = [
+  "Variations in Psychological Attributes",
+  "Self and Personality",
+  "Meeting Life Challenges",
+  "Psychological Disorders",
+  "Therapeutic Approaches",
+  "Attitude and Social Cognition",
+  "Social Influence and Group Processes",
+];
+
+const CLASS_12_SOCIOLOGY = [
+  "Indian Society · Introducing Indian Society",
+  "Indian Society · The Demographic Structure of the Indian Society",
+  "Indian Society · Social Institutions: Continuity and Change",
+  "Indian Society · The Market as a Social Institution",
+  "Indian Society · Patterns of Social Inequality and Exclusion",
+  "Indian Society · The Challenges of Cultural Diversity",
+  "Social Change · Structural Change",
+  "Social Change · Cultural Change",
+  "Social Change · The Story of Indian Democracy",
+  "Social Change · Change and Development in Rural Society",
+  "Social Change · Change and Development in Industrial Society",
+  "Social Change · Globalisation and Social Change",
+  "Social Change · Mass Media and Communications",
+  "Social Change · Social Movements",
 ];
 
 export const CLASSES: ClassSyllabus[] = [
@@ -449,7 +877,7 @@ export const CLASSES: ClassSyllabus[] = [
     id: "8",
     label: "Class 8",
     note:
-      "No board paper at this stage — the paper follows the NCERT middle-school course your school teaches.",
+      "New NCERT books from 2025–26 (Curiosity, Ganita Prakash, Exploring Society). No board paper at this stage — the paper follows the middle-school course your school teaches.",
     hasBoard: false,
     subjects: [
       { id: "science", name: "Science", chapters: CLASS_8_SCIENCE },
@@ -465,7 +893,7 @@ export const CLASSES: ClassSyllabus[] = [
     id: "9",
     label: "Class 9",
     note:
-      "Annual-exam pattern: the same paper structure your school uses, with the rationalised NCERT chapters.",
+      "New NCERT books for 2026–27 (Exploration, Ganita Manjari, Kaveri, Ganga, Understanding Society). Annual-exam pattern, the same structure your school uses.",
     hasBoard: false,
     subjects: [
       { id: "science", name: "Science", chapters: CLASS_9_SCIENCE },
@@ -491,6 +919,52 @@ export const CLASSES: ClassSyllabus[] = [
       { id: "hindi", name: "Hindi", chapters: CLASS_10_HINDI },
       { id: "computer", name: "Information Technology (402)", chapters: CLASS_10_IT },
       { id: "ai", name: "Artificial Intelligence (417)", chapters: CLASS_10_AI },
+    ],
+  },
+  {
+    id: "11",
+    label: "Class 11",
+    note:
+      "First year of senior secondary: the subjects you opt for decide the paper. Papers follow the CBSE 2026–27 school pattern, and board-pattern practice is available for every subject.",
+    hasBoard: true,
+    subjects: [
+      { id: "english", name: "English Core", chapters: CLASS_11_ENGLISH },
+      { id: "physics", name: "Physics", chapters: CLASS_11_PHYSICS },
+      { id: "chemistry", name: "Chemistry", chapters: CLASS_11_CHEMISTRY },
+      { id: "maths", name: "Mathematics", chapters: CLASS_11_MATHS },
+      { id: "biology", name: "Biology", chapters: CLASS_11_BIOLOGY },
+      { id: "computer", name: "Computer Science", chapters: CLASS_11_COMPUTER },
+      { id: "accountancy", name: "Accountancy", chapters: CLASS_11_ACCOUNTANCY },
+      { id: "business-studies", name: "Business Studies", chapters: CLASS_11_BUSINESS },
+      { id: "economics", name: "Economics", chapters: CLASS_11_ECONOMICS },
+      { id: "history", name: "History", chapters: CLASS_11_HISTORY },
+      { id: "political-science", name: "Political Science", chapters: CLASS_11_POLITICAL_SCIENCE },
+      { id: "geography", name: "Geography", chapters: CLASS_11_GEOGRAPHY },
+      { id: "psychology", name: "Psychology", chapters: CLASS_11_PSYCHOLOGY },
+      { id: "sociology", name: "Sociology", chapters: CLASS_11_SOCIOLOGY },
+    ],
+  },
+  {
+    id: "12",
+    label: "Class 12",
+    note:
+      "Board year: 80 marks in 3 hours. Papers follow the CBSE board pattern with the chapters your stream covers; the saved past-paper question bank currently holds Class 10 questions.",
+    hasBoard: true,
+    subjects: [
+      { id: "english", name: "English Core", chapters: CLASS_12_ENGLISH },
+      { id: "physics", name: "Physics", chapters: CLASS_12_PHYSICS },
+      { id: "chemistry", name: "Chemistry", chapters: CLASS_12_CHEMISTRY },
+      { id: "maths", name: "Mathematics", chapters: CLASS_12_MATHS },
+      { id: "biology", name: "Biology", chapters: CLASS_12_BIOLOGY },
+      { id: "computer", name: "Computer Science", chapters: CLASS_12_COMPUTER },
+      { id: "accountancy", name: "Accountancy", chapters: CLASS_12_ACCOUNTANCY },
+      { id: "business-studies", name: "Business Studies", chapters: CLASS_12_BUSINESS },
+      { id: "economics", name: "Economics", chapters: CLASS_12_ECONOMICS },
+      { id: "history", name: "History", chapters: CLASS_12_HISTORY },
+      { id: "political-science", name: "Political Science", chapters: CLASS_12_POLITICAL_SCIENCE },
+      { id: "geography", name: "Geography", chapters: CLASS_12_GEOGRAPHY },
+      { id: "psychology", name: "Psychology", chapters: CLASS_12_PSYCHOLOGY },
+      { id: "sociology", name: "Sociology", chapters: CLASS_12_SOCIOLOGY },
     ],
   },
 ];
@@ -523,11 +997,13 @@ function clamp(value: number, min: number, max: number) {
  * The shape of a CBSE Class 10 paper is fixed — 20 MCQs, about 9 short answers
  * and 7 long answers across 80 marks and 180 minutes — so each section is
  * scaled from that paper's share of the clock: one MCQ per ~4.5 minutes, one
- * short answer per ~20, one long answer per ~26. A 15-minute paper therefore
- * gets a small complete paper (not four questions), and a 60-minute one gets
- * roughly a third of a board paper. Nothing is scaled below one written
- * question per section, and the section sizes are capped at the real paper's
- * maximum so a 5-hour request does not become an unmarkable monster.
+ * short answer per ~20, one long answer per ~26. Classes 11 and 12 sit an
+ * 80-mark, 3-hour paper of about the same size, so the same scaling holds
+ * there. A 15-minute paper therefore gets a small complete paper (not four
+ * questions), and a 60-minute one gets roughly a third of a board paper.
+ * Nothing is scaled below one written question per section, and the section
+ * sizes are capped at the real paper's maximum so a 5-hour request does not
+ * become an unmarkable monster.
  *
  * Objective papers follow the other real ratio: about one MCQ per 1.25
  * minutes.
