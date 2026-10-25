@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supportMailto } from "@/lib/site";
+import { supportClick, supportMailto } from "@/lib/site";
 import { Link } from "react-router";
 
 /**
@@ -145,6 +145,7 @@ function RemovalLink() {
   return (
     <a
       href={REMOVAL_MAILTO}
+      onClick={supportClick("Request removal of a review")}
       className="text-xs text-text-dim underline decoration-[var(--panel-line)] underline-offset-4 transition-colors hover:text-foreground"
     >
       Request removal of a review

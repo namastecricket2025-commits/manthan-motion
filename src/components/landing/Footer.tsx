@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { supportMailto } from "@/lib/site";
+import { supportClick, supportMailto } from "@/lib/site";
 import { Logo } from "./Logo";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
@@ -91,6 +91,7 @@ export default function Footer() {
             ))}
             <a
               href={supportMailto("Manthan — contact")}
+              onClick={supportClick("Manthan — contact")}
               className="transition-colors hover:text-foreground"
             >
               Contact
@@ -100,6 +101,7 @@ export default function Footer() {
                 "Request removal of a review",
                 "Please describe the review you would like removed, including the reviewer name and any details that help us identify it.",
               )}
+              onClick={supportClick("Request removal of a review")}
               className="transition-colors hover:text-foreground"
             >
               Request removal of a review

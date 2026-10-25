@@ -7,6 +7,7 @@ import { z } from "zod";
 import { callModel, resolveCandidates } from "./providers";
 import { parseJsonLoose } from "./ai";
 import { boardBank, boardLabel, type BankQuestion } from "../lib/boardBank";
+import { chapterBench } from "../lib/chapter-bench";
 
 /**
  * The part of the STEM Lab that is not a simulation.
@@ -69,19 +70,7 @@ const SUBJECT_LABEL = {
   biology: "Biology",
 } as const;
 
-/** Which STEM bench a Class 10 science chapter belongs to. */
-function chapterBench(chapter: string): "physics" | "chemistry" | "biology" | "both" {
-  if (/chemical|acid|base|salt|metal|atom|molecule|matter|carbon|periodic|fibre|coal|petroleum|combustion/i.test(chapter)) {
-    return "chemistry";
-  }
-  if (/light|sound|force|motion|gravitation|electric|magnetic|energy|pressure|friction|stars|natural phenomena|current|wave|human eye|eye/i.test(chapter)) {
-    return "physics";
-  }
-  if (/cell|tissue|life|reproduction|heredity|environment|resources|food|microorganism|crop|conservation|adolescence|control|coordination|diversity|pollution|fall ill/i.test(chapter)) {
-    return "biology";
-  }
-  return "both";
-}
+/** Which bench a science chapter belongs to — one rule, shared with the lab picker. */
 
 /**
  * Real board MCQs for a Class 10 drill, capped so the set still contains

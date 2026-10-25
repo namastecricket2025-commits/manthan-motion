@@ -1483,9 +1483,11 @@
   inset: -16px;
   border-radius: 999px;
   z-index: 0;
+  /* Neutral ink, not the amber signal: a tool orb should read as a control,
+     not as a light. White in dark mode, black in light mode. */
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--signal) 38%, transparent),
+    color-mix(in srgb, var(--text-main) 16%, transparent),
     transparent 68%
   );
   filter: blur(9px);
@@ -1515,8 +1517,8 @@
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    color-mix(in srgb, var(--signal) 18%, transparent) 80deg,
-    var(--signal) 150deg,
+    color-mix(in srgb, var(--text-main) 14%, transparent) 80deg,
+    color-mix(in srgb, var(--text-main) 44%, transparent) 150deg,
     transparent 290deg,
     transparent 360deg
   );
@@ -1544,7 +1546,7 @@
   z-index: 1;
   display: grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--signal) 38%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 24%, transparent);
   border-radius: 999px;
   background:
     radial-gradient(120% 120% at 30% 22%, rgba(255, 255, 255, 0.14), transparent 60%),
@@ -1560,12 +1562,12 @@
 
 .mathlab-calc-fab:hover .mathlab-calc-fab__core,
 .mathlab-calc-fab:focus-visible .mathlab-calc-fab__core {
-  border-color: color-mix(in srgb, var(--signal) 68%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 52%, transparent);
 }
 
 .mathlab-calc-fab.is-open .mathlab-calc-fab__core {
-  border-color: color-mix(in srgb, var(--signal) 76%, transparent);
-  color: color-mix(in srgb, var(--signal) 78%, var(--text-main));
+  border-color: color-mix(in srgb, var(--text-main) 64%, transparent);
+  color: var(--text-main);
 }
 
 .mathlab-calc-fab__label {
@@ -1601,7 +1603,7 @@
   left: max(18px, env(safe-area-inset-left));
   bottom: calc(max(18px, env(safe-area-inset-bottom)) + 62px);
   z-index: 46;
-  width: min(340px, calc(100vw - 32px));
+  width: min(360px, calc(100vw - 24px));
   max-height: min(78vh, 640px);
   overflow-y: auto;
   border: 1px solid var(--glass-line);
@@ -1665,9 +1667,9 @@
 }
 
 .mathlab-calc__result {
-  min-height: 22px;
+  min-height: 24px;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   color: color-mix(in srgb, var(--signal) 70%, var(--text-main));
   overflow-x: auto;
@@ -1676,22 +1678,23 @@
 .mathlab-calc__keys {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
+  gap: 6px;
 }
 
 .mathlab-calc__key {
+  min-height: 44px;
   border: 1px solid var(--glass-line);
   border-radius: 11px;
   background: color-mix(in srgb, var(--card) 62%, transparent);
-  padding: 10px 4px;
-  font-size: 12px;
+  padding: 8px 4px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-main);
   transition: border-color 160ms var(--ease-momentum), background 160ms var(--ease-momentum), transform 160ms var(--ease-momentum);
 }
 
 .mathlab-calc__key.is-fn {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 

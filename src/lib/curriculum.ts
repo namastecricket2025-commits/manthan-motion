@@ -994,19 +994,17 @@ function clamp(value: number, min: number, max: number) {
 /**
  * How many questions a given clock should carry.
  *
- * The shape of a CBSE Class 10 paper is fixed — 20 MCQs, about 9 short answers
- * and 7 long answers across 80 marks and 180 minutes — so each section is
- * scaled from that paper's share of the clock: one MCQ per ~4.5 minutes, one
- * short answer per ~20, one long answer per ~26. Classes 11 and 12 sit an
- * 80-mark, 3-hour paper of about the same size, so the same scaling holds
- * there. A 15-minute paper therefore gets a small complete paper (not four
- * questions), and a 60-minute one gets roughly a third of a board paper.
+ * Pacing follows what schools and testing bodies actually use: about a minute
+ * per multiple-choice question (the common 1-minute-per-item benchmark), and
+ * the fixed shape of a CBSE board paper — 20 MCQs, 9 short answers and 7 long
+ * answers across 80 marks in 180 minutes — for the mixed pattern. The mixed
+ * sections scale from that paper's own rhythm: one MCQ per two minutes, one
+ * short answer per twelve, one long answer per twenty, so a 15-minute paper is
+ * a real short test (about ten questions) instead of six, a 60-minute one sits
+ * at 28, and three hours reproduces the board paper exactly at 36.
  * Nothing is scaled below one written question per section, and the section
  * sizes are capped at the real paper's maximum so a 5-hour request does not
  * become an unmarkable monster.
- *
- * Objective papers follow the other real ratio: about one MCQ per 1.25
- * minutes.
  */
 export function paperPlan(
   durationMinutes: number,
@@ -1015,13 +1013,15 @@ export function paperPlan(
   const duration = clamp(Math.round(durationMinutes), 5, 300);
 
   if (pattern === "objective") {
-    const mcq = clamp(Math.round(duration * 0.8), 8, 60);
+    // One MCQ a minute, floor for a five-minute quiz, cap so an afternoon of
+    // paper does not turn into 300 questions.
+    const mcq = clamp(duration, 5, 60);
     return { mcq, short: 0, long: 0, totalMarks: mcq };
   }
 
-  const mcq = clamp(Math.round(duration * 0.22), 4, 20);
-  const short = clamp(Math.round(duration * 0.05), 1, 9);
-  const long = clamp(Math.round(duration * 0.04), 1, 7);
+  const mcq = clamp(Math.round(duration / 2), 4, 20);
+  const short = clamp(Math.round(duration / 12), 1, 9);
+  const long = clamp(Math.round(duration / 20), 1, 7);
 
   return {
     mcq,

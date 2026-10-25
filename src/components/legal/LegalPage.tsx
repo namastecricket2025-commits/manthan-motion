@@ -1,7 +1,7 @@
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import { Logo } from "@/components/landing/Logo";
-import { SUPPORT_EMAIL, supportMailto } from "@/lib/site";
+import { SUPPORT_EMAIL, supportClick, supportMailto } from "@/lib/site";
 import { Link } from "react-router";
 
 /**
@@ -68,6 +68,7 @@ export default function LegalPage({
           Questions about this policy? Write to{" "}
           <a
             href={supportMailto("Manthan — policy question")}
+            onClick={supportClick("Manthan — policy question")}
             className="font-medium text-foreground underline underline-offset-2"
           >
             {SUPPORT_EMAIL}

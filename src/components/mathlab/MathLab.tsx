@@ -78,7 +78,7 @@ const DETAIL_OPTIONS = [
 const VIEW_TABS = [
   { id: "solve", label: "Solve", icon: PenLine },
   { id: "graph", label: "Graph", icon: LineChart },
-  { id: "tools", label: "Calculator & Formulas", icon: Calculator },
+  { id: "tools", label: "Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
   { id: "practice", label: "Practice", icon: Sparkles },
   { id: "progress", label: "Progress", icon: ListChecks },

@@ -23,6 +23,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CLASSES } from "@/lib/curriculum";
+import { chapterBench } from "@/lib/chapter-bench";
 import { ChoiceSelect } from "@/components/ui/choice-select";
 
 /** The one selected/unalive treatment shared by every pill row in here. */
@@ -74,24 +75,10 @@ const SUBJECTS: { id: LabSubject; label: string; icon: typeof Atom }[] = [
 ];
 
 /**
- * Which lab a NCERT science chapter belongs to. The exam syllabus keeps
- * science as one subject, but the lab is split into three benches; offering a
- * chemistry chapter under Physics would make the generated questions wrong.
- * Chemistry is tested first because "Chemical Effects of Electric Current"
- * contains both words.
+ * Which lab a NCERT science chapter belongs to, decided once in
+ * `@/lib/chapter-bench` so the picker here and the setter in the lab agree.
  */
-function chapterSubject(chapter: string): LabSubject | "both" {
-  if (/chemical|acid|base|salt|metal|atom|molecule|matter|carbon|periodic|fibre|coal|petroleum|combustion/i.test(chapter)) {
-    return "chemistry";
-  }
-  if (/light|sound|force|motion|gravitation|electric|magnetic|energy|pressure|friction|stars|natural phenomena|current|wave|human eye|eye/i.test(chapter)) {
-    return "physics";
-  }
-  if (/cell|tissue|life|reproduction|heredity|environment|resources|food|microorganism|crop|conservation|adolescence|control|coordination|diversity|pollution|fall ill/i.test(chapter)) {
-    return "biology";
-  }
-  return "both";
-}
+const chapterSubject = chapterBench;
 
 const PROMPTS: Record<LabSubject, string[]> = {
   physics: [
