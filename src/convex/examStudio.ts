@@ -20,7 +20,7 @@ import {
   type ExamPattern,
   type PaperKind,
 } from "../lib/curriculum";
-import { boardBank, type BankQuestion } from "../lib/boardBank";
+import { boardBank, boardLabel, type BankQuestion } from "../lib/boardBank";
 
 /**
  * Mock-paper generation and marking.
@@ -36,8 +36,8 @@ import { boardBank, type BankQuestion } from "../lib/boardBank";
  *  - `notebook` — the student's own sources, as before.
  *  - `syllabus` — a CBSE class, subject and chapter list, so an account with
  *    no sources can still sit a paper. For Class 10 "board simulation" papers,
- *    real questions from the 2020–2025 board papers are inserted first and the
- *    model writes the rest around them.
+ *    real questions from the 2020–2026 board papers fill up to half the paper
+ *    and the model writes the rest around them.
  */
 
 const MAX_CORPUS_CHARS = 16_000;
@@ -59,7 +59,10 @@ type PaperQuestion = {
   explanation?: string;
   modelAnswer?: string;
   markingPoints?: string[];
+  /** Simple student-facing provenance, e.g. "BOARD 2024". */
   source?: string;
+  /** Full paper reference for the tooltip, e.g. "CBSE 2024 · 31/4/1 · Q6". */
+  sourceDetail?: string;
 };
 
 async function assertAllowance(ctx: ActionCtx, userId: Id<"users">) {
@@ -322,10 +325,43 @@ function pickBank(
     return copy;
   };
 
-  const mcq = shuffle(pool.filter((item) => item.type === "mcq")).slice(0, plan.mcq);
-  const short = shuffle(pool.filter((item) => item.type === "short")).slice(0, plan.short);
-  const long = shuffle(pool.filter((item) => item.type === "long")).slice(0, plan.long);
-  return [...mcq, ...short, ...long];
+  const pools = {
+    mcq: shuffle(pool.filter((item) => item.type === "mcq")),
+    short: shuffle(pool.filter((item) => item.type === "short")),
+    long: shuffle(pool.filter((item) => item.type === "long")),
+  };
+  const slots = { mcq: plan.mcq, short: plan.short, long: plan.long };
+
+  /*
+   * A board paper should contain real past-paper questions, not be made almost
+   * entirely of them. The bank is a sample of published papers, while the setter
+   * can write to the exact chapters and time limit the student chose, so the
+   * paper keeps half its seats for fresh questions. The cap is on the whole
+   * paper; questions are taken one type at a time, which also keeps all three
+   * sections represented instead of spending the whole allowance on MCQs.
+   */
+  const total = plan.mcq + plan.short + plan.long;
+  const cap = Math.min(
+    total,
+    Math.max(1, Math.round(total * 0.5)),
+  );
+
+  const pickedQuestions: BankQuestion[] = [];
+  const types: Array<keyof typeof pools> = ["mcq", "short", "long"];
+  let added = true;
+  while (pickedQuestions.length < cap && added) {
+    added = false;
+    for (const type of types) {
+      if (pickedQuestions.length >= cap) break;
+      const next = pools[type][0];
+      if (!next || slots[type] <= 0) continue;
+      pools[type].shift();
+      slots[type] -= 1;
+      pickedQuestions.push(next);
+      added = true;
+    }
+  }
+  return pickedQuestions;
 }
 
 function bankToQuestion(item: BankQuestion, section: string): PaperQuestion {
@@ -340,7 +376,8 @@ function bankToQuestion(item: BankQuestion, section: string): PaperQuestion {
     explanation: item.explanation,
     modelAnswer: item.modelAnswer,
     markingPoints: item.markingPoints,
-    source: item.origin,
+    source: boardLabel(item.origin),
+    sourceDetail: item.origin,
   };
 }
 
@@ -575,7 +612,9 @@ export const generate = action({
       totalMarks,
       questionCount: ordered.length,
       durationMinutes: duration,
-      boardQuestions: bank.length,
+      boardQuestions: ordered.filter((question) =>
+        question.source?.startsWith("BOARD"),
+      ).length,
     };
   },
 });

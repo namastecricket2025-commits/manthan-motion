@@ -60,7 +60,10 @@ type Question = {
   explanation?: string;
   modelAnswer?: string;
   markingPoints?: string[];
+  /** Student-facing tag, e.g. "BOARD 2024". */
   source?: string;
+  /** Full paper reference shown on hover. */
+  sourceDetail?: string;
 };
 
 type ReportResult = {
@@ -509,8 +512,8 @@ export default function Exam() {
                 Pick your class, subject and chapters, then choose the time a
                 real paper would give you. The timer is enforced on the server,
                 answers save as you write, and written answers are marked
-                against a scheme. Class 10 papers can include real CBSE board
-                questions from 2020–2025.
+                against a scheme. Class 10 papers mix real CBSE board
+                questions from 2020–2026 with fresh ones in the same pattern.
               </p>
 
               <section className="mt-7 rounded-2xl border border-[var(--card-border)] bg-[var(--panel)] p-5 sm:p-7">
@@ -701,7 +704,7 @@ export default function Exam() {
                                   : "Exam simulation",
                               body:
                                 className === "10"
-                                  ? "Real CBSE board questions from 2020–2025, filled out in the board pattern."
+                                  ? "Real CBSE board questions from 2020–2026, mixed with fresh questions in the same pattern."
                                   : "The section pattern and marking weights your annual exam uses.",
                             },
                           ] as const
@@ -730,8 +733,8 @@ export default function Exam() {
                       {paperKind === "board" && className === "10" ? (
                         <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
                           {realQuestions
-                            ? `${availableBank} real board question${availableBank === 1 ? "" : "s"} match your chapters and go into the paper first. 2021 papers were cancelled and 2022 was term-based, so the bank covers 2020, 2023, 2024 and 2025.`
-                            : "No saved board question covers those chapters yet — the paper keeps the board pattern, marks and wording style instead. Real questions cover all six Class 10 subjects; chapters without one get a board-pattern question instead."}
+                            ? `${availableBank} real board question${availableBank === 1 ? "" : "s"} match your chapters. Up to half the paper is filled from those papers and the rest is written fresh in the board pattern. The bank covers 2020–2026; the 2021 papers were cancelled and 2022 was term-based.`
+                            : "No saved board question covers those chapters yet — the paper keeps the board pattern, marks and wording style instead. Real questions cover every Class 10 subject, including AI 417; chapters without one get a board-pattern question instead."}
                         </p>
                       ) : null}
                     </div>
@@ -1041,16 +1044,17 @@ export default function Exam() {
               ) : null}
 
               {exam.questions.some((question) =>
-                question.source?.startsWith("CBSE"),
+                question.source?.startsWith("BOARD"),
               ) ? (
                 <p className="mt-5 rounded-xl border border-[var(--signal)]/30 bg-[color-mix(in_srgb,var(--signal)_6%,transparent)] px-4 py-3 text-[11.5px] leading-relaxed text-text-dim">
                   {
                     exam.questions.filter((question) =>
-                      question.source?.startsWith("CBSE"),
+                      question.source?.startsWith("BOARD"),
                     ).length
                   }{" "}
                   of these questions are reproduced from real CBSE board papers
-                  (2020–2025). Their paper code is shown on each question.
+                  (2020–2026). Each one is tagged with its board year; hover the
+                  tag to see the paper code.
                 </p>
               ) : null}
 
@@ -1120,8 +1124,11 @@ export default function Exam() {
                         {current.section} · Question {index + 1}
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        {current.source?.startsWith("CBSE") ? (
-                          <span className="rounded-full border border-[var(--signal)]/40 px-2 py-0.5 text-[9.5px] font-medium text-[var(--signal)]">
+                        {current.source?.startsWith("BOARD") ? (
+                          <span
+                            className="rounded-full border border-[var(--signal)]/40 px-2 py-0.5 text-[9.5px] font-medium text-[var(--signal)]"
+                            title={current.sourceDetail}
+                          >
                             {current.source}
                           </span>
                         ) : null}

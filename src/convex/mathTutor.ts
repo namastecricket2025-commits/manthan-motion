@@ -22,6 +22,7 @@ import {
   type SolvedProblem,
 } from "./mathPrompts";
 import { finalizeProblem } from "./mathLab";
+import { boardBank, boardLabel, type BankQuestion } from "../lib/boardBank";
 
 /**
  * The Math Lab's three follow-up tutors: explaining a single step, marking a
@@ -380,7 +381,7 @@ const PRACTICE_LEVELS = {
     "BOARD-PAPER level: write it the way CBSE sets it — a complete question stem, any sub-parts, and a mark value.",
     "Use the language of an Indian board paper (prove that, find, construct, case-study based) and keep the working to what earns full marks.",
     "If this is a question you can reproduce faithfully from a CBSE previous-year paper, set source to the exact paper and year (for example \"CBSE 2024 · 3 marks\").",
-    "If you cannot reproduce a real one verbatim, write an original question in that pattern and set source to the year plus the word pattern, for example \"CBSE 2025 pattern · 3 marks\". Never invent a citation you are not sure of.",
+    "If you cannot reproduce a real one verbatim, write an original question in that pattern and set source to the year plus the word pattern, for example \"CBSE 2026 pattern · 3 marks\". Never invent a citation you are not sure of.",
   ].join(" "),
 } as const;
 
@@ -390,6 +391,25 @@ const practiceLevelValidator = v.union(
   v.literal("hard"),
   v.literal("board"),
 );
+
+/**
+ * One real board question for a Class 10 maths set.
+ *
+ * The set still contains fresh questions — a board set should feel like a
+ * paper, not like a museum of four old questions — but the first seat is a
+ * question a student would actually meet in a board paper. Only the current
+ * chapter is eligible: putting a Statistics question in a Trigonometry set
+ * would make the tag misleading.
+ */
+function pickMathsBoardQuestion(chapterName?: string): BankQuestion | null {
+  const chapter = (chapterName ?? "").trim();
+  if (!chapter) return null;
+  const pool = boardBank("10", "maths").filter(
+    (item) => item.type !== "mcq" && item.chapter === chapter,
+  );
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)] ?? null;
+}
 
 /** A whole practice set: several questions from one topic, one level. */
 export const practiceSet = action({
@@ -408,6 +428,8 @@ export const practiceSet = action({
     track: v.optional(v.string()),
     chapterName: v.optional(v.string()),
     chapterFormulas: v.optional(v.array(v.string())),
+    /** Which class the student is in; only Class 10 has a board paper. */
+    className: v.optional(v.string()),
     /** 1 to 6 questions; the UI caps it and so does this handler. */
     count: v.number(),
     level: practiceLevelValidator,
@@ -418,9 +440,13 @@ export const practiceSet = action({
   },
   handler: async (
     ctx,
-    { problem, steps, finalAnswer, track, chapterName, chapterFormulas, count, level, boardYear, realWorld },
+    { problem, steps, finalAnswer, track, chapterName, chapterFormulas, className, count, level, boardYear, realWorld },
   ): Promise<{ problems: SolvedProblem[]; model: string }> => {
     const total = Math.max(1, Math.min(6, Math.round(count)));
+    const realBoard =
+      level === "board" && className === "10"
+        ? pickMathsBoardQuestion(chapterName)
+        : null;
     const language = detectLanguage([problem]);
     const method = (steps ?? [])
       .map((step, index) => `${index + 1}. ${step.rule ? `[${step.rule}] ` : ""}${step.expression || step.title}`)
@@ -429,7 +455,7 @@ export const practiceSet = action({
     // "CBSE (mixed)" is the student asking for either year, not a paper name.
     const board = /mixed/i.test(requestedBoard) ? "CBSE" : requestedBoard;
     const boardBrief = /mixed/i.test(requestedBoard)
-      ? "CBSE — pick EITHER the 2024 or the 2025 paper and put that year in the source tag (for example \"CBSE 2024 pattern · 3 marks\")"
+      ? "CBSE — pick EITHER the 2025 or the 2026 paper and put that year in the source tag (for example \"CBSE 2026 pattern · 3 marks\")"
       : requestedBoard;
 
     const problems: SolvedProblem[] = [];
@@ -437,6 +463,7 @@ export const practiceSet = action({
 
     for (let index = 0; index < total; index += 1) {
       const already = problems.map((entry) => `- ${entry.problem}`).join("\n");
+      const boardQuestion = index === 0 ? realBoard : null;
       const prompt = [
         `THE PROBLEM THE STUDENT JUST STUDIED: ${problem}`,
         method ? `THE METHOD THEY WERE SHOWN:\n${method}` : "",
@@ -446,13 +473,21 @@ export const practiceSet = action({
           ? `Formulas this chapter is examined on:\n- ${chapterFormulas.join("\n- ")}`
           : "",
         `This is question ${index + 1} of ${total} in one set.`,
+        boardQuestion
+          ? [
+              `THIS IS A REAL CBSE BOARD QUESTION (${boardQuestion.origin}). Reproduce its wording exactly in the \`problem\` field — do not rephrase it, add sub-parts or change its numbers — then solve it in full.`,
+              `REAL BOARD QUESTION: ${boardQuestion.prompt}`,
+            ].join("\n")
+          : "",
         already ? `Do NOT repeat or lightly reword any of these already-written questions:\n${already}` : "",
         PRACTICE_LEVELS[level],
         level === "board" ? `Board paper to aim at: ${boardBrief}.` : "",
-        realWorld
+        realWorld && !boardQuestion
           ? "Real-world framing is ON: build the question around a situation a student has actually met — a market bill, a water tank, a cricket score, a mobile plan, a school trip — and keep the mathematics exactly the same skill. Do not name a real person or company."
           : "",
-        "Write the new problem and solve it in full, in the same structured form.",
+        boardQuestion
+          ? "Answer the real board question above; do not write a different one."
+          : "Write the new problem and solve it in full, in the same structured form.",
         "Set `source` to a short tag for the question card: the board/year tag for a board question, or the level and topic otherwise. Leave it empty only when there is nothing honest to say.",
         ...languageDirective(language),
         "Reply with the JSON object only.",
@@ -480,6 +515,14 @@ export const practiceSet = action({
         parsed = practiceReplySchema.parse(parseJsonLoose(retry.text));
         model = retry.model;
       }
+      /* The real paper's wording is the canonical one. The model has just
+         solved it; if it silently reworded a phrase, the student still sees
+         the question as it was printed, not the model's paraphrase. */
+      if (boardQuestion) {
+        parsed.problem.problem = boardQuestion.prompt;
+        parsed.problem.source = boardLabel(boardQuestion.origin);
+      }
+
       const check = verifyAnswer(parsed.problem.problem, parsed.problem.finalAnswer);
       const finalized = finalizeProblem(parsed.problem, check);
 
@@ -488,7 +531,7 @@ export const practiceSet = action({
       // follows that paper without claiming it appeared in it.
       if (level === "board" && !finalized.source) {
         finalized.source = /mixed/i.test(requestedBoard)
-          ? "CBSE 2024/2025 pattern · 3 marks"
+          ? "CBSE 2025/2026 pattern · 3 marks"
           : `${board} pattern · 3 marks`;
       } else if (!finalized.source) {
         finalized.source = `${level === "easy" ? "Foundation" : level === "medium" ? "Standard" : "Challenge"} · ${chapterName ?? "practice"}`;

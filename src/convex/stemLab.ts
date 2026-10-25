@@ -6,6 +6,7 @@ import { v } from "convex/values";
 import { z } from "zod";
 import { callModel, resolveCandidates } from "./providers";
 import { parseJsonLoose } from "./ai";
+import { boardBank, boardLabel, type BankQuestion } from "../lib/boardBank";
 
 /**
  * The part of the STEM Lab that is not a simulation.
@@ -67,6 +68,47 @@ const SUBJECT_LABEL = {
   chemistry: "Chemistry",
   biology: "Biology",
 } as const;
+
+/** Which STEM bench a Class 10 science chapter belongs to. */
+function chapterBench(chapter: string): "physics" | "chemistry" | "biology" | "both" {
+  if (/chemical|acid|base|salt|metal|atom|molecule|matter|carbon|periodic|fibre|coal|petroleum|combustion/i.test(chapter)) {
+    return "chemistry";
+  }
+  if (/light|sound|force|motion|gravitation|electric|magnetic|energy|pressure|friction|stars|natural phenomena|current|wave|human eye|eye/i.test(chapter)) {
+    return "physics";
+  }
+  if (/cell|tissue|life|reproduction|heredity|environment|resources|food|microorganism|crop|conservation|adolescence|control|coordination|diversity|pollution|fall ill/i.test(chapter)) {
+    return "biology";
+  }
+  return "both";
+}
+
+/**
+ * Real board MCQs for a Class 10 drill, capped so the set still contains
+ * questions written for the chosen chapter and count. If the chapter has no
+ * past-paper MCQ, the drill keeps its fresh questions rather than borrowing a
+ * question from another chapter and mislabelling it.
+ */
+function pickScienceBoard(
+  subject: "physics" | "chemistry" | "biology",
+  chapter: string,
+  maximum: number,
+): BankQuestion[] {
+  const pool = boardBank("10", "science").filter((item) => {
+    if (item.type !== "mcq" || !item.options || item.options.length < 2) {
+      return false;
+    }
+    if (chapter) return item.chapter === chapter;
+    const bench = chapterBench(item.chapter);
+    return bench === subject || bench === "both";
+  });
+  const copy = [...pool];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+  }
+  return copy.slice(0, Math.max(0, maximum));
+}
 
 /** Keep only usable MCQs: a question, at least two options and an answer index
  *  that actually points at one of them. */
@@ -202,6 +244,18 @@ export const drill = action({
     const chapter = clean(args.chapter ?? "").slice(0, 160);
     const count = clamp(Math.round(args.count ?? 10), 5, 20);
     const difficulty = args.difficulty ?? "medium";
+    /* A quarter of a Class 10 board-level drill is real paper material, and
+       never the whole set: the remaining questions are written for the
+       chapter the student actually chose. */
+    const realBoard =
+      numericClass === "10" && difficulty === "board"
+        ? pickScienceBoard(
+            args.subject,
+            chapter,
+            Math.min(4, Math.max(1, Math.floor(count / 4))),
+          )
+        : [];
+    const writtenCount = Math.max(1, count - realBoard.length);
     const difficultyLine =
       difficulty === "easy"
         ? "Easy: one-step recall and direct definitions, the kind a student meets in the first exercise."
@@ -216,7 +270,7 @@ export const drill = action({
         ? `CHAPTER / TOPIC: ${chapter}.`
         : "CHAPTER / TOPIC: across the class syllabus for this subject.",
       difficultyLine,
-      `Write exactly ${count} single-correct multiple-choice questions.`,
+      `Write exactly ${writtenCount} single-correct multiple-choice questions.`,
       "Every question has four plausible options, exactly one correct answer, and a one-sentence explanation a teacher would accept.",
       "Use NCERT wording and SI units; keep each question under 45 words and avoid questions that need a diagram.",
       'Return exactly this JSON shape: {"title":string,"questions":[{"question":string,"options":[string,string,string,string],"answerIndex":number,"explanation":string}]}',
@@ -235,7 +289,16 @@ export const drill = action({
     });
 
     const parsed = drillSchema.parse(parseJsonLoose(reply.text));
-    const questions = normaliseQuestions(parsed.questions, count);
+    const written = normaliseQuestions(parsed.questions, writtenCount);
+    const boardQuestions = realBoard.map((item) => ({
+      question: item.prompt,
+      options: item.options ?? [],
+      answerIndex: item.answerIndex ?? 0,
+      explanation: item.explanation,
+      source: boardLabel(item.origin),
+      sourceDetail: item.origin,
+    }));
+    const questions = [...boardQuestions, ...written].slice(0, count);
     if (questions.length === 0) {
       throw new Error("The lab could not build a usable drill. Try a chapter name, or ask again.");
     }
@@ -244,6 +307,7 @@ export const drill = action({
       title: clean(parsed.title),
       questions,
       model: reply.model,
+      boardQuestions: boardQuestions.length,
     };
   },
 });

@@ -481,7 +481,7 @@ export const CLASSES: ClassSyllabus[] = [
     id: "10",
     label: "Class 10",
     note:
-      "Board year: 80 marks in 3 hours. Board simulation papers mix real CBSE questions from the 2020–2025 papers with fresh ones in the same pattern.",
+      "Board year: 80 marks in 3 hours. Board simulation papers mix real CBSE questions from the 2020–2026 papers with fresh ones in the same pattern.",
     hasBoard: true,
     subjects: [
       { id: "science", name: "Science", chapters: CLASS_10_SCIENCE },

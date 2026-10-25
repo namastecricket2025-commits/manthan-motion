@@ -3,9 +3,10 @@
  *
  * The mock exam has always been able to imitate a board paper; this file is
  * the part that does not imitate. Each entry is a question from a CBSE Class 10
- * board paper between 2020 and 2025, tagged with its paper code so the student
+ * board paper between 2020 and 2026, tagged with its paper code so the student
  * can check it against the original. When Class 10 sits a "Board simulation",
- * these are used first and the model writes the rest of the paper.
+ * these are mixed in first — up to half the paper — and the model writes the
+ * rest of the paper.
  *
  * Coverage spans all six Class 10 subjects: Science, Mathematics (Standard),
  * Social Science, English (Language and Literature), Hindi (Course B) and
@@ -14,8 +15,9 @@
  *
  * Two honesty notes shape the data:
  *
- *  - The 2021 board papers were cancelled, and 2022 used a two-term format, so
- *    the years present here are 2020, 2023, 2024 and 2025.
+ *  - The 2021 board papers were cancelled, and 2022 used a two-term format.
+ *    The six examination years present here are 2020, 2022, 2023, 2024, 2025
+ *    and 2026.
  *  - The wording is the published question, lightly re-typed. Answer points are
  *    checked against the marking scheme, not copied from it, so they read as
  *    points a teacher would tick rather than official scheme text.
@@ -1006,18 +1008,909 @@ const IT: BankQuestion[] = [
   },
 ];
 
+/* ------------------------------------------------------------------ */
+/* 2022 and 2026 sessions                                             */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The 2022 papers were the two-term format: Term 2 carried written questions
+ * only, so the 2022 entries here are short and long answers. The 2026 main
+ * papers returned to the full single-paper format, and their first section is
+ * MCQ — the entries below are those one-mark questions.
+ *
+ * The 2021 board papers were cancelled, so there is no 2021 set to reproduce.
+ * With 2020 and 2023–2025 already in this file that makes six examination
+ * years: 2020, 2022, 2023, 2024, 2025 and 2026.
+ */
+
+const SCIENCE_2022_26: BankQuestion[] = [
+  {
+    chapter: "Carbon and its Compounds",
+    type: "short",
+    marks: 2,
+    prompt:
+      "‘Carbon prefers to share its valence electrons with other atoms of carbon or with atoms of other elements rather than gaining or losing the valence electrons in order to attain noble gas configuration.’ Give reasons to justify this statement.",
+    modelAnswer:
+      "Carbon has four valence electrons, so it needs four more to complete its octet. Losing four electrons would require a large amount of energy because the nucleus holds them strongly, and gaining four electrons would make the nucleus unstable because of the extra negative charge. Carbon therefore shares electrons and forms four covalent bonds. This sharing also lets carbon atoms bond with one another, which is why carbon forms chains and rings.",
+    markingPoints: [
+      "Carbon has 4 valence electrons and needs 4 more.",
+      "Losing 4 electrons needs too much energy; gaining 4 is difficult for the nucleus.",
+      "It forms four covalent bonds by sharing, including C–C bonds.",
+    ],
+    origin: "CBSE 2022 · Delhi Set 1",
+  },
+  {
+    chapter: "How do Organisms Reproduce?",
+    type: "short",
+    marks: 2,
+    prompt:
+      "Name the reproductive and non-reproductive parts of bread mould (Rhizopus). List two advantages of vegetative propagation.",
+    modelAnswer:
+      "The reproductive parts of Rhizopus are the sporangia, which grow on upright sporangiophores and contain spores; it can also form zygospores after fusion. The non-reproductive parts are the thread-like hyphae, including the stolons and rhizoids that spread over the surface and absorb food. Two advantages of vegetative propagation: the new plant is genetically identical to the parent, so a useful variety is preserved, and it flowers and fruits earlier than a plant grown from seed.",
+    markingPoints: [
+      "Reproductive: sporangia/sporangiophores (and zygospores).",
+      "Non-reproductive: hyphae, stolons, rhizoids.",
+      "Advantage: true-to-type clones.",
+      "Advantage: faster flowering/fruiting; no seed needed.",
+    ],
+    origin: "CBSE 2022 · Delhi Set 1",
+  },
+  {
+    chapter: "Electricity",
+    type: "short",
+    marks: 3,
+    prompt:
+      "State Ohm's Law. Represent it mathematically. Define one ohm. What is the resistance of a conductor through which a current of 0.5 A flows when a potential difference of 2 V is applied across its ends?",
+    modelAnswer:
+      "Ohm's law states that at constant temperature, the current through a conductor is directly proportional to the potential difference across its ends, so V = IR. One ohm is the resistance of a conductor when a potential difference of one volt produces a current of one ampere through it. Here R = V/I = 2 V ÷ 0.5 A = 4 Ω.",
+    markingPoints: [
+      "Ohm's law statement at constant temperature.",
+      "V = IR (or I = V/R).",
+      "One ohm = 1 V per 1 A.",
+      "R = 2 ÷ 0.5 = 4 Ω.",
+    ],
+    origin: "CBSE 2022 · Delhi Set 1",
+  },
+  {
+    chapter: "Our Environment",
+    type: "short",
+    marks: 3,
+    prompt:
+      "We do not clean ponds or lakes, but an aquarium needs to be cleaned. Why? Why is the ozone layer getting depleted at the higher levels of the atmosphere? Mention one harmful effect caused by its depletion.",
+    modelAnswer:
+      "A pond or lake is a complete natural ecosystem. It has producers, consumers and decomposers, so dead matter and waste are broken down and recycled within the water, and the water keeps clearing itself. An aquarium is an artificial, closed and small system: it has no natural decomposer community or food web of that size, so uneaten food, fish waste and dead plants build up and have to be removed by hand. The ozone layer is depleted mainly by chlorofluorocarbons (CFCs) used in refrigerators and aerosols; chlorine released from them destroys ozone molecules at high altitude. One harmful effect: more ultraviolet radiation reaches the Earth and causes skin cancer and cataracts in humans, and damages crops and phytoplankton.",
+    markingPoints: [
+      "Pond/lake is self-sustaining: decomposers recycle waste.",
+      "Aquarium is artificial and small, so waste accumulates.",
+      "CFCs release chlorine and break down ozone.",
+      "Harm: UV-B causes skin cancer/cataracts, harms crops or plankton.",
+    ],
+    origin: "CBSE 2022 · Delhi Set 1",
+  },
+  {
+    chapter: "Life Processes",
+    type: "mcq",
+    marks: 1,
+    prompt: "Which structure in a leaf is mainly responsible for gaseous exchange?",
+    options: ["Xylem", "Stomata", "Phloem", "Cuticle"],
+    answerIndex: 1,
+    explanation:
+      "Stomata are tiny pores in the leaf epidermis; they open for the exchange of carbon dioxide and oxygen.",
+    origin: "CBSE 2026 · 31/1/1",
+  },
+  {
+    chapter: "How do Organisms Reproduce?",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Identify the correct statement for spirogyra, leishmania and hydra.",
+    options: [
+      "They reproduce sexually.",
+      "They are unicellular.",
+      "They are multicellular.",
+      "They reproduce asexually.",
+    ],
+    answerIndex: 3,
+    explanation:
+      "Spirogyra reproduces by fragmentation, Leishmania by binary fission and Hydra by budding — all asexual methods.",
+    origin: "CBSE 2026 · 31/1/1",
+  },
+  {
+    chapter: "Control and Coordination",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "The human brain has regions that help in different actions, responses and coordination. Which part is responsible for the precision of voluntary actions?",
+    options: ["Cerebrum", "Cerebellum", "Medulla", "Pons"],
+    answerIndex: 1,
+    explanation:
+      "The cerebellum coordinates balance and the precision of voluntary movements; the cerebrum handles thought and voluntary control.",
+    origin: "CBSE 2026 · 31/1/1",
+  },
+  {
+    chapter: "Life Processes",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Pancreatic juice contains enzymes that help digest food. Choose the correct statement.",
+    options: [
+      "Trypsin digests emulsified fats and lipase digests proteins.",
+      "Trypsin digests proteins and lipase digests emulsified fats.",
+      "Trypsin and lipase both digest fats.",
+      "Trypsin digests proteins and lipase digests carbohydrates.",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Trypsin is a protease that breaks down proteins, while lipase breaks down emulsified fats into fatty acids and glycerol.",
+    origin: "CBSE 2026 · 31/1/1",
+  },
+  {
+    chapter: "How do Organisms Reproduce?",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "In human beings, sex is determined genetically. Which of the following is/are correct? (i) A gamete carrying the X chromosome comes from the female parent. (ii) A gamete carrying the X chromosome comes from the male parent. (iii) A gamete carrying the Y chromosome comes from the male parent.",
+    options: ["(ii) and (iii)", "(i) only", "(i) and (iii)", "(iii) only"],
+    answerIndex: 2,
+    explanation:
+      "The mother contributes only X, while the father can contribute either X or Y; the Y-bearing sperm produces a male child.",
+    origin: "CBSE 2026 · 31/1/1",
+  },
+  {
+    chapter: "Our Environment",
+    type: "mcq",
+    marks: 1,
+    prompt: "Which of the following groups is not biodegradable?",
+    options: [
+      "Vegetable peels, dead leaves, paper",
+      "Cow dung, leather bag, water",
+      "Polythene bag, rubber band, ball pen",
+      "Paper, fruits, bones",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Polythene, rubber and the plastic body of a pen are synthetic materials that micro-organisms cannot break down.",
+    origin: "CBSE 2026 · 31/1/1",
+  },
+];
+
+const MATHS_2022_26: BankQuestion[] = [
+  {
+    chapter: "Statistics",
+    type: "short",
+    marks: 2,
+    prompt:
+      "The mode of a grouped frequency distribution is 75 and the modal class is 65–80. The frequency of the class preceding the modal class is 6 and the frequency of the class succeeding the modal class is 8. Find the frequency of the modal class.",
+    modelAnswer:
+      "Use Mode = L + [(f₁ − f₀)/(2f₁ − f₀ − f₂)] × h. Here L = 65, h = 15, f₀ = 6, f₂ = 8 and mode = 75. So 75 = 65 + [(f₁ − 6)/(2f₁ − 6 − 8)] × 15, which gives 10 = 15(f₁ − 6)/(2f₁ − 14). Then 10(2f₁ − 14) = 15(f₁ − 6), so 20f₁ − 140 = 15f₁ − 90 and 5f₁ = 50. Therefore f₁ = 10.",
+    markingPoints: [
+      "Writes the mode formula with L = 65, h = 15.",
+      "Substitutes f₀ = 6 and f₂ = 8.",
+      "Solves to f₁ = 10.",
+    ],
+    origin: "CBSE 2022 · Outside Delhi Set 1",
+  },
+  {
+    chapter: "Arithmetic Progressions",
+    type: "short",
+    marks: 2,
+    prompt:
+      "How many natural numbers are there between 1 and 1000 which are divisible by 5 but not by 2?",
+    modelAnswer:
+      "A number divisible by 5 but not by 2 must be an odd multiple of 5: 5, 15, 25, …, 995. This is an A.P. with a = 5, d = 10 and last term 995. Using aₙ = a + (n − 1)d: 995 = 5 + (n − 1)10, so (n − 1)10 = 990 and n − 1 = 99. Hence n = 100.",
+    markingPoints: [
+      "Identifies the numbers as odd multiples of 5.",
+      "Forms the A.P. 5, 15, …, 995 with d = 10.",
+      "Uses aₙ = a + (n − 1)d and gets n = 100.",
+    ],
+    origin: "CBSE 2022 · Outside Delhi Set 1",
+  },
+  {
+    chapter: "Statistics",
+    type: "short",
+    marks: 2,
+    prompt:
+      "Find the mean of the following frequency distribution: Class 1–5, 5–9, 9–13, 13–17; Frequency 4, 8, 7, 6.",
+    modelAnswer:
+      "The class marks are 3, 7, 11 and 15. Then Σfᵢxᵢ = 4×3 + 8×7 + 7×11 + 6×15 = 12 + 56 + 77 + 90 = 235, and Σfᵢ = 4 + 8 + 7 + 6 = 25. Mean = 235/25 = 9.4.",
+    markingPoints: [
+      "Class marks: 3, 7, 11, 15.",
+      "Σfᵢxᵢ = 235 and Σfᵢ = 25.",
+      "Mean = 9.4.",
+    ],
+    origin: "CBSE 2022 · Outside Delhi Set 1",
+  },
+  {
+    chapter: "Circles",
+    type: "short",
+    marks: 3,
+    prompt:
+      "Construct a pair of tangents to a circle of radius 4 cm, which are inclined to each other at an angle of 60°.",
+    modelAnswer:
+      "Draw a circle with centre O and radius 4 cm. The angle between the tangents is 60°, so the angle between the radii at the points of contact is 180° − 60° = 120°. Mark a point P on the circle such that ∠AOP = 120° for a chosen point A of contact, or construct the required point outside by bisecting the angle. At A, draw a perpendicular to OA; at the second point of contact B, draw a perpendicular to OB. The two perpendiculars meet at an external point T, and TA and TB are the required tangents with ∠ATB = 60°. (A construction with ruler and compass, and the 120° angle at the centre, earns full marks.)",
+    markingPoints: [
+      "Circle of radius 4 cm with centre O.",
+      "Uses the 120° angle at the centre for a 60° angle between tangents.",
+      "Draws perpendiculars at the two radii to get the external point.",
+      "Labels the tangents and states ∠ATB = 60°.",
+    ],
+    origin: "CBSE 2022 · Outside Delhi Set 1",
+  },
+  {
+    chapter: "Arithmetic Progressions",
+    type: "short",
+    marks: 3,
+    prompt:
+      "If the last term of an A.P. of 30 terms is 119 and the 8th term from the end (towards the first term) is 91, then find the common difference of the A.P. Hence, find the sum of all the terms of the A.P.",
+    modelAnswer:
+      "The 8th term from the end is the 23rd term from the beginning, because 30 − 8 + 1 = 23. So a + 29d = 119 and a + 22d = 91. Subtracting gives 7d = 28, so d = 4. Then a = 91 − 22×4 = 3. The sum of 30 terms is S₃₀ = 30/2 (a + l) = 15(3 + 119) = 15 × 122 = 1830.",
+    markingPoints: [
+      "Identifies the 8th term from the end as the 23rd term.",
+      "Sets a + 29d = 119 and a + 22d = 91.",
+      "Gets d = 4 and a = 3.",
+      "S₃₀ = 15(3 + 119) = 1830.",
+    ],
+    origin: "CBSE 2022 · Outside Delhi Set 1",
+  },
+  {
+    chapter: "Some Applications of Trigonometry",
+    type: "long",
+    marks: 4,
+    prompt:
+      "From the top of an 8 m high building, the angle of elevation of the top of a cable tower is 60° and the angle of depression of its foot is 45°. Determine the height of the tower. (Take √3 = 1.732.)",
+    modelAnswer:
+      "Let AB be the building with AB = 8 m and CD the tower. From the top A, the horizontal distance to the tower is BC. In right triangle ABC, tan 45° = AB/BC, so 1 = 8/BC and BC = 8 m. In right triangle ADE, where E is the point on the tower level with A, tan 60° = DE/AE = DE/8, so DE = 8√3 = 8 × 1.732 = 13.856 m. Therefore the tower is CD = CE + ED = 8 + 13.856 = 21.856 m, about 21.86 m.",
+    markingPoints: [
+      "Uses tan 45° = 8/BC to get BC = 8 m.",
+      "Uses tan 60° = DE/8 to get DE = 8√3.",
+      "Adds the building height: CD = 8 + 8√3.",
+      "Answer ≈ 21.86 m.",
+    ],
+    origin: "CBSE 2022 · Outside Delhi Set 1",
+  },
+  {
+    chapter: "Real Numbers",
+    type: "mcq",
+    marks: 1,
+    prompt: "The LCM of 960 and 240 is:",
+    options: ["960", "240", "60", "15"],
+    answerIndex: 0,
+    explanation: "240 divides 960 exactly, so the LCM of the pair is the larger number, 960.",
+    origin: "CBSE 2026 · 30/2/1",
+  },
+  {
+    chapter: "Real Numbers",
+    type: "mcq",
+    marks: 1,
+    prompt: "The natural number 1 is:",
+    options: [
+      "a prime number",
+      "a composite number",
+      "prime as well as composite",
+      "neither prime nor composite",
+    ],
+    answerIndex: 3,
+    explanation:
+      "1 has only one factor, itself, so it does not meet the definition of a prime (two factors) or a composite (more than two).",
+    origin: "CBSE 2026 · 30/2/1",
+  },
+  {
+    chapter: "Real Numbers",
+    type: "mcq",
+    marks: 1,
+    prompt: "For any natural number n, 5ⁿ ends with the digit:",
+    options: ["0", "5", "3", "2"],
+    answerIndex: 1,
+    explanation:
+      "5¹ = 5, 5² = 25, 5³ = 125 — every positive power of 5 ends in 5.",
+    origin: "CBSE 2026 · 30/2/1",
+  },
+  {
+    chapter: "Polynomials",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "If α and β are the two zeroes of the polynomial f(x) = px² − 2x + 3p and α + β = αβ, then the value of p is:",
+    options: ["−2/3", "2/3", "1/3", "−1/3"],
+    answerIndex: 1,
+    explanation:
+      "α + β = 2/p and αβ = 3p/p = 3. Setting them equal gives 2/p = 3, so p = 2/3.",
+    origin: "CBSE 2026 · 30/2/1",
+  },
+  {
+    chapter: "Introduction to Trigonometry",
+    type: "mcq",
+    marks: 1,
+    prompt: "If cos A = 4/5, then the value of tan A is:",
+    options: ["3/5", "3/4", "4/3", "5/3"],
+    answerIndex: 1,
+    explanation:
+      "With cos A = 4/5, the adjacent side is 4 and the hypotenuse 5, so the opposite side is 3. Therefore tan A = 3/4.",
+    origin: "CBSE 2026 · 30/2/1",
+  },
+];
+
+const SOCIAL_SCIENCE_2026: BankQuestion[] = [
+  {
+    chapter: "History · Nationalism in India",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Arrange the following events in chronological order: I. Salt Satyagraha II. Kheda Satyagraha III. Rowlatt Satyagraha IV. Ahmedabad Mill Workers Satyagraha",
+    options: ["II, I, III, IV", "II, IV, III, I", "III, II, IV, I", "II, I, IV, III"],
+    answerIndex: 1,
+    explanation:
+      "Kheda and the Ahmedabad mill strike came in 1918, the Rowlatt Satyagraha in 1919, and the Salt Satyagraha in 1930.",
+    origin: "CBSE 2026 · 32/5/1",
+  },
+  {
+    chapter: "History · The Making of a Global World",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Assertion (A): The discovery of sea routes to Asia and America shrank the pre-modern world in the sixteenth century. Reason (R): During this period, European entry into the Indian Ocean expanded trade.",
+    options: [
+      "Both A and R are true and R is the correct explanation of A.",
+      "Both A and R are true but R is not the correct explanation of A.",
+      "A is true but R is false.",
+      "A is false but R is true.",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Both statements are true: the sea routes changed the world's trade geography, and European entry did expand Indian Ocean trade. The reason is a related consequence rather than the explanation of how the world 'shrank'.",
+    origin: "CBSE 2026 · 32/5/1",
+  },
+  {
+    chapter: "Geography · Resources and Development",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Identify the soil from these clues: it is made of extremely fine material, is rich in soil nutrients, and is ideal for growing cotton.",
+    options: ["Alluvial soil", "Black soil", "Laterite soil", "Arid soil"],
+    answerIndex: 1,
+    explanation:
+      "Black soil, also called regur, is fine-grained, nutrient-rich and especially suited to cotton.",
+    origin: "CBSE 2026 · 32/5/1",
+  },
+  {
+    chapter: "Geography · Forest and Wildlife Resources",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "In which of the following States of India has the largest area under permanent forests?",
+    options: ["Uttar Pradesh", "Madhya Pradesh", "Gujarat", "Maharashtra"],
+    answerIndex: 1,
+    explanation:
+      "Madhya Pradesh has the largest area under permanent forest in India.",
+    origin: "CBSE 2026 · 32/5/1",
+  },
+  {
+    chapter: "Geography · Forest and Wildlife Resources",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Match Column-I (National Parks) with Column-II (States): a. Sariska, b. Sunderban, c. Corbett, d. Bandhavgarh; i. Madhya Pradesh, ii. Uttarakhand, iii. West Bengal, iv. Rajasthan.",
+    options: ["iii, ii, i, iv", "iv, ii, iii, i", "iv, iii, ii, i", "ii, iv, iii, i"],
+    answerIndex: 2,
+    explanation:
+      "Sariska is in Rajasthan, Sunderban in West Bengal, Corbett in Uttarakhand and Bandhavgarh in Madhya Pradesh.",
+    origin: "CBSE 2026 · 32/5/1",
+  },
+];
+
+const ENGLISH_2026: BankQuestion[] = [
+  {
+    chapter: "Grammar · Tenses, Modals, Determiners and Reported Speech",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "By the end of this quarter, the assistant manager ______ on this campaign for eight months.",
+    options: [
+      "will be working",
+      "will have been working",
+      "will have working",
+      "would have been working",
+    ],
+    answerIndex: 1,
+    explanation:
+      "The sentence needs the future perfect continuous for an action continuing up to a point in the future: will have been working.",
+    origin: "CBSE 2026 · 2/5/2",
+  },
+  {
+    chapter: "Writing Skills · Letter, Analytical Paragraph and Story",
+    type: "long",
+    marks: 5,
+    prompt:
+      "You are Neha/Nitin Verma, a senior teacher at Pragati International School. Write a letter to the editor of a leading daily showing your concern over the rising misuse of artificial intelligence tools by students today. Share your thoughts on the loss of critical thinking skills, the erosion of creativity, and academic dishonesty among children. Suggest how children can be made aware of responsible AI use and how AI should be integrated within the education system itself.",
+    modelAnswer:
+      "A complete answer is a formal letter to the editor in the prescribed format: sender's address, date, receiver's address, subject, salutation, body in two or three paragraphs, and closing. The body should name the problem (students submitting AI-written work, trusting generated answers without checking them), explain two or three consequences (weaker reasoning, less original thinking, unfair assessment), and propose practical steps (teach AI literacy, set tasks that require process and reflection, allow supervised use for brainstorming with citation, and train teachers to recognise misuse). It should end with a polite request that the newspaper highlight the issue.",
+    markingPoints: [
+      "Correct letter-to-the-editor format and formal tone.",
+      "Names the misuse and at least two consequences.",
+      "Suggests responsible-use and integration measures.",
+      "Coherent paragraphs, appropriate salutation and closing.",
+    ],
+    origin: "CBSE 2026 · 2/5/2",
+  },
+  {
+    chapter: "Prose · From the Diary of Anne Frank",
+    type: "short",
+    marks: 3,
+    prompt:
+      "In ‘From the Diary of Anne Frank’, how does Anne's relationship with her diary help her cope with isolation and the fear of hiding?",
+    modelAnswer:
+      "Anne treats the diary as a trusted friend, Kitty, so she has someone to confide in when she cannot talk freely to the adults in the annexe. Writing lets her put fear and frustration into words, which makes them easier to bear, and it keeps her mind active and her sense of self alive during years of hiding. The diary also gives her a private place to record ordinary thoughts, jokes and hopes, so she is not only a girl in hiding but a person with an inner life.",
+    markingPoints: [
+      "Calls the diary Kitty, a trusted friend/confidante.",
+      "Writing gives an outlet for fear and frustration.",
+      "It preserves her identity and normalcy during isolation.",
+    ],
+    origin: "CBSE 2026 · 2/5/2",
+  },
+];
+
+const HINDI_2022: BankQuestion[] = [
+  {
+    chapter: "मनुष्यता — मैथिलीशरण गुप्त",
+    type: "short",
+    marks: 2,
+    prompt:
+      "‘विचार लो कि मर्त्य हो, न मृत्यु से डरो कभी’ — ‘मनुष्यता’ कविता से उद्धृत इस पंक्ति का भाव कविता के संदर्भ में स्पष्ट कीजिए।",
+    modelAnswer:
+      "कवि कहता है कि मनुष्य का शरीर नश्वर है, इसलिए मृत्यु से डरना व्यर्थ है। मनुष्य को अपने विचारों और कर्मों से अमर होना चाहिए तथा दूसरों के कल्याण के लिए जीना चाहिए। त्याग और परहित की भावना ही मनुष्यता है; ऐसा व्यक्ति शरीर के मिटने के बाद भी अपने कार्यों से याद किया जाता है।",
+    markingPoints: [
+      "शरीर नश्वर है, मृत्यु से डरना व्यर्थ।",
+      "विचार और कर्म अमर रहते हैं।",
+      "परहित/त्याग ही मनुष्यता है।",
+    ],
+    origin: "CBSE 2022 · 4/1/1 · Set 1",
+  },
+  {
+    chapter: "पर्वत प्रदेश में पावस — सुमित्रानंदन पंत",
+    type: "short",
+    marks: 2,
+    prompt:
+      "‘पावस ऋतु’ किसे कहते हैं? इस ऋतु में पर्वत पर कैसा दृश्य होता है? ‘पर्वत प्रदेश में पावस’ कविता के आधार पर लिखिए।",
+    modelAnswer:
+      "पावस ऋतु का अर्थ वर्षा ऋतु है। इस ऋतु में पर्वत प्रदेश में काले बादल छा जाते हैं, झरने और नदियाँ भर जाती हैं, हवा में ठंडक और सोंधी खुशबू फैल जाती है। हरी घास, फूलों और चमकीले पत्थरों से पर्वत का दृश्य मनोहर हो जाता है; मोर नाचते हैं और प्रकृति में नया जीवन दिखाई देता है।",
+    markingPoints: [
+      "पावस = वर्षा ऋतु।",
+      "बादल, झरने, नदियाँ और हरियाली का दृश्य।",
+      "कविता के अनुसार प्रकृति की सुंदरता/जीवन।",
+    ],
+    origin: "CBSE 2022 · 4/1/1 · Set 1",
+  },
+  {
+    chapter: "कर चले हम फ़िदा — कैफ़ी आज़मी",
+    type: "short",
+    marks: 2,
+    prompt:
+      "‘कर चले हम फ़िदा’ कविता में धरती की तुलना दुल्हन से क्यों की गई है? दो बिंदुओं का उल्लेख कीजिए।",
+    modelAnswer:
+      "कविता में सैनिक मातृभूमि की रक्षा के लिए अपने प्राण न्योछावर कर देते हैं। धरती को दुल्हन की तरह स्नेह और श्रद्धा से सजाया गया है, क्योंकि वह माता के समान पूजनीय है और उसकी स्वतंत्रता की रक्षा सैनिकों का कर्तव्य है। सैनिक धरती के लिए अपना सर्वस्व अर्पित करते हैं, इसलिए उसकी तुलना दुल्हन से की गई है।",
+    markingPoints: [
+      "धरती मातृभूमि के रूप में पूजनीय है।",
+      "सैनिक उसकी रक्षा के लिए प्राण देते हैं।",
+      "दुल्हन के रूप में उसका स्नेह/सम्मान प्रकट हुआ है।",
+    ],
+    origin: "CBSE 2022 · 4/1/1 · Set 1",
+  },
+];
+
+const IT_2022_26: BankQuestion[] = [
+  {
+    chapter: "Employability Skills",
+    type: "short",
+    marks: 1,
+    prompt:
+      "Name the person who combines factors in a creative manner to generate value for customers and create wealth.",
+    modelAnswer: "An entrepreneur.",
+    markingPoints: ["Entrepreneur."],
+    origin: "CBSE 2022 · IT 402 · Set 4",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "short",
+    marks: 1,
+    prompt:
+      "Name the skill that helps anyone to lead, guide and supervise people who work for the business.",
+    modelAnswer: "Entrepreneurial skill, in particular the leadership/management component.",
+    markingPoints: ["Entrepreneurial skill (leadership/management)."],
+    origin: "CBSE 2022 · IT 402 · Set 4",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "short",
+    marks: 1,
+    prompt: "Name any two elements of nature.",
+    modelAnswer: "For example, earth and water (air, fire and space are the other traditional elements).",
+    markingPoints: ["Any two of earth, water, air, fire, space."],
+    origin: "CBSE 2022 · IT 402 · Set 4",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "short",
+    marks: 1,
+    prompt: "Give any one method that we can adopt to promote sustainable development.",
+    modelAnswer:
+      "Rainwater harvesting — a method that conserves a scarce resource for later use. Other acceptable answers include recycling, using public transport and planting trees.",
+    markingPoints: ["One valid conservation method, such as rainwater harvesting."],
+    origin: "CBSE 2022 · IT 402 · Set 4",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "mcq",
+    marks: 1,
+    prompt: "Identify the imperative sentence:",
+    options: [
+      "Shut the front door.",
+      "She is a talented artist.",
+      "Are you feeling better?",
+      "You were amazing!",
+    ],
+    answerIndex: 0,
+    explanation:
+      "An imperative sentence gives an instruction or command, and its subject 'you' is understood rather than written.",
+    origin: "CBSE 2026 · IT 402",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "mcq",
+    marks: 1,
+    prompt: "Breaking down big goals into smaller parts will make the goals ______.",
+    options: ["Specific", "Measurable", "Achievable", "Realistic"],
+    answerIndex: 2,
+    explanation:
+      "Dividing a large goal into smaller steps makes it achievable; the letters of SMART stand for Specific, Measurable, Achievable, Relevant and Time-bound.",
+    origin: "CBSE 2026 · IT 402",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "short",
+    marks: 1,
+    prompt: "Define the term ‘Time Management’.",
+    modelAnswer:
+      "Time management is planning and organising how much time to give to different tasks so that work is completed efficiently and by the deadline.",
+    markingPoints: ["Planning/organising time to finish work efficiently and on time."],
+    origin: "CBSE 2026 · IT 402",
+  },
+  {
+    chapter: "Employability Skills",
+    type: "mcq",
+    marks: 1,
+    prompt: "What should a strong password consist of?",
+    options: [
+      "Only letters",
+      "Numbers and special characters",
+      "Name of a person",
+      "Letters, numbers and special characters",
+    ],
+    answerIndex: 3,
+    explanation:
+      "A strong password mixes upper- and lower-case letters, digits and special characters, and is not a name or dictionary word.",
+    origin: "CBSE 2026 · IT 402",
+  },
+];
+
+const AI_2025: BankQuestion[] = [
+  {
+    chapter: "Employability Skills · Self-Management Skills–II",
+    type: "mcq",
+    marks: 1,
+    prompt: "Which of the following does not help in stress management?",
+    options: ["Healthy food", "Sound sleep", "Yoga asanas", "Negative thoughts"],
+    answerIndex: 3,
+    explanation:
+      "Healthy food, sleep and yoga reduce stress; negative thoughts keep the body's stress response switched on.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Employability Skills · ICT Skills–II",
+    type: "mcq",
+    marks: 1,
+    prompt: "Spam refers to:",
+    options: ["Unnecessary images", "Temporary files", "Junk mails", "Music files"],
+    answerIndex: 2,
+    explanation:
+      "Spam is unsolicited junk email, usually sent in bulk for advertising or fraud.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Employability Skills · Green Skills–II",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Assertion (A): Sustainable agriculture is environment friendly. Reason (R): It prevents the use of chemical fertilizers to protect soil.",
+    options: [
+      "Both (A) and (R) are correct and (R) is the correct explanation of (A).",
+      "Both (A) and (R) are correct but (R) is not the correct explanation of (A).",
+      "(A) is correct but (R) is not correct.",
+      "(A) is not correct but (R) is correct.",
+    ],
+    answerIndex: 0,
+    explanation:
+      "Sustainable farming avoids harmful chemical inputs and protects soil, which is exactly why it is environment friendly.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Employability Skills · Self-Management Skills–II",
+    type: "mcq",
+    marks: 1,
+    prompt: "Which of the following is not a step to build self-motivation?",
+    options: [
+      "Focusing on your goal.",
+      "Planning to achieve your goal.",
+      "Being indisciplined.",
+      "Finding out your strength.",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Self-motivation needs discipline and a plan; being undisciplined works against it.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Employability Skills · Communication Skills–II",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Which type of communication takes place when the number of people is small enough to communicate with each other effectively?",
+    options: [
+      "Interpersonal communication",
+      "Public communication",
+      "Intrapersonal communication",
+      "Small group communication",
+    ],
+    answerIndex: 3,
+    explanation:
+      "Small group communication involves a few people who can all take part directly, unlike public communication to a large audience.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Employability Skills · Entrepreneurial Skills–II",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Reema has started her own restaurant. She keeps trying new ideas to make different dishes for her customers. As an entrepreneur, Reema is:",
+    options: ["Impatient", "Creative", "Under-confident", "Lazy"],
+    answerIndex: 1,
+    explanation:
+      "Trying new ideas and recipes is the creative trait of an entrepreneur.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Revisiting the AI Project Cycle and Ethical Frameworks",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Assertion (A): When a machine is able to mimic human traits, it is said to be artificially intelligent. Reason (R): A fully automatic washing machine is artificially intelligent.",
+    options: [
+      "Both (A) and (R) are correct and (R) is the correct explanation of (A).",
+      "Both (A) and (R) are correct but (R) is not the correct explanation of (A).",
+      "(A) is correct but (R) is not correct.",
+      "(A) is not correct but (R) is correct.",
+    ],
+    answerIndex: 2,
+    explanation:
+      "A fully automatic washing machine follows a fixed program; it does not learn or mimic human intelligence.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Revisiting the AI Project Cycle and Ethical Frameworks",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Platforms such as Spotify, Facebook, Instagram, Amazon and Netflix show recommendations based on what you like. Which technology is behind this?",
+    options: [
+      "Human intelligence",
+      "Platform intelligence",
+      "Artificial intelligence",
+      "Application intelligence",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Recommendation systems are AI systems that learn patterns from user behaviour and suggest similar content.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Revisiting the AI Project Cycle and Ethical Frameworks",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Statement 1: In the ‘When’ block of the 4Ws canvas we find the stakeholders. Statement 2: Stakeholders are the people who face a particular problem and would be benefited by the solution.",
+    options: [
+      "Both Statement 1 and Statement 2 are correct.",
+      "Both Statement 1 and Statement 2 are incorrect.",
+      "Statement 1 is correct but Statement 2 is incorrect.",
+      "Statement 2 is correct but Statement 1 is incorrect.",
+    ],
+    answerIndex: 3,
+    explanation:
+      "The ‘Who’ block holds the stakeholders, so Statement 1 is wrong; the description of stakeholders in Statement 2 is correct.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Advanced Concepts of Modelling in AI",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Whenever we want an AI project to be able to predict an output, we need to:",
+    options: [
+      "first test it using the data.",
+      "first train it using the data.",
+      "both (a) and (b).",
+      "neither (a) nor (b).",
+    ],
+    answerIndex: 1,
+    explanation:
+      "A model learns the relationship between inputs and outputs during training; testing checks that learning afterwards.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Computer Vision",
+    type: "mcq",
+    marks: 1,
+    prompt: "What does the term ‘image processing’ refer to in Computer Vision?",
+    options: [
+      "Editing videos",
+      "Extracting meaningful information from images",
+      "Playing audio files",
+      "Compiling codes",
+    ],
+    answerIndex: 1,
+    explanation:
+      "Computer vision processes an image to extract information it can use, such as edges, objects or labels.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Natural Language Processing",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "A corpus contains four documents in which words such as ‘an’, ‘is’ and ‘the’ appear frequently. What are such words called?",
+    options: ["Stop words", "Rare words", "Missing words", "Removable words"],
+    answerIndex: 0,
+    explanation:
+      "Stop words are common words removed before NLP processing because they carry little meaning.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Evaluating Models",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "A model predicts ‘No’ while the reality is ‘Yes’. Which condition of evaluation does this indicate?",
+    options: ["False positive", "False negative", "True positive", "True negative"],
+    answerIndex: 1,
+    explanation:
+      "A false negative occurs when the model misses a positive case and predicts negative.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Evaluating Models",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Which evaluation parameter is the percentage of true positive cases among all cases where the prediction is true?",
+    options: ["Precision", "Recall", "F1 score", "Accuracy"],
+    answerIndex: 0,
+    explanation:
+      "Precision = TP / (TP + FP), so it measures how many predicted positives are actually positive.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Natural Language Processing",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "In NLP, which of the following words is the stem produced from ‘Studies’ by stemming?",
+    options: ["Study", "Stud", "Studi", "Studied"],
+    answerIndex: 2,
+    explanation:
+      "A stemmer strips the suffix without insisting on a dictionary word, so ‘studies’ becomes ‘studi’.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Computer Vision",
+    type: "mcq",
+    marks: 1,
+    prompt:
+      "Statement 1: Search engines and e-commerce portals now have image-based search using computer vision. Statement 2: Image-based search helps find items, people and places by giving their sounds to the system.",
+    options: [
+      "Both statements are correct.",
+      "Both statements are incorrect.",
+      "Statement 1 is correct but Statement 2 is incorrect.",
+      "Statement 2 is correct but Statement 1 is incorrect.",
+    ],
+    answerIndex: 2,
+    explanation:
+      "Image-based search works on an image, not on sounds, so the first statement is true and the second is false.",
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Computer Vision",
+    type: "short",
+    marks: 2,
+    prompt: "Differentiate between Computer Vision (CV) and Natural Language Processing (NLP).",
+    modelAnswer:
+      "Computer Vision enables a computer to interpret images and videos — it extracts information such as objects, faces or text from visual data. Natural Language Processing enables a computer to understand, interpret and generate human language, whether written text or speech. CV works on pixels; NLP works on words and sentences.",
+    markingPoints: [
+      "CV deals with images/video and visual information.",
+      "NLP deals with human language, text or speech.",
+      "One contrast in input or task.",
+    ],
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Evaluating Models",
+    type: "short",
+    marks: 2,
+    prompt:
+      "Suppose you are developing an AI model to detect fraudulent financial transactions. Describe false positives and false negatives in this context.",
+    modelAnswer:
+      "A false positive is a genuine transaction that the model wrongly flags as fraudulent; the customer may be inconvenienced and the bank spends time reviewing it. A false negative is a fraudulent transaction that the model lets through as genuine, which causes a direct financial loss and is usually the more serious error here.",
+    markingPoints: [
+      "False positive: genuine transaction flagged as fraud.",
+      "False negative: fraud missed and treated as genuine.",
+      "Correct context/effect for each.",
+    ],
+    origin: "CBSE 2025 · AI 417",
+  },
+  {
+    chapter: "Revisiting the AI Project Cycle and Ethical Frameworks",
+    type: "long",
+    marks: 4,
+    prompt:
+      "What do you understand by AI Bias and AI Access? Give one example of each to support your answer.",
+    modelAnswer:
+      "AI bias means systematic, repeatable errors in an AI system that produce unfair outcomes for some groups. It usually enters through the training data or the way the model is designed. Example: a facial-recognition system trained mostly on lighter-skinned faces performs poorly on darker-skinned faces. AI access means the ability of people and communities to use and benefit from AI technology. Example: students in a rural school without reliable internet or devices cannot use AI learning tools, so the benefit stays with better-connected groups.",
+    markingPoints: [
+      "Defines AI bias as unfair/systematic error.",
+      "Gives a valid bias example.",
+      "Defines AI access as the ability to use/benefit from AI.",
+      "Gives a valid access example.",
+    ],
+    origin: "CBSE 2025 · AI 417",
+  },
+];
+
 const BANK: Record<string, BankQuestion[]> = {
-  "10:science": SCIENCE,
-  "10:maths": [...MATHS, ...MATHS_MORE],
-  "10:social-science": [...SOCIAL_SCIENCE, ...SOCIAL_SCIENCE_MORE],
-  "10:english": ENGLISH,
-  "10:hindi": HINDI,
-  "10:computer": IT,
+  "10:science": [...SCIENCE, ...SCIENCE_2022_26],
+  "10:maths": [...MATHS, ...MATHS_MORE, ...MATHS_2022_26],
+  "10:social-science": [
+    ...SOCIAL_SCIENCE,
+    ...SOCIAL_SCIENCE_MORE,
+    ...SOCIAL_SCIENCE_2026,
+  ],
+  "10:english": [...ENGLISH, ...ENGLISH_2026],
+  "10:hindi": [...HINDI, ...HINDI_2022],
+  "10:computer": [...IT, ...IT_2022_26],
+  "10:ai": AI_2025,
 };
 
 /** Every real board question available for a class + subject. */
 export function boardBank(classId: string, subjectId: string): BankQuestion[] {
   return BANK[`${classId}:${subjectId}`] ?? [];
+}
+
+/**
+ * The label a student sees on a past-paper question.
+ *
+ * The full provenance ("CBSE 2024 · 31/4/1 · Q6") stays on `origin` for the
+ * paper's reference, but a question card only has room for the one fact that
+ * matters while answering: which board year it came from. `BOARD 2024` is
+ * short enough to sit beside a mark value and unambiguous about what it is.
+ */
+export function boardLabel(origin: string): string {
+  const year = origin.match(/\b(20\d{2})\b/)?.[1];
+  return year ? `BOARD ${year}` : "BOARD";
+}
+
+/** The examination years present in a subject's bank, newest first. */
+export function bankYears(classId: string, subjectId: string): number[] {
+  const years = boardBank(classId, subjectId)
+    .map((item) => Number(item.origin.match(/\b(20\d{2})\b/)?.[1]))
+    .filter((year) => Number.isFinite(year));
+  return [...new Set(years)].sort((a, b) => b - a);
 }
 
 /** The chapters that actually have a past-paper question behind them. */

@@ -44,7 +44,7 @@ const BOARD_GRADE = "10";
 
 const COUNTS = [1, 3, 5];
 
-const BOARDS = ["CBSE 2025", "CBSE 2024", "CBSE (mixed)"];
+const BOARDS = ["CBSE 2026", "CBSE 2025", "CBSE 2024", "CBSE (mixed)"];
 
 /** A CBSE Class 10 maths paper runs three hours; this set is a section of it,
  *  so the clock is 90 minutes — enough to finish without being a mock exam. */
@@ -118,6 +118,7 @@ export function PracticePanel({
           track,
           chapterName,
           chapterFormulas,
+          className: gradeId,
           count: overrideCount ?? count,
           level: boardAllowed || level !== "board" ? level : "medium",
           boardYear: boardAllowed && level === "board" ? boardYear : undefined,
@@ -139,7 +140,7 @@ export function PracticePanel({
         setBusy(false);
       }
     },
-    [boardAllowed, boardYear, chapterFormulas, chapterName, count, finalAnswer, level, problem, realWorld, setAction, steps, track],
+    [boardAllowed, boardYear, chapterFormulas, chapterName, count, finalAnswer, gradeId, level, problem, realWorld, setAction, steps, track],
   );
 
   /* A board set is timed from the moment it lands. The interval is cleared
@@ -293,7 +294,7 @@ export function PracticePanel({
           </button>
           <span className="mathlab-practice__meta">
             {level === "board"
-              ? `${boardYear} pattern · tagged with its source`
+              ? `${boardYear} · real board questions tagged with their year`
               : LEVELS.find((entry) => entry.id === level)?.hint}
           </span>
         </div>

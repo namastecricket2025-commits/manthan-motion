@@ -44,6 +44,10 @@ type AskQuestion = {
   options: string[];
   answerIndex: number;
   explanation?: string;
+  /** "BOARD 2024" when this is a real CBSE past-paper question. */
+  source?: string;
+  /** Full paper reference for the tooltip. */
+  sourceDetail?: string;
 };
 
 type AskResult = {
@@ -122,10 +126,20 @@ function QuestionCard({
   const answered = choice !== undefined;
   return (
     <article className="rounded-xl border border-[var(--card-border)] p-3.5">
-      <p className="text-[12.5px] font-medium leading-relaxed">
-        <span className="mr-1.5 text-text-dim">{index + 1}.</span>
-        {item.question}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 text-[12.5px] font-medium leading-relaxed">
+          <span className="mr-1.5 text-text-dim">{index + 1}.</span>
+          {item.question}
+        </p>
+        {item.source?.startsWith("BOARD") ? (
+          <span
+            className="shrink-0 rounded-full border border-[var(--signal)]/40 px-2 py-0.5 text-[9.5px] font-semibold text-[var(--signal)]"
+            title={item.sourceDetail}
+          >
+            {item.source}
+          </span>
+        ) : null}
+      </div>
       <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
         {item.options.map((option, optionIndex) => {
           const isCorrect = optionIndex === item.answerIndex;
