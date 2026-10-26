@@ -14,6 +14,7 @@ export const LATEX_COMMANDS = new Set(
    pm mp le ge ne neq approx equiv to rightarrow leftarrow leftrightarrow Rightarrow Leftrightarrow
    left right text mathrm mathbf mathit mathsf mathtt mathbb mathcal mathfrak operatorname
    sin cos tan sec csc cot log ln exp lim vec hat bar overline underline begin end quad qquad
+   cong sim propto mid emptyset varnothing nexists leq geq deg subseteq supseteq arg
    ldots dots cdots bmod pmod angle triangle parallel perp circ degree Omega mu lambda sigma phi
    omega rho tau nu xi zeta eta psi chi kappa epsilon varepsilon subset supset in notin cup cap
    forall exists therefore because implies iff vdots ddots matrix pmatrix bmatrix cases aligned

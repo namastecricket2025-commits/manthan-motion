@@ -18,6 +18,7 @@ import {
   type PlanId,
   type PlanTier,
 } from "@/lib/plans";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Check, ChevronDown, Minus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -321,6 +322,7 @@ const COLUMNS: Array<{ id: PlanId; name: string; price: string }> = [
 
 export default function Pricing() {
   const { plan, setPlan } = usePlan();
+  const { isAuthenticated } = useAuth();
   const [duration, setDuration] = useState<DurationId>(DEFAULT_DURATION);
   const [checkout, setCheckout] = useState<PlanTier | null>(null);
 
@@ -369,7 +371,7 @@ export default function Pricing() {
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
               Every account starts free and stays useful — 60,000 tokens a day,
-              three notebooks, every source you add. The tiers raise the ceiling
+              three notebooks, six sources in each. The tiers raise the ceiling
               and open the advanced workspaces. Checkout is a sandbox: nothing is
               charged.
             </p>
@@ -412,18 +414,10 @@ export default function Pricing() {
             })}
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => setPlan("free")}
-              className="text-xs text-text-dim transition-colors hover:text-foreground"
-            >
-              Return this account to the Free plan
-            </button>
-            <span className="text-xs text-text-dim">
-              · currently on {planName(plan)}
-            </span>
-          </div>
+          <p className="mt-8 text-center text-xs text-text-dim">
+            This account is on {planName(plan)}. Switching is instant and
+            reversible from this page.
+          </p>
 
           {/* One table, grouped by workspace: what a student compares is
               "which rooms open", not twelve adjectives. */}
@@ -541,20 +535,12 @@ export default function Pricing() {
                 first five kits of the day are yours either way.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <Link
-                to="/auth?returnTo=%2Fdashboard"
-                className="rounded-full bg-[var(--signal-strong)] px-5 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
-              >
-                Create a free account
-              </Link>
-              <Link
-                to="/dashboard"
-                className="rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:border-[var(--panel-line-strong)]"
-              >
-                Open dashboard
-              </Link>
-            </div>
+            <Link
+              to={isAuthenticated ? "/dashboard" : "/auth?returnTo=%2Fdashboard"}
+              className="shrink-0 rounded-full bg-[var(--signal-strong)] px-5 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+            >
+              {isAuthenticated ? "Open dashboard" : "Start free"}
+            </Link>
           </section>
 
           <TestimonialStrip />
