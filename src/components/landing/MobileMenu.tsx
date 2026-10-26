@@ -124,19 +124,26 @@ export function MobileMenu() {
   ];
 
   return (
-    <div ref={rootRef} className="relative md:hidden">
+    <div ref={rootRef} className="md:hidden">
       <AnimatePresence>
         {open && (
           /* A page behind a menu still scrolls; the panel must be a solid
              surface so its rows never sit on two backgrounds at once. No
              `.glass-chip` here — that class is a translucent pill and its
-             fill was fighting the opaque one below. */
+             fill was fighting the opaque one below.
+
+             The sheet is anchored to the viewport, not to the hamburger.
+             `right-0` on the 40px button put its right edge ~6rem in from the
+             screen edge, so a 19rem panel ran off the left of a phone and cut
+             every row mid-word. `fixed` plus a 1rem gutter keeps it on screen
+             at 320px and up; the header is full-width and pinned to the top,
+             so its backdrop-filter containing block lands in the same place. */
           <motion.div
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh_-_5.5rem)] w-[min(19rem,calc(100vw_-_2rem))] origin-top-right overflow-y-auto overscroll-contain rounded-2xl border border-[var(--panel-line)] bg-[var(--panel)] p-2 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.7)]"
+            className="fixed right-4 top-[4rem] z-50 max-h-[calc(100dvh_-_5.5rem)] w-[min(19rem,calc(100vw_-_2rem))] origin-top-right overflow-y-auto overscroll-contain rounded-2xl border border-[var(--panel-line)] bg-[var(--panel)] p-2 shadow-[0_28px_70px_-24px_rgba(0,0,0,0.7)]"
           >
             {/* The primary action, first and unmistakable. */}
             <div className="p-1.5 pb-2">
