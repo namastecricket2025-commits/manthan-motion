@@ -406,7 +406,7 @@ function boardChapter(spec: {
 /** The rest of the CBSE Class 9 syllabus, in the board's order. */
 const CBSE_9: Chapter[] = [
   boardChapter({
-    name: "Introduction to Euclid's Geometry",
+    name: "Propositions and their Converses",
     focus: "Axioms, postulates and what counts as a proof.",
     formulas: [
       "Things equal to the same thing are equal to one another",
@@ -424,50 +424,7 @@ const CBSE_9: Chapter[] = [
     ],
     example: "Show that two distinct lines cannot have more than one point in common",
     plot: "linear",
-    rule: "Euclid's Axioms",
-  }),
-  boardChapter({
-    name: "Lines and Angles",
-    focus: "Angle pairs on a transversal and the angle sum of a triangle.",
-    formulas: [
-      "Linear pair: a + b = 180°",
-      "Vertically opposite angles are equal",
-      "Angle sum of a triangle = 180°",
-    ],
-    latex: [
-      ["Linear pair", String.raw`\angle a + \angle b = 180^\circ`],
-      ["Vertically opposite", String.raw`\angle 1 = \angle 3`],
-      ["Angle sum", String.raw`\angle A + \angle B + \angle C = 180^\circ`],
-      ["Exterior angle", String.raw`\angle ACD = \angle A + \angle B`],
-    ],
-    method: [
-      "Mark the parallel pair and the transversal first; every relation follows from those two.",
-      "State which pair you used — alternate, corresponding or co-interior — so the reason is visible.",
-    ],
-    example: "Two parallel lines cut by a transversal: one angle is 65°, find the rest",
-    plot: "linear",
-    rule: "Parallel Line Theorems",
-  }),
-  boardChapter({
-    name: "Triangles",
-    focus: "Congruence rules and the inequalities a triangle must obey.",
-    formulas: [
-      "SAS, ASA, SSS and RHS congruence",
-      "Angles opposite equal sides are equal",
-      "Sum of any two sides > the third side",
-    ],
-    latex: [
-      ["Congruence", String.raw`\triangle ABC \cong \triangle PQR`],
-      ["Isosceles base angles", String.raw`AB = AC \;\Rightarrow\; \angle B = \angle C`],
-      ["Triangle inequality", String.raw`AB + BC > AC`],
-    ],
-    method: [
-      "Write the correspondence in the right order — the letters carry the proof.",
-      "Quote the rule (SAS, ASA, SSS, RHS) after the three facts, never before.",
-    ],
-    example: "In triangles ABC and PQR, AB = PQ, BC = QR and ∠B = ∠Q — prove congruence",
-    plot: "linear",
-    rule: "Congruence Criteria",
+    rule: "Propositions and Converses",
   }),
   boardChapter({
     name: "Quadrilaterals",
@@ -491,30 +448,8 @@ const CBSE_9: Chapter[] = [
     rule: "Parallelogram Properties",
   }),
   boardChapter({
-    name: "Circles",
-    focus: "Chords, arcs, cyclic quadrilaterals and the angle in a semicircle.",
-    formulas: [
-      "Angle at the centre = 2 × angle at the circumference",
-      "Angle in a semicircle = 90°",
-      "Opposite angles of a cyclic quadrilateral add to 180°",
-    ],
-    latex: [
-      ["Angle at the centre", String.raw`\angle AOB = 2\angle ACB`],
-      ["Semicircle", String.raw`\angle APB = 90^\circ`],
-      ["Cyclic quadrilateral", String.raw`\angle A + \angle C = 180^\circ`],
-      ["Perpendicular from centre", String.raw`OM \perp AB \;\Rightarrow\; AM = MB`],
-    ],
-    method: [
-      "Join the centre to the points you were given — the radius is the only free construction.",
-      "Look for a diameter before anything else; it hands you a right angle.",
-    ],
-    example: "A chord of length 16 cm is 6 cm from the centre — find the radius",
-    plot: "circle",
-    rule: "Circle Theorems",
-  }),
-  boardChapter({
-    name: "Heron's Formula",
-    focus: "Area of any triangle from its three sides, and the quadrilateral split.",
+    name: "Measuring Space: Perimeter and Area",
+    focus: "Perimeter and area of triangles and quadrilaterals, including Heron's formula.",
     formulas: [
       "s = (a + b + c) / 2",
       "Area = √(s(s − a)(s − b)(s − c))",
@@ -534,7 +469,7 @@ const CBSE_9: Chapter[] = [
     rule: "Heron's Formula",
   }),
   boardChapter({
-    name: "Surface Areas and Volumes",
+    name: "Math of Space: Surface Area and Volume",
     focus: "Right circular cones, spheres and cylinders, and combinations of them.",
     formulas: [
       "CSA of a cone = π r l, where l = √(r² + h²)",
@@ -556,7 +491,7 @@ const CBSE_9: Chapter[] = [
     rule: "Mensuration Formulas",
   }),
   boardChapter({
-    name: "Statistics",
+    name: "How Quantities Combine: Understanding Data",
     focus: "Reading data, and the mean, median and mode of grouped data.",
     formulas: [
       "Mean = Σ fᵢxᵢ / Σ fᵢ",
@@ -575,6 +510,119 @@ const CBSE_9: Chapter[] = [
     example: "Find the mean of the classes 0-10, 10-20, 20-30 with frequencies 4, 6, 10",
     plot: "sequence",
     rule: "Measures of Central Tendency",
+  }),
+  boardChapter({
+    name: "Exploring Algebraic Identities",
+    focus: "The standard identities, and using them to factorise and to compute without a calculator.",
+    formulas: [
+      "(a + b)² = a² + 2ab + b²",
+      "(a − b)² = a² − 2ab + b²",
+      "a² − b² = (a − b)(a + b)",
+      "x² + (a + b)x + ab = (x + a)(x + b)",
+    ],
+    latex: [
+      ["Square of a sum", String.raw`(a+b)^2 = a^2 + 2ab + b^2`],
+      ["Square of a difference", String.raw`(a-b)^2 = a^2 - 2ab + b^2`],
+      ["Difference of squares", String.raw`a^2 - b^2 = (a-b)(a+b)`],
+      ["Splitting the middle term", String.raw`x^2 + (a+b)x + ab = (x+a)(x+b)`],
+    ],
+    method: [
+      "Decide which identity fits the shape of the expression before expanding anything.",
+      "For a numeric square such as 98², write it as (100 − 2)² and use the identity — never multiply longhand.",
+    ],
+    example: "Evaluate 104 × 96 without a calculator",
+    plot: "quadratic",
+    rule: "Algebraic Identities",
+  }),
+  boardChapter({
+    name: "I'm Up and Down, and Round and Round",
+    focus: "Reading graphs that rise, fall and turn, and motion that repeats around a circle.",
+    formulas: [
+      "Turning point of y = ax² + bx + c is at x = −b/2a",
+      "Circumference of a circle = 2πr",
+      "One full turn = 360° = 2π radians",
+      "Arc length = (θ/360°) × 2πr",
+    ],
+    latex: [
+      ["Turning point", String.raw`x = -\frac{b}{2a}`],
+      ["Circumference", String.raw`C = 2\pi r`],
+      ["Arc length", String.raw`s = \frac{\theta}{360^\circ} \times 2\pi r`],
+      ["One full turn", String.raw`360^\circ = 2\pi\ \text{rad}`],
+    ],
+    method: [
+      "Find where the curve stops rising and starts falling — that point is the turning point, not the vertex of the axes.",
+      "For anything that repeats, name the angle first and the radius second; the arc length follows from the two.",
+    ],
+    example: "A wheel of radius 35 cm turns through 90° — how far does a point on the rim travel?",
+    plot: "circle",
+    rule: "Turning Points and Arcs",
+  }),
+  boardChapter({
+    name: "The Mathematics of Maybe: Introduction to Probability",
+    focus: "Chance as a number between 0 and 1, from equally likely outcomes.",
+    formulas: [
+      "P(E) = number of favourable outcomes / total number of outcomes",
+      "0 ≤ P(E) ≤ 1",
+      "P(E) + P(not E) = 1",
+      "Sum of the probabilities of all outcomes = 1",
+    ],
+    latex: [
+      ["Probability of an event", String.raw`P(E) = \frac{n(E)}{n(S)}`],
+      ["Range of probability", String.raw`0 \leq P(E) \leq 1`],
+      ["Complement", String.raw`P(E) + P(\bar{E}) = 1`],
+      ["Sure event", String.raw`P(S) = 1`],
+    ],
+    method: [
+      "Write the sample space out before counting anything — most errors are a missing outcome, not a wrong fraction.",
+      "Use the complement when 'at least one' appears; it is usually one subtraction instead of a long count.",
+    ],
+    example: "Two dice are thrown — find the probability that the sum is 9",
+    plot: "sequence",
+    rule: "Classical Probability",
+  }),
+  boardChapter({
+    name: "Predicting What Comes Next: Exploring Sequences and Progressions",
+    focus: "Patterns built by a constant difference or ratio, and the rule for any term.",
+    formulas: [
+      "Arithmetic: aₙ = a + (n − 1)d",
+      "Arithmetic sum: Sₙ = n/2 [2a + (n − 1)d]",
+      "Geometric: aₙ = a rⁿ⁻¹",
+      "Geometric sum (r ≠ 1): Sₙ = a(rⁿ − 1)/(r − 1)",
+    ],
+    latex: [
+      ["nth term, AP", String.raw`a_n = a + (n-1)d`],
+      ["Sum of n terms, AP", String.raw`S_n = \frac{n}{2}\left[2a + (n-1)d\right]`],
+      ["nth term, GP", String.raw`a_n = a r^{n-1}`],
+      ["Sum of n terms, GP", String.raw`S_n = a\frac{r^n - 1}{r - 1},\ r \neq 1`],
+    ],
+    method: [
+      "Subtract consecutive terms first: a constant answer means arithmetic, a constant ratio means geometric.",
+      "Write the nth-term formula with the numbers you were given, then solve for n rather than listing terms.",
+    ],
+    example: "The 5th term of an AP is 17 and the 9th is 33 — find the first term and the common difference",
+    plot: "sequence",
+    rule: "nth Term of a Progression",
+  }),
+  boardChapter({
+    name: "The World of Algorithms",
+    focus: "Step-by-step procedures: flowcharts, iteration and why an algorithm must terminate.",
+    formulas: [
+      "Sum of the first n natural numbers = n(n + 1)/2",
+      "Euclid's algorithm: HCF(a, b) = HCF(b, a mod b)",
+      "A loop must change its condition variable on every pass, or it never ends",
+    ],
+    latex: [
+      ["Sum 1 to n", String.raw`1 + 2 + \cdots + n = \frac{n(n+1)}{2}`],
+      ["Euclid's algorithm", String.raw`\gcd(a,b) = \gcd(b,\ a \bmod b)`],
+      ["Termination", String.raw`\gcd(a, 0) = a`],
+    ],
+    method: [
+      "Trace the algorithm with a small input on paper before trusting it with a large one.",
+      "For a loop, state the value that changes and the value that ends it — that pair is the whole proof it stops.",
+    ],
+    example: "Use Euclid's algorithm to find the HCF of 252 and 105",
+    plot: "sequence",
+    rule: "Algorithm Trace",
   }),
 ];
 
@@ -801,7 +849,7 @@ export const GRADES: GradeSpec[] = [
     advanced: false,
     chapters: [
       {
-        name: "Rational Numbers",
+        name: "Fractions in Disguise",
         focus: "Operations on fractions and the properties they obey.",
         formulas: [
           "a/b + c/d = (a·d + b·c) / (b·d)",
@@ -824,7 +872,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       {
-        name: "Linear Equations in One Variable",
+        name: "Algebra Play",
         focus: "Isolate the variable, then verify by substitution.",
         formulas: [
           "a x + b = 0 ⇒ x = −b / a",
@@ -847,7 +895,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       boardChapter({
-        name: "Understanding Quadrilaterals",
+        name: "Quadrilaterals",
         focus: "Angle sums of polygons and the properties of a parallelogram.",
         formulas: [
           "Angle sum of an n-gon = (n − 2) × 180°",
@@ -868,7 +916,7 @@ export const GRADES: GradeSpec[] = [
         rule: "Angle Sum Property",
       }),
       boardChapter({
-        name: "Data Handling",
+        name: "Tales by Dots and Lines",
         focus: "Organising data, reading graphs and simple probability.",
         formulas: [
           "Mean = sum of observations / number of observations",
@@ -889,11 +937,13 @@ export const GRADES: GradeSpec[] = [
         rule: "Probability of an Event",
       }),
       {
-        name: "Squares and Square Roots",
-        focus: "Perfect squares, roots and the identities behind quick expansion.",
+        name: "A Square and A Cube",
+        focus: "Perfect squares and cubes, their roots, and the identities behind quick expansion.",
         formulas: [
           "(a + b)² = a² + 2ab + b²",
           "√(a·b) = √a · √b",
+          "∛(a × b) = ∛a × ∛b",
+          "(a + b)³ = a³ + 3a²b + 3ab² + b³",
           "Pythagorean triplet: (2m, m² − 1, m² + 1)",
         ],
         method: [
@@ -912,28 +962,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       boardChapter({
-        name: "Cubes and Cube Roots",
-        focus: "Perfect cubes, prime factorisation and cube roots.",
-        formulas: [
-          "a³ = a × a × a",
-          "∛(a × b) = ∛a × ∛b",
-          "(a + b)³ = a³ + 3a²b + 3ab² + b³",
-        ],
-        latex: [
-          ["Cube", String.raw`a^3 = a \times a \times a`],
-          ["Cube root of a product", String.raw`\sqrt[3]{ab} = \sqrt[3]{a}\,\sqrt[3]{b}`],
-          ["Cube of a sum", String.raw`(a+b)^3 = a^3 + 3a^2b + 3ab^2 + b^3`],
-        ],
-        method: [
-          "Write the number as a product of primes, then group the factors in threes.",
-          "Test a cube root by cubing it back — an exact cube returns the original number.",
-        ],
-        example: "Find the cube root of 13824 by prime factorisation",
-        plot: "sqrt",
-        rule: "Prime Factorisation",
-      }),
-      boardChapter({
-        name: "Comparing Quantities",
+        name: "Proportional Reasoning 2",
         focus: "Percentages, profit and loss, simple and compound interest.",
         formulas: [
           "Profit % = (SP − CP) / CP × 100",
@@ -954,7 +983,7 @@ export const GRADES: GradeSpec[] = [
         rule: "Compound Interest",
       }),
       boardChapter({
-        name: "Algebraic Expressions and Identities",
+        name: "We Distribute, Yet Things Multiply",
         focus: "Terms, like terms and the four standard identities.",
         formulas: [
           "(a + b)² = a² + 2ab + b²",
@@ -976,7 +1005,7 @@ export const GRADES: GradeSpec[] = [
         rule: "Standard Identities",
       }),
       {
-        name: "Mensuration",
+        name: "Area",
         focus: "Areas and volumes of the standard plane and solid figures.",
         formulas: [
           "Area of a trapezium = ½ (a + b) h",
@@ -999,7 +1028,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       boardChapter({
-        name: "Exponents and Powers",
+        name: "Power Play",
         focus: "The laws of exponents and numbers in standard form.",
         formulas: [
           "aᵐ × aⁿ = aᵐ⁺ⁿ",
@@ -1020,7 +1049,7 @@ export const GRADES: GradeSpec[] = [
         rule: "Laws of Exponents",
       }),
       boardChapter({
-        name: "Direct and Inverse Proportions",
+        name: "Proportional Reasoning 1",
         focus: "Two quantities changing together, in the same or opposite direction.",
         formulas: [
           "Direct: y = kx, so x₁/y₁ = x₂/y₂",
@@ -1041,46 +1070,89 @@ export const GRADES: GradeSpec[] = [
         rule: "Proportion",
       }),
       boardChapter({
-        name: "Factorisation",
-        focus: "Common factors, the identities, and dividing one polynomial by another.",
+        name: "A Story of Numbers",
+        focus: "How our numerals and place value grew, and why zero and negative numbers had to be invented.",
         formulas: [
-          "ab + ac = a(b + c)",
-          "a² − b² = (a − b)(a + b)",
-          "x² + (a + b)x + ab = (x + a)(x + b)",
+          "Place value: the 3 in 4357 is 3 × 100",
+          "Expanded form: 4357 = 4 × 1000 + 3 × 100 + 5 × 10 + 7",
+          "a × (b + c) = a × b + a × c — the rule that makes column arithmetic work",
         ],
         latex: [
-          ["Common factor", String.raw`ab + ac = a(b + c)`],
-          ["Difference of squares", String.raw`a^2 - b^2 = (a - b)(a + b)`],
-          ["Splitting the middle term", String.raw`x^2 + (a+b)x + ab = (x + a)(x + b)`],
+          ["Expanded form", String.raw`\overline{abcd} = a\cdot10^3 + b\cdot10^2 + c\cdot10 + d`],
+          ["Distributive law", String.raw`a(b + c) = ab + ac`],
+          ["Subtracting a larger from a smaller", String.raw`3 - 8 = -5`],
         ],
         method: [
-          "Take out the highest common factor before trying any identity.",
-          "For the middle-term split, find two numbers whose product is the constant and whose sum is the coefficient of x.",
+          "Write the number in expanded form before comparing two numbers digit by digit.",
+          "Keep the place-value columns aligned when adding or subtracting; a slipped column is the commonest arithmetic error.",
         ],
-        example: "Factorise x² + 7x + 12",
-        plot: "quadratic",
-        rule: "Common Factor Method",
+        example: "Write 5068 in expanded form and state the place value of 0",
+        plot: "linear",
+        rule: "Place Value",
       }),
       boardChapter({
-        name: "Introduction to Graphs",
-        focus: "Plotting points and reading a line graph.",
+        name: "Number Play",
+        focus: "Divisibility, parity, digit puzzles and the patterns that make arithmetic quicker.",
         formulas: [
-          "A point is written as (x, y) — x along the horizontal axis, y along the vertical",
-          "A linear graph is a straight line, y = mx + c",
-          "On a distance–time graph, the slope is the speed",
+          "Divisible by 3 ⇔ the digit sum is divisible by 3",
+          "Divisible by 9 ⇔ the digit sum is divisible by 9",
+          "Divisible by 11 ⇔ the alternating digit sum is divisible by 11",
+          "Sum of the first n odd numbers = n²",
         ],
         latex: [
-          ["A point", String.raw`P = (x,\ y)`],
-          ["A straight line", String.raw`y = mx + c`],
-          ["Slope as speed", String.raw`\text{speed} = \frac{\Delta d}{\Delta t}`],
+          ["Divisibility by 3", String.raw`3 \mid n \iff 3 \mid \text{(digit sum of } n\text{)}`],
+          ["Divisibility by 11", String.raw`11 \mid n \iff 11 \mid (d_1 - d_2 + d_3 - \cdots)`],
+          ["Sum of odd numbers", String.raw`1 + 3 + 5 + \cdots + (2n-1) = n^2`],
         ],
         method: [
-          "Fix the scale and label both axes with their units before plotting anything.",
-          "Read a value off the graph by going up from the x-axis to the line, then across to the y-axis.",
+          "Test the smallest primes first; once 2, 3 and 5 fail, you rarely need the larger ones for a school problem.",
+          "For a digit puzzle, write the number in place-value form and use the divisibility rule as an equation.",
         ],
-        example: "Plot the temperature at each hour and read it at noon",
-        plot: "linear",
-        rule: "Coordinate Axes",
+        example: "Find the smallest digit that makes 74_2 divisible by 3",
+        plot: "sequence",
+        rule: "Divisibility Rules",
+      }),
+      boardChapter({
+        name: "The Baudhayana-Pythagoras Theorem",
+        focus: "The right-triangle relation, its converse, and the triples it generates.",
+        formulas: [
+          "(hypotenuse)² = (base)² + (height)²",
+          "Converse: if a² + b² = c², the triangle is right-angled at the side c faces",
+          "Triples: (3, 4, 5), (5, 12, 13), (8, 15, 17), (7, 24, 25)",
+        ],
+        latex: [
+          ["Pythagoras", String.raw`c^2 = a^2 + b^2`],
+          ["Finding a side", String.raw`b = \sqrt{c^2 - a^2}`],
+          ["Generating triples", String.raw`(2m,\ m^2 - 1,\ m^2 + 1)`],
+        ],
+        method: [
+          "Name the hypotenuse first — it is always the side opposite the right angle, and always the longest.",
+          "Leave the square root in exact form until the final step; rounding early changes which triple you appear to have.",
+        ],
+        example: "A ladder 13 m long rests 5 m from a wall — how high does it reach?",
+        plot: "sqrt",
+        rule: "Pythagorean Theorem",
+      }),
+      boardChapter({
+        name: "Exploring Some Geometric Themes",
+        focus: "Symmetry, tessellation and the constructions that hold a figure together.",
+        formulas: [
+          "A regular polygon has n lines of symmetry and rotational symmetry of order n",
+          "Angles at a point add to 360°",
+          "A tessellation covers the plane with no gaps and no overlaps",
+        ],
+        latex: [
+          ["Symmetry order", String.raw`\text{order} = \frac{360^\circ}{\text{angle of rotation}}`],
+          ["Angles at a point", String.raw`\theta_1 + \theta_2 + \cdots + \theta_n = 360^\circ`],
+          ["Tessellation", String.raw`\text{sum of angles at a vertex} = 360^\circ`],
+        ],
+        method: [
+          "Fold the figure to test reflection symmetry, then turn it to test rotation — they are different questions.",
+          "For a tessellation, check the angles meeting at one point before drawing a single tile.",
+        ],
+        example: "How many lines of symmetry does a regular hexagon have?",
+        plot: "circle",
+        rule: "Symmetry",
       }),
     ],
     models: [
@@ -1101,7 +1173,7 @@ export const GRADES: GradeSpec[] = [
     advanced: false,
     chapters: [
       {
-        name: "Number Systems",
+        name: "The World of Numbers",
         focus: "Rational and irrational numbers, and rationalising denominators.",
         formulas: [
           "(√a + √b)(√a − √b) = a − b",
@@ -1123,7 +1195,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       {
-        name: "Polynomials",
+        name: "Introduction to Linear Polynomials",
         focus: "Remainder and factor theorems, and the algebraic identities.",
         formulas: [
           "Remainder theorem: p(x) ÷ (x − a) leaves p(a)",
@@ -1146,7 +1218,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       {
-        name: "Linear Equations in Two Variables",
+        name: "Two Variables, One Line",
         focus: "Straight lines as equations, and how many solutions they admit.",
         formulas: [
           "a x + b y + c = 0",
@@ -1168,7 +1240,7 @@ export const GRADES: GradeSpec[] = [
         ],
       },
       {
-        name: "Coordinate Geometry",
+        name: "Orienting Yourself: The Use of Coordinates",
         focus: "Plotting points and reading the Cartesian plane.",
         formulas: [
           "Distance = √((x₂ − x₁)² + (y₂ − y₁)²)",

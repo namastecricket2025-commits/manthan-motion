@@ -76,23 +76,33 @@
 
 /* ------------------------------- the panel ------------------------------- */
 
+/* The panel is a quiet sheet of paper, not a Google-branded widget: neutral
+   hairlines, generous corners, one accent — the mark itself. Colour on the
+   amber action of every other surface would make a search feel like a
+   promotion. */
 .gs-panel {
-  /* Soft-cornered rectangle: wider than the shadcn default so a result list
-     reads as a page, not as a card. Unlayered, so it wins over the utility
-     classes the dialog carries. */
   display: flex;
   flex-direction: column;
-  border-radius: 22px;
-  max-width: min(540px, calc(100vw - 28px));
+  border-radius: 26px;
+  max-width: min(560px, calc(100vw - 28px));
   /* A fixed frame, not a stack that grows with the results: the query stays at
      the top, the follow-up field stays at the bottom, and only the middle
      scrolls — the same shape whether there are two sources or eight. */
-  height: min(82dvh, 640px);
-  padding: 14px 16px 0;
+  height: min(80dvh, 620px);
+  padding: 16px 18px 0;
   overflow: hidden;
-  gap: 10px;
-  border-color: var(--card-border, rgba(127, 127, 127, 0.2));
-  box-shadow: 0 34px 84px -48px rgba(0, 0, 0, 0.82);
+  gap: 12px;
+  border: 1px solid var(--panel-line, rgba(127, 127, 127, 0.18));
+  background: var(--panel, var(--card));
+  box-shadow: 0 40px 90px -54px rgba(0, 0, 0, 0.7);
+}
+
+@media (max-width: 480px) {
+  .gs-panel {
+    height: min(86dvh, 640px);
+    padding: 14px 14px 0;
+    border-radius: 22px;
+  }
 }
 
 /* The scrolling middle: answer, conversation, sources. */
@@ -140,16 +150,21 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border-top: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
-  padding: 9px 1px 11px;
+  border-top: 1px solid var(--glass-line, rgba(127, 127, 127, 0.2));
+  padding: 10px 1px 12px;
+  min-width: 0;
 }
 
 .gs-foot__brand {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-dim, #8b8b8b);
 }
 
@@ -177,17 +192,41 @@
 .gs-field {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
-  padding: 6px 6px 6px 13px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--text-main, currentColor) 3.5%, transparent);
+  padding: 5px 5px 5px 10px;
   color: var(--text-dim, #8b8b8b);
   transition: border-color 180ms var(--ease-momentum, ease);
 }
 
+/* Focus is a hairline that firms up, not a coloured ring. */
 .gs-field:focus-within {
-  border-color: color-mix(in srgb, var(--signal, #de9c0d) 52%, transparent);
+  border-color: color-mix(in srgb, var(--text-main, currentColor) 26%, transparent);
+}
+
+.gs-field__mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  transition: background-color 160ms ease;
+}
+
+.gs-field__mark:hover {
+  background: color-mix(in srgb, var(--text-main, currentColor) 7%, transparent);
+}
+
+.gs-field__mark img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  user-select: none;
 }
 
 .gs-field input {
@@ -209,17 +248,18 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 6px;
-  border-radius: 10px;
-  background: var(--signal-strong, #111);
-  color: var(--primary-foreground, #fff);
-  padding: 7px 14px;
+  border-radius: 9px;
+  background: var(--text-main, #111);
+  color: var(--panel, #fff);
+  padding: 8px 14px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .gs-submit:disabled {
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
 .gs-submit:not(:disabled):active {
@@ -264,11 +304,11 @@
 .gs-answer {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
+  gap: 6px;
+  border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.24));
   border-radius: 14px;
-  background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
-  padding: 11px 13px;
+  background: color-mix(in srgb, var(--text-main, currentColor) 3.5%, transparent);
+  padding: 13px 14px;
 }
 
 .gs-answer__label {
@@ -322,8 +362,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border-left: 2px solid color-mix(in srgb, var(--signal, #de9c0d) 42%, transparent);
-  padding-left: 10px;
+  border-left: 2px solid color-mix(in srgb, var(--text-main, currentColor) 16%, transparent);
+  padding-left: 11px;
 }
 
 .gs-turn__q {
@@ -360,14 +400,14 @@
   align-items: center;
   gap: 6px;
   border: 1px solid var(--glass-line, rgba(127, 127, 127, 0.25));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-main, currentColor) 4%, transparent);
-  padding: 4px 4px 4px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text-main, currentColor) 3.5%, transparent);
+  padding: 4px 4px 4px 13px;
   transition: border-color 180ms var(--ease-momentum, ease);
 }
 
 .gs-follow:focus-within {
-  border-color: color-mix(in srgb, var(--signal, #de9c0d) 52%, transparent);
+  border-color: color-mix(in srgb, var(--text-main, currentColor) 26%, transparent);
 }
 
 .gs-follow input {
@@ -389,11 +429,11 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 27px;
-  height: 27px;
-  border-radius: 999px;
-  background: var(--signal-strong, #111);
-  color: var(--primary-foreground, #fff);
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--text-main, #111);
+  color: var(--panel, #fff);
   transition: opacity 160ms ease, transform 160ms ease;
 }
 
@@ -438,11 +478,11 @@
 
 .gs-hit {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 11px;
   border: 1px solid transparent;
   border-radius: 11px;
-  padding: 7px 9px;
+  padding: 9px 10px;
   text-decoration: none;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
@@ -484,6 +524,11 @@
 }
 
 .gs-hit__snip {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 2px;
   font-size: 11.5px;
   line-height: 1.55;
   color: var(--text-dim, #8b8b8b);

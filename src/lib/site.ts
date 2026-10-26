@@ -24,6 +24,27 @@ export function supportMailto(subject?: string, body?: string): string {
 }
 
 /**
+ * The same message, in Gmail's compose window.
+ *
+ * `mailto:` only works when the device has a mail app registered — on a phone
+ * or a Chromebook whose owner reads Gmail in the browser it does nothing at
+ * all, which is what made "Open mail" feel broken. Gmail's compose deep link
+ * takes the recipient, subject and body as query parameters, so the student
+ * lands in "New message" with everything filled in but the words they want to
+ * write.
+ */
+export function gmailComposeUrl(subject?: string, body?: string): string {
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to: SUPPORT_EMAIL,
+  });
+  if (subject) params.set("su", subject);
+  if (body) params.set("body", body);
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
+/**
  * What a click on a contact link does.
  *
  * A bare `mailto:` silently does nothing on machines with no mail client and
@@ -33,7 +54,9 @@ export function supportMailto(subject?: string, body?: string): string {
  */
 export function supportClick(subject?: string) {
   return () => {
-    const detail = subject ? `${SUPPORT_EMAIL} — subject “${subject}”` : SUPPORT_EMAIL;
+    const detail = subject
+      ? `${SUPPORT_EMAIL} — subject “${subject}”`
+      : SUPPORT_EMAIL;
     const copied = navigator.clipboard?.writeText(SUPPORT_EMAIL);
     if (copied && typeof copied.then === "function") {
       copied.then(

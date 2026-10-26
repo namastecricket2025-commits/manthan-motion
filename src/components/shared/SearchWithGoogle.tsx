@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { AlertCircle, ArrowUp, ArrowUpRight, Loader2, Search } from "lucide-react";
+import { AlertCircle, ArrowUp, ArrowUpRight, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -205,25 +205,6 @@ export function SearchWithGoogle({
           Type a question and press Search. Results open in a new tab.
         </DialogDescription>
 
-        {/* The Google mark in the panel's top-left corner, and nothing else:
-            it is a link out, so the panel needs no copy explaining itself. */}
-        <a
-          className="gs-corner"
-          href={googleUrl}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Open these results on Google"
-          title="Open on Google"
-        >
-          <img
-            src="/google-g.png"
-            alt="Google"
-            width={20}
-            height={20}
-            draggable={false}
-          />
-        </a>
-
         <form
           className="gs-field"
           onSubmit={(event) => {
@@ -231,7 +212,25 @@ export function SearchWithGoogle({
             void run(query);
           }}
         >
-          <Search className="h-4 w-4 shrink-0" aria-hidden />
+          {/* The mark leads the field and doubles as the way out to Google.
+              One row instead of a floating badge above the search, so the
+              first thing on the panel is the thing you can type into. */}
+          <a
+            className="gs-field__mark"
+            href={googleUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open this search on Google"
+            title="Open on Google"
+          >
+            <img
+              src="/google-g.png"
+              alt="Google"
+              width={16}
+              height={16}
+              draggable={false}
+            />
+          </a>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -347,6 +346,11 @@ export function SearchWithGoogle({
                           {hostOf(result.url)}
                         </span>
                         <span className="gs-hit__title">{result.title}</span>
+                        {result.snippet ? (
+                          <span className="gs-hit__snip">
+                            {result.snippet.slice(0, 140)}
+                          </span>
+                        ) : null}
                       </span>
                     </a>
                   </li>
@@ -393,18 +397,10 @@ export function SearchWithGoogle({
 
         <div className="gs-foot">
           <span className="gs-foot__brand">
-            <img
-              src="/google-g.png"
-              alt=""
-              width={12}
-              height={12}
-              draggable={false}
-              aria-hidden
-            />
-            Google
+            Results from Google · open a source in a new tab
           </span>
           <a className="gs-foot__link" href={googleUrl} target="_blank" rel="noreferrer">
-            Open this search
+            Open
             <ArrowUpRight className="h-3 w-3" aria-hidden />
           </a>
         </div>

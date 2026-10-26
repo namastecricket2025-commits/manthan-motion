@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Explanation } from "@/components/mathlab/parts";
 import { MathTex } from "@/components/mathlab/latex";
+import { enhancePhotoToFile } from "@/lib/enhance-photo";
 import type { EngineStep } from "@/components/mathlab/solution";
 
 /**
@@ -84,16 +85,19 @@ export function CheckMyWork({
       setError(null);
       setBusy(true);
       try {
+        // The page is sharpened before it is uploaded: marking working from a
+        // soft photo reads a 3 as an 8 and fails the student for the camera.
+        const upload = await enhancePhotoToFile(file);
         const url = await generateUploadUrl();
         const response = await fetch(url, {
           method: "POST",
-          headers: { "content-type": file.type || "application/octet-stream" },
-          body: file,
+          headers: { "content-type": upload.type || "application/octet-stream" },
+          body: upload,
         });
         if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
         const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
-        setPendingPhoto({ storageId, name: file.name, mime: file.type });
-        setPhotoName(file.name);
+        setPendingPhoto({ storageId, name: upload.name, mime: upload.type });
+        setPhotoName(upload.name);
       } catch {
         setError("That photo did not reach the tutor. Type your working instead.");
       } finally {

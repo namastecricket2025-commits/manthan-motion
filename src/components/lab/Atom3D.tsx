@@ -8,6 +8,8 @@ interface Atom3DProps {
   shells: number[];
   symbol: string;
   orbitals: boolean;
+  /** Small read-only-ish frame for a side panel: no hint chip, tighter box. */
+  compact?: boolean;
 }
 
 const MAX_RINGS = 7;
@@ -33,7 +35,7 @@ function makeGlowTexture(): THREE.CanvasTexture {
  * glow sprites on tilted orbital rings; the quantum-orbital toggle overlays
  * translucent s-spheres and p-dumbbell probability clouds.
  */
-export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
+export default function Atom3D({ z, shells, symbol, orbitals, compact = false }: Atom3DProps) {
   const { ref, size } = useCanvasSize<HTMLCanvasElement>();
   const vp = useViewport();
   const ren = useRef<THREE.WebGLRenderer | null>(null);
@@ -340,7 +342,12 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
     /* Square, centred and never clipped: a fixed-height strip cut the
        orbital rings off at the left/right edges, so the canvas keeps a
        1/1 aspect ratio and the wrapper explicitly allows overflow. */
-    <div className="relative mx-auto w-full max-w-[430px] overflow-visible">
+    <div
+      className={
+        "relative mx-auto w-full overflow-visible " +
+        (compact ? "max-w-[190px]" : "max-w-[430px]")
+      }
+    >
       <canvas
         ref={ref}
         className="aspect-square w-full cursor-grab touch-none overflow-visible rounded-2xl bg-[radial-gradient(circle_at_50%_40%,#16233b_0%,#0b1120_75%)] ring-1 ring-white/5 active:cursor-grabbing"
@@ -350,9 +357,11 @@ export default function Atom3D({ z, shells, symbol, orbitals }: Atom3DProps) {
         onPointerCancel={endPointer}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[9px] tracking-wide text-slate-400">
-        {symbol} · Z = {z} · DRAG rotate · SCROLL zoom · RIGHT-DRAG pan
-      </span>
+      {compact ? null : (
+        <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 text-[9px] tracking-wide text-slate-400">
+          {symbol} · Z = {z} · DRAG rotate · SCROLL zoom · RIGHT-DRAG pan
+        </span>
+      )}
     </div>
   );
 }

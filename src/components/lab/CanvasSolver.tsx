@@ -3,6 +3,7 @@ import { useAction } from "convex/react";
 import { AlertTriangle, Loader2, RotateCcw, ScanSearch, Upload } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { enhancePhoto } from "@/lib/enhance-photo";
 
 /**
  * AI Canvas Solver.
@@ -107,40 +108,23 @@ function readableSize(bytes: number) {
 async function prepareImage(
   file: File,
 ): Promise<{ dataUrl: string; base64: string; mimeType: string; width: number; height: number }> {
-  const bitmapUrl = URL.createObjectURL(file);
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const element = new Image();
-      element.onload = () => resolve(element);
-      element.onerror = () => reject(new Error("That image could not be opened."));
-      element.src = bitmapUrl;
-    });
-
-    const maxEdge = 1400;
-    const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
-    const width = Math.max(1, Math.round(image.width * scale));
-    const height = Math.max(1, Math.round(image.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("This browser cannot prepare the image.");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(image, 0, 0, width, height);
-
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.86);
-    return {
-      dataUrl,
-      base64: dataUrl.split(",")[1] ?? "",
-      mimeType: "image/jpeg",
-      width,
-      height,
-    };
-  } finally {
-    URL.revokeObjectURL(bitmapUrl);
-  }
+  /* Same clean-up as the Math Lab's photo path: a screenshot of a PDF page is
+     often soft and small, and the reader must not confuse a 3 with an 8. */
+  const prepared = await enhancePhoto(file);
+  const dataUrl = `data:${prepared.mimeType};base64,${prepared.base64}`;
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("That image could not be opened."));
+    element.src = dataUrl;
+  });
+  return {
+    dataUrl,
+    base64: prepared.base64,
+    mimeType: prepared.mimeType,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+  };
 }
 
 export function CanvasSolver() {

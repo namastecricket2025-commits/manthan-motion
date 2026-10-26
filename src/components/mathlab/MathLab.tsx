@@ -64,6 +64,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
+import { enhancePhoto } from "@/lib/enhance-photo";
 
 type CurriculumTrack = "CBSE" | "ICSE" | "IB" | "IGCSE";
 
@@ -355,6 +356,9 @@ export function MathLab() {
   const [detail, setDetail] = useState<"simple" | "detailed">("simple");
   const [solving, setSolving] = useState(false);
   const [engineError, setEngineError] = useState<string | null>(null);
+  /* A one-line receipt for a photo that was cleaned up before reading, so the
+     student knows the picture they took was improved rather than replaced. */
+  const [photoNote, setPhotoNote] = useState<string | null>(null);
   const [turns, setTurns] = useState<EngineTurn[]>([]);
   const [followUp, setFollowUp] = useState("");
   const [listening, setListening] = useState(false);
@@ -541,6 +545,7 @@ export function MathLab() {
     hush();
     setSolving(true);
     setEngineError(null);
+    setPhotoNote(null);
     setSolution(null);
     try {
       /* A photograph goes to the solver as an image, not as text extracted by
@@ -549,20 +554,24 @@ export function MathLab() {
          transcription read as `csc` was then solved as a different problem.
          With the image in hand, the reading rules in the system prompt have
          something to apply to. */
-      if (file.type.startsWith("image/") && file.size <= 3_600_000) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = typeof reader.result === "string" ? reader.result : "";
-            const comma = result.indexOf(",");
-            resolve(comma >= 0 ? result.slice(comma + 1) : "");
-          };
-          reader.onerror = () => reject(new Error("That photo could not be read. Try another one."));
-          reader.readAsDataURL(file);
-        });
-        if (base64) {
+      /* Images are cleaned before they are sent: a soft phone photo of a
+         printed question is upscaled, contrast-normalised and unsharp-masked,
+         which is what stops a `3` being read as an `8` and solved as another
+         problem. Sharp, large photos are passed through byte-for-byte. */
+      if (file.type.startsWith("image/") && file.size <= 12_000_000) {
+        const prepared = await enhancePhoto(file);
+        if (prepared.base64) {
+          setPhotoNote(
+            prepared.enhanced
+              ? "Photo straightened and sharpened before reading."
+              : "Photo read at full quality.",
+          );
           await askEngine({
-            image: { base64, mimeType: file.type, name: file.name },
+            image: {
+              base64: prepared.base64,
+              mimeType: prepared.mimeType,
+              name: prepared.name,
+            },
           });
           return;
         }
@@ -809,6 +818,9 @@ export function MathLab() {
                 }}
               />
               {engineError && <p className="mathlab-error">{engineError}</p>}
+              {!engineError && photoNote ? (
+                <p className="mathlab-photo-note">{photoNote}</p>
+              ) : null}
 
               {!solution && !solving ? (
                 <div className="mathlab-examples">

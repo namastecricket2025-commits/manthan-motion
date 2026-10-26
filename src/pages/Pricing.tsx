@@ -141,7 +141,9 @@ function PlanCard({
           </p>
         </div>
         {featured ? (
-          <span className="premium-chip shrink-0">Most popular</span>
+          <span className="premium-chip premium-chip--featured shrink-0">
+            Most popular
+          </span>
         ) : current ? (
           <span className="premium-chip shrink-0">Current</span>
         ) : null}

@@ -79,6 +79,65 @@
   color: var(--text-dim);
 }
 
+/* The featured badge carries a slow travelling light around its rim — a conic
+   sweep clipped to the pill by an inner mask, so the colour runs along the
+   edge as a line rather than filling the chip. Three accents (signal, ember,
+   cyan) so the movement reads at a glance without turning the badge into a
+   rainbow. Rotation is the only thing animating, so it costs one compositor
+   layer. */
+.premium-chip--featured {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: transparent;
+  padding: 4px 11px;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.premium-chip--featured::before {
+  content: "";
+  position: absolute;
+  inset: -160%;
+  z-index: -2;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 218deg,
+    color-mix(in srgb, var(--signal) 85%, transparent) 268deg,
+    #ff8a3d 300deg,
+    #4cc9f0 330deg,
+    transparent 356deg
+  );
+  animation: premium-chip-spin 3.6s linear infinite;
+}
+
+.premium-chip--featured::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--panel) 94%, var(--text-main));
+}
+
+@keyframes premium-chip-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-chip--featured::before {
+    animation: none;
+    background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--signal) 85%, transparent),
+      #ff8a3d,
+      #4cc9f0
+    );
+  }
+}
+
 .premium-divider {
   height: 1px;
   background: var(--glass-line);
@@ -657,6 +716,12 @@ html:not(.dark) .lock-veil {
   font-size: 12px;
   line-height: 1.5;
   color: var(--destructive);
+}
+.mathlab-photo-note {
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
 }
 .mathlab-hint {
   font-size: 12.5px;

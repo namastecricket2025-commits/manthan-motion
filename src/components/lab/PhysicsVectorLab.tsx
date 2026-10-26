@@ -1,5 +1,7 @@
 import { AMBER, CYAN, MINT, Picker, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
 import DynamicsBench from "@/components/lab/DynamicsBench";
+import OpticsPractical from "@/components/lab/physics/OpticsPractical";
+import PendulumBench from "@/components/lab/physics/PendulumBench";
 import { CircuitsBench } from "@/components/lab/CircuitDiagram";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
@@ -26,6 +28,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
  *   Waves     two streams with their own shape, amplitude, frequency and phase,
  *             plus the sum they make. Where they agree the sum doubles, where
  *             they disagree it flattens — the envelope beats at 1/|f₂ − f₁|.
+ *   Optics    the thin-lens practical: object distance and focal length are
+ *             sliders, and the three construction rays, the image position,
+ *             its size and its nature are computed from 1/v − 1/u = 1/f.
+ *   Pendulum  the simple-pendulum practical, integrated from θ̈ = −(g/L) sin θ
+ *             so the measured period can disagree with 2π√(L/g) at large
+ *             amplitude — and g can be swapped for the Moon or Jupiter.
  *
  * Every drawing is vector geometry and every number on screen comes out of the
  * same equations the drawing uses. The bench carries the same light/dark switch
@@ -37,13 +45,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 /* Accents, ink and the shared bench atoms come from `bench-atoms` so the
    Dynamics bench (its own file) draws with exactly the same vocabulary. */
 
-type Bench = "circuits" | "motion" | "dynamics" | "waves";
+type Bench = "circuits" | "motion" | "dynamics" | "waves" | "optics" | "pendulum";
 
 const BENCHES: { id: Bench; label: string }[] = [
   { id: "circuits", label: "Circuits" },
   { id: "motion", label: "Motion" },
   { id: "dynamics", label: "Dynamics" },
   { id: "waves", label: "Waves" },
+  { id: "optics", label: "Optics" },
+  { id: "pendulum", label: "Pendulum" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -1799,6 +1809,8 @@ export function PhysicsVectorLab() {
           {bench === "motion" && <MotionSandbox />}
           {bench === "dynamics" && <DynamicsBench />}
           {bench === "waves" && <WaveBench />}
+          {bench === "optics" && <OpticsPractical />}
+          {bench === "pendulum" && <PendulumBench />}
         </motion.div>
       </AnimatePresence>
     </div>

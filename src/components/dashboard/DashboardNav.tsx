@@ -3,6 +3,7 @@ import { useSpringTransition } from "@/lib/motion";
 import { useMutation, useQuery } from "convex/react";
 import {
   Check,
+  ChevronDown,
   ClipboardCheck,
   FlaskConical,
   Info,
@@ -127,6 +128,14 @@ export function SidebarCollapseButton({
  * `/dashboard` to it via `?notebook=`, and the inline "+ New notebook" row
  * creates and opens one without leaving the sidebar.
  *
+ * The list is folded away by default. A rail that is always nine rows plus
+ * every notebook the student owns turns into a wall of small buttons; one
+ * Notebooks row that opens its own drawer keeps the eight destinations
+ * readable and lets the panel below it slide down when the list opens. The
+ * drawer opens on the Notebooks click and stays open while a notebook is in
+ * scope, so the current notebook is never hidden by a fold the student did not
+ * make.
+ *
  * Every entry is a state shift, so every entry moves on the shared spring: the
  * row leans toward the pointer and gives slightly under the press, and the
  * active rail lights up where you are.
@@ -148,11 +157,13 @@ export function DashboardNav({
   const transition = useSpringTransition();
 
   const activeNotebookId = searchParams.get("notebook");
+  const [openList, setOpenList] = useState(Boolean(searchParams.get("notebook")));
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
 
   const notebooksActive = active === "notebooks" || Boolean(activeNotebookId);
+  const listOpen = openList || adding;
 
   async function submitNotebook() {
     const name = draft.trim();
@@ -184,8 +195,19 @@ export function DashboardNav({
               type="button"
               aria-current={isActive ? "page" : undefined}
               aria-label={item.label}
+              aria-expanded={
+                item.key === "notebooks" && !collapsed ? listOpen : undefined
+              }
               title={collapsed ? item.label : undefined}
-              onClick={() => onSelect(item.key)}
+              onClick={() => {
+                // One click always does the thing the row says: open Notebooks.
+                // The chevron is the drawer — a click on the open list folds it
+                // away again without a second destination change.
+                if (item.key === "notebooks" && !collapsed) {
+                  setOpenList((value) => !value);
+                }
+                onSelect(item.key);
+              }}
               className={
                 "group relative flex w-full touch-manipulation items-center rounded-xl border text-left text-sm font-medium transition-colors " +
                 (collapsed
@@ -213,14 +235,34 @@ export function DashboardNav({
                 }
               />
               {collapsed ? null : (
-                <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                <span className="flex-1 transition-transform duration-200 group-hover:translate-x-0.5">
                   {item.label}
                 </span>
               )}
+              {item.key === "notebooks" && !collapsed ? (
+                <motion.span
+                  aria-hidden
+                  className="shrink-0 text-text-dim"
+                  initial={false}
+                  animate={{ rotate: listOpen ? 180 : 0 }}
+                  transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </motion.span>
+              ) : null}
             </motion.button>
 
             {/* The notebooks themselves, nested under the section entry. */}
-            {item.key === "notebooks" && !collapsed && (
+            <AnimatePresence initial={false}>
+              {item.key === "notebooks" && !collapsed && listOpen && (
+              <motion.div
+                key="notebook-list"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.26, ease: [0.25, 1, 0.5, 1] }}
+                className="overflow-hidden"
+              >
               <div className="ml-4 flex flex-col gap-0.5 border-l border-[var(--card-border)] pl-3">
                 {notebooks === undefined && (
                   <span className="px-2.5 py-1.5 text-xs text-text-dim">
@@ -307,7 +349,9 @@ export function DashboardNav({
                   )}
                 </AnimatePresence>
               </div>
-            )}
+              </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}

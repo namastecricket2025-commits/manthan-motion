@@ -10,6 +10,7 @@ import {
   type Category,
   type ElementData,
 } from "@/components/lab/periodic-data";
+import Atom3D from "@/components/lab/Atom3D";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
@@ -239,6 +240,231 @@ function BohrDiagram({
           </motion.g>
         );
       })}
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------
+   The other three atomic models.
+
+   A tab called "Atomic Models" that shows one model is a picture, not a
+   lesson: the structure on screen has to change when the model does, or the
+   switcher is decoration. Each drawing is the same element seen through a
+   different experiment —
+
+     Bohr        quantised shells, electrons orbiting on fixed rings
+     Rutherford  the scattering result: most alpha particles pass straight
+                 through, a few bend hard, one comes back
+     Quantum     no path at all: probability density around the nucleus
+     Lewis       only the valence electrons, as dots on four sides
+   ------------------------------------------------------------ */
+
+type AtomModel = "bohr" | "rutherford" | "quantum" | "lewis";
+
+const ATOM_MODELS: Array<{ id: AtomModel; label: string; note: string }> = [
+  {
+    id: "bohr",
+    label: "Bohr",
+    note: "Electrons travel in fixed shells. Each ring is one principal quantum number n, and the count per shell is the ground-state configuration.",
+  },
+  {
+    id: "rutherford",
+    label: "Rutherford",
+    note: "The gold-foil result: most alpha particles pass straight through empty space, a few are deflected, and a rare one bounces back off the dense nucleus.",
+  },
+  {
+    id: "quantum",
+    label: "Quantum",
+    note: "An electron has no path here — the dots are probability density. Denser regions are where the electron is more likely to be found.",
+  },
+  {
+    id: "lewis",
+    label: "Lewis",
+    note: "Only the valence shell is drawn. The dots are the electrons available for bonding, arranged in pairs on four sides of the symbol.",
+  },
+];
+
+/** Deterministic pseudo-random: the cloud must not reshuffle on every render. */
+function seeded(seed: number) {
+  let state = seed % 2147483647;
+  if (state <= 0) state += 2147483646;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
+function RutherfordDiagram({
+  size,
+  color,
+}: {
+  size: number;
+  color: string;
+}) {
+  const c = size / 2;
+  const transition = useSpringTransition();
+  /* Three families of track: straight through, bent, and the one that comes
+     back. The angles are drawn, not simulated — the point is the shape. */
+  const tracks = [
+    { y: -0.62, bend: 0.02, out: 0.6 },
+    { y: -0.34, bend: 0.08, out: 0.42 },
+    { y: -0.1, bend: 0.42, out: -0.2 },
+    { y: 0.18, bend: -0.5, out: 0.34 },
+    { y: 0.46, bend: -0.1, out: 0.52 },
+    { y: 0.7, bend: 0.03, out: 0.66 },
+  ];
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full" role="img" aria-label="Rutherford scattering diagram">
+      <circle cx={c} cy={c} r={c - 2} fill="none" stroke="rgba(128,128,128,0.12)" />
+      {tracks.map((track, index) => {
+        const startY = c + track.y * c * 0.8;
+        const endY = c + (track.y + track.out) * c * 0.5;
+        const controlY = c + (track.y - track.bend) * c * 1.5;
+        return (
+          <motion.path
+            key={index}
+            d={`M 4 ${startY} Q ${c * 0.55} ${controlY} ${c} ${c} T ${size - 4} ${endY}`}
+            fill="none"
+            stroke={index === 2 || index === 3 ? color : "rgba(148,163,184,0.55)"}
+            strokeWidth={index === 2 || index === 3 ? 1.6 : 1.1}
+            strokeDasharray="4 6"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ ...transition, delay: index * 0.08 }}
+          />
+        );
+      })}
+      {/* the nucleus: 1/10000 of the atom, drawn honestly large so it is visible */}
+      <circle cx={c} cy={c} r={size * 0.035} fill={tint(color, "66")} stroke={tint(color, "ee")} strokeWidth={1.2} />
+      <circle cx={c} cy={c} r={size * 0.012} fill={tint(color, "ff")} />
+      <text x={c} y={c + size * 0.14} fontSize={size * 0.032} fill="var(--lab-ink-micro)" textAnchor="middle">
+        dense nucleus
+      </text>
+    </svg>
+  );
+}
+
+function QuantumDiagram({
+  size,
+  color,
+  z,
+}: {
+  size: number;
+  color: string;
+  z: number;
+}) {
+  const c = size / 2;
+  const rand = seeded(z * 97 + 13);
+  const inner = Array.from({ length: 90 }, () => {
+    const r = Math.pow(rand(), 0.55) * size * 0.16;
+    const theta = rand() * Math.PI * 2;
+    return { x: c + Math.cos(theta) * r, y: c + Math.sin(theta) * r };
+  });
+  const lobes = Array.from({ length: 3 }, (_, axis) =>
+    Array.from({ length: 54 }, () => {
+      const t = rand() * Math.PI * 2;
+      const u = (rand() - 0.5) * 2;
+      const spread = size * 0.2;
+      const major = Math.cos(t) * spread * 1.55 * Math.sign(axis % 2 === 0 ? 1 : -1);
+      return {
+        x: c + (axis === 0 ? major : axis === 1 ? 0 : Math.sin(t) * spread) + u * size * 0.02,
+        y: c + (axis === 1 ? major : axis === 2 ? 0 : Math.sin(t) * spread) + u * size * 0.02,
+      };
+    }),
+  );
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full" role="img" aria-label="Quantum probability cloud">
+      <circle cx={c} cy={c} r={c - 2} fill="none" stroke="rgba(128,128,128,0.12)" />
+      {/* s-orbital: spherical density */}
+      <motion.circle
+        cx={c}
+        cy={c}
+        r={size * 0.17}
+        fill={tint(color, "14")}
+        initial={{ opacity: 0, scale: 0.7 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        style={{ transformBox: "view-box", transformOrigin: "50% 50%" }}
+      />
+      {inner.map((dot, index) => (
+        <circle key={`s${index}`} cx={dot.x} cy={dot.y} r={size * 0.0045} fill={tint(color, "aa")} />
+      ))}
+      {lobes.map((lobe, axis) =>
+        lobe.map((dot, index) => (
+          <circle
+            key={`p${axis}-${index}`}
+            cx={dot.x}
+            cy={dot.y}
+            r={size * 0.004}
+            fill={tint(color, "88")}
+          />
+        )),
+      )}
+      <circle cx={c} cy={c} r={size * 0.012} fill="var(--lab-ink)" />
+      <text x={c} y={size - 10} fontSize={size * 0.03} fill="var(--lab-ink-micro)" textAnchor="middle">
+        1s² + 2p⁶ probability density
+      </text>
+    </svg>
+  );
+}
+
+function LewisDiagram({
+  size,
+  color,
+  symbol,
+  valence,
+}: {
+  size: number;
+  color: string;
+  symbol: string;
+  valence: number;
+}) {
+  const c = size / 2;
+  const shown = Math.min(8, valence);
+  const transition = useSpringTransition();
+  /* Dots go on one at a time, sides in the order a Lewis structure is taught: */
+  const sides: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i < 8; i += 1) {
+    const side = Math.floor(i / 2);
+    const pair = i % 2;
+    const offset = size * 0.085;
+    const gap = size * 0.032;
+    const step = (pair === 0 ? -1 : 1) * gap;
+    if (side === 0) sides.push({ x: c + step, y: c - offset });
+    else if (side === 1) sides.push({ x: c + offset, y: c + step });
+    else if (side === 2) sides.push({ x: c + step, y: c + offset });
+    else sides.push({ x: c - offset, y: c + step });
+  }
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full" role="img" aria-label={`Lewis dot structure of ${symbol} with ${shown} valence electrons`}>
+      <circle cx={c} cy={c} r={c - 2} fill="none" stroke="rgba(128,128,128,0.12)" />
+      <text
+        x={c}
+        y={c}
+        fontSize={size * 0.2}
+        fontWeight={700}
+        fill="var(--lab-ink)"
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >
+        {symbol}
+      </text>
+      {sides.slice(0, shown).map((dot, index) => (
+        <motion.circle
+          key={index}
+          cx={dot.x}
+          cy={dot.y}
+          r={size * 0.016}
+          fill={tint(color, "ee")}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ ...transition, delay: index * 0.05 }}
+          style={{ transformBox: "fill-box", transformOrigin: "center" }}
+        />
+      ))}
+      <text x={c} y={size - 12} fontSize={size * 0.032} fill="var(--lab-ink-micro)" textAnchor="middle">
+        {shown} valence electron{shown === 1 ? "" : "s"} · pairs form bonds
+      </text>
     </svg>
   );
 }
@@ -669,10 +895,18 @@ function PeriodicTableTab({
               />
             </div>
 
-            {/* Mini Bohr — the real shells, inline under the facts. */}
+            {/* The atom itself, in three dimensions and draggable — the shells
+                read out beside it. It is not badged "3D": the pointer changes
+                and the model answers the drag, which is the whole label. */}
             <div className="apple-lab-card flex min-w-0 items-center gap-4 px-3 py-3">
-              <div className="w-[124px] shrink-0">
-                <BohrDiagram element={selectedElement} size={124} theme={theme} />
+              <div className="w-[152px] shrink-0" title="Drag to rotate · scroll to zoom">
+                <Atom3D
+                  z={selectedElement.n}
+                  shells={shellsFor(selectedElement.n)}
+                  symbol={selectedElement.sym}
+                  orbitals={false}
+                  compact
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="apple-lab-micro">Electron shells</p>
@@ -713,11 +947,14 @@ function PeriodicTableTab({
 
 function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
   const [z, setZ] = useState(6);
+  const [model, setModel] = useState<AtomModel>("bohr");
   const element = ELEMENTS.find((el) => el.n === z) ?? ELEMENTS[0];
   const shells = useMemo(() => shellsFor(z), [z]);
   const transition = useSpringTransition();
   const stagger = useStagger(0.07);
   const catColor = theme === "light" ? CAT_COLORS[element.cat].onLight : CAT_COLORS[element.cat].on;
+  const valence = shells[shells.length - 1] ?? 0;
+  const activeModel = ATOM_MODELS.find((entry) => entry.id === model) ?? ATOM_MODELS[0];
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -726,7 +963,7 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
           <div className="min-w-0">
             <p className="apple-lab-micro">Atomic models</p>
             <h3 className="apple-lab-title mt-1 text-lg">
-              {element.name} — {shells.length} shell{shells.length === 1 ? "" : "s"}
+              {element.name} — {activeModel.label} model
             </h3>
           </div>
           <label className="apple-lab-card flex items-center gap-2 px-3 py-2">
@@ -746,10 +983,59 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
           </label>
         </div>
 
-        <div className="mx-auto w-full max-w-[420px] py-2">
-          <BohrDiagram element={element} size={420} theme={theme} labeled />
+        {/* The model switcher. Four buttons, not a dropdown: the point of the
+            tab is comparing the structures, and a menu hides three of them. */}
+        <div className="apple-lab-tabrail mt-3 flex w-full" role="tablist" aria-label="Atomic model">
+          {ATOM_MODELS.map((entry) => {
+            const active = entry.id === model;
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className="apple-lab-subtab flex-1 whitespace-nowrap"
+                onClick={() => setModel(entry.id)}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="atom-model-pill"
+                    className="apple-lab-pill"
+                    transition={transition}
+                  />
+                )}
+                <span className="relative z-10">{entry.label}</span>
+              </button>
+            );
+          })}
         </div>
 
+        <div className="relative mx-auto w-full max-w-[420px] py-2">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`${model}-${z}`}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {model === "bohr" && <BohrDiagram element={element} size={420} theme={theme} labeled />}
+              {model === "rutherford" && (
+                <RutherfordDiagram size={420} color={catColor} />
+              )}
+              {model === "quantum" && (
+                <QuantumDiagram size={420} color={catColor} z={z} />
+              )}
+              {model === "lewis" && (
+                <LewisDiagram size={420} color={catColor} symbol={element.sym} valence={valence} />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <p className="apple-lab-note mt-1 min-h-[42px] leading-relaxed">
+          {activeModel.note}
+        </p>
       </div>
 
       <div className="apple-lab-panel apple-lab-glass min-w-0">

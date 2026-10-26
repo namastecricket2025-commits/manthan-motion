@@ -22,6 +22,8 @@ import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
 import { SITE_URL } from "@/lib/site";
+import { createDictation, type Dictation } from "@/components/voice/dictation";
+import { enhancePhotoToFile } from "@/lib/enhance-photo";
 import { isKitSaved, offlineKitId, saveKit } from "@/lib/offline";
 import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
@@ -34,6 +36,7 @@ import {
   Link2Off,
   Loader2,
   Lock,
+  Mic,
   NotebookPen,
   Printer,
   Share2,
@@ -49,6 +52,18 @@ import { AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
+
+/**
+ * Clean a photo before it is uploaded, so the reader sees a sharp page.
+ *
+ * A notebook is often built from phone photos of a classmate's notes. The
+ * vision pass that transcribes them is only as good as the pixels it gets, so
+ * soft or small images go through the same upscale + unsharp as a Math Lab
+ * question. PDFs, DOCX and text are uploaded untouched.
+ */
+async function prepareSourceFile(file: File): Promise<File> {
+  return enhancePhotoToFile(file);
+}
 
 /**
  * The notebook workspace: where the product actually happens.
@@ -122,6 +137,9 @@ export function NotebookWorkspace({
   const [notesTitle, setNotesTitle] = useState("");
   const [notesBody, setNotesBody] = useState("");
   const [busyNotes, setBusyNotes] = useState(false);
+  const [listening, setListening] = useState(false);
+  const dictationRef = useRef<Dictation | null>(null);
+  const notesBaseRef = useRef("");
   const [selected, setSelected] = useState<Kind[]>(
     KIND_META.map((meta) => meta.kind),
   );
@@ -201,13 +219,14 @@ export function NotebookWorkspace({
       accepted.map(async (file, i) => {
         const key = keys[i];
         try {
+          const upload = await prepareSourceFile(file);
           const url = await generateUploadUrl();
           const response = await fetch(url, {
             method: "POST",
             headers: {
-              "content-type": file.type || "application/octet-stream",
+              "content-type": upload.type || "application/octet-stream",
             },
-            body: file,
+            body: upload,
           });
           if (!response.ok) {
             throw new Error(`Upload failed (${response.status}).`);
@@ -218,9 +237,9 @@ export function NotebookWorkspace({
           await ingestFile({
             notebookId,
             storageId,
-            name: file.name,
-            mime: file.type || undefined,
-            size: file.size,
+            name: upload.name,
+            mime: upload.type || undefined,
+            size: upload.size,
           });
           setUploads((u) => u.filter((item) => item.key !== key));
         } catch (error) {
@@ -235,6 +254,59 @@ export function NotebookWorkspace({
         }
       }),
     );
+  }
+
+  /* A copied photo or PDF is the fastest way into a notebook: a student
+     screenshots a page, presses ⌘V, and the source is in. The listener is on
+     the document because the paste target is usually the page, not a field —
+     but it only ever claims events that actually carry files, so pasting text
+     into the notes box still types. */
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const files = Array.from(event.clipboardData?.files ?? []);
+      if (files.length === 0) return;
+      event.preventDefault();
+      const transfer = new DataTransfer();
+      for (const file of files) transfer.items.add(file);
+      void uploadFiles(transfer.files);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [notebookId]);
+
+  /* Dictation appends to whatever is already typed: the student can write the
+     heading themselves and speak the rest. */
+  function toggleNotesMic() {
+    if (dictationRef.current) {
+      dictationRef.current.stop();
+      return;
+    }
+    if (
+      typeof window === "undefined" ||
+      (!window.SpeechRecognition && !window.webkitSpeechRecognition)
+    ) {
+      toast.error("This browser has no speech recognition — type the notes instead.");
+      return;
+    }
+    notesBaseRef.current = notesBody;
+    const dictation = createDictation({
+      lang: "en-IN",
+      silenceMs: 3000,
+      onText: (text) => {
+        const base = notesBaseRef.current;
+        setNotesBody(base ? `${base.trimEnd()} ${text}` : text);
+      },
+      onListening: setListening,
+      onStop: (reason) => {
+        dictationRef.current = null;
+        setListening(false);
+        if (reason === "error") {
+          toast.error("I did not catch that. Tap the microphone again.");
+        }
+      },
+    });
+    dictationRef.current = dictation;
+    dictation.start();
   }
 
   /**
@@ -634,8 +706,8 @@ export function NotebookWorkspace({
               Drop files or click to browse — as many as you like
             </span>
             <span className="text-xs text-text-dim">
-              PDF, Word, JPG or PNG, text and CSV — up to 20 MB each, added in
-              parallel
+              PDF, Word, JPG or PNG, text and CSV — up to 20 MB each. Paste a
+              screenshot or a PDF with ⌘V, or drop it here.
             </span>
             <input
               type="file"
@@ -683,13 +755,30 @@ export function NotebookWorkspace({
                 placeholder="Title (optional)"
                 className="w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-base outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)] sm:py-2 sm:text-sm"
               />
-              <textarea
-                value={notesBody}
-                onChange={(e) => setNotesBody(e.target.value)}
-                rows={5}
-                placeholder="Paste or type your notes here…"
-                className="w-full resize-y rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm leading-relaxed outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
-              />
+              <div className="relative">
+                <textarea
+                  value={notesBody}
+                  onChange={(e) => setNotesBody(e.target.value)}
+                  rows={5}
+                  placeholder="Paste, type or dictate your notes here…"
+                  className="w-full resize-y rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 pb-11 text-sm leading-relaxed outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
+                />
+                <button
+                  type="button"
+                  onClick={toggleNotesMic}
+                  aria-label={listening ? "Stop dictating" : "Dictate these notes"}
+                  aria-pressed={listening}
+                  className={
+                    "absolute bottom-2 right-2 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11.5px] font-medium transition-colors " +
+                    (listening
+                      ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_14%,transparent)] text-foreground"
+                      : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                  }
+                >
+                  <Mic className="h-3.5 w-3.5" />
+                  {listening ? "Listening" : "Dictate"}
+                </button>
+              </div>
               <div className="flex items-center gap-2">
                 <MovingBorderButton
                   onClick={() => void submitNotes()}

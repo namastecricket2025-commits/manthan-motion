@@ -1,6 +1,95 @@
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { useLayoutEffect, useRef } from "react";
 
+const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/**
+ * One figure, counted the way a mechanical counter counts it.
+ *
+ * Each decimal place is its own wheel: the ones wheel turns fastest, the tens
+ * wheel only catches up when the ones wheel rolls past 9, and so on. That is
+ * why a two-digit number reads as two digits rolling rather than a value
+ * flickering — and why the effect survives a fast scroll instead of finishing
+ * before the rail is on screen.
+ *
+ * Pace follows magnitude the way the eye expects: a single digit has room to
+ * tick over slowly, while a three-digit figure would look stuck at the same
+ * rate — so duration grows only logarithmically and the *speed* (digits per
+ * second) rises with the number. Every place shares one tween, so the wheels
+ * can never drift out of step with each other.
+ */
+function RollingNumber({ value }: { value: number }) {
+  const rootRef = useRef<HTMLSpanElement | null>(null);
+  const strips = useRef<Array<HTMLSpanElement | null>>([]);
+  const places = String(value).length;
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const cols = strips.current.filter((el): el is HTMLSpanElement => Boolean(el));
+    if (cols.length === 0) return;
+
+    // Where each wheel sits for a running value. `place` is the value of one
+    // unit of that wheel (1, 10, 100…), so one full turn of the wheel is ten
+    // units of its own place.
+    const paint = (running: number) => {
+      cols.forEach((col, index) => {
+        const place = Math.pow(10, cols.length - 1 - index);
+        const turns = running / place / 10;
+        const offset = (turns % 1) * 10;
+        col.style.transform = `translate3d(0, ${-offset}em, 0)`;
+      });
+    };
+
+    if (prefersReducedMotion()) {
+      paint(value);
+      return;
+    }
+
+    paint(0);
+    const state = { running: 0 };
+    const tween = gsap.to(state, {
+      running: value,
+      duration: 0.85 + Math.log10(value + 1) * 0.42,
+      ease: "power2.out",
+      onUpdate: () => paint(state.running),
+      scrollTrigger: { trigger: root, ...revealConfig },
+    });
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+    };
+  }, [value]);
+
+  return (
+    <span ref={rootRef} className="inline-flex tabular-nums" aria-hidden="true">
+      {Array.from({ length: places }, (_, index) => (
+        <span
+          key={index}
+          className="inline-block overflow-hidden"
+          style={{ height: "1em", lineHeight: 1 }}
+        >
+          <span
+            ref={(el) => {
+              strips.current[index] = el;
+            }}
+            className="flex flex-col will-change-transform"
+          >
+            {DIGITS.map((digit) => (
+              <span key={digit} style={{ height: "1em", lineHeight: 1 }}>
+                {digit}
+              </span>
+            ))}
+            {/* The wrap row: at 9.6 the wheel is already showing the head of
+                the next revolution rather than a blank edge. */}
+            <span style={{ height: "1em", lineHeight: 1 }}>0</span>
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /**
  * The numbers, as one panel of receipts rather than six matching cards.
  *
@@ -80,26 +169,6 @@ export default function Stats() {
           scrollTrigger: { trigger: root, ...revealConfig },
         },
       );
-
-      // Count-up, once, on the way in. Duration scales with the number's
-      // magnitude so a single digit lands quickly and a three-digit value
-      // sweeps without dragging.
-      gsap.fromTo(
-        root.querySelectorAll<HTMLElement>("[data-count]"),
-        { textContent: 0 },
-        {
-          textContent: (_i: number, el: unknown) =>
-            Number((el as HTMLElement).dataset.count ?? 0),
-          duration: (_i: number, el: unknown) => {
-            const digits = String(Number((el as HTMLElement).dataset.count ?? 0)).length;
-            return 0.6 + digits * 0.28;
-          },
-          ease: "power2.out",
-          snap: { textContent: 1 },
-          stagger: 0.1,
-          scrollTrigger: { trigger: root, ...revealConfig },
-        },
-      );
     }, root);
     return () => ctx.revert();
   }, []);
@@ -132,9 +201,10 @@ export default function Stats() {
                 {stat.prefix ? (
                   <span className="text-[26px] text-text-dim">{stat.prefix}</span>
                 ) : null}
-                {/* Final value rendered in the markup (SEO and no-JS); GSAP
-                    counts it up from zero when the rail scrolls into view. */}
-                <span data-count={stat.value}>{stat.value}</span>
+                {/* The figure itself, on rolling wheels; the real value stays
+                    in the tree for search engines and screen readers. */}
+                <span className="sr-only">{stat.value}</span>
+                <RollingNumber value={stat.value} />
                 {stat.suffix ? (
                   <span className="text-[26px] text-text-dim">{stat.suffix}</span>
                 ) : null}

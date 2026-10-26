@@ -68,11 +68,40 @@ function stripHtml(html: string) {
     .trim();
 }
 
-/** PDF → text, via pdf.js (bundled with unpdf). */
+/**
+ * PDF → text, via pdf.js (bundled with unpdf).
+ *
+ * Pages are read one at a time rather than merged: a merged extraction loses
+ * the hard page break, so the last line of page 3 runs straight into the
+ * heading of page 4 and a chapter boundary disappears. Reading each page and
+ * joining with a blank line keeps the structure the generator needs.
+ *
+ * A PDF produced from a phone scan has no text layer at all — pdf.js returns
+ * an empty string, which used to become an empty source. That is a dead end
+ * for the student, so it is reported as what it is, with the one workaround
+ * that actually works: photograph the pages (Manthan sharpens and reads
+ * those) or paste the text.
+ */
 async function extractPdfText(bytes: Uint8Array) {
   const pdf = await getDocumentProxy(bytes);
-  const result = await extractText(pdf, { mergePages: true });
-  return Array.isArray(result.text) ? result.text.join("\n\n") : result.text;
+  const result = await extractText(pdf, { mergePages: false });
+  const pages = Array.isArray(result.text) ? result.text : [result.text];
+  const cleaned = pages.map((page) =>
+    page
+      .replace(/\u0000/g, "")
+      .replace(/\ufffd/g, "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+  );
+  const text = cleaned.filter(Boolean).join("\n\n");
+  const readable = text.replace(/[^A-Za-z\u0900-\u097F0-9]/g, "").length;
+  if (readable < 60) {
+    throw new UploadUnreadable(
+      "This PDF has no text layer — it is a scan or a photo saved as PDF, so there is nothing crisp for the reader to use. Photograph the pages (or paste the images here): Manthan sharpens each photo and reads the writing. Typing or pasting the text works too.",
+    );
+  }
+  return text;
 }
 
 /* ---------------- ZIP (a .docx is one) ---------------- */

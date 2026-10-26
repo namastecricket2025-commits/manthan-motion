@@ -49,7 +49,7 @@ type Bank = Record<GradeId, Record<string, CheatEntry[]>>;
 /* ================================================================== */
 
 const CLASS_8: Record<string, CheatEntry[]> = {
-  "Rational Numbers": [
+  "Fractions in Disguise": [
     f("Subtraction of fractions", String.raw`\frac{a}{b} - \frac{c}{d} = \frac{ad - bc}{bd}`),
     f("Additive inverse", String.raw`\frac{a}{b} + \left(-\frac{a}{b}\right) = 0`),
     f("Multiplicative inverse", String.raw`\frac{a}{b} \times \frac{b}{a} = 1,\quad a \neq 0`),
@@ -58,7 +58,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     t("Rational numbers are closed", String.raw`\frac{a}{b}, \frac{c}{d} \in \mathbb{Q} \Rightarrow \frac{a}{b} \pm \frac{c}{d},\ \frac{a}{b} \cdot \frac{c}{d} \in \mathbb{Q}`),
     d("Rational number", String.raw`\frac{p}{q},\ q \neq 0`, "A number that can be written as a ratio of two integers."),
   ],
-  "Linear Equations in One Variable": [
+  "Algebra Play": [
     f("Solving ax = b", String.raw`x = \frac{b}{a},\quad a \neq 0`),
     f("Solving ax + b = c", String.raw`x = \frac{c - b}{a}`),
     f("Variable on both sides", String.raw`ax + b = cx + d \;\Rightarrow\; x = \frac{d - b}{a - c}`),
@@ -67,7 +67,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Sum of consecutive integers", String.raw`n + (n+1) + (n+2) = 3n + 3`),
     d("Linear equation", String.raw`ax + b = 0`, "The variable appears only to the first power, so there is exactly one root."),
   ],
-  "Understanding Quadrilaterals": [
+  "Quadrilaterals": [
     f("Angle sum of a polygon", String.raw`(n - 2) \times 180^\circ`),
     f("Exterior angles of a polygon", String.raw`\sum \text{exterior} = 360^\circ`),
     f("Interior angle of a regular polygon", String.raw`\frac{(n-2)\,180^\circ}{n}`),
@@ -80,7 +80,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     t("Diagonals of a kite", String.raw`AC \perp BD,\quad BO = OD`, "One diagonal bisects the other at right angles."),
     d("Regular polygon", String.raw`\text{all sides} = \text{all angles}`, "Both conditions are needed; equal angles alone do not make a regular polygon."),
   ],
-  "Data Handling": [
+  "Tales by Dots and Lines": [
     f("Mean", String.raw`\bar{x} = \frac{\sum x_i}{n}`),
     f("Range", String.raw`R = x_{\max} - x_{\min}`),
     f("Median when n is odd", String.raw`M = \left(\frac{n+1}{2}\right)^{\text{th}} \text{ observation}`),
@@ -90,8 +90,15 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Central angle in a pie chart", String.raw`\theta = \frac{\text{value}}{\text{total}} \times 360^\circ`),
     f("Class mark", String.raw`\text{mark} = \frac{\text{lower} + \text{upper}}{2}`),
     d("Mode", String.raw`\text{most frequent value}`, "A data set can have no mode, one mode, or several."),
+    f("Slope between two points", String.raw`m = \frac{y_2 - y_1}{x_2 - x_1}`),
+    f("Equation of a straight line", String.raw`y = mx + c`),
+    f("Intercepts of ax + by = c", String.raw`x\text{-intercept} = \frac{c}{a},\qquad y\text{-intercept} = \frac{c}{b}`),
+    f("Distance from a distance-time graph", String.raw`s = v \times t`),
+    f("Amount from a simple-interest graph", String.raw`A = P + \frac{PR}{100}\,T`),
+    f("Coordinates of a point", String.raw`P(x,\ y)`, "x is the abscissa (across), y is the ordinate (up)."),
+    d("Origin", String.raw`(0,\ 0)`, "Where the two axes meet; every reading on a graph is measured from here."),
   ],
-  "Squares and Square Roots": [
+  "A Square and A Cube": [
     f("Square of a sum", String.raw`(a+b)^2 = a^2 + 2ab + b^2`),
     f("Square of a difference", String.raw`(a-b)^2 = a^2 - 2ab + b^2`),
     f("Difference of two squares", String.raw`a^2 - b^2 = (a-b)(a+b)`),
@@ -103,8 +110,6 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Squares ending in 5", String.raw`(10a + 5)^2 = 100a(a+1) + 25`),
     t("Pythagorean triplets", String.raw`(2m,\; m^2 - 1,\; m^2 + 1)`, "Every whole number m greater than 1 generates a triplet."),
     d("Perfect square", String.raw`n = k^2,\ k \in \mathbb{Z}`, "A whole number that is the square of another whole number."),
-  ],
-  "Cubes and Cube Roots": [
     f("Cube of a sum", String.raw`(a+b)^3 = a^3 + 3a^2b + 3ab^2 + b^3`),
     f("Cube of a difference", String.raw`(a-b)^3 = a^3 - 3a^2b + 3ab^2 - b^3`),
     f("Sum of cubes", String.raw`a^3 + b^3 = (a+b)(a^2 - ab + b^2)`),
@@ -115,7 +120,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("When the three-variable identity vanishes", String.raw`a+b+c = 0 \;\Rightarrow\; a^3+b^3+c^3 = 3\,a\,b\,c`),
     d("Perfect cube", String.raw`n = k^3,\ k \in \mathbb{Z}`),
   ],
-  "Comparing Quantities": [
+  "Proportional Reasoning 2": [
     f("Profit per cent", String.raw`\text{profit}\% = \frac{SP - CP}{CP} \times 100`),
     f("Loss per cent", String.raw`\text{loss}\% = \frac{CP - SP}{CP} \times 100`),
     f("Selling price from a profit", String.raw`SP = CP\left(1 + \frac{p}{100}\right)`),
@@ -129,7 +134,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Depreciation", String.raw`A = P\left(1 - \frac{R}{100}\right)^{n}`),
     f("Sales tax", String.raw`\text{tax} = \frac{\text{rate}}{100} \times \text{price}`),
   ],
-  "Algebraic Expressions and Identities": [
+  "We Distribute, Yet Things Multiply": [
     f("Square of a binomial", String.raw`(a \pm b)^2 = a^2 \pm 2ab + b^2`),
     f("Difference of squares", String.raw`a^2 - b^2 = (a-b)(a+b)`),
     f("Product of two binomials", String.raw`(x+a)(x+b) = x^2 + (a+b)x + ab`),
@@ -140,7 +145,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Product as a difference", String.raw`(x+a)(x-a) = x^2 - a^2`),
     d("Identity", String.raw`\text{LHS} = \text{RHS}`, "An equation that is true for every value of the variable, unlike an equation with a root."),
   ],
-  Mensuration: [
+  Area: [
     f("Rectangle", String.raw`A = lb,\qquad P = 2(l+b)`),
     f("Square", String.raw`A = a^2,\qquad P = 4a`),
     f("Parallelogram", String.raw`A = b h`),
@@ -157,7 +162,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Diagonal of a cuboid", String.raw`\sqrt{l^2 + b^2 + h^2}`),
     f("Capacity", String.raw`1\ \text{m}^3 = 1000\ \text{L},\qquad 1\ \text{L} = 1000\ \text{cm}^3`),
   ],
-  "Exponents and Powers": [
+  "Power Play": [
     f("Product law", String.raw`a^m \times a^n = a^{m+n}`),
     f("Quotient law", String.raw`\frac{a^m}{a^n} = a^{m-n},\quad a \neq 0`),
     f("Power of a power", String.raw`(a^m)^n = a^{mn}`),
@@ -169,7 +174,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Same exponent, different bases", String.raw`a^m b^m = (ab)^m`),
     f("Standard form", String.raw`a \times 10^n,\quad 1 \leq a < 10,\ n \in \mathbb{Z}`),
   ],
-  "Direct and Inverse Proportions": [
+  "Proportional Reasoning 1": [
     f("Direct proportion", String.raw`y = kx \;\Rightarrow\; \frac{x_1}{y_1} = \frac{x_2}{y_2}`),
     f("Inverse proportion", String.raw`xy = k \;\Rightarrow\; x_1 y_1 = x_2 y_2`),
     f("Constant of a direct proportion", String.raw`k = \frac{y}{x}`),
@@ -179,24 +184,27 @@ const CLASS_8: Record<string, CheatEntry[]> = {
     f("Speed, distance and time", String.raw`d = s \times t`),
     d("Direct proportion", String.raw`x \propto y`, "Both quantities grow together; their ratio stays fixed."),
   ],
-  Factorisation: [
-    f("Taking out a common factor", String.raw`ab + ac = a(b+c)`),
-    f("Difference of squares", String.raw`a^2 - b^2 = (a-b)(a+b)`),
-    f("Perfect square trinomial", String.raw`a^2 \pm 2ab + b^2 = (a \pm b)^2`),
-    f("Factorising a quadratic", String.raw`x^2 + (a+b)x + ab = (x+a)(x+b)`),
-    f("Splitting the middle term", String.raw`ax^2 + bx + c,\quad p+q = b,\quad pq = ac`),
-    f("Sum and difference of cubes", String.raw`a^3 \pm b^3 = (a \pm b)(a^2 \mp ab + b^2)`),
-    f("Three-variable identity", String.raw`a^3+b^3+c^3-3\,a\,b\,c = (a+b+c)(a^2+b^2+c^2-ab-bc-ca)`),
-    f("Division algorithm for polynomials", String.raw`p(x) = g(x)\,q(x) + r(x),\quad \deg r < \deg g`),
+  "A Story of Numbers": [
+    f("Expanded form", String.raw`\overline{abcd} = a\cdot10^3 + b\cdot10^2 + c\cdot10 + d`),
+    f("Distributive law", String.raw`a(b + c) = ab + ac`),
+    d("Place value", String.raw`3 \text{ in } 4357 = 3 \times 100`, "The value of a digit is its face value times the place it sits in."),
   ],
-  "Introduction to Graphs": [
-    f("Slope between two points", String.raw`m = \frac{y_2 - y_1}{x_2 - x_1}`),
-    f("Equation of a straight line", String.raw`y = mx + c`),
-    f("Intercepts of ax + by = c", String.raw`x\text{-intercept} = \frac{c}{a},\qquad y\text{-intercept} = \frac{c}{b}`),
-    f("Distance from a distance-time graph", String.raw`s = v \times t`),
-    f("Amount from a simple-interest graph", String.raw`A = P + \frac{PR}{100}\,T`),
-    f("Coordinates of a point", String.raw`P(x,\ y)`, "x is the abscissa (across), y is the ordinate (up)."),
-    d("Origin", String.raw`(0,\ 0)`, "Where the two axes meet; every reading on a graph is measured from here."),
+  "Number Play": [
+    f("Divisibility by 3", String.raw`3 \mid n \iff 3 \mid \text{digit sum}`),
+    f("Divisibility by 9", String.raw`9 \mid n \iff 9 \mid \text{digit sum}`),
+    f("Divisibility by 11", String.raw`11 \mid n \iff 11 \mid (d_1 - d_2 + d_3 - \cdots)`),
+    f("Sum of the first n odd numbers", String.raw`1 + 3 + \cdots + (2n-1) = n^2`),
+  ],
+  "The Baudhayana-Pythagoras Theorem": [
+    t("Pythagoras theorem", String.raw`c^2 = a^2 + b^2`),
+    f("Finding a leg", String.raw`b = \sqrt{c^2 - a^2}`),
+    f("Generating triples", String.raw`(2m,\ m^2 - 1,\ m^2 + 1)`),
+    d("Converse", String.raw`a^2 + b^2 = c^2 \Rightarrow 90^\circ`, "If the square relation holds, the angle opposite the longest side is a right angle."),
+  ],
+  "Exploring Some Geometric Themes": [
+    f("Orders of rotational symmetry", String.raw`\text{order} = \frac{360^\circ}{\text{angle of rotation}}`),
+    f("Angles at a point", String.raw`\theta_1 + \cdots + \theta_n = 360^\circ`),
+    d("Tessellation", String.raw`\text{angles at a vertex} = 360^\circ`, "Shapes tile the plane only when the angles meeting at every vertex add to a full turn."),
   ],
 };
 
@@ -205,7 +213,7 @@ const CLASS_8: Record<string, CheatEntry[]> = {
 /* ================================================================== */
 
 const CLASS_9: Record<string, CheatEntry[]> = {
-  "Number Systems": [
+  "The World of Numbers": [
     f("Rationalising a denominator", String.raw`\frac{1}{\sqrt{a} + \sqrt{b}} = \frac{\sqrt{a} - \sqrt{b}}{a - b}`),
     f("Conjugate product", String.raw`(\sqrt{a} + \sqrt{b})(\sqrt{a} - \sqrt{b}) = a - b`),
     f("Root of a product", String.raw`\sqrt{ab} = \sqrt{a}\,\sqrt{b}`),
@@ -217,7 +225,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     d("Rational number", String.raw`\frac{p}{q},\ q \neq 0`, "A terminating or recurring decimal; every rational has one of the two."),
     d("Irrational number", String.raw`\nexists\ \frac{p}{q}`, "A decimal that neither terminates nor recurs — √2, √3, π."),
   ],
-  Polynomials: [
+  "Introduction to Linear Polynomials": [
     f("Remainder theorem", String.raw`p(x) \div (x-a) \;\Rightarrow\; \text{remainder} = p(a)`),
     f("Factor theorem", String.raw`p(a) = 0 \iff (x-a) \text{ is a factor}`),
     f("Square of a binomial", String.raw`(a \pm b)^2 = a^2 \pm 2ab + b^2`),
@@ -228,7 +236,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     f("Division algorithm", String.raw`p(x) = g(x)q(x) + r(x),\quad \deg r < \deg g`),
     d("Zero of a polynomial", String.raw`p(k) = 0`, "A value of the variable at which the polynomial is zero — where its graph crosses the x-axis."),
   ],
-  "Linear Equations in Two Variables": [
+  "Two Variables, One Line": [
     f("Standard form", String.raw`ax + by + c = 0`),
     f("x-intercept", String.raw`y = 0 \;\Rightarrow\; x = -\frac{c}{a}`),
     f("y-intercept", String.raw`x = 0 \;\Rightarrow\; y = -\frac{c}{b}`),
@@ -237,7 +245,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     d("Infinitely many solutions", String.raw`ax + by + c = 0`, "One equation in two variables is a whole line of solutions, not a single point."),
     d("Graph of a linear equation", String.raw`\text{straight line}`, "Two points are enough to draw it; a third checks the reading."),
   ],
-  "Coordinate Geometry": [
+  "Orienting Yourself: The Use of Coordinates": [
     f("Distance from the y-axis", String.raw`|x|`),
     f("Distance from the x-axis", String.raw`|y|`),
     f("Reflection in the x-axis", String.raw`(x,\ y) \rightarrow (x,\ -y)`),
@@ -247,7 +255,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     f("Reflection in the origin", String.raw`(x,\ y) \rightarrow (-x,\ -y)`),
     d("Signs by quadrant", String.raw`\text{I}(+,+)\ \text{II}(-,+)\ \text{III}(-,-)\ \text{IV}(+,-)`),
   ],
-  "Introduction to Euclid's Geometry": [
+  "Propositions and their Converses": [
     d("Axiom 1", String.raw`a = b,\ b = c \Rightarrow a = c`, "Things equal to the same thing are equal to one another."),
     d("Axiom 2", String.raw`a = b \Rightarrow a + c = b + c`, "If equals are added to equals, the wholes are equal."),
     d("Axiom 3", String.raw`a = b \Rightarrow a - c = b - c`, "If equals are subtracted from equals, the remainders are equal."),
@@ -258,28 +266,6 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     t("Postulate 3", String.raw`(O,\ r)`, "A circle can be drawn with any centre and any radius."),
     t("Postulate 4", String.raw`90^\circ = 90^\circ`, "All right angles are equal to one another."),
     t("Playfair's axiom", String.raw`\text{exactly one parallel}`, "Through a point not on a line, exactly one line parallel to it can be drawn."),
-  ],
-  "Lines and Angles": [
-    t("Linear pair", String.raw`\angle A + \angle B = 180^\circ`),
-    t("Vertically opposite angles", String.raw`\angle 1 = \angle 3,\quad \angle 2 = \angle 4`),
-    t("Corresponding angles", String.raw`\angle 1 = \angle 5`, "Equal only when the two lines are parallel."),
-    t("Alternate interior angles", String.raw`\angle 3 = \angle 5`),
-    t("Co-interior angles", String.raw`\angle 3 + \angle 6 = 180^\circ`),
-    t("Angles around a point", String.raw`\sum \angle = 360^\circ`),
-    t("Exterior angle of a triangle", String.raw`\text{ext} = \angle A + \angle B`, "The exterior angle equals the sum of the two interior opposite angles."),
-    t("Angle sum of a triangle", String.raw`\angle A + \angle B + \angle C = 180^\circ`),
-    d("Angle bisector", String.raw`\angle A\,O\,B = 2\angle A\,O\,R`, "A ray that splits an angle into two equal parts."),
-  ],
-  Triangles: [
-    t("Angle sum property", String.raw`\angle A + \angle B + \angle C = 180^\circ`),
-    t("Exterior angle theorem", String.raw`\text{ext} = \angle A + \angle B`),
-    t("SSS congruence", String.raw`AB = PQ,\ BC = QR,\ CA = RP \Rightarrow \triangle A\,B\,C \cong \triangle P\,Q\,R`),
-    t("SAS congruence", String.raw`AB = PQ,\ \angle B = \angle Q,\ BC = QR`),
-    t("ASA and AAS congruence", String.raw`\angle A = \angle P,\ \angle B = \angle Q,\ AB = PQ`),
-    t("RHS congruence", String.raw`\angle B = \angle Q = 90^\circ,\ AC = PR,\ BC = QR`),
-    t("Isosceles triangle", String.raw`AB = AC \iff \angle B = \angle C`),
-    t("Triangle inequality", String.raw`a + b > c`, "Any two sides together are longer than the third; otherwise no triangle exists."),
-    t("CPCT", String.raw`\triangle A\,B\,C \cong \triangle P\,Q\,R \Rightarrow AB = PQ,\ \angle A = \angle P`, "Corresponding parts of congruent triangles are equal."),
   ],
   Quadrilaterals: [
     t("Angle sum of a quadrilateral", String.raw`\angle A + \angle B + \angle C + \angle D = 360^\circ`),
@@ -293,19 +279,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     t("Diagonals of a rectangle", String.raw`AC = BD`),
     t("Diagonals of a square", String.raw`AC = BD,\quad AC \perp BD`),
   ],
-  Circles: [
-    t("Angle at the centre", String.raw`\angle A\,O\,B = 2\angle A\,C\,B`),
-    t("Angles in the same segment", String.raw`\angle A\,C\,B = \angle A\,D\,B`),
-    t("Angle in a semicircle", String.raw`\angle A\,C\,B = 90^\circ`),
-    t("Cyclic quadrilateral", String.raw`\angle A + \angle C = 180^\circ`),
-    t("Exterior angle of a cyclic quadrilateral", String.raw`\text{ext} = \angle A`),
-    t("Perpendicular from the centre", String.raw`OM \perp AB \Rightarrow AM = MB`),
-    f("Chord from its distance from the centre", String.raw`AB = 2\sqrt{r^2 - d^2}`),
-    t("Equal chords", String.raw`AB = CD \Rightarrow \angle A\,O\,B = \angle C\,O\,D`),
-    t("Equal chords are equidistant", String.raw`AB = CD \iff OM = ON`),
-    t("Equal arcs subtend equal chords", String.raw`\text{arc } AB = \text{arc } CD \Rightarrow AB = CD`),
-  ],
-  "Heron's Formula": [
+  "Measuring Space: Perimeter and Area": [
     f("Semi-perimeter", String.raw`s = \frac{a+b+c}{2}`),
     f("Heron's formula", String.raw`A = \sqrt{s(s-a)(s-b)(s-c)}`),
     f("Perimeter of a triangle", String.raw`P = a + b + c`),
@@ -315,7 +289,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     f("Altitude from the area", String.raw`h = \frac{2A}{b}`),
     f("Area of a quadrilateral", String.raw`A = A_1 + A_2`, "Split it along a diagonal into two triangles and use Heron on each."),
   ],
-  "Surface Areas and Volumes": [
+  "Math of Space: Surface Area and Volume": [
     f("Cuboid", String.raw`V = l\,b\,h,\quad \text{TSA} = 2(lb+bh+hl),\quad \text{LSA} = 2h(l+b)`),
     f("Cube", String.raw`V = a^3,\quad \text{TSA} = 6a^2,\quad \text{LSA} = 4a^2`),
     f("Cylinder", String.raw`V = \pi r^2 h,\quad \text{CSA} = 2\pi r h,\quad \text{TSA} = 2\pi r(r+h)`),
@@ -326,7 +300,7 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     f("Capacity", String.raw`1\ \text{cm}^3 = 1\ \text{mL},\qquad 1000\ \text{cm}^3 = 1\ \text{L}`),
     f("Diagonal of a cuboid", String.raw`d = \sqrt{l^2 + b^2 + h^2}`),
   ],
-  Statistics: [
+  "How Quantities Combine: Understanding Data": [
     f("Mean — direct method", String.raw`\bar{x} = \frac{\sum f_i x_i}{\sum f_i}`),
     f("Mean — assumed mean", String.raw`\bar{x} = a + \frac{\sum f_i d_i}{\sum f_i},\quad d_i = x_i - a`),
     f("Mean — step deviation", String.raw`\bar{x} = a + h\,\frac{\sum f_i u_i}{\sum f_i},\quad u_i = \frac{x_i - a}{h}`),
@@ -336,6 +310,41 @@ const CLASS_9: Record<string, CheatEntry[]> = {
     f("Range", String.raw`R = x_{\max} - x_{\min}`),
     f("Class mark", String.raw`x_i = \frac{\text{lower} + \text{upper}}{2}`),
     f("Cumulative frequency", String.raw`cf_i = cf_{i-1} + f_i`),
+  ],
+  "Exploring Algebraic Identities": [
+    f("Square of a sum", String.raw`(a+b)^2 = a^2 + 2ab + b^2`),
+    f("Square of a difference", String.raw`(a-b)^2 = a^2 - 2ab + b^2`),
+    f("Difference of squares", String.raw`a^2 - b^2 = (a-b)(a+b)`),
+    f("Product of two binomials", String.raw`(x+a)(x+b) = x^2 + (a+b)x + ab`),
+    f("Three-variable square", String.raw`(a+b+c)^2 = a^2+b^2+c^2+2ab+2bc+2ca`),
+    f("Sum and difference of cubes", String.raw`a^3 \pm b^3 = (a \pm b)(a^2 \mp ab + b^2)`),
+    f("Three-variable identity", String.raw`a^3+b^3+c^3-3\,a\,b\,c = (a+b+c)(a^2+b^2+c^2-ab-bc-ca)`),
+  ],
+  "I'm Up and Down, and Round and Round": [
+    f("Turning point of a parabola", String.raw`x = -\frac{b}{2a},\qquad y = c - \frac{b^2}{4a}`),
+    f("Circumference", String.raw`C = 2\pi r`),
+    f("Arc length", String.raw`s = \frac{\theta}{360^\circ} \times 2\pi r`),
+    f("Sector area", String.raw`A = \frac{\theta}{360^\circ} \times \pi r^2`),
+    f("One full turn", String.raw`360^\circ = 2\pi\ \text{rad}`),
+  ],
+  "The Mathematics of Maybe: Introduction to Probability": [
+    f("Probability of an event", String.raw`P(E) = \frac{n(E)}{n(S)}`),
+    f("Range of a probability", String.raw`0 \leq P(E) \leq 1`),
+    f("Complement", String.raw`P(E) + P(\bar{E}) = 1`),
+    f("Sum over the sample space", String.raw`\sum_i P(E_i) = 1`),
+  ],
+  "Predicting What Comes Next: Exploring Sequences and Progressions": [
+    f("nth term of an AP", String.raw`a_n = a + (n-1)d`),
+    f("Sum of n terms of an AP", String.raw`S_n = \frac{n}{2}\left[2a + (n-1)d\right]`),
+    f("nth term of a GP", String.raw`a_n = a r^{n-1}`),
+    f("Sum of n terms of a GP", String.raw`S_n = a\frac{r^n - 1}{r - 1},\quad r \neq 1`),
+    f("Common difference", String.raw`d = a_{n+1} - a_n`),
+    f("Common ratio", String.raw`r = \frac{a_{n+1}}{a_n}`),
+  ],
+  "The World of Algorithms": [
+    f("Sum 1 to n", String.raw`1 + 2 + \cdots + n = \frac{n(n+1)}{2}`),
+    f("Euclid's algorithm", String.raw`\gcd(a,b) = \gcd(b,\ a \bmod b)`),
+    d("Termination", String.raw`\gcd(a,0) = a`, "The remainder reaches zero, so the loop must stop."),
   ],
 };
 
