@@ -896,10 +896,12 @@ function PeriodicTableTab({
             </div>
 
             {/* The atom itself, in three dimensions and draggable — the shells
-                read out beside it. It is not badged "3D": the pointer changes
-                and the model answers the drag, which is the whole label. */}
-            <div className="apple-lab-card flex min-w-0 items-center gap-4 px-3 py-3">
-              <div className="w-[152px] shrink-0" title="Drag to rotate · scroll to zoom">
+                read out beneath it. It is not badged "3D": the pointer changes
+                and the model answers the drag, which is the whole label. The
+                canvas gets the card's full width so every ring and its glow is
+                inside the frame instead of being cropped by a narrow column. */}
+            <div className="apple-lab-card flex min-w-0 flex-col gap-3 px-3 py-3">
+              <div className="mx-auto w-full max-w-[210px]" title="Drag to rotate · scroll to zoom">
                 <Atom3D
                   z={selectedElement.n}
                   shells={shellsFor(selectedElement.n)}
@@ -908,9 +910,9 @@ function PeriodicTableTab({
                   compact
                 />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0">
                 <p className="apple-lab-micro">Electron shells</p>
-                <p className="apple-lab-value mt-1 text-[12.5px] leading-relaxed">
+                <p className="apple-lab-value mt-1 break-words text-[12.5px] leading-relaxed">
                   {shellsFor(selectedElement.n)
                     .map((count, index) => `${SHELL_LETTERS[index] ?? index + 1}·${count}`)
                     .join("  ")}
@@ -1010,7 +1012,7 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
           })}
         </div>
 
-        <div className="relative mx-auto w-full max-w-[420px] py-2">
+        <div className="relative mx-auto w-full max-w-[420px] py-2 lg:max-w-[460px] xl:max-w-[500px]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={`${model}-${z}`}
@@ -1033,52 +1035,110 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
           </AnimatePresence>
         </div>
 
-        <p className="apple-lab-note mt-1 min-h-[42px] leading-relaxed">
-          {activeModel.note}
-        </p>
       </div>
 
-      <div className="apple-lab-panel apple-lab-glass min-w-0">
-        <p className="apple-lab-micro">Shell occupancy</p>
-        <div className="mt-3 flex flex-col gap-2.5">
-          {shells.map((count, index) => (
-            <motion.div
-              key={`shell-${index}`}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...transition, delay: stagger(index) }}
-              className="apple-lab-card px-3 py-2.5"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="apple-lab-micro">
-                  Shell {SHELL_LETTERS[index] ?? index + 1} (n = {index + 1})
-                </span>
-                <span className="apple-lab-value shrink-0 text-[14px] font-semibold">
-                  {count} e⁻
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--lab-line)]">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(count / ((index + 1) * 10)) * 100}%` }}
-                  transition={transition}
-                  className="h-full rounded-full"
+      {/* The right column. The definition of every model lives here, verbatim:
+          a four-tab switcher with one caption underneath explains one model at
+          a time and leaves half the column empty. Listing all four means the
+          student can read what Bohr and Rutherford actually claimed without
+          clicking through each tab to find out. */}
+      <div className="flex min-w-0 flex-col gap-5">
+        <div className="apple-lab-panel apple-lab-glass min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <p className="apple-lab-micro">Model theory</p>
+            <span className="apple-lab-chip !py-0.5 !text-[10px]">
+              {ATOM_MODELS.length} models
+            </span>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2">
+            {ATOM_MODELS.map((entry) => {
+              const active = entry.id === model;
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setModel(entry.id)}
+                  aria-pressed={active}
+                  className="apple-lab-card w-full min-w-0 px-3 py-2.5 text-left transition-colors"
                   style={{
-                    background: `linear-gradient(90deg, ${tint(catColor, "66")}, ${tint(catColor, "cc")})`,
+                    borderColor: active ? tint(catColor, "aa") : undefined,
+                    background: active ? tint(catColor, "12") : undefined,
                   }}
-                />
-              </div>
-            </motion.div>
-          ))}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ background: active ? catColor : "var(--lab-line)" }}
+                    />
+                    <span
+                      className="text-[12px] font-semibold"
+                      style={{ color: active ? "var(--lab-ink)" : "var(--lab-ink-dim)" }}
+                    >
+                      {entry.label} model
+                    </span>
+                    {active ? (
+                      <span
+                        className="ml-auto text-[9px] font-semibold uppercase tracking-[0.16em]"
+                        style={{ color: catColor }}
+                      >
+                        showing
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="apple-lab-note mt-1.5 block text-[11px] leading-[1.6]">
+                    {entry.note}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="apple-lab-card mt-3 px-3 py-2.5">
-          <p className="apple-lab-micro">Ground-state configuration</p>
-          <p className="apple-lab-value mt-1 break-words text-[12.5px] leading-relaxed">
-            {configFor(z)}
-          </p>
-        </div>
+        <div className="apple-lab-panel apple-lab-glass min-w-0">
+          <p className="apple-lab-micro">Shell occupancy</p>
+          <div className="mt-3 flex flex-col gap-2.5">
+            {shells.map((count, index) => (
+              <motion.div
+                key={`shell-${index}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...transition, delay: stagger(index) }}
+                className="apple-lab-card px-3 py-2.5"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="apple-lab-micro">
+                    Shell {SHELL_LETTERS[index] ?? index + 1} (n = {index + 1})
+                  </span>
+                  <span className="apple-lab-value shrink-0 text-[14px] font-semibold">
+                    {count} e⁻
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--lab-line)]">
+                  {/* The bar is occupancy against the shell's real capacity,
+                      2n² — 2, 8, 18, 32. The old divisor (10, 20, 30, 40)
+                      left even a noble gas reading half empty. */}
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(count / (2 * (index + 1) ** 2)) * 100}%` }}
+                    transition={transition}
+                    className="h-full rounded-full"
+                    style={{
+                      background: `linear-gradient(90deg, ${tint(catColor, "66")}, ${tint(catColor, "cc")})`,
+                    }}
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
+          <div className="apple-lab-card mt-3 px-3 py-2.5">
+            <p className="apple-lab-micro">Ground-state configuration</p>
+            <p className="apple-lab-value mt-1 break-words text-[12.5px] leading-relaxed">
+              {configFor(z)}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

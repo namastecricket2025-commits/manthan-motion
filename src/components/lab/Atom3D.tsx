@@ -47,25 +47,38 @@ export default function Atom3D({ z, shells, symbol, orbitals, compact = false }:
   const electrons = useRef<THREE.Group[][]>([]);
   const orbitalsG = useRef<THREE.Group | null>(null);
 
-  const cam = useRef({ yaw: 0.65, pitch: 0.32, dist: 320, panX: 0, panY: 0 });
+  /* `zoom` is a multiplier on the fitted distance, never a distance itself:
+     the fit is recomputed every frame from the live canvas aspect, so the atom
+     stays whole when the panel is resized or the element changes shell count.
+     1 means "exactly the whole atom". */
+  const cam = useRef({ yaw: 0.65, pitch: 0.32, zoom: 1, panX: 0, panY: 0 });
   const p = useRef({ z, shells, orbitals });
   p.current = { z, shells, orbitals };
   const dragging = useRef(false);
 
-  /* Frame the whole atom: pull the camera back far enough that the widest
-     orbital ring plus its electron glow never clips at the canvas edges. */
-  const fitCamera = () => {
-    const c = cam.current;
-    const maxR = 42 + 26 * Math.max(0, p.current.shells.length - 1);
-    c.dist = clamp(maxR / Math.tan((22.5 * Math.PI) / 180) + 26, 200, 660);
-    c.panX = 0;
-    c.panY = 0;
+  /* Distance at which a sphere enclosing the atom fits the canvas.
+
+     This used to be `maxR / tan(22.5°)`, which only guarantees that the ring's
+     *centre line* is inside the frame: a ring tilted toward the eye projects up
+     to R·d/(d−R) wide, so the outer shell's glow was clipped at the left and
+     right edges and the model read as squeezed. Fitting the enclosing sphere
+     with sin() (R / sin θ) is the form that accounts for that near-side bulge,
+     and the electron sprites are added to the radius instead of ignored. */
+  const fitDistance = (shellCount: number, aspect: number) => {
+    const glow = 18; // sprite (11) + core (1.5) + line width, beyond the ring
+    const radius = 42 + 26 * Math.max(0, shellCount - 1) + glow;
+    const halfV = (45 / 2) * (Math.PI / 180);
+    const halfH = Math.atan(Math.tan(halfV) * Math.max(0.2, aspect || 1));
+    return radius / Math.sin(Math.min(halfV, halfH));
   };
+
+  /* A new element gets a fresh framing: zoom/pan left over from the previous
+     atom could hide the new one entirely. */
   useEffect(() => {
-    fitCamera();
-    // re-fit whenever the element (and therefore shell count) changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shells.length]);
+    cam.current.zoom = 1;
+    cam.current.panX = 0;
+    cam.current.panY = 0;
+  }, [shells.length, z]);
 
   /* ---------- scene setup (once) ---------- */
   useEffect(() => {
@@ -236,10 +249,11 @@ export default function Atom3D({ z, shells, symbol, orbitals, compact = false }:
     const cssW = w / Math.max(1, dpr);
     const cssH = h / Math.max(1, dpr);
     // size only on a real box change, never mid-drag (canvas.width resets the buffer)
-    syncViewport(vp.current, renderer, cam3, cssW, cssH, dragging.current !== null);
-    cam3.position.set(c.panX, c.panY, c.dist);
+    syncViewport(vp.current, renderer, cam3, cssW, cssH, dragging.current);
 
     const P = p.current;
+    const fit = fitDistance(P.shells.length, cam3.aspect);
+    cam3.position.set(c.panX, c.panY, clamp(fit * c.zoom, 120, 1600));
     // nucleus
     if (nucleus.current) nucleus.current.scale.setScalar(11 + Math.min(5, P.z * 0.03));
 
@@ -301,7 +315,7 @@ export default function Atom3D({ z, shells, symbol, orbitals, compact = false }:
 
   useWheelZoom(ref, (dy) => {
     const c = cam.current;
-    c.dist = clamp(c.dist * (dy > 0 ? 1.09 : 0.92), 180, 620);
+    c.zoom = clamp(c.zoom * (dy > 0 ? 1.09 : 0.92), 0.6, 2);
   });
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -323,7 +337,7 @@ export default function Atom3D({ z, shells, symbol, orbitals, compact = false }:
     if (pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinch.current > 0) c.dist = clamp(c.dist * (dist / pinch.current), 180, 620);
+      if (pinch.current > 0) c.zoom = clamp(c.zoom * (pinch.current / dist), 0.6, 2);
       pinch.current = dist;
     } else if (prev.button === 2) {
       c.panX += dx * 0.5;
@@ -345,7 +359,7 @@ export default function Atom3D({ z, shells, symbol, orbitals, compact = false }:
     <div
       className={
         "relative mx-auto w-full overflow-visible " +
-        (compact ? "max-w-[190px]" : "max-w-[430px]")
+        (compact ? "max-w-[210px]" : "max-w-[430px]")
       }
     >
       <canvas
