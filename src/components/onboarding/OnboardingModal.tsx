@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, BookOpen, Check, GraduationCap, Loader2, X } from "lucide-react";
+import { ArrowRight, BookOpen, Check, GraduationCap, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
@@ -10,10 +10,15 @@ import { toast } from "sonner";
 /**
  * First-run questions.
  *
- * Two screens, not a tour: which class and board the student is in, then which
- * subjects they actually study. The answers are stored on the account row so
- * they survive a new device, and `onboardedAt` is stamped even on “Skip”, so
- * the prompt never becomes a wall between a student and their notebook.
+ * Two screens, not a tour: who the student is and which class they are in,
+ * then which subjects they actually study. The answers are stored on the
+ * account row so they survive a new device.
+ *
+ * This is a gate, not a suggestion: a brand-new Google account arrives with a
+ * name and an email but no class, so the workspace cannot open on the right
+ * level until the student says which class they are in. The sheet therefore
+ * has no skip and no close — completing the two screens is the way in. The
+ * answers remain editable from Settings.
  *
  * It is deliberately absent from /auth: a sign-in form behind a modal is not a
  * first-run experience.
@@ -49,7 +54,10 @@ export function OnboardingModal() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
-  const [grade, setGrade] = useState<string>("10");
+  /* No default class. A Google account supplies a name but never a class, and
+     defaulting to 10 would silently open an eight-grader's workspace at the
+     wrong level if they tapped through. The student has to choose. */
+  const [grade, setGrade] = useState<string>("");
   const [board, setBoard] = useState<string>("CBSE");
   const [subjects, setSubjects] = useState<string[]>([
     "Mathematics",
@@ -59,8 +67,8 @@ export function OnboardingModal() {
   const [saving, setSaving] = useState(false);
   const [closed, setClosed] = useState(false);
 
-  /* A dismissed prompt stays dismissed for this tab even if the mutation is
-     still in flight; the profile prop is the durable truth. */
+  /* Once the mutation has landed, keep the sheet closed even if the profile
+     query is still catching up; the profile prop is the durable truth. */
   useEffect(() => {
     setClosed(false);
     setStep(0);
@@ -81,6 +89,17 @@ export function OnboardingModal() {
     !closed &&
     location.pathname !== "/auth";
 
+  /* The sheet is the only thing that can be touched while it is up; without
+     this, a thumb swipe scrolls the workspace behind it on a phone. */
+  useEffect(() => {
+    if (!shouldShow) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [shouldShow]);
+
   function toggleSubject(subject: string) {
     setSubjects((current) =>
       current.includes(subject)
@@ -89,27 +108,21 @@ export function OnboardingModal() {
     );
   }
 
-  async function save(skip = false) {
-    if (saving) return;
+  async function save() {
+    if (saving || !name.trim() || !grade) return;
     setSaving(true);
     try {
-      await complete(
-        skip
-          ? { name: name.trim() || undefined }
-          : {
-              name: name.trim(),
-              grade,
-              board,
-              subjects,
-            },
-      );
+      await complete({
+        name: name.trim(),
+        grade,
+        board,
+        subjects,
+      });
       setClosed(true);
-      toast.success(skip ? "You can set this in Settings" : "Workspace personalised", {
-        description: skip
-          ? "Your class and subjects stay unset until you choose them."
-          : `Class ${grade} · ${board} · ${subjects.length} subject${
-              subjects.length === 1 ? "" : "s"
-            }`,
+      toast.success("Workspace personalised", {
+        description: `Class ${grade} · ${board} · ${subjects.length} subject${
+          subjects.length === 1 ? "" : "s"
+        }`,
       });
     } catch (error) {
       toast.error(
@@ -134,7 +147,7 @@ export function OnboardingModal() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="onboarding-title"
-            className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-[var(--card-border)] bg-[var(--panel)] p-6 shadow-2xl sm:p-8"
+            className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-3xl border border-[var(--card-border)] bg-[var(--panel)] p-6 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-8"
             initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -163,15 +176,6 @@ export function OnboardingModal() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => void save(true)}
-                disabled={saving}
-                aria-label="Skip personalisation"
-                className="rounded-full p-1.5 text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
 
             <AnimatePresence mode="wait" initial={false}>
@@ -193,7 +197,7 @@ export function OnboardingModal() {
                   <p className="mt-1.5 text-sm leading-relaxed text-text-dim">
                     Your name and class set how the workspace greets you and the
                     level every practice set opens on. You can change them in
-                    Settings.
+                    Settings, but both are needed before the workspace opens.
                   </p>
 
                   <label
@@ -305,21 +309,27 @@ export function OnboardingModal() {
                   <p className="mt-4 text-[11px] text-text-dim">
                     {subjects.length === 0
                       ? "No subjects selected — that is fine, you can add them later."
-                      : `${subjects.length} selected · ${grade} · ${board}`}
+                      : `${subjects.length} selected · Class ${grade} · ${board}`}
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
 
             <div className="relative mt-7 flex items-center justify-between gap-3 border-t border-[var(--card-border)] pt-5">
-              <button
-                type="button"
-                onClick={() => (step === 0 ? void save(true) : setStep(0))}
-                disabled={saving}
-                className="text-xs font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
-              >
-                {step === 0 ? "Skip for now" : "Back"}
-              </button>
+              {step === 0 ? (
+                <span className="text-xs text-text-dim">
+                  Two quick questions, then your workspace opens.
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStep(0)}
+                  disabled={saving}
+                  className="text-xs font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
+                >
+                  Back
+                </button>
+              )}
 
               <div className="flex items-center gap-3">
                 <span className="flex gap-1.5" aria-hidden="true">
@@ -339,7 +349,7 @@ export function OnboardingModal() {
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    disabled={!name.trim()}
+                    disabled={!name.trim() || !grade}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Continue
@@ -348,8 +358,8 @@ export function OnboardingModal() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => void save(false)}
-                    disabled={saving || !name.trim()}
+                    onClick={() => void save()}
+                    disabled={saving || !name.trim() || !grade}
                     className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}

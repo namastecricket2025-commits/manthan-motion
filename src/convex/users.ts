@@ -74,8 +74,9 @@ const ALLOWED_BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "State board"] as const;
  *
  * This is a write path, so it creates the `users` row if this is the account's
  * first write — which is exactly what happens for a brand-new sign-up.
- * `onboardedAt` is stamped even when every field is skipped, so the prompt does
- * not reappear on the next page load.
+ * `onboardedAt` is stamped on completion, so the first-run prompt does not
+ * reappear on the next page load. The name and class themselves are required
+ * by the sheet before it will save.
  */
 export const completeOnboarding = mutation({
   args: {
