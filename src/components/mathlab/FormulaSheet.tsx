@@ -1,16 +1,19 @@
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Copy, Search } from "lucide-react";
 import { GRADES, type CheatEntry, type GradeId } from "@/components/mathlab/mathlab";
+import { cheatWithBank } from "@/components/mathlab/formula-bank";
 import { MathTex } from "@/components/mathlab/latex";
 
 /**
  * The formula sheet.
  *
- * Every line here comes from the chapter data the Lab already teaches from —
- * the same `cheat` entries the solve pane shows under "chapter reference" — so
- * the sheet can never disagree with the chapters. It is organised two ways at
- * once, because both are how a student actually revises: by curriculum track,
- * and by chapter.
+ * Every line here comes from the chapter the Lab teaches from: the chapter's
+ * own `cheat` entries, then the revision layer in `formula-bank.ts` — the
+ * standard results a student is examined on, which the solver data does not
+ * carry. `cheatWithBank` merges them without duplicates, so the sheet can
+ * never print the same result twice and can never fall out of step with the
+ * chapter it belongs to. It is organised two ways at once, because both are
+ * how a student actually revises: by curriculum track, and by chapter.
  *
  * The track chips are not decoration. Each one lists the class levels it
  * covers, and the sheet only ever shows the chapters of those classes; Class 11
@@ -47,19 +50,23 @@ export function FormulaSheet() {
   const chapters = useMemo(() => {
     const wanted = track.covers.includes(gradeFilter as GradeId) ? [gradeFilter as GradeId] : track.covers;
     return GRADES.filter((grade) => wanted.includes(grade.id)).flatMap((grade) =>
-      grade.chapters.map((chapter) => ({ grade, chapter })),
+      grade.chapters.map((chapter) => ({
+        grade,
+        chapter,
+        entries: cheatWithBank(grade.id, chapter.name, chapter.cheat),
+      })),
     );
   }, [track, gradeFilter]);
 
   const needle = query.trim().toLowerCase();
   const filtered = useMemo(() => {
     if (!needle) {
-      return chapters.map((entry) => ({ ...entry, hits: entry.chapter.cheat as CheatEntry[] }));
+      return chapters.map((entry) => ({ ...entry, hits: entry.entries }));
     }
     return chapters
       .map((entry) => ({
         ...entry,
-        hits: entry.chapter.cheat.filter(
+        hits: entry.entries.filter(
           (item) =>
             item.title.toLowerCase().includes(needle) ||
             item.latex.toLowerCase().includes(needle) ||
@@ -78,7 +85,7 @@ export function FormulaSheet() {
     });
   };
 
-  const totalEntries = chapters.reduce((sum, entry) => sum + entry.chapter.cheat.length, 0);
+  const totalEntries = chapters.reduce((sum, entry) => sum + entry.entries.length, 0);
   const totalChapters = chapters.length;
 
   return (
@@ -154,12 +161,12 @@ export function FormulaSheet() {
         <p className="mathlab-hint">Nothing in these chapters matches “{query}”.</p>
       ) : (
         <div className="mathlab-sheet__chapters">
-          {filtered.map(({ grade, chapter, hits }) => {
+          {filtered.map(({ grade, chapter, entries, hits }) => {
             const key = `${grade.id}-${chapter.name}`;
             const open = openChapter === key;
             // Searching narrows a chapter to what matched; if the chapter
             // matched by name alone, the whole chapter is still offered.
-            const entries: CheatEntry[] = needle && hits.length ? hits : chapter.cheat;
+            const shown: CheatEntry[] = needle && hits.length ? hits : entries;
             return (
               <section key={key} className="mathlab-sheet__chapter" data-open={open}>
                 <button
@@ -171,14 +178,14 @@ export function FormulaSheet() {
                   <ChevronDown className="mathlab-fold__chev" aria-hidden />
                   <span className="mathlab-sheet__chaptername">{chapter.name}</span>
                   <span className="mathlab-sheet__chaptermeta">
-                    Class {grade.id} · {entries.length} entries
+                    Class {grade.id} · {shown.length} entries
                   </span>
                 </button>
                 {open ? (
                   <div className="mathlab-sheet__chapterbody">
                     <p className="mathlab-sheet__focus">{chapter.focus}</p>
                     {KIND_ORDER.map((kind) => {
-                      const group = entries.filter((item) => item.kind === kind);
+                      const group = shown.filter((item) => item.kind === kind);
                       if (!group.length) return null;
                       return (
                         <div key={kind} className="mathlab-sheet__group">

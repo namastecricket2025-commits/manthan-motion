@@ -1,4 +1,5 @@
 import { currentIdentity, requireAuthUserId } from "./identity";
+import { normalizeClassLabel } from "../lib/class-label";
 import { v } from "convex/values";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 
@@ -140,7 +141,11 @@ export const submitFeedback = mutation({
       rating: Math.round(args.rating),
       text: (args.text ?? "").trim().slice(0, MAX_TEXT),
       displayName: args.displayName?.trim().slice(0, MAX_NAME) || undefined,
-      classLabel: args.classLabel?.trim().slice(0, MAX_NAME) || undefined,
+      // Normalised on the server too: the browser sends "10th", the row that
+      // reaches the carousel stores and prints "Class 10", whatever client
+      // submitted it.
+      classLabel:
+        normalizeClassLabel(args.classLabel)?.slice(0, MAX_NAME) || undefined,
       consentToPublish: args.consentToPublish,
       status: args.consentToPublish ? "approved" : "pending",
       source: "user",

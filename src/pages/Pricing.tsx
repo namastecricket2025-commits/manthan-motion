@@ -7,55 +7,351 @@ import { usePlan } from "@/components/plans/PlanProvider";
 import {
   DEFAULT_DURATION,
   DURATIONS,
-  durationSavings,
+  FREE_PLAN,
+  PLAN_MATRIX,
+  PLAN_TIERS,
   durationTotal,
   formatINR,
   getDuration,
-  PLAN_TIERS,
   planName,
   type DurationId,
+  type PlanId,
   type PlanTier,
 } from "@/lib/plans";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, ChevronDown, Minus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { Link } from "react-router";
 
 /**
  * Plans and pricing.
  *
- * Three tiers, each priced honestly: the Sprint Pass is a single seven-day
- * pass, while EduVantage and Manthan Prime offer the 1 / 6 / 12 month schemes
- * with the discount applied to the running total. Checkout is an explicit
- * sandbox simulation — nothing here contacts a payment network.
+ * Four columns, priced the way the workspaces actually differ: Free keeps the
+ * notebook studio whole, the Sprint Pass buys a week of it with Cram Mode,
+ * EduVantage opens the lab graphs and the photo solver, and Prime opens the
+ * rest. One billing switch sits above the cards and moves every plan that has
+ * a term at once, because three separate switches on three cards made the
+ * reader compare four prices in three different units.
  *
- * The card deliberately carries as little as possible: a name, one line of
- * description, the term, the number, ONE muted line of billing context, the
- * action, and the feature list.
+ * Below the cards: one comparison table, read from `PLAN_MATRIX` in
+ * `src/lib/plans.ts` — the same module that names the capability each lock
+ * checks, so the table cannot promise a workspace the app will refuse. Above
+ * the footnote: the questions a student asks before paying, answered with the
+ * numbers on this page.
  *
- * What was removed, and why it was removed rather than restyled:
- *
- *   - the "Popular" / "Current" bordered pills. A bordered micro-chip is a
- *     third type of box competing with the card, the button and the field
- *     around it; the featured plan is already told apart by a brighter border,
- *     and this account's state is already told apart by its button.
- *   - the `/ month` suffix and the `−10%` / `−20%` chips in the term switcher.
- *     The unit and the saving belong in one sentence under the price, not
- *     scattered as punctuation around it.
- *   - the eyebrow pill above the heading.
+ * Checkout is still an explicit sandbox simulation. Nothing here contacts a
+ * payment network.
  */
+
+/** The billing switch above the cards — one control for every term plan. */
+function BillingSwitch({
+  duration,
+  onSelect,
+}: {
+  duration: DurationId;
+  onSelect: (next: DurationId) => void;
+}) {
+  return (
+    <div className="mt-8 flex flex-col items-center gap-2.5">
+      <div
+        className="inline-flex items-center gap-1 rounded-full border border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--panel)_70%,transparent)] p-1"
+        role="group"
+        aria-label="Billing term"
+      >
+        {DURATIONS.map((option) => {
+          const active = option.id === duration;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(option.id)}
+              className={cn(
+                "relative rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition-colors",
+                active
+                  ? "bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)] text-foreground"
+                  : "text-text-dim hover:text-foreground",
+              )}
+            >
+              {option.months === 1 ? "Monthly" : `${option.months} months`}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[11.5px] text-text-dim">
+        6 months saves 10% · 12 months saves 20% — applied to the total, not
+        hidden in it.
+      </p>
+    </div>
+  );
+}
+
+/** A plan card. Free and the paid tiers share every rule by construction. */
+function PlanCard({
+  name,
+  summary,
+  price,
+  priceSuffix,
+  billingLine,
+  hook,
+  features,
+  includedLabel,
+  featured,
+  current,
+  onChoose,
+  ctaLabel,
+}: {
+  name: string;
+  summary: string;
+  price: number;
+  priceSuffix: string;
+  billingLine: string;
+  hook?: string;
+  features: string[];
+  includedLabel: string;
+  featured?: boolean;
+  current: boolean;
+  onChoose?: () => void;
+  ctaLabel: string;
+}) {
+  return (
+    <section
+      data-reveal
+      className={cn(
+        "premium-card relative overflow-hidden",
+        featured && "premium-card--featured",
+      )}
+    >
+      {featured ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--signal)] to-transparent opacity-80"
+        />
+      ) : null}
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-display text-[15px] font-semibold tracking-tight">
+            {name}
+          </h2>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-text-dim">
+            {summary}
+          </p>
+        </div>
+        {featured ? (
+          <span className="premium-chip shrink-0">Most popular</span>
+        ) : current ? (
+          <span className="premium-chip shrink-0">Current</span>
+        ) : null}
+      </div>
+
+      {/* The number glides when the term changes — one animated figure per
+          card, never a second price in the small print. */}
+      <div className="mt-6 flex items-end gap-1.5">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={`${name}-${price}`}
+            initial={{ y: 14, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -14, opacity: 0 }}
+            transition={{ duration: 0.26, ease: [0.25, 1, 0.5, 1] }}
+            className="block font-display text-[38px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
+          >
+            {formatINR(price)}
+          </motion.span>
+        </AnimatePresence>
+        <span className="pb-1 text-[11.5px] text-text-dim">{priceSuffix}</span>
+      </div>
+
+      <p className="mt-2.5 min-h-[18px] text-[11.5px] leading-relaxed text-text-dim">
+        {billingLine}
+      </p>
+      {hook ? (
+        <p className="mt-1 text-[11.5px] leading-relaxed text-text-dim">{hook}</p>
+      ) : null}
+
+      <div className="mt-6">
+        {current ? (
+          <button
+            type="button"
+            disabled
+            className="w-full cursor-default rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-text-dim"
+          >
+            Your current plan
+          </button>
+        ) : featured ? (
+          <MovingBorderButton
+            onClick={onChoose}
+            className="w-full"
+            innerClassName="w-full px-5 py-2.5 text-[13px]"
+          >
+            {ctaLabel}
+          </MovingBorderButton>
+        ) : (
+          <button
+            type="button"
+            onClick={onChoose}
+            className="w-full rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:border-[var(--panel-line-strong)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
+          >
+            {ctaLabel}
+          </button>
+        )}
+      </div>
+
+      <div className="premium-divider my-6" />
+
+      <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+        {includedLabel}
+      </p>
+      <ul className="flex-1 space-y-3">
+        {features.map((feature) => (
+          <li key={feature} className="flex gap-2.5 text-[13px]">
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
+            <span className="leading-relaxed">{feature}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** One comparison cell: a tick, a dash, or the plan's own words. */
+function CellValue({ value }: { value: string }) {
+  if (value === "—") {
+    return (
+      <>
+        <Minus className="mx-auto h-3.5 w-3.5 text-text-dim opacity-60" aria-hidden="true" />
+        <span className="sr-only">Not included</span>
+      </>
+    );
+  }
+  if (value === "Included") {
+    return (
+      <>
+        <Check className="mx-auto h-4 w-4 text-[var(--signal)]" aria-hidden="true" />
+        <span className="sr-only">Included</span>
+      </>
+    );
+  }
+  return <span className="text-[12px] leading-snug">{value}</span>;
+}
+
+const PRICING_FAQ: { q: string; a: string }[] = [
+  {
+    q: "Is anything actually charged?",
+    a: "No. Checkout is a sandbox simulation: it writes the plan onto your account so you can use the workspaces and see the allowance change, and it never contacts a payment network. No card is stored anywhere.",
+  },
+  {
+    q: "What happens when my allowance runs out?",
+    a: "Generation pauses until the window resets — midnight UTC on Free, the first of the month on a paid plan. Nothing you already made disappears: notebooks, sources and generated material stay readable and exportable at zero tokens.",
+  },
+  {
+    q: "Do paid plans unlock chapters?",
+    a: "Never. Every chapter, every board paper and every formula in Classes 8 to 12 is readable on Free. A plan changes how much you can generate and which workspaces open; it never gates the syllabus.",
+  },
+  {
+    q: "What counts as a study kit?",
+    a: "One run of the pipeline over your sources: a summary, flashcards, a quiz, a mind map and slides, all generated together. Five kits a day on Free is five of those, not five cards.",
+  },
+  {
+    q: "Can I change plan in the middle of a term?",
+    a: "Yes, in either direction, from this page. The change applies immediately — the allowance and the workspaces move together — and going back to Free never deletes material you made while subscribed.",
+  },
+];
+
+function PricingFaq() {
+  const [open, setOpen] = useState<number | null>(0);
+  return (
+    <div className="mx-auto mt-14 max-w-3xl">
+      <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+        Questions before you choose
+      </h2>
+      <div className="glass-panel mt-5 overflow-hidden">
+        {PRICING_FAQ.map((item, index) => {
+          const isOpen = open === index;
+          return (
+            <div
+              key={item.q}
+              className={cn(index > 0 && "border-t border-[var(--panel-line)]")}
+            >
+              <h3>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpen(isOpen ? null : index)}
+                  className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)]"
+                >
+                  <span className="text-[14px] font-medium leading-6">
+                    {item.q}
+                  </span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn(
+                      "mt-1 h-4 w-4 shrink-0 text-text-dim transition-transform duration-200 motion-reduce:transition-none",
+                      isOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+              </h3>
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none"
+                style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  <p className="px-5 pb-5 text-[13px] leading-relaxed text-text-dim">
+                    {item.a}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const COLUMNS: Array<{ id: PlanId; name: string; price: string }> = [
+  { id: "free", name: "Free", price: "₹0" },
+  { id: "sprint", name: "Sprint Pass", price: "₹49 / 7 days" },
+  { id: "eduvantage", name: "EduVantage", price: "from ₹199 / mo" },
+  { id: "prime", name: "Prime", price: "from ₹349 / mo" },
+];
 
 export default function Pricing() {
   const { plan, setPlan } = usePlan();
-  const [durations, setDurations] = useState<Record<string, DurationId>>({
-    eduvantage: DEFAULT_DURATION,
-    prime: DEFAULT_DURATION,
-  });
+  const [duration, setDuration] = useState<DurationId>(DEFAULT_DURATION);
   const [checkout, setCheckout] = useState<PlanTier | null>(null);
 
-  const checkoutDuration = checkout
-    ? getDuration(durations[checkout.id] ?? DEFAULT_DURATION)
-    : getDuration(DEFAULT_DURATION);
+  const term = getDuration(duration);
+  const checkoutDuration = getDuration(duration);
+
+  const tierDisplay = (tier: PlanTier) => {
+    if (!tier.flexible) {
+      return {
+        price: tier.price,
+        suffix: "/ 7 days",
+        billing: `One 7-day pass · ${tier.allowance}`,
+        hook:
+          "About ₹7 a day for one revision week — the price of a bus fare.",
+      };
+    }
+    const total = durationTotal(tier, term);
+    const perMonth = Math.round(total / term.months);
+    return {
+      price: perMonth,
+      suffix: "/ month",
+      billing:
+        term.months === 1
+          ? `Billed monthly · cancel any time`
+          : `${formatINR(total)} billed every ${term.months} months`,
+      hook:
+        perMonth <= 199
+          ? `About ₹${Math.max(1, Math.round(perMonth / 30))} a day — less than one photocopied test.`
+          : `About ₹${Math.max(1, Math.round(perMonth / 30))} a day for every workspace, unlocked.`,
+    };
+  };
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -63,199 +359,60 @@ export default function Pricing() {
         {/* Page-top wash — the same faint neutral light as the landing page. */}
         <div className="glow-aura" aria-hidden="true" />
         <Navbar />
-        <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-28 sm:px-6 sm:pt-36">
+        <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-28 sm:px-6 sm:pt-36">
           <div data-reveal className="mx-auto max-w-2xl text-center">
-            <h1 className="text-fade font-display text-4xl font-bold tracking-[-0.035em] sm:text-5xl md:text-[56px] md:leading-[1.05]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-dim">
+              Plans
+            </p>
+            <h1 className="text-fade mt-3 font-display text-4xl font-bold tracking-[-0.035em] sm:text-5xl md:text-[56px] md:leading-[1.05]">
               Pricing for every study plan
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
               Every account starts free and stays useful — 60,000 tokens a day,
-              every notebook, every source. The tiers below raise the ceiling and
-              open the advanced workspaces. Checkout is a sandbox: nothing is
+              three notebooks, every source you add. The tiers raise the ceiling
+              and open the advanced workspaces. Checkout is a sandbox: nothing is
               charged.
             </p>
+            <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* What free already includes — stated once, above the table, so the
-              paid cards only have to sell the difference. */}
-          <div
-            data-reveal
-            className="glass-panel mt-12 flex flex-wrap items-center justify-between gap-4 px-5 py-4"
-          >
-            <div>
-              <p className="font-display text-sm font-semibold tracking-tight">
-                Free · included with every account
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-text-dim">
-                60,000 tokens per day · unlimited notebooks and sources ·
-                summaries, flashcards, quizzes, mind maps and slides · AI
-                notebook chat, audio overviews and Hindi one-shot lecture picks
-                · full STEM Lab
-              </p>
-            </div>
-            <p className="text-xs font-medium text-text-dim">
-              {plan === "free" ? "Your current plan" : "Included"}
-            </p>
-          </div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <PlanCard
+              name={FREE_PLAN.name}
+              summary={FREE_PLAN.summary}
+              price={0}
+              priceSuffix="/ forever"
+              billingLine="No card, no trial clock."
+              features={FREE_PLAN.features}
+              includedLabel="What you get"
+              current={plan === "free"}
+              ctaLabel="Switch to Free"
+              onChoose={() => setPlan("free")}
+            />
 
-          <div className="mt-6 grid gap-5 lg:grid-cols-3">
             {PLAN_TIERS.map((tier) => {
-              const duration = getDuration(durations[tier.id] ?? DEFAULT_DURATION);
-              const total = tier.flexible
-                ? durationTotal(tier, duration)
-                : tier.price;
-              const savings = tier.flexible ? durationSavings(tier, duration) : 0;
-              const isCurrent = plan === tier.id;
-              /* The daily figure is the hook that actually lands: a student can
-                 compare ₹7 a day with a bus fare; ₹349 a month is abstract. */
-              const perDay = Math.max(
-                1,
-                Math.round(
-                  tier.flexible
-                    ? total / (duration.months * 30)
-                    : tier.price / 7,
-                ),
-              );
-              const hook =
-                tier.id === "sprint"
-                  ? `About ${formatINR(perDay)} a day for one revision week.`
-                  : tier.id === "eduvantage"
-                    ? `About ${formatINR(perDay)} a day — less than one photocopied test.`
-                    : `About ${formatINR(perDay)} a day for every workspace, unlocked.`;
-
+              const display = tierDisplay(tier);
               return (
-                <section
+                <PlanCard
                   key={tier.id}
-                  data-reveal
-                  className={cn(
-                    "premium-card",
-                    tier.featured && "premium-card--featured",
-                  )}
-                >
-                  {/* A plain, unboxed label — the popular plan is named, not
-                      badged, and its card's brighter border does the rest. */}
-                  {tier.featured && !isCurrent && (
-                    <p className="mb-3 text-xs font-medium text-foreground">
-                      Most popular
-                    </p>
-                  )}
-
-                  <h2 className="font-display text-base font-semibold tracking-tight">
-                    {tier.name}
-                  </h2>
-                  <p className="mt-1 text-sm leading-relaxed text-text-dim">
-                    {tier.summary}
-                  </p>
-
-                  {/* Term switcher — plain text, no discount chips: the saving
-                      is stated once, in the billing line under the price. */}
-                  {tier.flexible && (
-                    <div className="mt-5 flex items-center gap-1">
-                      {DURATIONS.map((option) => {
-                        const active =
-                          (durations[tier.id] ?? DEFAULT_DURATION) === option.id;
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() =>
-                              setDurations((current) => ({
-                                ...current,
-                                [tier.id]: option.id,
-                              }))
-                            }
-                            className={cn(
-                              "rounded-md px-2 py-1 text-[13px] transition-colors",
-                              active
-                                ? "bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] font-medium text-foreground"
-                                : "text-text-dim hover:text-foreground",
-                            )}
-                          >
-                            {option.months} mo
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Animated total — the number glides when the term changes. */}
-                  <div className="mt-5 h-11 overflow-hidden">
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.span
-                        key={`${tier.id}-${total}`}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -20, opacity: 0 }}
-                        transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
-                        className="block font-display text-[40px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
-                      >
-                        {formatINR(total)}
-                      </motion.span>
-                    </AnimatePresence>
-                  </div>
-
-                  <p className="mt-3 min-h-[20px] text-xs leading-relaxed text-text-dim">
-                    {tier.flexible
-                      ? duration.months === 1
-                        ? "Billed monthly. Cancel any time."
-                        : `Billed every ${duration.months} months · saves ${formatINR(savings)}`
-                      : `One 7-day pass · ${tier.allowance}`}
-                  </p>
-                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-dim">
-                    {hook}
-                  </p>
-
-                  {/* The action sits directly under the price on every card, at
-                      the same offset, so the three buttons line up across the
-                      row and do not have to be hunted for. */}
-                  <div className="mt-6">
-                    {isCurrent ? (
-                      <button
-                        type="button"
-                        disabled
-                        className="w-full cursor-default rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-text-dim"
-                      >
-                        Current plan
-                      </button>
-                    ) : tier.featured ? (
-                      <MovingBorderButton
-                        onClick={() => setCheckout(tier)}
-                        className="w-full"
-                        innerClassName="w-full px-5 py-2.5 text-[13px]"
-                      >
-                        Choose {tier.name}
-                      </MovingBorderButton>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setCheckout(tier)}
-                        className="w-full rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:border-[var(--panel-line-strong)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
-                      >
-                        Choose {tier.name}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="premium-divider my-6" />
-
-                  <p className="mb-3 text-[11.5px] text-text-dim">
-                    Everything in Free, plus:
-                  </p>
-                  <ul className="flex-1 space-y-3">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex gap-2.5 text-sm">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-text-dim" />
-                        <span className="leading-relaxed">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                  name={tier.name}
+                  summary={tier.summary}
+                  price={display.price}
+                  priceSuffix={display.suffix}
+                  billingLine={display.billing}
+                  hook={display.hook}
+                  features={tier.features}
+                  includedLabel="Everything in Free, plus"
+                  featured={tier.featured}
+                  current={plan === tier.id}
+                  ctaLabel={`Choose ${tier.name}`}
+                  onChoose={() => setCheckout(tier)}
+                />
               );
             })}
           </div>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={() => setPlan("free")}
@@ -268,41 +425,135 @@ export default function Pricing() {
             </span>
           </div>
 
-          {/* What the price is for, stated in outcomes rather than adjectives. */}
-          <section data-reveal className="mt-14">
-            <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
-              What the money actually buys
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
-              The free account is not a demo. Paid tiers raise how much you can
-              make and which workbenches open — never which chapters you can
-              read.
+          {/* One table, grouped by workspace: what a student compares is
+              "which rooms open", not twelve adjectives. */}
+          <section data-reveal className="mt-16">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+                  Compare every plan
+                </h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
+                  Same engine on all four. What changes is how much it will
+                  make, how many notebooks it keeps, and which workspaces open.
+                </p>
+              </div>
+              <p className="text-[11px] text-text-dim sm:hidden">
+                Swipe the table →
+              </p>
+            </div>
+
+            <div className="glass-panel mt-5 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-[var(--panel-line)]">
+                      <th
+                        scope="col"
+                        className="sticky left-0 z-10 bg-[var(--panel)] px-4 py-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-dim sm:px-5"
+                      >
+                        Feature
+                      </th>
+                      {COLUMNS.map((column) => (
+                        <th
+                          key={column.id}
+                          scope="col"
+                          className="px-3 py-3 text-center align-bottom"
+                        >
+                          <span className="block font-display text-[13px] font-semibold">
+                            {column.name}
+                          </span>
+                          <span className="mt-0.5 block text-[10.5px] font-normal text-text-dim">
+                            {column.price}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PLAN_MATRIX.map((group) => (
+                      <Fragment key={group.title}>
+                        <tr className="bg-[color-mix(in_srgb,var(--text-main)_3%,transparent)]">
+                          <th
+                            scope="colgroup"
+                            colSpan={COLUMNS.length + 1}
+                            className="px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-text-dim sm:px-5"
+                          >
+                            {group.title}
+                          </th>
+                        </tr>
+                        {group.rows.map((row) => (
+                          <tr
+                            key={row.label}
+                            className="border-t border-[var(--panel-line)]"
+                          >
+                            <th
+                              scope="row"
+                              className="sticky left-0 z-10 bg-[var(--panel)] px-4 py-3 text-[12.5px] font-normal leading-snug sm:px-5"
+                            >
+                              {row.label}
+                              {row.detail ? (
+                                <span className="mt-0.5 block text-[10.5px] font-normal leading-snug text-text-dim">
+                                  {row.detail}
+                                </span>
+                              ) : null}
+                            </th>
+                            {COLUMNS.map((column) => (
+                              <td
+                                key={column.id}
+                                className={cn(
+                                  "px-3 py-3 text-center align-middle",
+                                  column.id === "eduvantage" &&
+                                    "bg-[color-mix(in_srgb,var(--signal)_4%,transparent)]",
+                                )}
+                              >
+                                <CellValue value={row.values[column.id]} />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-text-dim">
+              Counts are per account and reset with your allowance window. A
+              study kit is one run of the pipeline; a mock exam is one paper
+              generated from your own chapters.
             </p>
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              {[
-                {
-                  title: "The same engine on every plan",
-                  body: "A free account already churns sources into summaries, flashcards, quizzes, mind maps and slides. Paying buys more tokens and the advanced workspaces, not a better answer.",
-                },
-                {
-                  title: "Priced around an exam, not a feature list",
-                  body: "Sprint is one revision week. EduVantage is a month of assignments. Prime is the full Math Lab and the voice tutor, for the term you are actually in.",
-                },
-                {
-                  title: "Your notes are never held hostage",
-                  body: "Every notebook, source and generated item can be exported from Settings. Deleting an account removes the material with it, not just the login.",
-                },
-              ].map((card) => (
-                <div
-                  key={card.title}
-                  className="rounded-2xl border border-[var(--panel-line)] p-5"
-                >
-                  <p className="text-sm font-semibold tracking-tight">{card.title}</p>
-                  <p className="mt-2 text-xs leading-relaxed text-text-dim">
-                    {card.body}
-                  </p>
-                </div>
-              ))}
+          </section>
+
+          <PricingFaq />
+
+          {/* One closing action, aimed at the reader who is still deciding. */}
+          <section
+            data-reveal
+            className="glass-panel mt-14 flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center"
+          >
+            <div>
+              <p className="font-display text-[15px] font-semibold tracking-tight">
+                Start on Free. Upgrade when a workspace gets in the way.
+              </p>
+              <p className="mt-1 max-w-xl text-xs leading-relaxed text-text-dim">
+                No card, no countdown, no chapter locked behind a plan. The
+                first five kits of the day are yours either way.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Link
+                to="/auth?returnTo=%2Fdashboard"
+                className="rounded-full bg-[var(--signal-strong)] px-5 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+              >
+                Create a free account
+              </Link>
+              <Link
+                to="/dashboard"
+                className="rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:border-[var(--panel-line-strong)]"
+              >
+                Open dashboard
+              </Link>
             </div>
           </section>
 
@@ -310,9 +561,10 @@ export default function Pricing() {
 
           <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-text-dim">
             Daily allowances count the tokens the AI reads from your sources and
-            writes back as study material. They reset at midnight UTC. Paid tiers
-            raise the cap and unlock the advanced workspaces; they never change
-            your notebooks or the material already inside them.
+            writes back as study material. They reset at midnight UTC; paid tiers
+            reset on the first of the month. Plans raise the cap and unlock the
+            advanced workspaces; they never change your notebooks or the material
+            already inside them.
           </p>
         </main>
         <Footer />

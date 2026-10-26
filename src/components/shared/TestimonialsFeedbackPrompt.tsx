@@ -2,6 +2,7 @@ import * as React from "react";
 import { Star } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
+import { normalizeClassLabel } from "@/lib/class-label";
 import { cn } from "@/lib/utils";
 import { useMutation } from "convex/react";
 
@@ -194,7 +195,7 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
         rating,
         text: text.trim(),
         displayName: displayName.trim() || undefined,
-        classLabel: classLabel.trim() || undefined,
+        classLabel: normalizeClassLabel(classLabel),
         consentToPublish: consent,
       });
       setSubmitted(true);
@@ -207,6 +208,13 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
       setBusy(false);
     }
   }
+
+  // Shown only when the app will print something different from what was
+  // typed — "10th" becoming "Class 10" is the whole point; an answer the app
+  // passes through untouched does not need a second line repeating it.
+  const classPreview = normalizeClassLabel(classLabel);
+  const showClassPreview =
+    !!classPreview && classPreview !== classLabel.trim().replace(/\s+/g, " ");
 
   if (!prompt.shouldShow && !submitted) {
     return null;
@@ -342,9 +350,14 @@ export function FeedbackPrompt({ className, forceVisible = false }: FeedbackProm
               onChange={(e) =>
                 setClassLabel(e.target.value.slice(0, 40))
               }
-              placeholder="Class 12 or JEE aspirant"
+              placeholder="10th or JEE"
               className="mt-1 w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm outline-none placeholder:text-text-dim/70 focus:border-[var(--signal)]"
             />
+            {showClassPreview ? (
+              <p className="mt-1 text-[10.5px] text-text-dim">
+                Prints as “{classPreview}”
+              </p>
+            ) : null}
           </div>
         </div>
 
