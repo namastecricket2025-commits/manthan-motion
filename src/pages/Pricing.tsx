@@ -124,13 +124,9 @@ function PlanCard({
         featured && "premium-card--featured",
       )}
     >
-      {featured ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--signal)] to-transparent opacity-80"
-        />
-      ) : null}
-
+      {/* The featured card's lit edge is the revolving rim in premium.css —
+          the straight hairline that used to sit across its top would now cut
+          through that rim, so it is gone. */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-[15px] font-semibold tracking-tight">

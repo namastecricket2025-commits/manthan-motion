@@ -48,12 +48,26 @@ function RollingNumber({ value }: { value: number }) {
 
     paint(0);
     const state = { running: 0 };
+
+    /* Each figure owns its own trigger, and the trigger is the figure itself.
+
+       This used to fire off the whole section at `top 85%`, which is the
+       heading's entry — the rail of numbers sits a few hundred pixels below
+       that, so the roll had already finished while the numbers were still
+       under the fold. The arithmetic was right and nobody could see it. A
+       figure now starts counting when the figure is on screen, and the roll
+       lasts long enough (≈2s, growing with the magnitude) to read as a count
+       rather than a snap. */
     const tween = gsap.to(state, {
       running: value,
-      duration: 0.85 + Math.log10(value + 1) * 0.42,
+      duration: 1.7 + Math.log10(value + 1) * 0.4,
       ease: "power2.out",
       onUpdate: () => paint(state.running),
-      scrollTrigger: { trigger: root, ...revealConfig },
+      scrollTrigger: {
+        trigger: root,
+        start: "top 75%",
+        toggleActions: "play none none none",
+      },
     });
     return () => {
       tween.scrollTrigger?.kill();

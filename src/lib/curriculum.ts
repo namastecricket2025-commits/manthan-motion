@@ -402,7 +402,6 @@ const CLASS_10_ENGLISH = [
   "Supplementary · Footprints without Feet",
   "Supplementary · The Making of a Scientist",
   "Supplementary · The Necklace",
-  "Supplementary · The Hack Driver",
   "Supplementary · Bholi",
   "Supplementary · The Book That Saved the Earth",
   "Writing Skills · Letter, Analytical Paragraph and Story",

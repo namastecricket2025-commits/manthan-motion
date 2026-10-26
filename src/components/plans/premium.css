@@ -57,12 +57,75 @@
   }
 }
 
-/* The featured plan is told apart by a BRIGHTER EDGE, not by colour: a tinted
-   border plus an accent glow ring on one card of three is the loudest thing
-   on a pricing page and it competes with the price itself. */
+/* The featured plan is told apart by a rim of travelling light — the same
+   conic sweep the badge used to wear, wrapped around the whole sheet where it
+   reads as the surface itself rather than a highlight on one word.
+
+   The ring is a pseudo-element one hairline larger than the card, carrying the
+   gradient and cut back to a 2px band by an `exclude` mask, so the card's fill,
+   radius and padding are untouched. The ring sits OUTSIDE the border box — a
+   descendant can never paint over the card's own 1px border because
+   `overflow: hidden` clips at the padding edge — which is why the featured card
+   drops that clip and keeps the rim on the outside.
+
+   `--premium-angle` is a registered <angle>, so the gradient's start angle can
+   be interpolated directly: the light turns in place instead of a huge box
+   spinning behind the card, which is what would leave the corners uncovered. */
+@property --premium-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
 .premium-card--featured {
-  border-color: var(--panel-line-strong);
-  box-shadow: 0 0 0 1px var(--panel-line);
+  overflow: visible;
+  border-color: transparent;
+  /* Keeps the rim's stacking inside this card — `position: relative` alone
+     leaves a z-indexed child competing in the grid's context. */
+  isolation: isolate;
+}
+
+.premium-card--featured::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 2px;
+  /* The tail of the sweep is a faint signal-tinted hairline rather than
+     nothing: with a fully transparent arc a third of the card's edge would
+     vanish as the light passed it, which reads as a broken border. Top of
+     the ramp is the three accents the badge used — signal, ember, cyan. */
+  background: conic-gradient(
+    from var(--premium-angle),
+    color-mix(in srgb, var(--signal) 30%, transparent) 0deg 140deg,
+    color-mix(in srgb, var(--signal) 92%, transparent) 210deg,
+    #ff8a3d 262deg,
+    #4cc9f0 316deg,
+    color-mix(in srgb, var(--signal) 30%, transparent) 358deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: premium-ring-turn 7s linear infinite;
+}
+
+@keyframes premium-ring-turn {
+  to {
+    --premium-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-card--featured::before {
+    animation: none;
+  }
 }
 
 /* Neutral badge: a state label, not a decoration. */
@@ -79,63 +142,14 @@
   color: var(--text-dim);
 }
 
-/* The featured badge carries a slow travelling light around its rim — a conic
-   sweep clipped to the pill by an inner mask, so the colour runs along the
-   edge as a line rather than filling the chip. Three accents (signal, ember,
-   cyan) so the movement reads at a glance without turning the badge into a
-   rainbow. Rotation is the only thing animating, so it costs one compositor
-   layer. */
+/* The featured badge is a plain label again. The card's rim carries the
+   motion now, and two revolving accents on one card fight each other for the
+   eye that should be on the price. */
 .premium-chip--featured {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--text-main) 22%, transparent);
   padding: 4px 11px;
   color: var(--text-main);
   font-weight: 600;
-}
-
-.premium-chip--featured::before {
-  content: "";
-  position: absolute;
-  inset: -160%;
-  z-index: -2;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg 218deg,
-    color-mix(in srgb, var(--signal) 85%, transparent) 268deg,
-    #ff8a3d 300deg,
-    #4cc9f0 330deg,
-    transparent 356deg
-  );
-  animation: premium-chip-spin 3.6s linear infinite;
-}
-
-.premium-chip--featured::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  z-index: -1;
-  border-radius: inherit;
-  background: color-mix(in srgb, var(--panel) 94%, var(--text-main));
-}
-
-@keyframes premium-chip-spin {
-  to {
-    transform: rotate(1turn);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .premium-chip--featured::before {
-    animation: none;
-    background: linear-gradient(
-      100deg,
-      color-mix(in srgb, var(--signal) 85%, transparent),
-      #ff8a3d,
-      #4cc9f0
-    );
-  }
 }
 
 .premium-divider {
