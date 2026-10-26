@@ -123,21 +123,20 @@ export function MobileMenu() {
         ]),
   ];
 
+  // A page behind a menu still scrolls, so the panel must be a solid surface:
+  // its rows never sit on two backgrounds at once. No `.glass-chip` here --
+  // that class is a translucent pill and its fill fought the opaque one below.
+  //
+  // The sheet is anchored to the viewport, not to the hamburger. `right-0` on
+  // the 40px button put its right edge ~6rem in from the screen edge, so a
+  // 19rem panel ran off the left of a phone and cut every row mid-word.
+  // `fixed` plus a 1rem gutter keeps it on screen at 320px and up; the header
+  // is full-width and pinned to the top, so its backdrop-filter containing
+  // block lands in the same place.
   return (
     <div ref={rootRef} className="md:hidden">
       <AnimatePresence>
         {open && (
-          /* A page behind a menu still scrolls; the panel must be a solid
-             surface so its rows never sit on two backgrounds at once. No
-             `.glass-chip` here — that class is a translucent pill and its
-             fill was fighting the opaque one below.
-
-             The sheet is anchored to the viewport, not to the hamburger.
-             `right-0` on the 40px button put its right edge ~6rem in from the
-             screen edge, so a 19rem panel ran off the left of a phone and cut
-             every row mid-word. `fixed` plus a 1rem gutter keeps it on screen
-             at 320px and up; the header is full-width and pinned to the top,
-             so its backdrop-filter containing block lands in the same place. */
           <motion.div
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
