@@ -1,7 +1,7 @@
 /**
  * Math Lab curriculum and equation engine.
  *
- * Everything the lab knows lives here: the four grade tracks, the chapters
+ * Everything the lab knows lives here: the five grade tracks, the chapters
  * with the governing formulas each one is examined on, the plottable models
  * the graphing canvas renders, and a small symbolic solver that turns a typed
  * equation into the four structured blocks the right pane shows.
@@ -12,7 +12,7 @@
  * rather than inventing an answer.
  */
 
-export type GradeId = "8" | "9" | "10" | "11";
+export type GradeId = "8" | "9" | "10" | "11" | "12";
 
 /** A number in a label reads as short as possible: 2, never 2.0000001. */
 function shortNum(value: number): string {
@@ -89,7 +89,7 @@ export interface GradeSpec {
   label: string;
   level: string;
   blurb: string;
-  /** Grade 10 and 11 need the full Prime suite; 8 and 9 run on basic graphs. */
+  /** Grades 10 to 12 need the full Prime suite; 8 and 9 run on basic graphs. */
   advanced: boolean;
   chapters: Chapter[];
   models: PlotModel[];
@@ -1300,6 +1300,165 @@ export const GRADES: GradeSpec[] = [
     blurb: "Conic sections, straight lines, trigonometric functions and calculus.",
     advanced: true,
     chapters: [
+      boardChapter({
+        name: "Sets",
+        focus: "Set operations, Venn diagrams and counting the elements of a union.",
+        formulas: [
+          "n(A ∪ B) = n(A) + n(B) − n(A ∩ B)",
+          "A set with n elements has 2ⁿ subsets",
+          "n(A − B) = n(A) − n(A ∩ B)",
+        ],
+        latex: [
+          ["Union of two sets", String.raw`n(A \cup B) = n(A) + n(B) - n(A \cap B)`],
+          ["Three sets", String.raw`n(A \cup B \cup C) = \sum n(A) - \sum n(A \cap B) + n(A \cap B \cap C)`],
+          ["Number of subsets", String.raw`|\mathcal{P}(A)| = 2^n`],
+          ["Difference", String.raw`A - B = \{x : x \in A,\ x \notin B\}`],
+          ["De Morgan", String.raw`(A \cup B)' = A' \cap B', \qquad (A \cap B)' = A' \cup B'`],
+        ],
+        method: [
+          "Draw the Venn diagram and write the number in every region before using a formula.",
+          "For a word problem, start with the intersection and work outwards.",
+        ],
+        example: "In a class of 40, 25 play cricket, 20 play football and 10 play both — how many play neither?",
+        plot: "sequence",
+        rule: "Inclusion–Exclusion",
+      }),
+      boardChapter({
+        name: "Relations and Functions",
+        focus: "Cartesian products, domain and range, and types of relations.",
+        formulas: [
+          "A × B = {(a, b) : a ∈ A, b ∈ B}",
+          "A relation from A to B is a subset of A × B",
+          "Domain of f is the set of inputs; range is the set of outputs",
+        ],
+        latex: [
+          ["Cartesian product", String.raw`A \times B = \{(a, b) : a \in A,\ b \in B\}`],
+          ["Number of relations", String.raw`2^{mn},\quad m = n(A),\ n = n(B)`],
+          ["Function", String.raw`f: A \to B,\quad (a, b) \in f \Rightarrow b = f(a)`],
+          ["Domain and range", String.raw`\operatorname{Dom}(f) = A, \qquad \operatorname{Range}(f) \subseteq B`],
+        ],
+        method: [
+          "A relation is a set of ordered pairs, so equality means the same pairs, not the same rule written differently.",
+          "For the domain of a formula, exclude the values that make a denominator zero or a root negative.",
+        ],
+        example: "If A = {1, 2} and B = {3, 4}, list A × B and the number of relations from A to B",
+        plot: "linear",
+        rule: "Cartesian Product",
+      }),
+      boardChapter({
+        name: "Complex Numbers and Quadratic Equations",
+        focus: "The algebra of i, modulus and argument, and roots of a quadratic.",
+        formulas: [
+          "i² = −1",
+          "|z| = √(a² + b²) for z = a + ib",
+          "Roots of az² + bz + c = 0 are (−b ± √(b² − 4ac))/2a",
+        ],
+        latex: [
+          ["The imaginary unit", String.raw`i^2 = -1, \qquad i^3 = -i, \qquad i^4 = 1`],
+          ["Algebraic form", String.raw`z = a + ib, \qquad \bar{z} = a - ib`],
+          ["Modulus and argument", String.raw`|z| = \sqrt{a^2 + b^2}, \qquad \arg z = \tan^{-1}\frac{b}{a}`],
+          ["Product in polar form", String.raw`z_1 z_2 = r_1 r_2\left[\cos(\theta_1 + \theta_2) + i\sin(\theta_1 + \theta_2)\right]`],
+          ["Cube roots of unity", String.raw`\omega^3 = 1, \qquad 1 + \omega + \omega^2 = 0`],
+        ],
+        method: [
+          "Collect the real and imaginary parts separately; i² becomes −1 before adding anything.",
+          "Multiply by the conjugate to rationalise a complex denominator.",
+        ],
+        example: "Find the modulus and argument of z = 1 + i√3",
+        plot: "quadratic",
+        rule: "Modulus–Argument Form",
+      }),
+      boardChapter({
+        name: "Linear Inequalities",
+        focus: "Solving inequalities and reading the solution as an interval.",
+        formulas: [
+          "Multiplying or dividing by a negative reverses the inequality",
+          "|x| < a ⇒ −a < x < a",
+          "|x| > a ⇒ x < −a or x > a",
+        ],
+        latex: [
+          ["Linear inequality", String.raw`ax + b < c \;\Rightarrow\; x < \frac{c - b}{a},\ a > 0`],
+          ["Sign flip", String.raw`a < b \;\Rightarrow\; -a > -b`],
+          ["Modulus less than", String.raw`|x| < a \iff -a < x < a`],
+          ["Modulus greater than", String.raw`|x| > a \iff x < -a \ \text{or}\ x > a`],
+          ["Interval notation", String.raw`a < x \le b \iff (a, b]`],
+        ],
+        method: [
+          "Solve exactly like an equation, then flip the sign the moment you multiply or divide by a negative.",
+          "Mark the critical values on a number line and test one point in each interval.",
+        ],
+        example: "Solve 3x − 5 < 7 and write the solution as an interval",
+        plot: "linear",
+        rule: "Inequality Rules",
+      }),
+      boardChapter({
+        name: "Permutations and Combinations",
+        focus: "Counting arrangements and selections, with and without repetition.",
+        formulas: [
+          "ⁿPᵣ = n!/(n − r)!",
+          "ⁿCᵣ = n!/(r!(n − r)!)",
+          "ⁿCᵣ = ⁿC₍ₙ₋ᵣ₎",
+        ],
+        latex: [
+          ["Permutations", String.raw`{}^nP_r = \frac{n!}{(n - r)!}`],
+          ["Combinations", String.raw`{}^nC_r = \frac{n!}{r!\,(n - r)!}`],
+          ["Link between them", String.raw`{}^nP_r = r!\,{}^nC_r`],
+          ["Symmetry", String.raw`{}^nC_r = {}^nC_{n-r}`],
+          ["Circular arrangements", String.raw`(n - 1)!`],
+        ],
+        method: [
+          "Ask whether order matters: if AB and BA are different, it is a permutation.",
+          "Handle restrictions by fixing the restricted object first, then arranging the rest.",
+        ],
+        example: "How many 4-letter words can be formed from the letters of EQUATION with no repetition?",
+        plot: "sequence",
+        rule: "Counting Principle",
+      }),
+      boardChapter({
+        name: "Binomial Theorem",
+        focus: "Expanding (a + b)ⁿ and picking out a particular term.",
+        formulas: [
+          "(a + b)ⁿ = Σ ⁿCᵣ aⁿ⁻ʳ bʳ",
+          "General term Tᵣ₊₁ = ⁿCᵣ aⁿ⁻ʳ bʳ",
+          "Number of terms in the expansion is n + 1",
+        ],
+        latex: [
+          ["Binomial expansion", String.raw`(a + b)^n = \sum_{r=0}^{n} {}^nC_r\,a^{n-r}b^r`],
+          ["General term", String.raw`T_{r+1} = {}^nC_r\,a^{n-r}b^r`],
+          ["Sum of coefficients", String.raw`\sum_{r=0}^{n} {}^nC_r = 2^n`],
+          ["Middle term", String.raw`n \text{ even}: T_{n/2 + 1}; \quad n \text{ odd}: T_{(n+1)/2},\ T_{(n+3)/2}`],
+        ],
+        method: [
+          "Write the general term first; most questions are a question about r, not about the whole expansion.",
+          "For a term independent of x, set the power of x to zero and solve for r.",
+        ],
+        example: "Find the term independent of x in (2x − 1/x)⁶",
+        plot: "sequence",
+        rule: "General Term",
+      }),
+      boardChapter({
+        name: "Sequences and Series",
+        focus: "Arithmetic and geometric progressions, and the sum to infinity.",
+        formulas: [
+          "AP: aₙ = a + (n − 1)d",
+          "GP: aₙ = arⁿ⁻¹, Sₙ = a(1 − rⁿ)/(1 − r)",
+          "S∞ = a/(1 − r) for |r| < 1",
+        ],
+        latex: [
+          ["AP nth term", String.raw`a_n = a + (n - 1)d`],
+          ["AP sum", String.raw`S_n = \frac{n}{2}\left[2a + (n - 1)d\right]`],
+          ["GP nth term", String.raw`a_n = a r^{n-1}`],
+          ["GP sum", String.raw`S_n = \frac{a(1 - r^n)}{1 - r},\ r \neq 1`],
+          ["Sum to infinity", String.raw`S_\infty = \frac{a}{1 - r},\ |r| < 1`],
+        ],
+        method: [
+          "Identify the progression by the ratio of consecutive terms: a constant difference is AP, a constant ratio is GP.",
+          "The sum to infinity exists only when the common ratio lies strictly between −1 and 1.",
+        ],
+        example: "Find the sum of the first 10 terms of 3, 7, 11, …",
+        plot: "sequence",
+        rule: "AP and GP Formulae",
+      }),
       {
         name: "Conic Sections",
         focus: "Circles, parabolas, ellipses and hyperbolas in standard form.",
@@ -1391,8 +1550,381 @@ export const GRADES: GradeSpec[] = [
           { kind: "definition", title: "Instantaneous rate of change", latex: String.raw`f'(a) = \lim_{x \to a}\frac{f(x) - f(a)}{x - a}`, note: "The slope of the tangent at a, and the whole meaning of the derivative." },
         ],
       },
+      boardChapter({
+        name: "Introduction to Three Dimensional Geometry",
+        focus: "Coordinates in space, distance and the section formula.",
+        formulas: [
+          "Distance = √((x₂ − x₁)² + (y₂ − y₁)² + (z₂ − z₁)²)",
+          "Section formula: ((mx₂ + nx₁)/(m + n), …) in all three coordinates",
+          "l² + m² + n² = 1 for direction cosines",
+        ],
+        latex: [
+          ["Distance in space", String.raw`d = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2 + (z_2 - z_1)^2}`],
+          ["Section formula", String.raw`\left(\frac{mx_2 + nx_1}{m+n},\ \frac{my_2 + ny_1}{m+n},\ \frac{mz_2 + nz_1}{m+n}\right)`],
+          ["Direction cosines", String.raw`l = \cos\alpha,\ m = \cos\beta,\ n = \cos\gamma`],
+          ["Identity", String.raw`l^2 + m^2 + n^2 = 1`],
+        ],
+        method: [
+          "Plot the three coordinates before substituting; the octant usually tells you the sign of every term.",
+          "The section formula works coordinate by coordinate, exactly as it does in two dimensions.",
+        ],
+        example: "Find the distance between (1, 2, 3) and (4, 6, 3)",
+        plot: "linear",
+        rule: "Distance Formula in Space",
+      }),
+      boardChapter({
+        name: "Statistics",
+        focus: "Mean deviation, variance and standard deviation for raw and grouped data.",
+        formulas: [
+          "Variance σ² = Σ(xᵢ − x̄)²/n",
+          "Standard deviation σ = √variance",
+          "Coefficient of variation = (σ/x̄) × 100",
+        ],
+        latex: [
+          ["Mean", String.raw`\bar{x} = \frac{\sum x_i}{n}`],
+          ["Variance", String.raw`\sigma^2 = \frac{1}{n}\sum_{i=1}^{n}(x_i - \bar{x})^2`],
+          ["Shortcut form", String.raw`\sigma^2 = \frac{\sum x_i^2}{n} - \bar{x}^2`],
+          ["Mean deviation", String.raw`MD = \frac{\sum |x_i - \bar{x}|}{n}`],
+          ["Coefficient of variation", String.raw`CV = \frac{\sigma}{\bar{x}} \times 100`],
+        ],
+        method: [
+          "For grouped data, replace each class by its midpoint before using any formula.",
+          "The shortcut form is faster and less rounding-sensitive than subtracting the mean from every observation.",
+        ],
+        example: "Find the variance of 2, 4, 6, 8, 10",
+        plot: "sequence",
+        rule: "Variance Formula",
+      }),
+      boardChapter({
+        name: "Probability",
+        focus: "Sample spaces, equally likely outcomes and the addition rule.",
+        formulas: [
+          "P(E) = favourable outcomes / total outcomes",
+          "0 ≤ P(E) ≤ 1 and P(E′) = 1 − P(E)",
+          "P(A ∪ B) = P(A) + P(B) − P(A ∩ B)",
+        ],
+        latex: [
+          ["Classical probability", String.raw`P(E) = \frac{n(E)}{n(S)}`],
+          ["Complement", String.raw`P(E') = 1 - P(E)`],
+          ["Addition rule", String.raw`P(A \cup B) = P(A) + P(B) - P(A \cap B)`],
+          ["Mutually exclusive", String.raw`A \cap B = \varnothing \Rightarrow P(A \cup B) = P(A) + P(B)`],
+          ["Independent events", String.raw`P(A \cap B) = P(A)\,P(B)`],
+        ],
+        method: [
+          "Write the sample space explicitly for small experiments; most errors are a missing outcome, not a wrong formula.",
+          "Use the complement when the question says at least one — it is almost always shorter.",
+        ],
+        example: "A card is drawn from a deck — find the probability that it is a king or a heart",
+        plot: "sequence",
+        rule: "Addition Rule",
+      }),
     ],
     models: [ellipseModel, hyperbolaModel, circleModel, trigModel, linearModel, tangentModel],
+  },
+  {
+    id: "12",
+    label: "Class 12",
+    level: "Board year",
+    blurb: "Relations, matrices, calculus, vectors, three-dimensional geometry and probability.",
+    advanced: true,
+    chapters: [
+      boardChapter({
+        name: "Relations and Functions",
+        focus: "Types of relations, one-one and onto functions, and inverses.",
+        formulas: [
+          "A × B has m·n elements, so it has 2^(m·n) relations",
+          "f is one-one when f(a₁) = f(a₂) ⇒ a₁ = a₂",
+          "f is onto when the range equals the codomain",
+        ],
+        latex: [
+          ["Size of a product set", String.raw`n(A \times B) = m \cdot n`],
+          ["Number of relations", String.raw`2^{mn}`],
+          ["One-one", String.raw`f(a_1) = f(a_2) \Rightarrow a_1 = a_2`],
+          ["Composition", String.raw`(f \circ g)(x) = f(g(x))`],
+          ["Inverse", String.raw`(f^{-1})^{-1} = f, \qquad f^{-1} \circ f = I`],
+        ],
+        method: [
+          "For one-one, assume f(a) = f(b) and show a = b; for onto, solve y = f(x) for x and check every y in the codomain.",
+          "A function has an inverse only when it is both one-one and onto.",
+        ],
+        example: "Show that f(x) = 2x + 3 is one-one and onto on R",
+        plot: "linear",
+        rule: "One-one and Onto",
+      }),
+      boardChapter({
+        name: "Inverse Trigonometric Functions",
+        focus: "Principal value branches and the inverse identities.",
+        formulas: [
+          "sin⁻¹x + cos⁻¹x = π/2",
+          "tan⁻¹x + tan⁻¹y = tan⁻¹((x + y)/(1 − xy))",
+          "sin⁻¹x has range [−π/2, π/2]",
+        ],
+        latex: [
+          ["Principal branches", String.raw`\sin^{-1}: [-1, 1] \to \left[-\frac{\pi}{2}, \frac{\pi}{2}\right]`],
+          ["Cosine branch", String.raw`\cos^{-1}: [-1, 1] \to [0, \pi]`],
+          ["Complementary pair", String.raw`\sin^{-1}x + \cos^{-1}x = \frac{\pi}{2}`],
+          ["Tangent sum", String.raw`\tan^{-1}x + \tan^{-1}y = \tan^{-1}\frac{x + y}{1 - xy},\ xy < 1`],
+          ["Double angle", String.raw`2\tan^{-1}x = \tan^{-1}\frac{2x}{1 - x^2}`],
+        ],
+        method: [
+          "Convert every inverse to its principal branch before combining, so the answer stays inside the range.",
+          "For a sum of tangents, check xy < 1; otherwise add or subtract π as the branch requires.",
+        ],
+        example: "Evaluate tan⁻¹1 + tan⁻¹2 + tan⁻¹3",
+        plot: "trig",
+        rule: "Principal Value",
+      }),
+      boardChapter({
+        name: "Matrices",
+        focus: "Algebra of matrices, transpose and symmetric matrices.",
+        formulas: [
+          "(AB)ᵀ = BᵀAᵀ",
+          "A + Aᵀ is symmetric; A − Aᵀ is skew-symmetric",
+          "(AB)⁻¹ = B⁻¹A⁻¹ when both inverses exist",
+        ],
+        latex: [
+          ["Transpose of a product", String.raw`(AB)^T = B^T A^T`],
+          ["Symmetric matrix", String.raw`A^T = A`],
+          ["Skew-symmetric", String.raw`A^T = -A`],
+          ["Inverse of a product", String.raw`(AB)^{-1} = B^{-1} A^{-1}`],
+          ["Scalar multiplication", String.raw`(kA)_{ij} = k\,a_{ij}`],
+        ],
+        method: [
+          "Check the orders first: AB exists only when the columns of A equal the rows of B.",
+          "Multiply row by column and add the products; never multiply entry by entry unless both matrices are diagonal.",
+        ],
+        example: "If A = [[1, 2], [3, 4]], find A + Aᵀ and show it is symmetric",
+        plot: "linear",
+        rule: "Matrix Multiplication",
+      }),
+      boardChapter({
+        name: "Determinants",
+        focus: "Expansion, properties, adjoint and the inverse of a matrix.",
+        formulas: [
+          "|AB| = |A|·|B|",
+          "A⁻¹ = adj(A)/|A|, defined only when |A| ≠ 0",
+          "Area of a triangle = ½ |determinant of coordinates|",
+        ],
+        latex: [
+          ["Second-order determinant", String.raw`\begin{vmatrix} a & b \\ c & d \end{vmatrix} = ad - bc`],
+          ["Product rule", String.raw`|AB| = |A|\,|B|`],
+          ["Inverse", String.raw`A^{-1} = \frac{1}{|A|}\,\operatorname{adj}(A)`],
+          ["Adjoint identity", String.raw`A\,(\operatorname{adj}A) = |A|\,I`],
+          ["Area of a triangle", String.raw`\Delta = \frac{1}{2}\begin{vmatrix} x_1 & y_1 & 1 \\ x_2 & y_2 & 1 \\ x_3 & y_3 & 1 \end{vmatrix}`],
+        ],
+        method: [
+          "Expand along the row or column with the most zeros to cut the arithmetic.",
+          "A zero determinant means no inverse; say so instead of dividing by zero.",
+        ],
+        example: "Find the inverse of A = [[2, 1], [1, 1]]",
+        plot: "linear",
+        rule: "Cramer's Rule",
+      }),
+      boardChapter({
+        name: "Continuity and Differentiability",
+        focus: "Continuity at a point, the chain rule, and the standard derivatives.",
+        formulas: [
+          "f is continuous at a when lim(x→a) f(x) = f(a)",
+          "d/dx (sin x) = cos x and d/dx (cos x) = −sin x",
+          "d/dx (log x) = 1/x for x > 0",
+        ],
+        latex: [
+          ["Continuity at a point", String.raw`\lim_{x \to a} f(x) = f(a)`],
+          ["Differentiability implies continuity", String.raw`f'(a)\ \text{exists} \Rightarrow f\ \text{is continuous at } a`],
+          ["Chain rule", String.raw`\frac{d}{dx}f(g(x)) = f'(g(x))\,g'(x)`],
+          ["Quotient rule", String.raw`\left(\frac{u}{v}\right)' = \frac{u'v - uv'}{v^2}`],
+          ["Rolle's theorem", String.raw`f(a) = f(b) \Rightarrow \exists\, c \in (a, b): f'(c) = 0`],
+        ],
+        method: [
+          "Test the left and right limits separately at a piecewise join; continuity needs all three values to agree.",
+          "Differentiate from the outside in with the chain rule, then simplify before substituting.",
+        ],
+        example: "Differentiate y = sin(x² + 1)",
+        plot: "tangent",
+        rule: "Chain Rule",
+      }),
+      boardChapter({
+        name: "Application of Derivatives",
+        focus: "Rates of change, monotonicity and maxima–minima.",
+        formulas: [
+          "Rate of change: dy/dt = (dy/dx)(dx/dt)",
+          "f is increasing where f′(x) > 0 and decreasing where f′(x) < 0",
+          "Local maximum at c when f′(c) = 0 and f″(c) < 0",
+        ],
+        latex: [
+          ["Related rates", String.raw`\frac{dy}{dt} = \frac{dy}{dx}\cdot\frac{dx}{dt}`],
+          ["Increasing on an interval", String.raw`f'(x) > 0 \ \forall x \in (a, b)`],
+          ["First derivative test", String.raw`f'(c) = 0,\ f'\ \text{changes sign at } c`],
+          ["Second derivative test", String.raw`f'(c) = 0,\ f''(c) < 0 \Rightarrow \text{local maximum}`],
+          ["Tangent and normal", String.raw`m_T = f'(a), \qquad m_N = -\frac{1}{f'(a)}`],
+        ],
+        method: [
+          "Write every changing quantity as a function of one variable before differentiating.",
+          "For an optimisation, list the critical points and the endpoints: the largest value is the answer on a closed interval.",
+        ],
+        example: "Find the maximum area of a rectangle with perimeter 40 cm",
+        plot: "quadratic",
+        rule: "Second Derivative Test",
+      }),
+      boardChapter({
+        name: "Integrals",
+        focus: "Standard integrals, substitution, by parts and definite integrals.",
+        formulas: [
+          "∫xⁿ dx = xⁿ⁺¹/(n + 1) + C, n ≠ −1",
+          "∫(u′v) dx = uv − ∫(uv′) dx",
+          "∫ₐᵇ f(x) dx = F(b) − F(a)",
+        ],
+        latex: [
+          ["Power rule", String.raw`\int x^n\,dx = \frac{x^{n+1}}{n+1} + C,\ n \neq -1`],
+          ["Reciprocal", String.raw`\int \frac{1}{x}\,dx = \log|x| + C`],
+          ["Exponential and sine", String.raw`\int e^x dx = e^x + C, \qquad \int \sin x\,dx = -\cos x + C`],
+          ["By parts", String.raw`\int u\,v'\,dx = uv - \int u'\,v\,dx`],
+          ["Fundamental theorem", String.raw`\int_a^b f(x)\,dx = F(b) - F(a)`],
+        ],
+        method: [
+          "Look for a function and its derivative together — that is a substitution, not a by-parts.",
+          "Keep the limits until the antiderivative is found, then substitute upper minus lower in one step.",
+        ],
+        example: "Evaluate ∫ x·e^x dx and ∫₀¹ x² dx",
+        plot: "quadratic",
+        rule: "Integration by Parts",
+      }),
+      boardChapter({
+        name: "Application of Integrals",
+        focus: "Area under a curve and between two curves.",
+        formulas: [
+          "Area under y = f(x) from a to b = ∫ₐᵇ f(x) dx",
+          "Area between curves = ∫ₐᵇ (upper − lower) dx",
+          "Area of a circle of radius r = πr²",
+        ],
+        latex: [
+          ["Area under a curve", String.raw`A = \int_a^b f(x)\,dx`],
+          ["Area between curves", String.raw`A = \int_a^b \left[f(x) - g(x)\right] dx`],
+          ["Area of a circle", String.raw`A = \pi r^2 = 4\int_0^r \sqrt{r^2 - x^2}\,dx`],
+          ["Area with respect to y", String.raw`A = \int_c^d x\,dy`],
+        ],
+        method: [
+          "Sketch first: the limits of integration are the points where the curves meet.",
+          "Decide which curve is on top between the intersections; a sign error there halves the answer.",
+        ],
+        example: "Find the area enclosed by y = x² and y = x",
+        plot: "quadratic",
+        rule: "Area Between Curves",
+      }),
+      boardChapter({
+        name: "Differential Equations",
+        focus: "Order and degree, variable separation and the linear equation.",
+        formulas: [
+          "Order = highest derivative; degree = its power after clearing radicals",
+          "Variable separable: dy/dx = f(x)g(y) ⇒ dy/g(y) = f(x) dx",
+          "Linear DE: dy/dx + Py = Q has integrating factor e^(∫P dx)",
+        ],
+        latex: [
+          ["Order and degree", String.raw`\left(\frac{d^2y}{dx^2}\right)^3 + \frac{dy}{dx} = 0 \Rightarrow \text{order } 2,\ \text{degree } 3`],
+          ["Variable separable", String.raw`\frac{dy}{dx} = f(x)\,g(y) \Rightarrow \int \frac{dy}{g(y)} = \int f(x)\,dx`],
+          ["Integrating factor", String.raw`\mu(x) = e^{\int P\,dx}`],
+          ["Linear solution", String.raw`y\,\mu = \int Q\,\mu\,dx + C`],
+        ],
+        method: [
+          "Classify the equation before solving: separable, homogeneous or linear each has one route.",
+          "Apply the initial condition only after the constant of integration is written.",
+        ],
+        example: "Solve dy/dx = (1 + y²)/(1 + x²)",
+        plot: "tangent",
+        rule: "Integrating Factor",
+      }),
+      boardChapter({
+        name: "Vector Algebra",
+        focus: "Components, dot and cross products, and projections.",
+        formulas: [
+          "a·b = |a||b| cos θ",
+          "|a × b| = |a||b| sin θ, perpendicular to both",
+          "Projection of a on b = (a·b)/|b|",
+        ],
+        latex: [
+          ["Unit vector", String.raw`\hat{a} = \frac{\vec{a}}{|\vec{a}|}`],
+          ["Dot product", String.raw`\vec{a}\cdot\vec{b} = |\vec{a}||\vec{b}|\cos\theta`],
+          ["Cross product", String.raw`|\vec{a} \times \vec{b}| = |\vec{a}||\vec{b}|\sin\theta`],
+          ["Projection", String.raw`\text{proj}_{\vec{b}}\vec{a} = \frac{\vec{a}\cdot\vec{b}}{|\vec{b}|}`],
+          ["Direction cosines", String.raw`l^2 + m^2 + n^2 = 1`],
+        ],
+        method: [
+          "Use the dot product for angles and projections, the cross product for areas and perpendicular vectors.",
+          "Write vectors in component form so the arithmetic is three independent multiplications.",
+        ],
+        example: "Find the angle between a = 2i + j − k and b = i − j + k",
+        plot: "linear",
+        rule: "Dot and Cross Product",
+      }),
+      boardChapter({
+        name: "Three Dimensional Geometry",
+        focus: "Lines and planes in space, angles and shortest distances.",
+        formulas: [
+          "Line: r = a + λb, or (x − x₁)/a = (y − y₁)/b = (z − z₁)/c",
+          "Angle between lines: cos θ = |b₁·b₂|/(|b₁||b₂|)",
+          "Plane: r·n = d, or ax + by + cz = d",
+        ],
+        latex: [
+          ["Vector equation of a line", String.raw`\vec{r} = \vec{a} + \lambda\vec{b}`],
+          ["Cartesian form", String.raw`\frac{x - x_1}{a} = \frac{y - y_1}{b} = \frac{z - z_1}{c}`],
+          ["Angle between lines", String.raw`\cos\theta = \frac{|\vec{b_1}\cdot\vec{b_2}|}{|\vec{b_1}||\vec{b_2}|}`],
+          ["Equation of a plane", String.raw`\vec{r}\cdot\hat{n} = d`],
+          ["Distance of a point from a plane", String.raw`d = \frac{|ax_1 + by_1 + cz_1 - d|}{\sqrt{a^2 + b^2 + c^2}}`],
+        ],
+        method: [
+          "Read the direction ratios straight off the denominators, and the point off the numerators.",
+          "A plane's normal is the cross product of two vectors lying in it.",
+        ],
+        example: "Find the shortest distance between two parallel lines",
+        plot: "linear",
+        rule: "Direction Ratios",
+      }),
+      boardChapter({
+        name: "Linear Programming",
+        focus: "Constraints, the feasible region and the corner-point theorem.",
+        formulas: [
+          "Maximise or minimise Z = ax + by",
+          "Constraints are linear inequalities, with x ≥ 0 and y ≥ 0",
+          "The optimum occurs at a corner of the feasible region",
+        ],
+        latex: [
+          ["Objective function", String.raw`Z = ax + by`],
+          ["Feasible region", String.raw`a_ix + b_iy \le c_i,\quad x, y \ge 0`],
+          ["Corner-point theorem", String.raw`\max Z = \max\{Z(P_1), \ldots, Z(P_n)\}`],
+        ],
+        method: [
+          "Draw every constraint as a line, shade the side that satisfies it, and keep only the common region.",
+          "Evaluate Z at every vertex of the feasible region, including the axes intercepts.",
+        ],
+        example: "Maximise Z = 3x + 4y subject to x + y ≤ 4, x ≥ 0, y ≥ 0",
+        plot: "linear",
+        rule: "Corner-Point Theorem",
+      }),
+      boardChapter({
+        name: "Probability",
+        focus: "Conditional probability, Bayes' theorem and the binomial distribution.",
+        formulas: [
+          "P(A|B) = P(A ∩ B)/P(B)",
+          "P(A ∩ B) = P(A)P(B|A)",
+          "Binomial: P(X = r) = ⁿCᵣ pʳ qⁿ⁻ʳ, mean np, variance npq",
+        ],
+        latex: [
+          ["Conditional probability", String.raw`P(A \mid B) = \frac{P(A \cap B)}{P(B)},\ P(B) > 0`],
+          ["Multiplication rule", String.raw`P(A \cap B) = P(A)\,P(B \mid A)`],
+          ["Bayes' theorem", String.raw`P(A_i \mid B) = \frac{P(A_i)\,P(B \mid A_i)}{\sum_j P(A_j)\,P(B \mid A_j)}`],
+          ["Binomial probability", String.raw`P(X = r) = {}^{n}C_r\,p^r q^{n-r},\ q = 1 - p`],
+          ["Mean and variance", String.raw`E(X) = np, \qquad \operatorname{Var}(X) = npq`],
+        ],
+        method: [
+          "Draw the tree or the two-way table before applying a formula; the conditioning usually becomes obvious there.",
+          "For a binomial, check the four conditions: fixed n, two outcomes, constant p, independent trials.",
+        ],
+        example: "A die is thrown twice — find the probability that the sum is 8 given the first throw is 3",
+        plot: "sequence",
+        rule: "Bayes' Theorem",
+      }),
+    ],
+    models: [linearModel, quadraticModel, trigModel, tangentModel, sequenceModel],
   },
 ];
 

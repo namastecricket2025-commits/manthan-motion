@@ -322,7 +322,7 @@ export default function KitShowcase() {
   const tab = TABS[active];
 
   return (
-    <section id="kit" ref={ref} className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6 md:py-24">
+    <section id="kit" ref={ref} className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 md:py-24">
       <div className="mx-auto max-w-2xl text-center" data-reveal>
         <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
           What actually lands in your{" "}

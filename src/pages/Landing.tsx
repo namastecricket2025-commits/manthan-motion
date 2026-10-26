@@ -139,7 +139,7 @@ function Hero() {
       {/* The first screen. Its height is capped at 940px so a 27" monitor
           doesn't get a hero mostly made of empty black — Vercel caps theirs
           for the same reason. */}
-      <section className="relative flex min-h-[min(100svh,940px)] flex-col px-4 pb-10 pt-24 sm:px-6 sm:pt-28">
+      <section className="relative flex flex-col px-4 pb-6 pt-20 sm:min-h-[min(100svh,940px)] sm:px-6 sm:pb-10 sm:pt-28">
         {/* NO page wash and NO bloom behind the product shot.
 
             The hero used to carry `.glow-aura` (a 460px-tall 42%-white radial
@@ -161,7 +161,7 @@ function Hero() {
               centres against below 1280px; from 1280px up the mark is
               absolutely centred and the row below it is the only thing in
               flow, so the row centres in the full height of the hero. */}
-          <div className="relative flex flex-1 flex-col items-center justify-center gap-8 py-10 sm:gap-12 sm:py-14 xl:gap-0">
+          <div className="relative flex flex-1 flex-col items-center justify-center gap-6 py-6 sm:gap-12 sm:py-14 xl:gap-0">
             {/* THE MARK — the hero's centrepiece, at size, on its own centred
                 layer behind the copy.
 
@@ -171,7 +171,7 @@ function Hero() {
                 lit object. */}
             <div
               data-hero-fade
-              className="relative h-[clamp(150px,26vw,340px)] w-[clamp(150px,26vw,340px)] xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2"
+              className="relative h-[clamp(118px,24vw,340px)] w-[clamp(118px,24vw,340px)] xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2"
             >
               <div aria-hidden="true" className="absolute inset-0">
                 <div className="mark-halo" />
@@ -257,7 +257,7 @@ function Hero() {
                   does it. */}
               <ul
                 data-hero-fade
-                className="flex w-full max-w-[420px] flex-col gap-2 xl:max-w-[364px]"
+                className="hidden w-full max-w-[420px] flex-col gap-2 sm:flex xl:max-w-[364px]"
               >
                 {CAPABILITIES.map((item) => (
                   <li key={item.line} className="cap-row text-center xl:text-left">
@@ -280,7 +280,7 @@ function Hero() {
             strip reads as a specification instead of a caption. */}
         <div
           data-hero-fade
-          className="mx-auto mt-10 flex w-full max-w-[1400px] flex-col items-center gap-3"
+          className="mx-auto mt-7 flex w-full max-w-[1400px] flex-col items-center gap-3 sm:mt-10"
         >
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--text-main)_50%,transparent)]">
             Reads
@@ -299,7 +299,7 @@ function Hero() {
       {/* The product itself, on flat black, in a hairline frame. It sits
           outside the first screen so the hero is exactly one viewport, which is
           how the reference structures it too. */}
-      <div data-hero-fade className="relative mx-auto max-w-5xl px-4 pb-24 sm:px-6">
+      <div data-hero-fade className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 sm:pb-24">
         <div className="hero-frame">
           <HeroPreview />
         </div>

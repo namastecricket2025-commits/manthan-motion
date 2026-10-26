@@ -47,6 +47,8 @@ export function OnboardingModal() {
   const location = useLocation();
 
   const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
   const [grade, setGrade] = useState<string>("10");
   const [board, setBoard] = useState<string>("CBSE");
   const [subjects, setSubjects] = useState<string[]>([
@@ -63,6 +65,13 @@ export function OnboardingModal() {
     setClosed(false);
     setStep(0);
   }, [profile?.onboardedAt]);
+
+  /* Google already knows the name, so the field starts filled — the student
+     confirms or corrects it rather than typing it again. Once they edit it,
+     a later profile refresh must not overwrite what they typed. */
+  useEffect(() => {
+    if (!nameTouched && profile?.name) setName(profile.name);
+  }, [profile?.name, nameTouched]);
 
   const shouldShow =
     isAuthenticated &&
@@ -86,8 +95,9 @@ export function OnboardingModal() {
     try {
       await complete(
         skip
-          ? {}
+          ? { name: name.trim() || undefined }
           : {
+              name: name.trim(),
               grade,
               board,
               subjects,
@@ -178,14 +188,37 @@ export function OnboardingModal() {
                     id="onboarding-title"
                     className="font-display text-2xl font-bold tracking-[-0.02em]"
                   >
-                    Which class are you in?
+                    Who are we teaching?
                   </h2>
                   <p className="mt-1.5 text-sm leading-relaxed text-text-dim">
-                    This sets the level of practice sets and the syllabus the lab
-                    opens on. You can change it any time.
+                    Your name and class set how the workspace greets you and the
+                    level every practice set opens on. You can change them in
+                    Settings.
                   </p>
 
-                  <div className="mt-5 grid grid-cols-5 gap-2">
+                  <label
+                    htmlFor="onboarding-name"
+                    className="mt-5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim"
+                  >
+                    Your name
+                  </label>
+                  <input
+                    id="onboarding-name"
+                    value={name}
+                    onChange={(event) => {
+                      setNameTouched(true);
+                      setName(event.target.value);
+                    }}
+                    maxLength={60}
+                    autoComplete="name"
+                    placeholder="e.g. Aarav Sharma"
+                    className="mt-2 w-full rounded-xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] px-3.5 py-2.5 text-[14px] text-foreground outline-none transition-colors focus:border-[color-mix(in_srgb,var(--text-main)_40%,transparent)]"
+                  />
+
+                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+                    Class
+                  </p>
+                  <div className="mt-2 grid grid-cols-5 gap-2">
                     {GRADES.map((entry) => (
                       <button
                         key={entry}
@@ -306,7 +339,8 @@ export function OnboardingModal() {
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98]"
+                    disabled={!name.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Continue
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -315,8 +349,8 @@ export function OnboardingModal() {
                   <button
                     type="button"
                     onClick={() => void save(false)}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:opacity-70"
+                    disabled={saving || !name.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                     Start studying

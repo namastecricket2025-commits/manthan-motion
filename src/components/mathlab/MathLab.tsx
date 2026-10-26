@@ -86,6 +86,39 @@ const VIEW_TABS = [
 type ViewId = (typeof VIEW_TABS)[number]["id"];
 
 /**
+ * Where the student left the lab.
+ *
+ * The class, chapter and tab used to reset on every visit, which read as the
+ * lab throwing away progress. This is only the working position — the ticks
+ * themselves live on the account — but reopening on the same chapter is what
+ * makes the lab feel like it remembers.
+ */
+const LAST_KEY = "manthan.mathlab.last";
+
+type LastPosition = { gradeId: string; chapterIndex: number; view: ViewId };
+
+function readLastPosition(): LastPosition | null {
+  try {
+    const raw = window.localStorage.getItem(LAST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LastPosition>;
+    const grade = GRADES.find((entry) => entry.id === parsed.gradeId);
+    const view = VIEW_TABS.find((tab) => tab.id === parsed.view)?.id;
+    if (!grade) return null;
+    const index =
+      typeof parsed.chapterIndex === "number" &&
+      Number.isInteger(parsed.chapterIndex) &&
+      parsed.chapterIndex >= 0 &&
+      parsed.chapterIndex < grade.chapters.length
+        ? parsed.chapterIndex
+        : 0;
+    return { gradeId: grade.id, chapterIndex: index, view: view ?? "solve" };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * What a spoken problem is likely to contain: operation words, the topics of
  * the school course, and the symbols students read aloud. Used to bias the
  * recogniser and to repair a near-miss word, never to rewrite a clear one.
@@ -267,19 +300,35 @@ export function MathLab() {
   const paramView = VIEW_TABS.find((tab) => tab.id === searchParams.get("view"))?.id;
   const paramGrade = GRADES.find((entry) => entry.id === searchParams.get("grade"));
   const paramChapter = Number(searchParams.get("chapter"));
+  const lastPosition = useMemo(readLastPosition, []);
 
-  const [view, setView] = useState<ViewId>(paramView ?? "solve");
+  const [view, setView] = useState<ViewId>(paramView ?? lastPosition?.view ?? "solve");
   const [track, setTrack] = useState<CurriculumTrack>("CBSE");
-  const [gradeId, setGradeId] = useState<string>(paramGrade?.id ?? GRADES[0].id);
+  const [gradeId, setGradeId] = useState<string>(
+    paramGrade?.id ?? lastPosition?.gradeId ?? GRADES[0].id,
+  );
   const grade: GradeSpec = useMemo(() => getGrade(gradeId as GradeSpec["id"]), [gradeId]);
   const [chapterIndex, setChapterIndex] = useState(() =>
     Number.isInteger(paramChapter) &&
     paramChapter >= 0 &&
     paramChapter < (paramGrade ?? GRADES[0]).chapters.length
       ? paramChapter
-      : 0,
+      : (lastPosition?.chapterIndex ?? 0),
   );
   const chapter = grade.chapters[chapterIndex] ?? grade.chapters[0];
+
+  /* Remember the working position across visits and sign-outs. A failure here
+     (private mode, storage disabled) must never stop the lab working. */
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        LAST_KEY,
+        JSON.stringify({ gradeId, chapterIndex, view }),
+      );
+    } catch {
+      /* storage is optional */
+    }
+  }, [gradeId, chapterIndex, view]);
 
   /* A second ⌘K jump while /math-lab is already open changes the query string
      without remounting — follow it without touching state on every keystroke. */

@@ -21,7 +21,7 @@ import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router";
 
 /**
- * /math-lab — the mathematics workspace (Classes 8 to 11).
+ * /math-lab — the mathematics workspace (Classes 8 to 12).
  * Shares the app shell with the dashboard and settings; the lab itself owns
  * the grade tabs, the graphing canvas and the equation engine.
  */
@@ -171,7 +171,7 @@ export default function MathLabPage() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim max-sm:hidden">
-                  Workspace · Classes 8 to 11
+                  Workspace · Classes 8 to 12
                 </p>
                 <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
                   Math Lab<span className="text-[var(--signal)]">.</span>

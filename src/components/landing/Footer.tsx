@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { supportClick, supportMailto } from "@/lib/site";
+import { ContactButton } from "@/components/shared/ContactButton";
 import { Logo } from "./Logo";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
@@ -89,23 +89,19 @@ export default function Footer() {
                 {item.label}
               </Link>
             ))}
-            <a
-              href={supportMailto("Manthan — contact")}
-              onClick={supportClick("Manthan — contact")}
-              className="transition-colors hover:text-foreground"
+            <ContactButton
+              subject="Manthan — contact"
+              className="text-left transition-colors hover:text-foreground"
             >
               Contact
-            </a>
-            <a
-              href={supportMailto(
-                "Request removal of a review",
-                "Please describe the review you would like removed, including the reviewer name and any details that help us identify it.",
-              )}
-              onClick={supportClick("Request removal of a review")}
-              className="transition-colors hover:text-foreground"
+            </ContactButton>
+            <ContactButton
+              subject="Request removal of a review"
+              body="Please describe the review you would like removed, including the reviewer name and any details that help us identify it."
+              className="text-left transition-colors hover:text-foreground"
             >
               Request removal of a review
-            </a>
+            </ContactButton>
           </nav>
         </div>
 
@@ -127,6 +123,7 @@ export default function Footer() {
           <p>Built for learners, by learners.</p>
         </div>
       </div>
+
     </footer>
   );
 }

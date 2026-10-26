@@ -509,7 +509,7 @@ export default function Features() {
     <section
       id="features"
       ref={ref}
-      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-20 sm:px-6 md:py-28"
+      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-20 md:py-28"
     >
       <div className="mx-auto max-w-2xl text-center" data-reveal>
         <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
@@ -523,7 +523,7 @@ export default function Features() {
         </p>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-16 lg:grid-cols-6">
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:mt-12 md:mt-16 lg:grid-cols-6">
         {TILES.map((tile) => (
           <article
             key={tile.title}
@@ -550,7 +550,12 @@ export default function Features() {
           data-card
           className="feature-card glass-panel card-surface spot-card flex flex-col gap-6 p-4 sm:col-span-2 sm:p-5 lg:col-span-6 lg:flex-row lg:items-center lg:gap-8 lg:p-6"
         >
-          <PhoneArt />
+          {/* The phone mock is the longest object on the mobile page; the copy
+              below already carries the point, so the mock itself is desktop
+              only and the phone landing stays scannable. */}
+          <div className="hidden sm:block">
+            <PhoneArt />
+          </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-display text-[17px] font-semibold tracking-[-0.01em] text-foreground sm:text-lg">
               Built for the phone it will be used on
@@ -579,7 +584,7 @@ export default function Features() {
           data-card
           className="feature-card glass-panel card-surface spot-card flex flex-col gap-6 p-4 sm:col-span-2 sm:p-5 lg:col-span-6 lg:flex-row-reverse lg:items-center lg:gap-8 lg:p-6"
         >
-          <div className="min-w-0 lg:w-[46%] lg:shrink-0">
+          <div className="hidden min-w-0 sm:block lg:w-[46%] lg:shrink-0">
             <SearchArt />
           </div>
           <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 self-stretch py-1">

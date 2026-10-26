@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supportClick, supportMailto } from "@/lib/site";
+import { ContactButton } from "@/components/shared/ContactButton";
 import { Link } from "react-router";
 
 /**
@@ -30,11 +30,6 @@ import { Link } from "react-router";
  * no two cards within two positions of each other share a hue — including
  * across the carousel's wrap.
  */
-
-const REMOVAL_MAILTO = supportMailto(
-  "Request removal of a review",
-  "Please tell us which review you would like removed — the name shown on it and, if you can, the class label.",
-);
 
 /** Canonical mix for the current quote sheet; unknown names follow in order. */
 const DISPLAY_ORDER = [
@@ -143,13 +138,13 @@ function ReviewCard({
 
 function RemovalLink() {
   return (
-    <a
-      href={REMOVAL_MAILTO}
-      onClick={supportClick("Request removal of a review")}
+    <ContactButton
+      subject="Request removal of a review"
+      body="Please tell us which review you would like removed — the name shown on it and, if you can, the class label."
       className="text-xs text-text-dim underline decoration-[var(--panel-line)] underline-offset-4 transition-colors hover:text-foreground"
     >
       Request removal of a review
-    </a>
+    </ContactButton>
   );
 }
 
@@ -277,7 +272,7 @@ export default function Testimonials() {
       id="reviews"
       ref={sectionRef}
       aria-labelledby="reviews-title"
-      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-16 sm:px-6 md:py-24"
+      className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 md:py-24"
     >
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl">

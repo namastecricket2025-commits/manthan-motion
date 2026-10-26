@@ -79,12 +79,14 @@ const ALLOWED_BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "State board"] as const;
  */
 export const completeOnboarding = mutation({
   args: {
+    name: v.optional(v.string()),
     grade: v.optional(v.string()),
     board: v.optional(v.string()),
     subjects: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<StudyProfile> => {
     const userId = await requireAuthUserId(ctx);
+    const name = args.name?.trim().slice(0, 60);
     const grade = ALLOWED_GRADES.find((entry) => entry === args.grade);
     const board = ALLOWED_BOARDS.find((entry) => entry === args.board);
     const subjects = Array.from(
@@ -96,6 +98,7 @@ export const completeOnboarding = mutation({
     ).slice(0, 8);
 
     await ctx.db.patch(userId, {
+      ...(name ? { name } : {}),
       ...(grade ? { grade } : {}),
       ...(board ? { board } : {}),
       subjects,

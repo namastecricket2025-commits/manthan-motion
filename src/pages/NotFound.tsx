@@ -17,7 +17,7 @@ export default function NotFound() {
     {
       to: "/math-lab",
       label: "Math Lab",
-      detail: "Solve, graph and practise Classes 8–11",
+      detail: "Solve, graph and practise Classes 8–12",
       icon: Sigma,
     },
     {

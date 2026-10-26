@@ -181,7 +181,7 @@ export default function Pipeline() {
     <section
       id="how"
       ref={ref}
-      className="relative scroll-mt-24 py-20 md:py-28"
+      className="relative scroll-mt-24 py-12 sm:py-20 md:py-28"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center" data-reveal>
@@ -201,7 +201,7 @@ export default function Pipeline() {
           horizontal glide is the focus, so padding is tighter. */}
       <div
         ref={viewportRef}
-        className="how-sticky relative mt-10 h-[68svh] min-h-[400px] w-full overflow-hidden md:mt-16"
+        className="how-sticky relative mt-8 h-[54svh] min-h-[330px] w-full overflow-hidden sm:mt-10 sm:h-[68svh] sm:min-h-[400px] md:mt-16"
       >
         {/* scrub progress line — brand amber, because it reports progress
             rather than ornamenting the section. */}

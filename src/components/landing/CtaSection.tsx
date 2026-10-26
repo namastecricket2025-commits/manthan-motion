@@ -41,10 +41,10 @@ export default function CtaSection() {
   }, []);
 
   return (
-    <section ref={ref} className="relative mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6 md:pb-32">
+    <section ref={ref} className="relative mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6 sm:pb-24 sm:pt-8 md:pb-32">
       <div
         data-reveal
-        className="glass-panel card-surface spot-card relative overflow-hidden px-6 py-14 text-center sm:px-12 md:py-20"
+        className="glass-panel card-surface spot-card relative overflow-hidden px-6 py-10 text-center sm:px-12 sm:py-14 md:py-20"
       >
         {/* No light pooling inside the card. It used to carry a 130%-wide
             radial at 60% opacity bleeding over the card's top edge, which on
