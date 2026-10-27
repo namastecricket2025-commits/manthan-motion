@@ -1,5 +1,6 @@
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { useLayoutEffect, useRef } from "react";
+import { RevealWords } from "./RevealWords";
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -194,10 +195,10 @@ export default function Stats() {
       className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 md:py-24"
     >
       <div data-reveal className="mx-auto max-w-2xl text-center">
-        <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
+        <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
           Numbers that <span className="gradient-text">matter</span> to your
           revision
-        </h2>
+        </RevealWords>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
           No vanity metrics — just the concrete facts of how Manthan turns your
           notes into a ready-to-revise study kit.
@@ -209,8 +210,20 @@ export default function Stats() {
         className="glass-panel card-surface mt-12 overflow-hidden md:mt-16"
       >
         <div className="receipt-rail grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="bg-[var(--panel)] p-6">
+          {STATS.map((stat, index) => (
+            <div
+              key={stat.label}
+              /* Five facts in a three-column table leave the bottom-right cell
+                 empty, and an empty BORDERED cell in a spec table reads as a
+                 missing row rather than as breathing room. The closing fact
+                 takes the rest of its row instead (and the whole row in the
+                 two-column layout); on a phone every cell is already full
+                 width, so no span is applied there. */
+              className={
+                "bg-[var(--panel)] p-6" +
+                (index === STATS.length - 1 ? " sm:col-span-2" : "")
+              }
+            >
               <div className="flex items-baseline gap-0.5 font-display text-[38px] font-normal leading-none tracking-[-0.03em] tabular-nums text-foreground">
                 {stat.prefix ? (
                   <span className="text-[26px] text-text-dim">{stat.prefix}</span>

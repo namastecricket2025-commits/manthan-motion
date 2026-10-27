@@ -1,4 +1,5 @@
 import { assignAvatarColors } from "@/components/shared/avatar-colors";
+import { RevealWords } from "@/components/landing/RevealWords";
 import { InitialAvatar } from "@/components/shared/InitialAvatar";
 import { useSpotlight } from "@/components/landing/use-spotlight";
 import { api } from "@/convex/_generated/api";
@@ -276,12 +277,12 @@ export default function Testimonials() {
     >
       <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl">
-          <h2
+          <RevealWords
             id="reviews-title"
             className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]"
           >
             From our <span className="gradient-text">early testers</span>
-          </h2>
+          </RevealWords>
           <p className="mt-4 text-base leading-relaxed text-text-dim">
             Students who used Manthan before launch, plus reviews posted from
             inside the app — quoted exactly as written, with only a first name

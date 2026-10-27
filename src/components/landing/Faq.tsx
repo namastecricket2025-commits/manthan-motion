@@ -2,6 +2,7 @@ import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
+import { RevealWords } from "./RevealWords";
 
 /**
  * The questions a student actually asks before uploading anything.
@@ -78,10 +79,10 @@ export default function Faq() {
     <section id="faq" ref={ref} className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 md:py-24">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:gap-14">
         <div data-reveal>
-          <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px]">
+          <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px]">
             Before you paste your{" "}
             <span className="gradient-text">first chapter</span>
-          </h2>
+          </RevealWords>
           <p className="mt-5 text-base leading-relaxed text-text-dim">
             Six things people check before they trust a pipeline with their
             syllabus — and the honest answer to each.

@@ -6,6 +6,7 @@ import { Logo } from "./Logo";
 import { MobileMenu } from "./MobileMenu";
 import { MovingBorderButton } from "./MovingBorderButton";
 import { ThemeToggle } from "./ThemeToggle";
+import { useEffect, useRef } from "react";
 
 /**
  * The site header.
@@ -43,6 +44,41 @@ export default function Navbar() {
      The landing page is the exception: there is nothing to return to. */
   const returnTo = pathname === "/" ? "/dashboard" : `${pathname}${search}${hash}`;
   const authUrl = `/auth?returnTo=${encodeURIComponent(returnTo)}`;
+
+  const progressBar = useRef<HTMLSpanElement | null>(null);
+
+  /* The scroll indicator on the header's bottom edge.
+
+     A hairline that grows with page progress: how much of the document is
+     left is the one thing a fixed header can honestly say about a long page,
+     and it moves only while the reader is moving.
+
+     Written straight to the element's transform (one composited property, no
+     React state, no re-render per frame), coalesced into a single rAF. At rest
+     it costs nothing. */
+  useEffect(() => {
+    const el = progressBar.current;
+    if (!el) return;
+    let frame = 0;
+    const paint = () => {
+      frame = 0;
+      const span = document.documentElement.scrollHeight - window.innerHeight;
+      const progress =
+        span > 0 ? Math.min(1, Math.max(0, window.scrollY / span)) : 0;
+      el.style.transform = `scaleX(${progress.toFixed(4)})`;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+    paint();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--ink)_72%,transparent)] backdrop-blur-xl max-md:bg-[var(--ink)]">
@@ -125,6 +161,7 @@ export default function Navbar() {
           </MovingBorderButton>
         </div>
       </nav>
+      <span ref={progressBar} aria-hidden="true" className="nav-progress" />
     </header>
   );
 }

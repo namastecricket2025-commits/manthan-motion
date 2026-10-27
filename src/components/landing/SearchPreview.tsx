@@ -16,6 +16,7 @@ import { useAction } from "convex/react";
 import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
+import { RevealWords } from "./RevealWords";
 
 /**
  * The working search preview on the landing page.
@@ -172,9 +173,9 @@ export default function SearchPreview() {
   return (
     <section id="ask" className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-2xl text-center">
-        <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px]">
+        <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px]">
           Ask it anything, <span className="gradient-text">live</span>.
-        </h2>
+        </RevealWords>
         <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-text-dim">
           The search panel from inside Manthan, working on this page — answers
           and sources come straight from Google.

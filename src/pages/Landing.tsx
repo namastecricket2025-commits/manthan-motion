@@ -1,5 +1,4 @@
 import CtaSection from "@/components/landing/CtaSection";
-import { AmbientField } from "@/components/landing/AmbientField";
 import Features from "@/components/landing/Features";
 import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
@@ -13,6 +12,7 @@ import SearchPreview from "@/components/landing/SearchPreview";
 import Stats from "@/components/landing/Stats";
 import Testimonials from "@/components/landing/Testimonials";
 import { TextGenerate } from "@/components/landing/TextGenerate";
+import { TiltFrame } from "@/components/landing/TiltFrame";
 import { useAuth } from "@/hooks/use-auth";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
@@ -103,6 +103,9 @@ function Hero() {
       gsap.set(els, { opacity: 1, y: 0 });
       return;
     }
+    const mark = root.querySelector<HTMLElement>("[data-mark-drift]");
+    const hero = root.querySelector<HTMLElement>("[data-hero-section]");
+
     const ctx = gsap.context(() => {
       // Entrance, to the reference set for this kind of site: 10–14px of
       // travel, ~500ms, and an ease-out so steep it is nearly finished by the
@@ -130,6 +133,31 @@ function Hero() {
           clearProps: "transform",
         },
       );
+
+      // The mark recedes as the page starts to move: over the first screen of
+      // scroll it drifts down, tips a few degrees and dims, so the hero reads
+      // as a lit object the page travels PAST rather than a picture the page
+      // covers up. Scrubbed rather than triggered — it tracks the reader's own
+      // hand and rewinds cleanly on the way back up.
+      //
+      // It is deliberately written on an inner layer: the outer mark element
+      // carries Tailwind's `-translate-x-1/2` for the centred composition, and
+      // an inline transform from GSAP would wipe that out.
+      if (mark && hero) {
+        gsap.to(mark, {
+          yPercent: 16,
+          scale: 0.92,
+          rotate: 7,
+          opacity: 0.5,
+          ease: "none",
+          scrollTrigger: {
+            trigger: hero,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.5,
+          },
+        });
+      }
     }, root);
     return () => ctx.revert();
   }, []);
@@ -141,7 +169,10 @@ function Hero() {
       {/* The first screen. Its height is capped at 940px so a 27" monitor
           doesn't get a hero mostly made of empty black — Vercel caps theirs
           for the same reason. */}
-      <section className="relative flex flex-col px-4 pb-6 pt-20 sm:min-h-[min(100svh,940px)] sm:px-6 sm:pb-10 sm:pt-28">
+      <section
+        data-hero-section
+        className="relative flex flex-col px-4 pb-6 pt-20 sm:min-h-[min(100svh,940px)] sm:px-6 sm:pb-10 sm:pt-28"
+      >
         {/* NO page wash and NO bloom behind the product shot.
 
             The hero used to carry `.glow-aura` (a 460px-tall 42%-white radial
@@ -175,13 +206,17 @@ function Hero() {
               data-hero-fade
               className="relative h-[clamp(118px,24vw,340px)] w-[clamp(118px,24vw,340px)] xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2"
             >
-              <div aria-hidden="true" className="absolute inset-0">
-                <div className="mark-halo" />
+              {/* The light and the mark move together on scroll — one layer,
+                  so the halo can never be left behind on its own. */}
+              <div data-mark-drift className="absolute inset-0">
+                <div aria-hidden="true" className="absolute inset-0">
+                  <div className="mark-halo" />
+                </div>
+                <OrbitMark
+                  className="relative flex h-full w-full items-center justify-center"
+                  svgClassName="h-full w-full"
+                />
               </div>
-              <OrbitMark
-                className="relative flex h-full w-full items-center justify-center"
-                svgClassName="h-full w-full"
-              />
             </div>
 
             <div className="flex w-full flex-col items-center gap-12 xl:flex-row xl:items-center xl:justify-between">
@@ -302,9 +337,11 @@ function Hero() {
           outside the first screen so the hero is exactly one viewport, which is
           how the reference structures it too. */}
       <div data-hero-fade className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 sm:pb-24">
-        <div className="hero-frame">
+        {/* The frame answers the pointer (see `TiltFrame`): it leans toward
+            the cursor while the surface inside slides the other way. */}
+        <TiltFrame className="hero-frame">
           <HeroPreview />
-        </div>
+        </TiltFrame>
       </div>
     </div>
   );
@@ -317,12 +354,12 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen">
-      {/* The plane the whole page sits on: the site's dot texture and one soft
-          light, fixed behind everything and moved by scroll (see the component
-          for what each of the two movements is). Rendered here rather than per
-          section so there is exactly one of it for the page, and no section can
-          own a light of its own. */}
-      <AmbientField />
+      {/* No page texture and no wash that travels with the scroll. A light with
+          nothing emitting it is fog, and because it is the only thing moving in
+          a still frame the eye locks onto it and follows it down the page — so
+          the plane stays black and the light stays on the mark, where it has
+          something to come from. The depth below the fold is done with contact
+          (the product frame's own edge) and with the sections' own motion. */}
       <div className="relative z-10">
         {/* Anchor target for the "Home" nav item — the header is fixed, so
             an anchor on it can't scroll the page; this spans the top. */}
@@ -330,16 +367,18 @@ export default function Landing() {
         <Navbar />
         <main>
           <Hero />
-          {/* The product, working, before anything is explained about it: a
-              visitor can ask a real question here and get a real answer.
-              Placed first on purpose — the page has plenty of description
-              below it, and nothing describes this app as well as using it. */}
-          <SearchPreview />
           <Features />
           <Pipeline />
           {/* The output, between "how it works" and the numbers: what the five
               steps were for, shown as four real artifacts. */}
           <KitShowcase />
+          {/* The product, working, rather than a claim about it: the live panel
+              asks Google for real answers and prints the pages they came from.
+              It used to sit directly above Features, where two sections in a
+              row were praising the same search — so it has moved below the
+              description, to the point where the page has finished telling and
+              a visitor can finally try. */}
+          <SearchPreview />
           <Stats />
           {/* Real quotes from the early testers, read live from the approved
               rows — the count and the average move with the database. */}

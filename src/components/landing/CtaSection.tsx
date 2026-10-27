@@ -3,6 +3,7 @@ import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { MovingBorderButton } from "./MovingBorderButton";
+import { RevealWords } from "./RevealWords";
 import { useSpotlight } from "./use-spotlight";
 
 const AUTH_URL = "/auth?returnTo=%2Fdashboard";
@@ -52,13 +53,13 @@ export default function CtaSection() {
             every card on this page was doing. The closing panel is a flat
             surface and a hairline, like the rest. */}
         <div className="relative">
-          <h2
-            data-reveal
-            className="text-fade mx-auto max-w-2xl font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]"
-          >
+          {/* No `data-reveal` on the heading itself: the words are its
+              entrance now, and a block fade under a word beat is two
+              animations doing one job. */}
+          <RevealWords className="text-fade mx-auto max-w-2xl font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
             Your notes are waiting to become{" "}
             <span className="gradient-text">study material</span>
-          </h2>
+          </RevealWords>
           <p
             data-reveal
             className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim"
