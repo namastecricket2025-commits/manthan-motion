@@ -59,40 +59,60 @@ const unit = (v: Vec): Vec => {
   return { x: v.x / m, y: v.y / m };
 };
 
-/** One field line from a seed, in plate-local coordinates (magnet centre at 0,0). */
-function traceFieldLine(seed: Vec, step = 3.4, maxSteps = 800): Vec[] {
+const inMagnet = (p: Vec) => Math.abs(p.x) < MAGNET_HALF_X && Math.abs(p.y) < MAGNET_HALF_Y;
+
+/**
+ * Walks one field line from a seed, in plate-local coordinates (the magnet is
+ * centred on 0,0), until it reaches the magnet body.
+ *
+ * `direction` −1 walks against B, which is how the half of the loop that
+ * arrives from the north pole is drawn; the line ends when it enters the body,
+ * because that is the pole it terminates on. Seeding the *pole face* instead is
+ * what broke the first version of this bench: lines through points close to the
+ * axis belong to enormous flux surfaces, so every one of them ran off the plate
+ * as a near-straight ray instead of closing. Seeding on the perpendicular
+ * bisector at distance h gives a closed loop of radius h, because on the
+ * equatorial line the field is perpendicular to the radius: the size of the
+ * drawing is chosen, not left to chance.
+ */
+function walk(seed: Vec, direction: 1 | -1, step = 3, maxSteps = 900): Vec[] {
+  const pull = (x: number, y: number) => {
+    const v = unit(fieldAt(x, y));
+    return { x: direction * v.x, y: direction * v.y };
+  };
   const pts: Vec[] = [];
   let p: Vec = { ...seed };
+  let outside = !inMagnet(seed);
   for (let i = 0; i < maxSteps; i += 1) {
     pts.push({ ...p });
-    const k1 = unit(fieldAt(p.x, p.y));
-    const k2 = unit(fieldAt(p.x + (step / 2) * k1.x, p.y + (step / 2) * k1.y));
-    const k3 = unit(fieldAt(p.x + (step / 2) * k2.x, p.y + (step / 2) * k2.y));
-    const k4 = unit(fieldAt(p.x + step * k3.x, p.y + step * k3.y));
+    const k1 = pull(p.x, p.y);
+    const k2 = pull(p.x + (step / 2) * k1.x, p.y + (step / 2) * k1.y);
+    const k3 = pull(p.x + (step / 2) * k2.x, p.y + (step / 2) * k2.y);
+    const k4 = pull(p.x + step * k3.x, p.y + step * k3.y);
     p = {
       x: p.x + (step / 6) * (k1.x + 2 * k2.x + 2 * k3.x + k4.x),
       y: p.y + (step / 6) * (k1.y + 2 * k2.y + 2 * k3.y + k4.y),
     };
-    if (Math.abs(p.x) > PLATE_W / 2 + 60 || Math.abs(p.y) > PLATE_H / 2 + 60) break;
-    /* Arriving back at the magnet is the end of the line: it has entered S. */
-    if (Math.abs(p.x) < MAGNET_HALF_X && Math.abs(p.y) < MAGNET_HALF_Y) break;
+    if (inMagnet(p)) {
+      if (outside) break;
+    } else {
+      outside = true;
+    }
   }
   return pts;
 }
 
-/* Traced once: the seeds are fixed angles around the north pole, so the drawing
-   is the same construction every time the bench is opened. */
+/* Traced once: the loop sizes are a fixed ladder, so the drawing is the same
+   construction every time the bench is opened. */
+const LOOP_RADII = [34, 62, 92, 124];
 const FIELD_LINES: Vec[][] = (() => {
   const lines: Vec[][] = [];
-  for (let i = 0; i < 7; i += 1) {
-    const angle = ((22 + i * 23) * Math.PI) / 180;
+  for (const h of LOOP_RADII) {
     for (const sign of [1, -1]) {
-      lines.push(
-        traceFieldLine({
-          x: POLE_HALF + 7 * Math.cos(angle),
-          y: sign * 7 * Math.sin(angle),
-        }),
-      );
+      const seed = { x: 0, y: sign * h };
+      const outward = walk(seed, -1).reverse();
+      const inward = walk(seed, 1).slice(1);
+      lines.push([...outward, ...inward]);
     }
   }
   return lines;
@@ -130,9 +150,10 @@ export default function MagnetismBench() {
 
   const magnet = useMemo(() => {
     const b = fieldAt(compass.x, compass.y);
-    const ref = Math.hypot(...Object.values(fieldAt(POLE_HALF + 10, 0)) as [number, number]);
+    /* The pole-face value: 1 cm out from the north face, on the axis. */
+    const reference = fieldAt(MAGNET_HALF_X + PX_PER_CM, 0);
+    const ref = Math.hypot(reference.x, reference.y);
     return {
-      field: b,
       relative: Math.hypot(b.x, b.y) / ref,
       /* Screen rotation for the needle, and the honest maths angle for the
          read-out: anticlockwise from the magnet's axis, y up. */
@@ -156,10 +177,10 @@ export default function MagnetismBench() {
   const readouts: Array<[string, string]> =
     source === "magnet"
       ? [
-          ["Field at the compass", `${magnet.relative.toFixed(2)}× pole value`],
+          ["Field at the compass", `${magnet.relative.toFixed(3)}× pole face`],
           ["Field direction", `${Math.round(magnet.mathsAngle)}° from the axis`],
           ["Distance from the N pole", `${magnet.distance.toFixed(1)} cm`],
-          ["Lines through a point", "one — field lines never cross"],
+          ["Far from the magnet", "B falls as 1/r³"],
         ]
       : [
           ["Field B at r", `${microTesla.toFixed(1)} µT`],
@@ -217,7 +238,19 @@ export default function MagnetismBench() {
 
             {source === "magnet" ? (
               <>
-                {/* the field, traced from the north pole */}
+                {/* the axial line: straight out of N to infinity, and back from
+                    infinity into S — the magnet body covers the middle */}
+                <line x1={12} y1={CY} x2={PLATE_W - 12} y2={CY} stroke={ink(0.3)} strokeWidth={1.1} />
+                {[MAGNET_HALF_X + 46, -(MAGNET_HALF_X + 46)].map((dx) => (
+                  <path
+                    key={`axis-${dx}`}
+                    d="M -4.6 -3.4 L 3 0 L -4.6 3.4 Z"
+                    fill={ink(0.42)}
+                    transform={`translate(${CX + dx} ${CY})`}
+                  />
+                ))}
+
+                {/* the field, traced out of the north face and back into S */}
                 {FIELD_LINES.map((line, index) => (
                   <path
                     key={index}
@@ -244,34 +277,39 @@ export default function MagnetismBench() {
                   );
                 })}
 
-                {/* the magnet */}
+                {/* the magnet — opaque, so the traced segment that runs through
+                    the body is covered rather than shown as a wrong arrow */}
                 <rect
                   x={CX - MAGNET_HALF_X}
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X * 2}
                   height={MAGNET_HALF_Y * 2}
                   rx={5}
-                  fill={ink(0.14)}
-                  stroke={ink(0.45)}
-                  strokeWidth={1.2}
+                  fill={plate(0.94)}
                 />
                 <rect
                   x={CX - MAGNET_HALF_X}
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X}
                   height={MAGNET_HALF_Y * 2}
-                  rx={5}
                   fill="#3f6fb5"
-                  opacity={0.55}
                 />
                 <rect
                   x={CX}
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X}
                   height={MAGNET_HALF_Y * 2}
-                  rx={5}
                   fill="#c94a3f"
-                  opacity={0.55}
+                />
+                <rect
+                  x={CX - MAGNET_HALF_X}
+                  y={CY - MAGNET_HALF_Y}
+                  width={MAGNET_HALF_X * 2}
+                  height={MAGNET_HALF_Y * 2}
+                  rx={5}
+                  fill="none"
+                  stroke={ink(0.45)}
+                  strokeWidth={1.2}
                 />
                 <text x={CX - MAGNET_HALF_X / 2} y={CY + 5} fontSize={13} fontWeight={700} fill="#ffffff" textAnchor="middle">
                   S
@@ -293,15 +331,17 @@ export default function MagnetismBench() {
             ) : (
               <>
                 {/* field circles: anticlockwise for current out of the page */}
-                {[3, 6, 9].map((cm) => {
+                {[2, 4, 6, 8].map((cm) => {
                   const r = cm * PX_PER_CM;
                   return (
                     <g key={cm}>
                       <circle cx={CX} cy={CY} r={r} fill="none" stroke={ink(0.22)} strokeWidth={1.1} />
+                      {/* at the top of a circle the anticlockwise tangent points
+                          left — that is the right-hand rule, drawn */}
                       <path
                         d="M -4.6 -3.4 L 3 0 L -4.6 3.4 Z"
                         fill={ink(0.42)}
-                        transform={`translate(${CX} ${CY - r}) rotate(-90)`}
+                        transform={`translate(${CX} ${CY - r}) rotate(180)`}
                       />
                       <text x={CX + 6} y={CY - r - 5} fontSize={9.5} fill={ink(0.4)}>
                         {cm} cm

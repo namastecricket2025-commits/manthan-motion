@@ -108,11 +108,15 @@ export default function OpticsPractical() {
      is exactly the u = f case: two rays are the whole construction there. */
   const drawRay3 = Math.abs(ray3FocusX - objectX) > 6;
 
-  const nature = [
-    v > 0 ? "real" : "virtual",
-    Math.abs(m) > 1.02 ? "enlarged" : Math.abs(m) < 0.98 ? "diminished" : "same size",
-    m < 0 ? "inverted" : "upright",
-  ].join(" · ");
+  /* u = f is neither real nor virtual: the beam leaves parallel and no image
+     forms, so saying "virtual · enlarged · upright" would be a lie. */
+  const nature = !finite
+    ? "image at infinity"
+    : [
+        v > 0 ? "real" : "virtual",
+        Math.abs(m) > 1.02 ? "enlarged" : Math.abs(m) < 0.98 ? "diminished" : "same size",
+        m < 0 ? "inverted" : "upright",
+      ].join(" · ");
 
   const solved = finite
     ? `v = ${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)} cm, m = ${m.toFixed(2)}`
@@ -354,7 +358,7 @@ export default function OpticsPractical() {
         </div>
 
         <p className="apple-lab-note mt-1">
-          {hint} Cyan is the object, its image is drawn in cyan when it is real and dashed violet when it is
+          {hint} The object is cyan; its image is solid cyan when it is real and dashed violet when it is
           virtual.
         </p>
       </div>
