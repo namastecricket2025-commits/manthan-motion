@@ -7,10 +7,26 @@ import { RotateCcw } from "lucide-react";
 
 /**
  * Heart viewer built on a real textured 3D model (public/models/heart.glb).
+ *
  * The model is a single mesh, so labels are numbered markers placed by hand on
  * its surface. `p` is in the model's own coordinates: x = back→front, y = up,
  * z = patient's left(−)→right(+). side "f" = visible from the front, "b" = from
  * the back. Check the labels against a textbook.
+ *
+ * Two rules keep the numbering readable, because a numbered label that moves is
+ * worse than no label at all:
+ *
+ *   1. The number of a part is its position in PARTS, and nothing else — the
+ *      same number on the dot, in the list under the stage and in the read-out.
+ *      Numbers are never re-counted from whatever happens to be on screen.
+ *   2. Selecting a part never moves the model. A part on the far side is drawn
+ *      faded rather than hidden (so the set of numbers never changes as you
+ *      orbit), and picking it says so and points at the Back button — only
+ *      Front / Back / dragging turn the model.
+ *
+ * The stage is the lungs' and kidneys' stage: same `lab-split` → stage pane →
+ * `lab-deck-pane` structure, so all three organ systems present the model first
+ * and put the controls, the read-out and the structure list below it.
  */
 type Part = { id: string; name: string; fn: string; color: string; p: [number, number, number]; side: "f" | "b" };
 
@@ -29,7 +45,7 @@ const PARTS: Part[] = [
   { id: "lad", name: "Coronary arteries and fat", fn: "Vessels in the grooves between chambers feed the heart muscle itself.", color: "#f4a640", p: [0.1634, -0.0294, -0.0766], side: "f" },
   { id: "la", name: "Left atrium (back view)", fn: "Receives oxygen-rich blood from the lungs through the pulmonary veins.", color: "#f07890", p: [-0.1622, 0.0992, 0.0096], side: "b" },
   { id: "lpv", name: "Left pulmonary veins (back view)", fn: "Bring oxygen-rich blood from the left lung to the left atrium.", color: "#f07890", p: [-0.138, 0.1218, -0.1915], side: "b" },
-  { id: "rpv", name: "Right pulmonary veins (back view)", fn: "Bring oxygen-rich blood from the right lung to the left atrium.", color: "#f07890", p: [-0.0218, 0.1329, 0.2722], side: "b" },
+  { id: "rpv", name: "Right pulmonary veins (back view)", fn: "Bring oxygen-rich blood from the right lung to the right atrium.", color: "#f07890", p: [-0.0218, 0.1329, 0.2722], side: "b" },
 ];
 
 /**
@@ -91,8 +107,11 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
     loaded: false,
     cam: null as THREE.PerspectiveCamera | null,
     controls: null as OrbitControls | null,
+    pin: null as string | null,
+    pinFacing: true,
   });
   const [pin, setPin] = useState<string | null>(null);
+  const [facing, setFacing] = useState(true);
   const [xray, setXray] = useState(false);
   const [all, setAll] = useState(false);
   const [bpm, setBpm] = useState(72);
@@ -186,14 +205,24 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
       PARTS.forEach((a) => {
         const d = dots.current[a.id];
         if (!d) return;
-        const visible = c.loaded && (a.side === "f" ? cx > 0.1 : cx < -0.1);
-        d.style.display = visible ? "block" : "none";
-        if (!visible) return;
+        d.style.display = c.loaded ? "block" : "none";
+        if (!c.loaded) return;
+        /* A part on the far side is faded, never removed: the number stays on
+           the same piece of anatomy in the same place, whatever the camera does. */
+        d.style.opacity = (a.side === "f" ? cx > 0 : cx < 0) ? "1" : "0.42";
         v.set(...a.p);
         group.localToWorld(v);
         v.project(cam);
         d.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
       });
+      const sel = PARTS.find((a) => a.id === c.pin);
+      if (sel) {
+        const towards = sel.side === "f" ? cx > 0 : cx < 0;
+        if (towards !== c.pinFacing) {
+          c.pinFacing = towards;
+          setFacing(towards);
+        }
+      }
       renderer.render(scene, cam);
     };
     loop();
@@ -231,6 +260,11 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
     });
   }, [xray, ready]);
 
+  useEffect(() => {
+    ctl.current.pin = pin;
+    if (!pin) setFacing(true);
+  }, [pin]);
+
   const side = (s: 1 | -1) => {
     const cam = ctl.current.cam;
     if (!cam) return;
@@ -241,170 +275,139 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
     ctl.current.fly = new THREE.Vector3(12, 0.8, 0);
     ctl.current.controls?.target.set(0, 0, 0);
   };
+  /**
+   * Selecting a part only selects it. It used to also fly the camera to the
+   * part's side, which rotated the whole diagram under the cursor — click 13
+   * while reading the front view and every number you were looking at swapped
+   * places. Facing is now the user's decision (Front / Back / drag), and a
+   * picked part that faces away says so instead of spinning the model.
+   */
   const pick = (id: string) => {
-    const next = pin === id ? null : id;
-    setPin(next);
-    const a = PARTS.find((p) => p.id === next);
-    const cam = ctl.current.cam;
-    if (a && cam) {
-      const cx = cam.position.clone().normalize().x;
-      if ((a.side === "f" && cx < 0.3) || (a.side === "b" && cx > -0.3)) side(a.side === "f" ? 1 : -1);
-    }
+    setPin(pin === id ? null : id);
   };
   const sel = PARTS.find((p) => p.id === pin);
 
+  const edge = "border-white/10";
+  const txt = "text-slate-100";
+  const sub = "text-slate-400";
+  const btn = (on: boolean) =>
+    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
+
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-      {/* ── the model ── */}
-      <div className="apple-lab-panel apple-lab-glass">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="apple-lab-micro">{label}</p>
-            <h3 className="apple-lab-title mt-1 text-lg">{blurb}</h3>
+    <div className="lab-split">
+      <div className="lab-stage-pane lab-glass p-2.5 sm:p-4">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className={`truncate text-sm font-bold ${txt}`}>{label}</p>
+            <p className={`hidden text-[11px] sm:block ${sub}`}>{blurb}</p>
           </div>
-          <button type="button" className="apple-lab-btn !px-3 !py-2" onClick={fit}>
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Fit view</span>
+          <button type="button" className={btn(false)} onClick={fit}>
+            <RotateCcw className="mr-1 inline h-3 w-3" />
+            Fit view
           </button>
         </div>
-
-        <div className="organ-viewbar mt-4">
-          <div className="organ-seg" role="group" aria-label="Heart view">
-            <button type="button" onClick={() => side(1)}>
-              Front
-            </button>
-            <button type="button" onClick={() => side(-1)}>
-              Back
-            </button>
-            <button type="button" data-active={xray} onClick={() => setXray((v) => !v)} aria-pressed={xray}>
-              X-ray
-            </button>
-          </div>
-          <span className="organ-viewhint">
-            {xray ? "The outer muscle turns glass so the chambers show through" : "A real scanned model — drag to turn it"}
-          </span>
-        </div>
-
-        <div className="apple-lab-stage mt-3 aspect-[16/10] min-h-[300px]">
+        <div className="lab-model-stage relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
-          {!ready && !failed && (
-            <div className="absolute inset-0 grid place-items-center text-sm text-[var(--lab-ink-dim)]">
-              Loading the heart model…
-            </div>
-          )}
-          {failed && (
-            <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-[var(--lab-ink-dim)]">
-              The heart model could not load. Check your connection and reload the lab.
-            </div>
-          )}
+          {!ready && !failed && <div className={`absolute inset-0 grid place-items-center text-sm ${sub}`}>Loading heart model…</div>}
+          {failed && <div className={`absolute inset-0 grid place-items-center px-6 text-center text-sm ${sub}`}>Could not load the heart model.</div>}
           {PARTS.map((a, i) => (
             <button
               key={a.id}
               type="button"
               aria-label={a.name}
+              aria-pressed={pin === a.id}
               ref={(el) => {
                 dots.current[a.id] = el;
               }}
               onClick={() => pick(a.id)}
               style={{ background: a.color, display: "none" }}
-              className={`absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${pin === a.id ? "z-10 scale-125" : ""}`}
+              className={`organ-dot absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow transition-shadow ${pin === a.id ? "z-10 ring-2 ring-white" : ""}`}
             >
               {i + 1}
               {(all || pin === a.id) && (
-                <span className="absolute left-7 top-0.5 whitespace-nowrap rounded-md bg-black/85 px-2 py-0.5 text-[10px] font-medium text-white">
-                  {a.name}
-                </span>
+                <span className="absolute left-7 top-0.5 whitespace-nowrap rounded-md bg-black/90 px-2 py-0.5 text-xs">{a.name}</span>
               )}
             </button>
           ))}
-          <span className="pointer-events-none absolute bottom-3 right-3 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] text-white/70 backdrop-blur-sm">
-            drag orbit · scroll zoom · click a dot
-          </span>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="apple-lab-micro">Heart rate</span>
-          <span className="apple-lab-value text-[12px] tabular-nums">{bpm} bpm</span>
-        </div>
-        <input
-          type="range"
-          className="apple-lab-range mt-1.5"
-          min={40}
-          max={180}
-          value={bpm}
-          aria-label="Heart rate"
-          onChange={(e) => {
-            setBpm(+e.target.value);
-            ctl.current.bpm = +e.target.value;
-          }}
-        />
-      </div>
-
-      {/* ── structures ── */}
-      <div className="flex min-w-0 flex-col gap-3">
-        <div className="apple-lab-panel apple-lab-glass">
-          <div className="flex items-center justify-between gap-3">
-            <p className="apple-lab-micro">Structures</p>
-            <button
-              type="button"
-              className="apple-lab-btn !px-2.5 !py-1 !text-[10px]"
-              data-active={all}
-              aria-pressed={all}
-              onClick={() => setAll((v) => !v)}
-            >
-              {all ? "Hide labels" : "All labels"}
-            </button>
-          </div>
-
-          {sel ? (
-            <div
-              className="apple-lab-card mt-3 px-3.5 py-3"
-              style={{ borderColor: `color-mix(in srgb, ${sel.color} 46%, transparent)` }}
-            >
-              <p className="apple-lab-micro" style={{ color: sel.color }}>
-                {sel.side === "f" ? "Front view" : "Back view"}
-              </p>
-              <p className="apple-lab-value mt-1 text-[14px] font-semibold leading-tight">{sel.name}</p>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">{sel.fn}</p>
-            </div>
-          ) : (
-            <p className="apple-lab-note mt-2">
-              Tap a numbered dot on the model, or a structure below, to read what it does.
+          {sel && !facing && (
+            <p className="pointer-events-none absolute bottom-3 left-3 max-w-[70%] rounded-lg border border-white/15 bg-black/75 px-2.5 py-1.5 text-[11px] leading-snug text-slate-200 backdrop-blur-sm">
+              {sel.name} faces away from this view — tap <b className="font-semibold text-white">Back</b> to turn the model
+              round.
             </p>
           )}
-
-          <div className="organ-scroll mt-2 max-h-[330px] overflow-y-auto pr-1">
-            <div className="mt-1 flex flex-col gap-1">
-              {PARTS.map((a, i) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => pick(a.id)}
-                  aria-pressed={pin === a.id}
-                  className="organ-row"
-                  data-active={pin === a.id}
-                >
-                  <span
-                    className="organ-row__dot"
-                    style={{ background: a.color, boxShadow: `0 0 10px ${a.color}55` }}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-left text-[12px] font-semibold">
-                    {i + 1}. {a.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="apple-lab-panel apple-lab-glass">
-          <p className="apple-lab-micro">Colour key</p>
-          <p className="apple-lab-note mt-2">
-            Blue vessels carry oxygen-poor blood to the lungs; red vessels carry oxygen-rich blood
-            away from them. Labels sit on one scanned model, so check them against your textbook.
+          <p className={`pointer-events-none absolute bottom-2 right-3 hidden text-[10px] ${sub} sm:block`}>
+            drag orbit · scroll zoom · tap a numbered dot
           </p>
         </div>
+      </div>
+
+      <div className="lab-deck-pane lab-glass-deep space-y-3 p-3.5">
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={btn(false)} onClick={() => side(1)}>
+            Front
+          </button>
+          <button type="button" className={btn(false)} onClick={() => side(-1)}>
+            Back
+          </button>
+          <button type="button" className={btn(xray)} onClick={() => setXray(!xray)}>
+            X-ray
+          </button>
+          <button type="button" className={btn(all)} onClick={() => setAll(!all)}>
+            All labels
+          </button>
+        </div>
+
+        <div className={`space-y-2 text-xs ${sub}`}>
+          <label className="flex items-center gap-2">
+            Heart rate
+            <input
+              type="range"
+              min={40}
+              max={180}
+              value={bpm}
+              className="flex-1"
+              onChange={(e) => {
+                setBpm(+e.target.value);
+                ctl.current.bpm = +e.target.value;
+              }}
+            />
+            <b className={txt}>{bpm} bpm</b>
+          </label>
+          <p>One beat is two moves: the atria fill the ventricles, then the ventricles squeeze. A resting adult runs at 60–100 bpm.</p>
+        </div>
+
+        <div className={`min-h-20 rounded-xl border ${edge} p-3 text-xs leading-relaxed ${txt}`}>
+          {sel ? (
+            <>
+              <b style={{ color: sel.color }}>{sel.name}</b>
+              <br />
+              {sel.fn}
+            </>
+          ) : (
+            <span className={sub}>Tap a numbered dot on the model, or a structure below, to read what it does.</span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          {PARTS.map((a, i) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => pick(a.id)}
+              aria-pressed={pin === a.id}
+              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === a.id ? "bg-white/10" : ""}`}
+            >
+              <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: a.color }} />
+              {i + 1}. {a.name}
+            </button>
+          ))}
+        </div>
+
+        <p className={`text-[10px] leading-relaxed ${sub}`}>
+          Blue vessels carry oxygen-poor blood to the lungs; red vessels carry oxygen-rich blood away from them. The
+          number of a part is the same on the model, in this list and in the read-out, and it never moves: a part on the
+          far side is drawn faded, and Front / Back is what turns the model.
+        </p>
       </div>
     </div>
   );

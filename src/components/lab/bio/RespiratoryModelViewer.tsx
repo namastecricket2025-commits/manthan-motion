@@ -36,8 +36,9 @@ const SCALE = 1;
 export default function RespiratoryModelViewer({ label, blurb }: { label: string; blurb: string; theme: "dark" | "light" }) {
   const holder = useRef<HTMLDivElement>(null);
   const dots = useRef<Record<string, HTMLButtonElement | null>>({});
-  const ctl = useRef({ auto: true, infl: 0.35, rate: 14, xray: false, fly: null as THREE.Vector3 | null, loaded: false, cam: null as THREE.PerspectiveCamera | null, controls: null as OrbitControls | null });
+  const ctl = useRef({ auto: true, infl: 0.35, rate: 14, xray: false, fly: null as THREE.Vector3 | null, loaded: false, cam: null as THREE.PerspectiveCamera | null, controls: null as OrbitControls | null, pin: null as string | null, pinFacing: true });
   const [pin, setPin] = useState<string | null>(null);
+  const [facing, setFacing] = useState(true);
   const [xray, setXray] = useState(false);
   const [all, setAll] = useState(false);
   const [auto, setAuto] = useState(true);
@@ -122,14 +123,29 @@ export default function RespiratoryModelViewer({ label, blurb }: { label: string
       PARTS.forEach((a) => {
         const d = dots.current[a.id];
         if (!d) return;
-        const visible = c.loaded && (!a.xr || c.xray) && (a.side === "f" ? cx > 0.1 : cx < -0.1);
-        d.style.display = visible ? "block" : "none";
-        if (!visible) return;
+        d.style.display = c.loaded ? "block" : "none";
+        if (!c.loaded) return;
+        /* A number is faded, never removed. Hiding the far side (and the parts
+           inside a lung) re-counted the labels as you moved: the model showed
+           1, 2, 3, 8 … while the list ran 1–16, and every click changed which
+           numbers existed. Now all of them are always there, and the faded
+           ones are the ones the camera is not facing or the X-ray is hiding. */
+        const towards = a.side === "f" ? cx > 0 : cx < 0;
+        const enclosed = Boolean(a.xr) && !c.xray;
+        d.style.opacity = towards && !enclosed ? "1" : "0.42";
         v.set(...a.p);
         group.localToWorld(v);
         v.project(cam);
         d.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
       });
+      const current = PARTS.find((a) => a.id === c.pin);
+      if (current) {
+        const towards = current.side === "f" ? cx > 0 : cx < 0;
+        if (towards !== c.pinFacing) {
+          c.pinFacing = towards;
+          setFacing(towards);
+        }
+      }
       renderer.render(scene, cam);
     };
     loop();
@@ -175,18 +191,29 @@ export default function RespiratoryModelViewer({ label, blurb }: { label: string
     ctl.current.fly = new THREE.Vector3(0, 0.6, 24);
     ctl.current.controls?.target.set(0, 0, 0);
   };
+  /**
+   * Picking a number selects it and nothing else. It used to fly the camera to
+   * the side the part belongs to, so clicking a label after orbiting the model
+   * snapped the view back and every number jumped to a new place. Turning the
+   * model is now the Front / Back buttons' job, and a picked part that is facing
+   * away (or is inside the lung) says so instead. The one thing a click still
+   * does by itself is switch the X-ray on for a part that is inside the lung —
+   * that reveals the part, it does not move anything.
+   */
   const pick = (id: string) => {
     const next = pin === id ? null : id;
     setPin(next);
     const a = PARTS.find((p) => p.id === next);
     if (a?.xr && !xray) setXray(true);
-    const cam = ctl.current.cam;
-    if (a && cam) {
-      const cx = cam.position.clone().normalize().z;
-      if ((a.side === "f" && cx < 0.3) || (a.side === "b" && cx > -0.3)) side(a.side === "f" ? 1 : -1);
-    }
   };
   const sel = PARTS.find((p) => p.id === pin);
+  const away = Boolean(sel) && !facing;
+  const enclosed = Boolean(sel?.xr) && !xray;
+
+  useEffect(() => {
+    ctl.current.pin = pin;
+    if (!pin) setFacing(true);
+  }, [pin]);
   /* The stage, its header and the deck below are one dark instrument face in
      both themes — the model needs a black studio behind it, and a panel split
      between a black stage and a paper deck read as two different tools. The
@@ -220,17 +247,32 @@ export default function RespiratoryModelViewer({ label, blurb }: { label: string
               key={a.id}
               type="button"
               aria-label={a.name}
+              aria-pressed={pin === a.id}
               ref={(el) => {
                 dots.current[a.id] = el;
               }}
               onClick={() => pick(a.id)}
               style={{ background: a.color, display: "none" }}
-              className={`organ-dot absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow ${pin === a.id ? "z-10 scale-125" : ""}`}
+              className={`organ-dot absolute left-0 top-0 -ml-3 -mt-3 h-6 w-6 cursor-pointer rounded-full border-2 border-white text-[11px] font-bold text-white shadow transition-shadow ${pin === a.id ? "z-10 ring-2 ring-white" : ""}`}
             >
               {i + 1}
               {(all || pin === a.id) && <span className="absolute left-7 top-0.5 whitespace-nowrap rounded-md bg-black/90 px-2 py-0.5 text-xs">{a.name}</span>}
             </button>
           ))}
+          {sel && (away || enclosed) && (
+            <p className="pointer-events-none absolute bottom-3 left-3 max-w-[70%] rounded-lg border border-white/15 bg-black/75 px-2.5 py-1.5 text-[11px] leading-snug text-slate-200 backdrop-blur-sm">
+              {enclosed ? (
+                <>
+                  {sel.name} sits inside the lung — tap <b className="font-semibold text-white">X-ray</b> to see it.
+                </>
+              ) : (
+                <>
+                  {sel.name} faces away from this view — tap <b className="font-semibold text-white">Back</b> to turn the
+                  model round.
+                </>
+              )}
+            </p>
+          )}
           <p className="pointer-events-none absolute bottom-2 right-3 hidden text-[10px] text-slate-400 sm:block">drag orbit · scroll zoom · tap a numbered dot</p>
         </div>
       </div>
