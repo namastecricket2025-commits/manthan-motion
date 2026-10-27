@@ -1112,6 +1112,77 @@ body::-webkit-scrollbar-thumb:hover {
   }
 
   /* ------------------------------------------------
+     The ambient field — the plane a long page sits on.
+
+     A black page is not the problem; a black page with nothing on it is.
+     The hero's light is deliberately spent inside the first screen, so from
+     the product shot down the page used to be flat black with cards floating
+     in it. This layer fills that with two things and nothing else: the same
+     26px dot cell the site already uses as its paper, and ONE very soft
+     light — assembled from the theme's existing halo tokens, never a new
+     white. Both sit on a fixed plane behind all content and are moved by
+     scroll (see `landing/AmbientField.tsx`): the texture drifts at 4% of the
+     scroll, a hairline parallax that reads as depth, and the light travels
+     from above the first screen down to the bottom third as page progress
+     goes 0 → 1, so every screen below the hero has light on it and the hero
+     — which keeps only the halo hugging its mark — is left alone.
+
+     The numbers are what keep it off the eyes. The dots are `--text-main`
+     painted at 0.045 — about a 4.5% ink mark, a hair under the `.dot-field`
+     the inner pages already use — and the light is the theme's own halo
+     stops run at 0.8, which puts its centre under 10% white: still below
+     `--halo-near`, the 22% the hero spends on itself, so the page light
+     never outshines the hero's. No hue, no blur filter, no animation of its
+     own: one composited layer whose
+     two children move only while the reader scrolls, and it holds still
+     under `prefers-reduced-motion` or Motionless Mode.
+
+     Contract: render once, as the first child of a page's `relative`
+     wrapper, with the page's content on `relative z-10`.
+     ------------------------------------------------ */
+  .ambient-field {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: var(--bg-glow-opacity, 1);
+  }
+  .ambient-field__grid {
+    position: absolute;
+    inset: -40px 0;
+    /* Ink first, alpha on the element: `--text-main` is already the theme's
+       readable colour, so the same rule is faint black dots on paper and
+       faint white ones on ink — and it costs no `color-mix`, which older
+       engines answer with Tailwind's full-alpha fallback. */
+    background-image: radial-gradient(
+      circle at center,
+      var(--text-main) 1px,
+      transparent 1.2px
+    );
+    background-size: 26px 26px;
+    opacity: 0.045;
+    -webkit-mask-image: radial-gradient(ellipse 78% 64% at 50% 46%, #000 0%, transparent 84%);
+    mask-image: radial-gradient(ellipse 78% 64% at 50% 46%, #000 0%, transparent 84%);
+    will-change: transform;
+  }
+  .ambient-field__light {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: min(1440px, 128vw);
+    height: min(680px, 84vh);
+    /* Both radials stack where they overlap, so the layer is scaled down to
+       keep the combined centre under 10% white rather than at 12.5%. */
+    opacity: 0.8;
+    transform: translate3d(-50%, 0, 0);
+    background:
+      radial-gradient(56% 46% at 50% 26%, var(--halo-mid), transparent 74%),
+      radial-gradient(80% 64% at 50% 38%, var(--halo-far), transparent 84%);
+    will-change: transform;
+  }
+
+  /* ------------------------------------------------
      The hero capability rail (Vercel's right-hand stack).
 
      Three rows, 8px apart, one line tall at rest. Hovering a row expands it

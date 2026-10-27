@@ -1,4 +1,5 @@
 import CtaSection from "@/components/landing/CtaSection";
+import { AmbientField } from "@/components/landing/AmbientField";
 import Features from "@/components/landing/Features";
 import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
@@ -315,6 +316,12 @@ export default function Landing() {
 
   return (
     <div className="relative min-h-screen">
+      {/* The plane the whole page sits on: the site's dot texture and one soft
+          light, fixed behind everything and moved by scroll (see the component
+          for what each of the two movements is). Rendered here rather than per
+          section so there is exactly one of it for the page, and no section can
+          own a light of its own. */}
+      <AmbientField />
       <div className="relative z-10">
         {/* Anchor target for the "Home" nav item — the header is fixed, so
             an anchor on it can't scroll the page; this spans the top. */}
