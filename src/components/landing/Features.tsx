@@ -1,6 +1,6 @@
 import { gsap, prefersReducedMotion, refreshOnLoad, revealConfig } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
-import { ArrowUp, Check, FileText, Plus, Search } from "lucide-react";
+import { Check, FileText, Plus } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { RevealWords } from "./RevealWords";
 import { useSpotlight } from "./use-spotlight";
@@ -243,134 +243,6 @@ function ThemeArt() {
   );
 }
 
-/**
- * The in-app search panel, reduced to its real parts: the Google mark, one
- * field, and Google's own results. No illustration invented for the landing
- * page — this is the surface a student actually gets, which is also why the
- * copy underneath can stay to two sentences.
- */
-function SearchArt() {
-  const hits = [
-    {
-      host: "ncert.nic.in",
-      title: "Light — Reflection and Refraction",
-      snippet: "Class 10 Science, Chapter 10. Laws of reflection, mirrors, refraction through a glass slab.",
-    },
-    {
-      host: "byjus.com",
-      title: "Why is the sky blue? Rayleigh scattering",
-      snippet: "Shorter wavelengths scatter more, so blue reaches your eye from every direction.",
-    },
-    {
-      host: "youtube.com",
-      title: "Rayleigh scattering, explained in four minutes",
-      snippet: "A chalkboard walkthrough of the same chapter, for a second pass.",
-    },
-  ];
-  return (
-    <Art className="p-0">
-      {/* The panel's own header: Google's mark, the word Search and the one
-          fact that matters — it opens here, not in another tab. */}
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--panel-line)] px-3 py-2">
-        <span className="flex items-center gap-2 text-[11.5px] font-semibold text-foreground">
-          <img
-            src="/google-g.png"
-            alt=""
-            width={14}
-            height={14}
-            className="shrink-0"
-            aria-hidden
-          />
-          Search
-        </span>
-        <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-ink)]">
-          In-app
-        </span>
-      </div>
-
-      <div className="p-3">
-        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-[var(--panel-line)] bg-[var(--panel)] px-2.5 py-2">
-          <Search className="h-3.5 w-3.5 shrink-0 text-text-dim" />
-          <span className="min-w-0 flex-1 truncate text-[12px] text-foreground">
-            why is the sky blue — Class 10
-          </span>
-          <span className="shrink-0 rounded-full bg-[var(--text-main)] px-2 py-0.5 text-[10px] font-semibold text-[var(--panel)]">
-            Search
-          </span>
-        </div>
-
-        <div className="mt-2 rounded-lg border border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] p-2.5">
-          <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-text-dim">
-            <img
-              src="/google-g.png"
-              alt=""
-              width={11}
-              height={11}
-              className="shrink-0"
-              aria-hidden
-            />
-            Answer
-          </p>
-          <p className="mt-1.5 text-[11.5px] leading-relaxed text-foreground">
-            Sunlight is a mix of colours. Air molecules scatter the shorter blue
-            wavelengths far more than the red ones — Rayleigh scattering — so
-            blue reaches your eye from every direction and the sky looks blue.
-          </p>
-        </div>
-
-        <p className="mt-2.5 text-[9px] font-bold uppercase tracking-[0.15em] text-text-dim">
-          Sources
-        </p>
-        <ul className="mt-1">
-          {hits.map((hit, index) => (
-            <li
-              key={hit.host}
-              className="flex items-start gap-2 border-t border-[var(--panel-line)] py-1.5 first:border-0"
-            >
-              <span className="w-3 shrink-0 pt-px text-[9.5px] tabular-nums text-text-dim">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[9.5px] text-text-dim">{hit.host}</span>
-                <span className="block truncate text-[11.5px] font-medium text-foreground">
-                  {hit.title}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {/* The panel's own footer, where the conversation continues: the answer
-            is the first turn, and a student can keep asking about the same
-            page without leaving the app. */}
-        <div className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-[var(--panel-line)] px-2.5 py-1.5">
-          <span className="text-[10.5px] text-text-dim">Ask a follow-up…</span>
-          <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--text-main)] text-[var(--panel)]">
-            <ArrowUp className="h-2.5 w-2.5" strokeWidth={3} />
-          </span>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--panel-line)] pt-2">
-          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim">
-            <img
-              src="/google-g.png"
-              alt=""
-              width={11}
-              height={11}
-              className="shrink-0"
-              aria-hidden
-            />
-            Google
-          </span>
-          <span className="text-[10px] text-text-dim underline underline-offset-2">
-            Open this search
-          </span>
-        </div>
-      </div>
-    </Art>
-  );
-}
-
 /** The phone: the same app, stacked, with the off-canvas bar at the bottom. */
 function PhoneArt() {
   return (
@@ -439,21 +311,6 @@ const MOBILE_POINTS = [
   "Off-canvas navigation instead of a squeezed sidebar",
   "Stacked cards that read at thumb width",
   "A background tuned for mid-range devices",
-];
-
-const SEARCH_POINTS = [
-  "Results open in the panel, not a new tab",
-  "Google's answer first, then the sources",
-  "Ask a follow-up without leaving the answer",
-];
-
-/** Real queries the panel is built for. Each carries the line a student
- *  would type, so the column reads as a list of things to ask rather than as
- *  three loose chips above a stretch of empty card. */
-const SEARCH_EXAMPLES = [
-  { query: "why is the sky blue", note: "Class 10 · Rayleigh scattering" },
-  { query: "NCERT trig formulas", note: "Class 10 · the identities, then the chapter" },
-  { query: "laws of reflection", note: "Class 8 · statement, diagram, worked example" },
 ];
 
 export default function Features() {
@@ -569,71 +426,6 @@ export default function Features() {
             <ul className="mt-4 grid gap-2 sm:grid-cols-3">
               {MOBILE_POINTS.map((point) => (
                 <li key={point} className="flex items-start gap-2 text-[13px] text-text-dim">
-                  <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
-                    <Check className="h-2 w-2" strokeWidth={3.5} />
-                  </span>
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </article>
-
-        {/* The search panel, given the closing slot: it is the one feature
-            that works the same on every page, so it reads last and widest. */}
-        <article
-          data-card
-          className="feature-card glass-panel card-surface spot-card flex flex-col gap-6 p-4 sm:col-span-2 sm:p-5 lg:col-span-6 lg:flex-row-reverse lg:items-center lg:gap-8 lg:p-6"
-        >
-          <div className="hidden min-w-0 sm:block lg:w-[46%] lg:shrink-0">
-            <SearchArt />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 self-stretch py-1">
-            <div>
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="/google-g.png"
-                  alt=""
-                  aria-hidden
-                  width={22}
-                  height={22}
-                  className="h-[22px] w-[22px] shrink-0"
-                />
-                <h3 className="font-display text-[17px] font-semibold tracking-[-0.01em] text-foreground sm:text-lg">
-                  Google, inside the working
-                </h3>
-              </div>
-
-              <p className="mt-2.5 max-w-xl text-[13px] leading-relaxed text-text-dim">
-                Every lab carries its own search. Ask for a definition
-                mid-solution and Google's results open beside the problem — the
-                page, the diagram and the answer never leave the screen.
-              </p>
-            </div>
-
-            <ul className="flex flex-col gap-2">
-              {SEARCH_EXAMPLES.map((example) => (
-                <li
-                  key={example.query}
-                  className="flex items-center gap-2.5 rounded-[10px] border border-[var(--panel-line)] bg-[color-mix(in_srgb,var(--text-main)_3%,transparent)] px-3 py-2"
-                >
-                  <Search className="h-3.5 w-3.5 shrink-0 text-text-dim" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] text-foreground">
-                      {example.query}
-                    </span>
-                    <span className="block truncate text-[10.5px] text-text-dim">
-                      {example.note}
-                    </span>
-                  </span>
-                  <ArrowUp className="h-3.5 w-3.5 shrink-0 rotate-45 text-text-dim" />
-                </li>
-              ))}
-            </ul>
-
-            <ul className="grid gap-2 sm:grid-cols-3">
-              {SEARCH_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-2 text-[12.5px] leading-snug text-text-dim">
                   <span className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--primary-foreground)]">
                     <Check className="h-2 w-2" strokeWidth={3.5} />
                   </span>
