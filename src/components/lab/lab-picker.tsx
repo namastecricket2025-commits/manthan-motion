@@ -22,6 +22,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * The keyboard contract is the standard listbox one: ArrowUp/ArrowDown/Home/End
  * move through the options, Enter or Space chooses, Escape closes and returns
  * focus to the trigger, and a pointer press outside closes without choosing.
+ *
+ * The list is `apple-lab-pop`, not Tailwind's `absolute`: `.apple-lab-card` is
+ * `position: relative` in an unlayered stylesheet, which beats a layered
+ * utility, and the panel would otherwise sit in flow and shove the whole bench
+ * down as it opened.
  */
 
 export type LabPickerOption = {
@@ -196,7 +201,7 @@ export function LabPicker({
             exit={{ opacity: 0, y: -4, scale: 0.99 }}
             transition={spring}
             style={{ transformOrigin: "top right" }}
-            className="apple-lab-card absolute right-0 top-full z-40 mt-2 w-[19rem] max-w-[calc(100vw-2.5rem)] overflow-hidden backdrop-blur-xl"
+            className="apple-lab-card apple-lab-pop right-0 top-full mt-2 w-[19rem] max-w-[calc(100vw-2.5rem)] overflow-hidden backdrop-blur-xl"
           >
             {searchable ? (
               <div className="flex items-center gap-2 border-b border-[var(--lab-line-soft)] px-3 py-2">

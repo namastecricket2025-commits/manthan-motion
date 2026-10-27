@@ -149,6 +149,19 @@ html[data-comfort="on"] .apple-lab::after {
   border-radius: 18px;
 }
 
+/* Anything that has to float over the bench without moving it: a picker list,
+   a menu, a callout. It declares its own positioning rather than relying on
+   Tailwind's `absolute`, because `.apple-lab-card` above is `position: relative`
+   and this stylesheet is unlayered while Tailwind puts its utilities in a layer
+   — an unlayered rule wins over a layered one whatever order they load in, so a
+   panel that only asked for `absolute` stayed in flow and pushed the entire
+   bench down the moment it opened. Same file, later rule, same specificity: the
+   popover now wins, and the element it belongs to keeps its own `relative`. */
+.apple-lab-pop {
+  position: absolute;
+  z-index: 40;
+}
+
 .apple-lab-chip {
   display: inline-flex;
   align-items: center;
