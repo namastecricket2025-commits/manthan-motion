@@ -144,7 +144,9 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
     controls.minDistance = 5;
     controls.maxDistance = 25;
     c.controls = controls;
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x556688, 0.5));
+    /* The muscle is a dark, desaturated red; without a decent ambient term it
+       reads as a silhouette even with correct normals. */
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x556688, 0.85));
     const d1 = new THREE.DirectionalLight(0xffffff, 1.1);
     d1.position.set(6, 6, 4);
     scene.add(d1);
@@ -165,7 +167,16 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
           const mesh = o as THREE.Mesh;
           if (!mesh.isMesh) return;
           const old = mesh.material as THREE.MeshStandardMaterial;
-          const mat = new THREE.MeshPhysicalMaterial({ map: old.map, normalMap: old.normalMap, roughness: 0.5, metalness: 0, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 0.8 });
+          /* This scan carries POSITION and TEXCOORD_0 and no NORMAL at all.
+             GLTFLoader copes with that by flat-shading the material it hands
+             over, which derives a normal per pixel in the fragment shader; the
+             fresh MeshPhysicalMaterial below loses that flag, and a surface with
+             no normals and no flat shading is lit by dot(normal, light) with
+             normal = (0,0,0) — a completely black silhouette, which is exactly
+             how this bench was rendering. Computing the normals once (150k
+             triangles, smooth) lights the muscle and lets the normal map work. */
+          if (!mesh.geometry.attributes.normal) mesh.geometry.computeVertexNormals();
+          const mat = new THREE.MeshPhysicalMaterial({ map: old.map, normalMap: old.normalMap, roughness: 0.5, metalness: 0, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 1 });
           old.dispose();
           mesh.material = mat;
           mats.current.push(mat);
