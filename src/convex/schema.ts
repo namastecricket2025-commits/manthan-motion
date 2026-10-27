@@ -327,6 +327,41 @@ const schema = defineSchema(
       .index("by_status", ["status"])
       .index("by_userId_status", ["userId", "status"])
       .index("by_created", ["createdAt"]),
+
+    // The landing page's live search demo.
+    //
+    // A signed-out visitor cannot use `webSearch.search`: it meters against a
+    // plan and needs an account, and inventing an account to search would be a
+    // lie. So the home page's preview reads and writes here instead. One row
+    // per distinct question, kept for good — a question that has already been
+    // asked once costs nothing to answer for the next visitor, which is what
+    // lets the demo stay live at forty lookups a day. `query` is normalised
+    // (trimmed, single-spaced, lowercased) before it is used as a key.
+    searchDemo: defineTable({
+      query: v.string(),
+      provider: v.optional(v.string()),
+      answer: v.optional(
+        v.object({
+          text: v.string(),
+          title: v.optional(v.string()),
+          url: v.optional(v.string()),
+        }),
+      ),
+      results: v.array(
+        v.object({ title: v.string(), url: v.string(), snippet: v.string() }),
+      ),
+      updatedAt: v.number(),
+    }).index("by_query", ["query"]),
+
+    // One row per UTC day, same bucket convention as `usage`. This is the
+    // ceiling on what anonymous traffic can spend: the demo claims a slot
+    // before it calls Google or a model, and when the day's slots are gone the
+    // panel says so and offers the sign-in instead of failing.
+    searchDemoDay: defineTable({
+      day: v.string(), // "2026-10-27"
+      spent: v.number(), // searches + follow-ups run that day
+      updatedAt: v.number(),
+    }).index("by_day", ["day"]),
   },
   {
     schemaValidation: false,

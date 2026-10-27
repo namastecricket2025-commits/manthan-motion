@@ -9,6 +9,7 @@ import {
   resolveCandidates,
   type Candidate,
 } from "./providers";
+import { dayKey, normaliseQuery } from "./searchDemo";
 import { v } from "convex/values";
 
 /**
@@ -48,6 +49,9 @@ const SERPER_KEY = "f73ff1627becf92a67860894a4ef65cdadeeba42";
 const NO_KEY = "Search is not set up yet.";
 const SEARCH_BUSY = "Google needs a minute. Try again shortly.";
 const SEARCH_FAILED = "That search did not go through. Try again.";
+/* Spoken only by the landing-page demo, and it says what to do about it. */
+const DEMO_SPENT =
+  "The public demo has used today's searches. Sign in and the full panel is open.";
 
 /** htmlTitle/htmlSnippet arrive with markup; the panel renders plain text. */
 function stripTags(value: unknown): string {
@@ -511,6 +515,187 @@ export const search = action({
           error instanceof Error && (error.message === SEARCH_BUSY || error.message === SEARCH_FAILED)
             ? error.message
             : SEARCH_FAILED,
+      };
+    }
+  },
+});
+
+/* ---------------------------- the demo lane ---------------------------- */
+
+/**
+ * The same search, for the visitor who has not signed in yet.
+ *
+ * This exists for exactly one surface: the working preview on the landing
+ * page, where a person types a question and gets a real answer before they
+ * have an account. It is not a second search engine — it runs the same Serper
+ * call and returns the same shape as `search` above, and it is deliberately
+ * cheaper than `search` in two ways:
+ *
+ *   the cache   a question already asked is answered from `searchDemo` with
+ *               no upstream call at all. The five suggested questions on the
+ *               landing page therefore cost five lookups a decade, not five
+ *               per visitor;
+ *   the ceiling before anything is spent, one slot is claimed from the day's
+ *               allowance (see `searchDemo.ts`). Twenty visitors at once, one
+ *               abuser with a loop, a launch spike — all of them hit the same
+ *               known number, and past it the panel offers the sign-in.
+ *
+ * Signed-in callers may use it too, and that is fine: the ceiling is global
+ * and tiny, so it cannot be farmed as a way around a plan, and a signed-in
+ * visitor browsing the landing page never spends their own allowance.
+ */
+export const demoSearch = action({
+  args: { q: v.string() },
+  handler: async (
+    ctx,
+    { q },
+  ): Promise<{
+    ok: boolean;
+    error?: string;
+    answer?: SearchAnswer;
+    results: Hit[];
+    cached?: boolean;
+  }> => {
+    const empty = { results: [] as Hit[] };
+    const query = q.trim().replace(/\s+/g, " ").slice(0, MAX_QUERY);
+    if (query.length < 2) {
+      return { ...empty, ok: false, error: "Type something to look up first." };
+    }
+
+    const key = normaliseQuery(query);
+    const cached = await ctx.runQuery(internal.searchDemo.read, { query: key });
+    if (cached) {
+      return {
+        ok: true,
+        answer: cached.answer,
+        results: cached.results,
+        cached: true,
+      };
+    }
+
+    const claimed = await ctx.runMutation(internal.searchDemo.claim, {
+      day: dayKey(),
+    });
+    if (!claimed.allowed) {
+      return { ...empty, ok: false, error: DEMO_SPENT };
+    }
+
+    if (!SERPER_KEY) {
+      console.error("[webSearch] SERPER_KEY is empty in convex/webSearch.ts");
+      return { ...empty, ok: false, error: NO_KEY };
+    }
+
+    try {
+      const reply = await runSerper(query, SERPER_KEY);
+      // Store what was asked, not what was typed: the cache key is normalised,
+      // so "why is the sky blue" and "Why is the sky blue?" are one row.
+      await ctx.runMutation(internal.searchDemo.write, {
+        query: key,
+        provider: reply.provider,
+        answer: reply.answer,
+        results: reply.results,
+      });
+      return { ok: true, answer: reply.answer, results: reply.results };
+    } catch (error) {
+      console.error(
+        `[webSearch] demo: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return {
+        ...empty,
+        ok: false,
+        error:
+          error instanceof Error &&
+          (error.message === SEARCH_BUSY || error.message === SEARCH_FAILED)
+            ? error.message
+            : SEARCH_FAILED,
+      };
+    }
+  },
+});
+
+/**
+ * A follow-up in the demo lane — the preview is not a dead end after its first
+ * answer, because "but why?" is the question a student actually has.
+ *
+ * Same model, same prompt and same context rules as the signed-in follow-up;
+ * the only differences are that no account is required and the day's ceiling
+ * pays for it. That ceiling is what keeps an open model endpoint from being an
+ * open model endpoint.
+ */
+export const demoFollowUp = action({
+  args: {
+    query: v.string(),
+    answer: v.optional(v.string()),
+    sources: v.array(
+      v.object({ title: v.string(), url: v.string(), snippet: v.string() }),
+    ),
+    history: v.optional(
+      v.array(v.object({ question: v.string(), answer: v.string() })),
+    ),
+    question: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ ok: boolean; text?: string; error?: string }> => {
+    const question = args.question.trim().replace(/\s+/g, " ").slice(0, 400);
+    if (question.length < 2) {
+      return { ok: false, error: "Type a question first." };
+    }
+
+    const claimed = await ctx.runMutation(internal.searchDemo.claim, {
+      day: dayKey(),
+    });
+    if (!claimed.allowed) {
+      return { ok: false, error: DEMO_SPENT };
+    }
+
+    const context = [
+      `Search: ${args.query.slice(0, MAX_QUERY)}`,
+      args.answer ? `Google's answer above the results: ${args.answer.slice(0, 900)}` : "",
+      ...args.sources.slice(0, 4).map(
+        (source) =>
+          `- ${source.title} (${source.url}): ${source.snippet.slice(0, 220)}`,
+      ),
+      ...(args.history ?? [])
+        .slice(-2)
+        .map(
+          (turn) =>
+            `Earlier — student: ${turn.question.slice(0, 240)}\nYou: ${turn.answer.slice(0, 500)}`,
+        ),
+      `Student's follow-up: ${question}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const reply = await callModel(
+        fastestFirst(await resolveCandidates()),
+        FOLLOW_UP_SYSTEM,
+        context,
+        undefined,
+        0.4,
+        8_000,
+      );
+      const text = readFollowUp(reply.text);
+      if (!text) {
+        return { ok: false, error: "That answer came back empty. Try asking again." };
+      }
+      return { ok: true, text };
+    } catch (error) {
+      if (!(error instanceof ProviderUnavailable)) {
+        console.error(
+          `[webSearch] demo follow-up: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return { ok: false, error: SEARCH_FAILED };
+      }
+      return {
+        ok: false,
+        error: error.dayExhausted
+          ? "Every study model has hit its limit for today. Try again tomorrow."
+          : error.rateLimited
+            ? "The study models are busy right now. Try again in a minute."
+            : "No study model could answer that just now. Try again in a minute.",
       };
     }
   },

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { AlertCircle, ArrowUp, ArrowUpRight, Loader2 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  FollowUpField,
+  GOOGLE_MARK,
+  SearchAnswerBlock,
+  SearchError,
+  SearchLoading,
+  SearchSources,
+  SearchThread,
+  hostOf,
+  type FollowUpTurn,
+  type Hit,
+  type SearchAnswer,
+} from "./googlePanelParts";
 import "./search-with-google.css";
 
 /**
@@ -24,31 +37,6 @@ import "./search-with-google.css";
  * The query runs through a Convex action, so no API key reaches the browser.
  * A result opens in a new tab only when it is clicked.
  */
-
-interface Hit {
-  title: string;
-  url: string;
-  snippet: string;
-}
-
-interface SearchAnswer {
-  text: string;
-  title?: string;
-  url?: string;
-}
-
-interface FollowUpTurn {
-  question: string;
-  answer: string;
-}
-
-function hostOf(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
 
 function googleUrlFor(query: string) {
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
@@ -188,7 +176,7 @@ export function SearchWithGoogle({
           <span className="gs-trigger__text">Search</span>
           <img
             className="gs-trigger__logo"
-            src="/google-g.png"
+            src={GOOGLE_MARK}
             alt="Google"
             width={18}
             height={18}
@@ -224,7 +212,7 @@ export function SearchWithGoogle({
             title="Open on Google"
           >
             <img
-              src="/google-g.png"
+              src={GOOGLE_MARK}
               alt="Google"
               width={16}
               height={16}
@@ -250,113 +238,25 @@ export function SearchWithGoogle({
         <div className="gs-body">
           {/* While the request is out, the panel is the mark and nothing else —
               a spinner plus a sentence is busier than the wait itself. */}
-          {busy ? (
-            <div className="gs-loading" role="status" aria-label="Searching Google">
-              <img
-                src="/google-g.png"
-                alt=""
-                width={34}
-                height={34}
-                draggable={false}
-                aria-hidden
-              />
-            </div>
-          ) : null}
+          {busy ? <SearchLoading /> : null}
 
-          {!busy && error ? (
-            <p className="gs-error" role="status">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span>{error}</span>
-            </p>
-          ) : null}
+          {!busy && error ? <SearchError message={error} /> : null}
 
-          {!busy && !error && answer ? (
-            <div className="gs-answer">
-              <p className="gs-answer__label">
-                <img
-                  src="/google-g.png"
-                  alt=""
-                  aria-hidden
-                  width={13}
-                  height={13}
-                  draggable={false}
-                />
-                Answer
-              </p>
-              <p className="gs-answer__text">{answer.text}</p>
-              {answer.url ? (
-                <a
-                  className="gs-answer__source"
-                  href={answer.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {answer.title || hostOf(answer.url)}
-                </a>
-              ) : null}
-            </div>
-          ) : null}
+          {!busy && !error && answer ? <SearchAnswerBlock answer={answer} /> : null}
 
           {/* The conversation continues in place. An answer that ends the panel
               is a dictionary lookup; a student usually has one more question. */}
           {!busy && !error && (thread.length > 0 || pending || followError) ? (
-            <div className="gs-thread">
-              {thread.map((turn, index) => (
-                <div className="gs-turn" key={`${turn.question}-${index}`}>
-                  <p className="gs-turn__q">{turn.question}</p>
-                  <p className="gs-turn__a">{turn.answer}</p>
-                </div>
-              ))}
-              {pending ? (
-                <div className="gs-turn">
-                  <p className="gs-turn__q">{pending}</p>
-                  <p className="gs-turn__pending">
-                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-                    Thinking it through…
-                  </p>
-                </div>
-              ) : null}
-              {!followBusy && followError ? (
-                <p className="gs-turn__error" role="status">
-                  {followError}
-                </p>
-              ) : null}
-              <div ref={threadEnd} />
-            </div>
+            <SearchThread
+              thread={thread}
+              pending={pending}
+              error={followBusy ? null : followError}
+              endRef={threadEnd}
+            />
           ) : null}
 
           {!busy && !error && results.length > 0 ? (
-            <>
-              <p className="gs-results__label">Sources</p>
-              <ul className="gs-results">
-                {results.map((result, index) => (
-                  <li key={result.url}>
-                    <a
-                      className="gs-hit"
-                      href={result.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={result.snippet || undefined}
-                    >
-                      <span className="gs-hit__index">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="gs-hit__body">
-                        <span className="gs-hit__host">
-                          {hostOf(result.url)}
-                        </span>
-                        <span className="gs-hit__title">{result.title}</span>
-                        {result.snippet ? (
-                          <span className="gs-hit__snip">
-                            {result.snippet.slice(0, 140)}
-                          </span>
-                        ) : null}
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <SearchSources hits={results} />
           ) : null}
 
           {!busy && !error && searched && results.length === 0 && !answer ? (
@@ -367,32 +267,12 @@ export function SearchWithGoogle({
         {/* The follow-up sits below the scroll area, so it is always one click
             away — on the first screen and under ten sources alike. */}
         {searched ? (
-          <form
-            className="gs-follow"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void ask(question);
-            }}
-          >
-            <input
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Ask a follow-up…"
-              aria-label="Ask a follow-up question"
-              disabled={followBusy}
-            />
-            <button
-              type="submit"
-              aria-label="Send follow-up"
-              disabled={followBusy || !question.trim()}
-            >
-              {followBusy ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <ArrowUp className="h-3.5 w-3.5" aria-hidden />
-              )}
-            </button>
-          </form>
+          <FollowUpField
+            value={question}
+            onChange={setQuestion}
+            onSubmit={() => void ask(question)}
+            busy={followBusy}
+          />
         ) : null}
 
         <div className="gs-foot">

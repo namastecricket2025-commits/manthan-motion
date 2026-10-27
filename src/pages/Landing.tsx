@@ -9,6 +9,7 @@ import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import Navbar from "@/components/landing/Navbar";
 import OrbitMark from "@/components/landing/OrbitMark";
 import Pipeline from "@/components/landing/Pipeline";
+import SearchPreview from "@/components/landing/SearchPreview";
 import Stats from "@/components/landing/Stats";
 import Testimonials from "@/components/landing/Testimonials";
 import { TextGenerate } from "@/components/landing/TextGenerate";
@@ -329,6 +330,11 @@ export default function Landing() {
         <Navbar />
         <main>
           <Hero />
+          {/* The product, working, before anything is explained about it: a
+              visitor can ask a real question here and get a real answer.
+              Placed first on purpose — the page has plenty of description
+              below it, and nothing describes this app as well as using it. */}
+          <SearchPreview />
           <Features />
           <Pipeline />
           {/* The output, between "how it works" and the numbers: what the five

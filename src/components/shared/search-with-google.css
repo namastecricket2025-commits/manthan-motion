@@ -540,3 +540,109 @@
   color: var(--text-dim, #8b8b8b);
   padding: 2px;
 }
+
+/* ------------------------------------------------------------------
+   The same panel, standing on a page.
+
+   The landing page shows this panel working before anyone has an account, so
+   it needs a footing rather than a dialog's: full width up to a reading
+   measure, and a frame short enough to sit in the first screens of the page
+   without pushing the section below it out of view. Everything inside — the
+   field, the answer, the thread, the sources, the follow-up — is the dialog's
+   own rows, unchanged.
+   ------------------------------------------------------------------ */
+.gs-panel--inline {
+  position: relative;
+  width: 100%;
+  max-width: min(660px, 100%);
+  height: min(56dvh, 420px);
+}
+
+@media (max-width: 480px) {
+  .gs-panel--inline {
+    height: min(74dvh, 460px);
+  }
+}
+
+/* The field's text area, so the changing suggestion can sit over it.
+   `position: relative` here is what makes the suggestion an overlay rather
+   than a second row. */
+.gs-field__wrap {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The suggestion the field is currently recommending. It is the input's
+   placeholder, given a body so it can dissolve from one question into the
+   next: an attribute cannot be animated, an element can. Sized and coloured
+   exactly like `::placeholder` so a visitor cannot tell the two apart. */
+.gs-field__ghost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text-dim, #8b8b8b) 80%, transparent);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 280ms ease;
+}
+
+.gs-field__ghost[data-out="true"] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-field__ghost {
+    transition: none;
+  }
+}
+
+/* What the panel shows before anything has been asked: the questions it is
+   recommending, as rows you can press. They are the same four the field
+   cycles through, so the panel's suggestion and the panel's content agree. */
+.gs-idle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gs-idle__label {
+  padding: 0 2px 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim, #8b8b8b);
+}
+
+.gs-ask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 9px 10px;
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text-main, inherit);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.gs-ask:hover {
+  border-color: var(--glass-line, rgba(127, 127, 127, 0.25));
+  background: color-mix(in srgb, var(--text-main, currentColor) 6%, transparent);
+}
+
+.gs-ask svg {
+  flex: 0 0 auto;
+  opacity: 0.45;
+}
