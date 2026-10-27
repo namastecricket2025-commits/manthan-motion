@@ -242,18 +242,6 @@ export default function OpticsPractical() {
                 <stop offset="52%" style={{ stopColor: "rgba(255,255,255,0.03)" }} />
                 <stop offset="100%" style={{ stopColor: "rgba(255,255,255,0.13)" }} />
               </linearGradient>
-              {/* the plate's own light: a soft pool behind the lens */}
-              <radialGradient id="lab-optics-pool" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" style={{ stopColor: MINT, stopOpacity: 0.14 }} />
-                <stop offset="100%" style={{ stopColor: MINT, stopOpacity: 0 }} />
-              </radialGradient>
-              <filter id="lab-optics-glow" x="-12%" y="-40%" width="124%" height="180%">
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
             </defs>
 
             {/* the plate the construction is drawn on */}
@@ -266,7 +254,6 @@ export default function OpticsPractical() {
               fill={plate(0.35)}
               stroke={ink(0.08)}
             />
-            <ellipse cx={lensX} cy={AXIS_Y} rx={150} ry={120} fill="url(#lab-optics-pool)" />
 
             {/* a centimetre grid, faint: the plate reads as ruled paper rather
                 than as an empty rectangle */}
@@ -332,7 +319,10 @@ export default function OpticsPractical() {
                   {cm === 0 ? "lens" : Math.abs(cm)}
                 </text>
               ))}
-            <text x={FRAME.x + 6} y={RULER_Y + 19} fontSize={9} fill={ink(0.28)}>
+            {/* The caption sits on the row above the scale, not on it: the ruler
+                runs the full width, so its leftmost tick label lands exactly
+                where a caption set on the same row would sit. */}
+            <text x={FRAME.x + 6} y={RULER_Y - 11} fontSize={9} fill={ink(0.3)}>
               cm from the lens
             </text>
 
@@ -411,7 +401,7 @@ export default function OpticsPractical() {
             ))}
 
             {/* the rays, clipped to the plate */}
-            <g clipPath="url(#lab-optics-frame)" filter="url(#lab-optics-glow)">
+            <g clipPath="url(#lab-optics-frame)">
               {/* 1 — parallel in, then through F′ (convex) or away from F (concave) */}
               <line
                 x1={objectX}

@@ -374,10 +374,6 @@ export default function MagnetismBench() {
               <clipPath id="lab-magnet-frame">
                 <rect x={FRAME.x} y={FRAME.y} width={FRAME.w} height={FRAME.h} rx={12} />
               </clipPath>
-              <radialGradient id="lab-magnet-pool" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" style={{ stopColor: MINT, stopOpacity: 0.1 }} />
-                <stop offset="100%" style={{ stopColor: MINT, stopOpacity: 0 }} />
-              </radialGradient>
               <linearGradient id="lab-magnet-bar-s" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" style={{ stopColor: "#5b8fd6" }} />
                 <stop offset="52%" style={{ stopColor: "#3f6fb5" }} />
@@ -388,13 +384,6 @@ export default function MagnetismBench() {
                 <stop offset="52%" style={{ stopColor: "#c94a3f" }} />
                 <stop offset="100%" style={{ stopColor: "#9d362e" }} />
               </linearGradient>
-              <filter id="lab-magnet-glow" x="-14%" y="-40%" width="128%" height="180%">
-                <feGaussianBlur stdDeviation="3.4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
             </defs>
 
             <rect
@@ -409,8 +398,6 @@ export default function MagnetismBench() {
 
             {source === "magnet" ? (
               <>
-                <ellipse cx={CX} cy={CY} rx={250} ry={170} fill="url(#lab-magnet-pool)" />
-
                 {/* The two lines every statement about this figure is measured
                     from: the magnet's axis, and the bisector of it that the
                     compass is walked across. */}
@@ -461,9 +448,8 @@ export default function MagnetismBench() {
                     d={pathOf(line)}
                     fill="none"
                     stroke={lineColor(index, magnet.nearest)}
-                    strokeWidth={index === magnet.nearest ? 2 : 1.25}
+                    strokeWidth={index === magnet.nearest ? 2.2 : 1.25}
                     strokeLinecap="round"
-                    filter={index === magnet.nearest ? "url(#lab-magnet-glow)" : undefined}
                   />
                 ))}
                 {/* two arrows per line, evenly spread along it, showing N → S */}
