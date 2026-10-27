@@ -9,9 +9,13 @@ import { useMemo, useState } from "react";
  *   Bar magnet     the field of two poles, summed as a 1/r² vector field and
  *                  then traced: dr/ds = B/|B| integrated with RK4, so the lines
  *                  leaving the north pole are the real solutions — they curve,
- *                  they crowd at the poles, and they never cross.
+ *                  they crowd at the poles, and they never cross. The filings
+ *                  are the same field sampled on a lattice: short dashes whose
+ *                  direction and darkness are the local B, which is what the
+ *                  iron actually does.
  *   Straight wire  the long-wire result B = μ₀I/2πr in real microtesla, with the
- *                  field circles and a needle that is tangential to them.
+ *                  field circles, a needle tangential to them, and the 1/r law
+ *                  plotted beside it so "doubling r halves B" is visible.
  *
  * The compass is the experiment, not decoration: on both plates its needle is
  * rotated to the field computed at its own position, which is exactly what
@@ -21,14 +25,15 @@ import { useMemo, useState } from "react";
 type Source = "magnet" | "wire";
 
 const PLATE_W = 760;
-const PLATE_H = 330;
+const PLATE_H = 352;
 const CX = PLATE_W / 2;
-const CY = 165;
+const CY = 176;
 const PX_PER_CM = 18;
+const FRAME = { x: 12, y: 12, w: PLATE_W - 24, h: PLATE_H - 24 };
 /** Pole-to-pole separation of the two-pole model, in plate pixels. */
-const POLE_HALF = 44;
-const MAGNET_HALF_X = 78;
-const MAGNET_HALF_Y = 15;
+const POLE_HALF = 56;
+const MAGNET_HALF_X = 104;
+const MAGNET_HALF_Y = 17;
 
 type Vec = { x: number; y: number };
 type Pole = { x: number; y: number; q: number };
@@ -60,6 +65,13 @@ const unit = (v: Vec): Vec => {
 };
 
 const inMagnet = (p: Vec) => Math.abs(p.x) < MAGNET_HALF_X && Math.abs(p.y) < MAGNET_HALF_Y;
+
+/** The field 1 cm out from the north face, on the axis: the yardstick every
+ *  relative reading on this bench is quoted against. */
+const REFERENCE = Math.hypot(
+  fieldAt(MAGNET_HALF_X + PX_PER_CM, 0).x,
+  fieldAt(MAGNET_HALF_X + PX_PER_CM, 0).y,
+);
 
 /**
  * Walks one field line from a seed, in plate-local coordinates (the magnet is
@@ -103,8 +115,9 @@ function walk(seed: Vec, direction: 1 | -1, step = 3, maxSteps = 900): Vec[] {
 }
 
 /* Traced once: the loop sizes are a fixed ladder, so the drawing is the same
-   construction every time the bench is opened. */
-const LOOP_RADII = [34, 62, 92, 124];
+   construction every time the bench is opened. Five rungs either side, which is
+   the density the textbook figure has — three left the plate looking empty. */
+const LOOP_RADII = [30, 54, 82, 114, 150];
 const FIELD_LINES: Vec[][] = (() => {
   const lines: Vec[][] = [];
   for (const h of LOOP_RADII) {
@@ -118,21 +131,135 @@ const FIELD_LINES: Vec[][] = (() => {
   return lines;
 })();
 
+/* Iron filings: the same field sampled on a lattice, drawn as short dashes that
+   point along B and darken where B is strong. Sampled once — it does not depend
+   on the sliders. */
+const FILINGS: { x: number; y: number; angle: number; opacity: number }[] = (() => {
+  const out: { x: number; y: number; angle: number; opacity: number }[] = [];
+  for (let px = FRAME.x + 14; px <= FRAME.x + FRAME.w - 14; px += 22) {
+    for (let py = FRAME.y + 14; py <= FRAME.y + FRAME.h - 14; py += 22) {
+      const local = { x: px - CX, y: py - CY };
+      if (inMagnet(local)) continue;
+      const b = fieldAt(local.x, local.y);
+      const rel = Math.hypot(b.x, b.y) / REFERENCE;
+      out.push({
+        x: px,
+        y: py,
+        angle: (Math.atan2(b.y, b.x) * 180) / Math.PI,
+        opacity: Math.min(0.03 + 0.17 * Math.pow(rel, 0.42), 0.2),
+      });
+    }
+  }
+  return out;
+})();
+
 const pathOf = (points: Vec[]) =>
   points
     .map((p, i) => `${i === 0 ? "M" : "L"}${(CX + p.x).toFixed(1)} ${(CY + p.y).toFixed(1)}`)
     .join(" ");
 
-/** A compass whose red half points along the field at its own position. */
+/** Colour of a field line: the one under the compass is the one being taught. */
+const lineColor = (index: number, nearest: number) => (index === nearest ? MINT : ink(0.32));
+
+/**
+ * A compass standing on the field: the local direction is drawn through it as a
+ * dashed line, and the needle lies along that same direction, red half to N.
+ */
 function Compass({ x, y, angle }: { x: number; y: number; angle: number }) {
   return (
     <g transform={`translate(${x} ${y})`}>
-      <circle r={14} fill={plate(0.55)} stroke={ink(0.45)} strokeWidth={1.2} />
+      <line
+        x1={-42}
+        y1={0}
+        x2={42}
+        y2={0}
+        stroke={MINT}
+        strokeWidth={1.2}
+        strokeOpacity={0.55}
+        strokeDasharray="3 4"
+        transform={`rotate(${angle})`}
+      />
+      <circle r={18} fill={plate(0.82)} stroke={ink(0.4)} strokeWidth={1.2} />
+      <circle r={13} fill="none" stroke={ink(0.1)} strokeWidth={1} />
       <g transform={`rotate(${angle})`}>
-        <path d="M 11 0 L 0 -3.4 L 0 3.4 Z" fill="#e05b45" />
-        <path d="M -11 0 L 0 -3.4 L 0 3.4 Z" fill={ink(0.5)} />
+        <path d="M 13 0 L 0 -4.6 L 0 4.6 Z" fill="#e05b45" />
+        <path d="M -13 0 L 0 -4.6 L 0 4.6 Z" fill={ink(0.45)} />
       </g>
-      <circle r={1.6} fill={ink(0.75)} />
+      <circle r={2.1} fill={ink(0.8)} />
+    </g>
+  );
+}
+
+/** The 1/r law drawn beside the wire plate: the marker rides the curve. */
+function WireLawInset({
+  current,
+  radius,
+  microTesla,
+}: {
+  current: number;
+  radius: number;
+  microTesla: number;
+}) {
+  const box = { x: 552, y: 28, w: 184, h: 122 };
+  const rMax = 8;
+  const bMax = 200;
+  const gx = (r: number) => box.x + 34 + (r / rMax) * (box.w - 48);
+  const gy = (b: number) => box.y + box.h - 28 - (Math.min(b, bMax) / bMax) * (box.h - 40);
+  const curve = Array.from({ length: 60 }, (_, i) => {
+    const r = 0.6 + (i * (rMax - 0.6)) / 59;
+    return `${i === 0 ? "M" : "L"}${gx(r).toFixed(1)} ${gy((20 * current) / r).toFixed(1)}`;
+  }).join(" ");
+  return (
+    <g>
+      <rect
+        x={box.x}
+        y={box.y}
+        width={box.w}
+        height={box.h}
+        rx={12}
+        fill={plate(0.6)}
+        stroke={ink(0.1)}
+      />
+      {/* axes */}
+      <line x1={gx(0)} y1={gy(0)} x2={gx(rMax)} y2={gy(0)} stroke={ink(0.24)} strokeWidth={1} />
+      <line x1={gx(0)} y1={gy(bMax)} x2={gx(0)} y2={gy(0)} stroke={ink(0.24)} strokeWidth={1} />
+      <text x={gx(0) + 4} y={gy(bMax) + 12} fontSize={8.5} fill={ink(0.4)}>
+        B (µT)
+      </text>
+      <text x={gx(rMax)} y={gy(0) + 13} fontSize={8.5} fill={ink(0.4)} textAnchor="end">
+        r (cm)
+      </text>
+      <text x={gx(0) - 4} y={gy(bMax) + 4} fontSize={8.5} fill={ink(0.34)} textAnchor="end">
+        {bMax}
+      </text>
+      <text x={gx(0) - 4} y={gy(0) + 3} fontSize={8.5} fill={ink(0.34)} textAnchor="end">
+        0
+      </text>
+      {/* the law itself */}
+      <path d={curve} fill="none" stroke={MINT} strokeWidth={1.8} strokeLinecap="round" />
+      {/* where the compass is standing */}
+      <line
+        x1={gx(radius)}
+        y1={gy(microTesla)}
+        x2={gx(radius)}
+        y2={gy(0)}
+        stroke={AMBER}
+        strokeWidth={1}
+        strokeDasharray="3 3"
+      />
+      <line
+        x1={gx(0)}
+        y1={gy(microTesla)}
+        x2={gx(radius)}
+        y2={gy(microTesla)}
+        stroke={AMBER}
+        strokeWidth={1}
+        strokeDasharray="3 3"
+      />
+      <circle cx={gx(radius)} cy={gy(microTesla)} r={4} fill={AMBER} />
+      <text x={box.x + 12} y={box.y + 15} fontSize={9} fill={ink(0.45)}>
+        B ∝ 1/r
+      </text>
     </g>
   );
 }
@@ -150,29 +277,46 @@ export default function MagnetismBench() {
 
   const magnet = useMemo(() => {
     const b = fieldAt(compass.x, compass.y);
-    /* The pole-face value: 1 cm out from the north face, on the axis. */
-    const reference = fieldAt(MAGNET_HALF_X + PX_PER_CM, 0);
-    const ref = Math.hypot(reference.x, reference.y);
     return {
-      relative: Math.hypot(b.x, b.y) / ref,
+      relative: Math.hypot(b.x, b.y) / REFERENCE,
       /* Screen rotation for the needle, and the honest maths angle for the
          read-out: anticlockwise from the magnet's axis, y up. */
       screenAngle: (Math.atan2(b.y, b.x) * 180) / Math.PI,
       mathsAngle: (Math.atan2(-b.y, b.x) * 180) / Math.PI,
       distance: Math.hypot(compass.x - POLE_HALF, compass.y) / PX_PER_CM,
-      /* The line the compass is standing on, drawn brighter than the rest. */
-      nearest: FIELD_LINES.reduce((best, line, index) => {
-        const d = line.reduce(
-          (min, p) => Math.min(min, Math.hypot(p.x - compass.x, p.y - compass.y)),
-          Infinity,
-        );
-        return d < best.d ? { index, d } : best;
-      }, { index: -1, d: Infinity }).index,
+      /* The line the compass is standing on. Five rungs of loops only reach
+         about ±4 cm either side of the magnet, and the sliders walk out to
+         18 cm, so a compass well clear of the bundle is honestly *on no drawn
+         line* — nothing lights up rather than the wrong loop being claimed. */
+      nearest: (() => {
+        const best = FIELD_LINES.reduce((closest, line, index) => {
+          const d = line.reduce(
+            (min, p) => Math.min(min, Math.hypot(p.x - compass.x, p.y - compass.y)),
+            Infinity,
+          );
+          return d < closest.d ? { index, d } : closest;
+        }, { index: -1, d: Infinity });
+        return best.d < 14 ? best.index : -1;
+      })(),
     };
   }, [compass.x, compass.y]);
 
   /* B = μ₀I / 2πr = 2 × 10⁻⁷ · I/r. In microtesla that is 20·I/r(cm). */
   const microTesla = (20 * current) / radius;
+
+  /* What the colours on the plate mean, in the same order the plate is built. */
+  const legend: Array<[string, string]> =
+    source === "magnet"
+      ? [
+          ["Ten field lines, traced from B — they never cross", MINT],
+          ["Iron filings: a dash along B, darker where B is strong", ink(0.5)],
+          ["Compass: needle along the field where it stands", "#e05b45"],
+        ]
+      : [
+          ["Field circles, anticlockwise for current out of the page", MINT],
+          ["B ∝ 1/r plotted — the dot is where this compass stands", AMBER],
+          ["Compass: tangent to the circle it stands on", "#e05b45"],
+        ];
 
   const readouts: Array<[string, string]> =
     source === "magnet"
@@ -184,7 +328,7 @@ export default function MagnetismBench() {
         ]
       : [
           ["Field B at r", `${microTesla.toFixed(1)} µT`],
-          ["Distance r", `${radius.toFixed(0)} cm`],
+          ["Distance r", `${radius.toFixed(1)} cm`],
           ["Direction", "anticlockwise, tangent to the circle"],
           ["Earth's field for scale", "≈ 40 µT"],
         ];
@@ -207,8 +351,8 @@ export default function MagnetismBench() {
               </>
             ) : (
               <>
-                <span className="apple-lab-chip">I = {current.toFixed(0)} A</span>
-                <span className="apple-lab-chip">r = {radius.toFixed(0)} cm</span>
+                <span className="apple-lab-chip">I = {current.toFixed(1)} A</span>
+                <span className="apple-lab-chip">r = {radius.toFixed(1)} cm</span>
                 <span className="apple-lab-chip">B = {microTesla.toFixed(1)} µT</span>
               </>
             )}
@@ -222,15 +366,42 @@ export default function MagnetismBench() {
             role="img"
             aria-label={
               source === "magnet"
-                ? "Field lines of a bar magnet, with a compass showing the field direction at its position"
-                : `Concentric field circles around a straight wire carrying ${current} amperes, with a compass at ${radius} centimetres`
+                ? "Field lines and iron filings of a bar magnet, with a compass showing the field direction at its position"
+                : `Concentric field circles around a straight wire carrying ${current} amperes, with a compass at ${radius} centimetres and the 1 over r law plotted`
             }
           >
+            <defs>
+              <clipPath id="lab-magnet-frame">
+                <rect x={FRAME.x} y={FRAME.y} width={FRAME.w} height={FRAME.h} rx={12} />
+              </clipPath>
+              <radialGradient id="lab-magnet-pool" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" style={{ stopColor: MINT, stopOpacity: 0.1 }} />
+                <stop offset="100%" style={{ stopColor: MINT, stopOpacity: 0 }} />
+              </radialGradient>
+              <linearGradient id="lab-magnet-bar-s" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" style={{ stopColor: "#5b8fd6" }} />
+                <stop offset="52%" style={{ stopColor: "#3f6fb5" }} />
+                <stop offset="100%" style={{ stopColor: "#2f5690" }} />
+              </linearGradient>
+              <linearGradient id="lab-magnet-bar-n" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" style={{ stopColor: "#e0695a" }} />
+                <stop offset="52%" style={{ stopColor: "#c94a3f" }} />
+                <stop offset="100%" style={{ stopColor: "#9d362e" }} />
+              </linearGradient>
+              <filter id="lab-magnet-glow" x="-14%" y="-40%" width="128%" height="180%">
+                <feGaussianBlur stdDeviation="3.4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
             <rect
-              x={10}
-              y={12}
-              width={PLATE_W - 20}
-              height={PLATE_H - 24}
+              x={FRAME.x}
+              y={FRAME.y}
+              width={FRAME.w}
+              height={FRAME.h}
               rx={12}
               fill={plate(0.35)}
               stroke={ink(0.08)}
@@ -238,14 +409,47 @@ export default function MagnetismBench() {
 
             {source === "magnet" ? (
               <>
+                <ellipse cx={CX} cy={CY} rx={250} ry={170} fill="url(#lab-magnet-pool)" />
+
+                {/* The two lines every statement about this figure is measured
+                    from: the magnet's axis, and the bisector of it that the
+                    compass is walked across. */}
+                <line
+                  x1={CX}
+                  y1={FRAME.y + 14}
+                  x2={CX}
+                  y2={FRAME.y + FRAME.h - 14}
+                  stroke={ink(0.1)}
+                  strokeWidth={1}
+                  strokeDasharray="2 6"
+                />
+
+                <g clipPath="url(#lab-magnet-frame)">
+                  {/* Iron filings: the texture the field actually makes. */}
+                  {FILINGS.map((filing) => (
+                    <line
+                      key={`${filing.x}-${filing.y}`}
+                      x1={filing.x - 4}
+                      y1={filing.y}
+                      x2={filing.x + 4}
+                      y2={filing.y}
+                      stroke={ink(1)}
+                      strokeOpacity={filing.opacity}
+                      strokeWidth={1.4}
+                      strokeLinecap="round"
+                      transform={`rotate(${filing.angle.toFixed(1)} ${filing.x} ${filing.y})`}
+                    />
+                  ))}
+                </g>
+
                 {/* the axial line: straight out of N to infinity, and back from
                     infinity into S — the magnet body covers the middle */}
-                <line x1={12} y1={CY} x2={PLATE_W - 12} y2={CY} stroke={ink(0.3)} strokeWidth={1.1} />
-                {[MAGNET_HALF_X + 46, -(MAGNET_HALF_X + 46)].map((dx) => (
+                <line x1={FRAME.x + 6} y1={CY} x2={FRAME.x + FRAME.w - 6} y2={CY} stroke={ink(0.22)} strokeWidth={1} />
+                {[MAGNET_HALF_X + 58, -(MAGNET_HALF_X + 58)].map((dx) => (
                   <path
                     key={`axis-${dx}`}
                     d="M -4.6 -3.4 L 3 0 L -4.6 3.4 Z"
-                    fill={ink(0.42)}
+                    fill={ink(0.4)}
                     transform={`translate(${CX + dx} ${CY})`}
                   />
                 ))}
@@ -256,25 +460,30 @@ export default function MagnetismBench() {
                     key={index}
                     d={pathOf(line)}
                     fill="none"
-                    stroke={index === magnet.nearest ? MINT : ink(0.3)}
-                    strokeWidth={index === magnet.nearest ? 1.8 : 1.1}
+                    stroke={lineColor(index, magnet.nearest)}
+                    strokeWidth={index === magnet.nearest ? 2 : 1.25}
+                    strokeLinecap="round"
+                    filter={index === magnet.nearest ? "url(#lab-magnet-glow)" : undefined}
                   />
                 ))}
-                {/* an arrow on each line, showing the direction N → S */}
+                {/* two arrows per line, evenly spread along it, showing N → S */}
                 {FIELD_LINES.map((line, index) => {
-                  const at = Math.floor(line.length * 0.42);
-                  const p = line[at];
-                  const next = line[Math.min(line.length - 1, at + 4)];
-                  if (!p || !next) return null;
-                  const angle = (Math.atan2(next.y - p.y, next.x - p.x) * 180) / Math.PI;
-                  return (
-                    <path
-                      key={`head-${index}`}
-                      d="M -4.6 -3.4 L 3 0 L -4.6 3.4 Z"
-                      fill={index === magnet.nearest ? MINT : ink(0.42)}
-                      transform={`translate(${CX + p.x} ${CY + p.y}) rotate(${angle})`}
-                    />
-                  );
+                  const color = lineColor(index, magnet.nearest);
+                  return [0.3, 0.72].map((fraction) => {
+                    const at = Math.floor(line.length * fraction);
+                    const p = line[at];
+                    const next = line[Math.min(line.length - 1, at + 4)];
+                    if (!p || !next) return null;
+                    const angle = (Math.atan2(next.y - p.y, next.x - p.x) * 180) / Math.PI;
+                    return (
+                      <path
+                        key={`head-${index}-${fraction}`}
+                        d="M -4.4 -3.2 L 3 0 L -4.4 3.2 Z"
+                        fill={color}
+                        transform={`translate(${CX + p.x} ${CY + p.y}) rotate(${angle})`}
+                      />
+                    );
+                  });
                 })}
 
                 {/* the magnet — opaque, so the traced segment that runs through
@@ -284,49 +493,104 @@ export default function MagnetismBench() {
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X * 2}
                   height={MAGNET_HALF_Y * 2}
-                  rx={5}
-                  fill={plate(0.94)}
+                  rx={6}
+                  fill={plate(0.96)}
                 />
                 <rect
                   x={CX - MAGNET_HALF_X}
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X}
                   height={MAGNET_HALF_Y * 2}
-                  fill="#3f6fb5"
+                  fill="url(#lab-magnet-bar-s)"
                 />
                 <rect
                   x={CX}
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X}
                   height={MAGNET_HALF_Y * 2}
-                  fill="#c94a3f"
+                  fill="url(#lab-magnet-bar-n)"
                 />
                 <rect
                   x={CX - MAGNET_HALF_X}
                   y={CY - MAGNET_HALF_Y}
                   width={MAGNET_HALF_X * 2}
                   height={MAGNET_HALF_Y * 2}
-                  rx={5}
+                  rx={6}
                   fill="none"
-                  stroke={ink(0.45)}
+                  stroke={ink(0.42)}
                   strokeWidth={1.2}
                 />
-                <text x={CX - MAGNET_HALF_X / 2} y={CY + 5} fontSize={13} fontWeight={700} fill="#ffffff" textAnchor="middle">
+                <text
+                  x={CX - MAGNET_HALF_X / 2}
+                  y={CY + 5.5}
+                  fontSize={13}
+                  fontWeight={700}
+                  fill="#ffffff"
+                  textAnchor="middle"
+                >
                   S
                 </text>
-                <text x={CX + MAGNET_HALF_X / 2} y={CY + 5} fontSize={13} fontWeight={700} fill="#ffffff" textAnchor="middle">
+                <text
+                  x={CX + MAGNET_HALF_X / 2}
+                  y={CY + 5.5}
+                  fontSize={13}
+                  fontWeight={700}
+                  fill="#ffffff"
+                  textAnchor="middle"
+                >
                   N
                 </text>
 
-                <Compass x={CX + compass.x} y={CY + compass.y} angle={magnet.screenAngle} />
+                {/* the measured distance the read-out quotes, drawn */}
+                <line
+                  x1={CX + POLE_HALF}
+                  y1={CY}
+                  x2={CX + compass.x}
+                  y2={CY + compass.y}
+                  stroke={AMBER}
+                  strokeWidth={1.2}
+                  strokeDasharray="4 4"
+                />
+                <circle cx={CX + POLE_HALF} cy={CY} r={2.4} fill={AMBER} />
                 <text
-                  x={CX + compass.x + 19}
-                  y={CY + compass.y + 4}
+                  x={(CX + POLE_HALF + CX + compass.x) / 2 + 8}
+                  y={(CY + CY + compass.y) / 2 - 4}
                   fontSize={10}
-                  fill={ink(0.5)}
+                  fill={ink(0.62)}
                 >
+                  {magnet.distance.toFixed(1)} cm
+                </text>
+
+                <Compass x={CX + compass.x} y={CY + compass.y} angle={magnet.screenAngle} />
+                <text x={CX + compass.x + 24} y={CY + compass.y + 12} fontSize={9.5} fill={ink(0.45)}>
                   compass
                 </text>
+                <text
+                  x={CX + 7}
+                  y={FRAME.y + FRAME.h - 7}
+                  fontSize={9}
+                  fill={ink(0.34)}
+                >
+                  perpendicular bisector
+                </text>
+
+                {/* the scale, so "9 cm" on the slider means something on the paper */}
+                <g transform={`translate(${FRAME.x + 14} ${FRAME.y + 20})`}>
+                  <line x1={0} y1={0} x2={PX_PER_CM * 6} y2={0} stroke={ink(0.4)} strokeWidth={1.2} />
+                  {[0, 1, 2, 3, 4, 5, 6].map((cm) => (
+                    <line
+                      key={cm}
+                      x1={cm * PX_PER_CM}
+                      y1={-4}
+                      x2={cm * PX_PER_CM}
+                      y2={4}
+                      stroke={ink(cm % 2 === 0 ? 0.42 : 0.24)}
+                    />
+                  ))}
+                  <text x={0} y={-8} fontSize={9.5} fill={ink(0.42)}>
+                    6 cm
+                  </text>
+                </g>
               </>
             ) : (
               <>
@@ -340,7 +604,7 @@ export default function MagnetismBench() {
                           left — that is the right-hand rule, drawn */}
                       <path
                         d="M -4.6 -3.4 L 3 0 L -4.6 3.4 Z"
-                        fill={ink(0.42)}
+                        fill={ink(0.4)}
                         transform={`translate(${CX} ${CY - r}) rotate(180)`}
                       />
                       <text x={CX + 6} y={CY - r - 5} fontSize={9.5} fill={ink(0.4)}>
@@ -350,14 +614,14 @@ export default function MagnetismBench() {
                   );
                 })}
 
-                {/* the compass on its own circle */}
+                {/* the circle the compass is standing on */}
                 <circle
                   cx={CX}
                   cy={CY}
                   r={radius * PX_PER_CM}
                   fill="none"
                   stroke={MINT}
-                  strokeWidth={1.6}
+                  strokeWidth={1.8}
                 />
                 <line
                   x1={CX + 16}
@@ -368,21 +632,24 @@ export default function MagnetismBench() {
                   strokeWidth={1.2}
                   strokeDasharray="4 4"
                 />
-                <text x={CX + 26} y={CY - 8} fontSize={10} fill={ink(0.55)}>
-                  r = {radius.toFixed(0)} cm
+                <text x={CX + 26} y={CY - 8} fontSize={10} fill={ink(0.6)}>
+                  r = {radius.toFixed(1)} cm
                 </text>
                 {/* tangent at (r, 0) points up the screen: anticlockwise */}
                 <Compass x={CX + radius * PX_PER_CM} y={CY} angle={-90} />
 
                 {/* the wire, current out of the page */}
-                <circle cx={CX} cy={CY} r={10} fill={plate(0.75)} stroke={ink(0.5)} strokeWidth={1.2} />
-                <circle cx={CX} cy={CY} r={2.6} fill={ink(0.7)} />
-                <text x={CX + 15} y={CY + 22} fontSize={10.5} fill={ink(0.6)}>
+                <circle cx={CX} cy={CY} r={11} fill={plate(0.85)} stroke={ink(0.5)} strokeWidth={1.3} />
+                <circle cx={CX} cy={CY} r={7} fill="none" stroke={ink(0.25)} strokeWidth={1} />
+                <circle cx={CX} cy={CY} r={2.8} fill={ink(0.75)} />
+                <text x={CX + 16} y={CY + 26} fontSize={10.5} fill={ink(0.55)}>
                   current out of the page
                 </text>
-                <text x={CX - 14} y={CY - 14} fontSize={10} fill={ink(0.45)} textAnchor="end">
+                <text x={CX - 18} y={CY - 18} fontSize={10} fill={ink(0.42)} textAnchor="end">
                   fingers curl anticlockwise
                 </text>
+
+                <WireLawInset current={current} radius={radius} microTesla={microTesla} />
               </>
             )}
           </svg>
@@ -393,6 +660,17 @@ export default function MagnetismBench() {
             ? "Field lines leave the north pole, curve through space and enter the south pole; inside the magnet they run S → N. The compass needle always lies along the line it is standing on, and two lines never cross."
             : "Right-hand thumb rule: point the thumb along the current, and the fingers curl the way the field goes. B = μ₀I/2πr — doubling the distance halves the field, doubling the current doubles it."}
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {legend.map(([text, color]) => (
+            <span
+              key={text}
+              className="flex items-center gap-2 text-[11px] text-[var(--lab-ink-dim)]"
+            >
+              <span className="h-[2px] w-4 shrink-0 rounded-full" style={{ background: color }} />
+              {text}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
@@ -430,7 +708,9 @@ export default function MagnetismBench() {
               />
               <p className="apple-lab-note">
                 Walk the compass around the magnet: on the axis it points straight out of N, and on the
-                perpendicular bisector it points back parallel to the axis.
+                perpendicular bisector it points back parallel to the axis. The dashed mark from the
+                north pole is the distance the read-out quotes, and a traced line lights up whenever the
+                compass is standing on one.
               </p>
             </>
           ) : (
@@ -457,7 +737,8 @@ export default function MagnetismBench() {
               />
               <p className="apple-lab-note">
                 This is the field of a long straight wire, so the number is real: at 5 A and 4 cm it is
-                25 µT, about half of Earth's field.
+                25 µT, about half of Earth's field. The inset plots B against r, with the dot where this
+                compass is standing.
               </p>
             </>
           )}

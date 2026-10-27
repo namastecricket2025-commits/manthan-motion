@@ -11,6 +11,7 @@ import {
   type ElementData,
 } from "@/components/lab/periodic-data";
 import Atom3D from "@/components/lab/Atom3D";
+import { LabPicker, type LabPickerOption } from "@/components/lab/lab-picker";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
@@ -972,6 +973,20 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
   const [z, setZ] = useState(6);
   const [model, setModel] = useState<AtomModel>("bohr");
   const element = ELEMENTS.find((el) => el.n === z) ?? ELEMENTS[0];
+  /* All 118 elements, grouped by period and tinted by category, so the picker
+     can be searched by name, symbol or number instead of scrolled. */
+  const elementOptions: LabPickerOption[] = useMemo(
+    () =>
+      ELEMENTS.map((el) => ({
+        value: String(el.n),
+        label: el.name,
+        meta: String(el.n),
+        badge: el.sym,
+        color: theme === "light" ? CAT_COLORS[el.cat].onLight : CAT_COLORS[el.cat].on,
+        group: `Period ${periodGroupOf(el.n).period}`,
+      })),
+    [theme],
+  );
   const shells = useMemo(() => shellsFor(z), [z]);
   const transition = useSpringTransition();
   const stagger = useStagger(0.07);
@@ -989,21 +1004,14 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
               {element.name} — {activeModel.label} model
             </h3>
           </div>
-          <label className="apple-lab-card flex items-center gap-2 px-3 py-2">
-            <span className="apple-lab-micro">Element</span>
-            <select
-              value={z}
-              onChange={(event) => setZ(Number(event.target.value))}
-              aria-label="Choose an element"
-              className="w-full min-w-0 max-w-[220px] cursor-pointer truncate bg-transparent text-[12.5px] font-medium text-[var(--lab-ink)] outline-none"
-            >
-              {ELEMENTS.map((el) => (
-                <option key={el.n} value={el.n}>
-                  {el.n} — {el.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <LabPicker
+            label="Element"
+            value={String(z)}
+            options={elementOptions}
+            onChange={(next) => setZ(Number(next))}
+            searchPlaceholder="Search an element…"
+            className="w-[13.5rem] shrink-0"
+          />
         </div>
 
         {/* The model switcher. Four buttons, not a dropdown: the point of the
@@ -1353,6 +1361,17 @@ function TitrationTab() {
   const titrantOptions = TITRANTS.filter((entry) =>
     acidInFlask ? entry.kind === "strong-base" : entry.kind !== "strong-base",
   );
+  /* The two benches are picked with the lab's own dropdown; acids read warm and
+     bases cool, the same way the flasks in the drawing are tinted. */
+  const benchOptions = (entries: Titrant[]): LabPickerOption[] =>
+    entries.map((entry) => ({
+      value: entry.id,
+      label: entry.name,
+      badge: entry.formula,
+      color: entry.kind.includes("acid") ? "#e08a2e" : "#2aa8c4",
+    }));
+  const analyteOptions = benchOptions(ANALYTES);
+  const titrantPickerOptions = benchOptions(titrantOptions);
   const titrant = titrantOptions.find((entry) => entry.id === titrantId) ?? titrantOptions[0];
   const indicator = INDICATORS.find((entry) => entry.id === indicatorId) ?? INDICATORS[0];
 
@@ -1642,39 +1661,25 @@ function TitrationTab() {
           ) : null}
         </svg>
 
-        {/* What is in the flask and what is being added. */}
+        {/* What is in the flask and what is being added. Same picker as the
+            element list — a native menu here would be the one control in the
+            room that belongs to the operating system. */}
         <div className="mt-1 grid gap-2 sm:grid-cols-2">
-          <label className="apple-lab-card flex min-w-0 flex-col gap-1 px-3 py-2">
-            <span className="apple-lab-micro">In the flask</span>
-            <select
-              value={analyte.id}
-              onChange={(event) => selectAnalyte(event.target.value)}
-              className="w-full cursor-pointer truncate bg-transparent text-[12.5px] font-semibold text-[var(--lab-ink)] outline-none"
-            >
-              {ANALYTES.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.formula} — {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="apple-lab-card flex min-w-0 flex-col gap-1 px-3 py-2">
-            <span className="apple-lab-micro">In the burette</span>
-            <select
-              value={titrant.id}
-              onChange={(event) => {
-                setTitrantId(event.target.value);
-                setVolume(0);
-              }}
-              className="w-full cursor-pointer truncate bg-transparent text-[12.5px] font-semibold text-[var(--lab-ink)] outline-none"
-            >
-              {titrantOptions.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.formula} — {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <LabPicker
+            label="In the flask"
+            value={analyte.id}
+            options={analyteOptions}
+            onChange={selectAnalyte}
+          />
+          <LabPicker
+            label="In the burette"
+            value={titrant.id}
+            options={titrantPickerOptions}
+            onChange={(next) => {
+              setTitrantId(next);
+              setVolume(0);
+            }}
+          />
         </div>
 
         <div className="mt-3">
