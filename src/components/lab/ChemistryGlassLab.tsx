@@ -261,26 +261,47 @@ function BohrDiagram({
 
 type AtomModel = "bohr" | "rutherford" | "quantum" | "lewis";
 
-const ATOM_MODELS: Array<{ id: AtomModel; label: string; note: string }> = [
+const ATOM_MODELS: Array<{
+  id: AtomModel;
+  label: string;
+  /** Year the model was put forward — the part of the theory exams ask for by name. */
+  year: string;
+  who: string;
+  note: string;
+  /** What the diagram beside this definition is actually showing, in words. */
+  shows: string;
+}> = [
   {
     id: "bohr",
     label: "Bohr",
+    year: "1913",
+    who: "Niels Bohr",
     note: "Electrons travel in fixed shells. Each ring is one principal quantum number n, and the count per shell is the ground-state configuration.",
+    shows: "the nucleus with the electrons sitting on their shells K, L, M …, counted from the ground-state configuration.",
   },
   {
     id: "rutherford",
     label: "Rutherford",
+    year: "1911",
+    who: "Ernest Rutherford",
     note: "The gold-foil result: most alpha particles pass straight through empty space, a few are deflected, and a rare one bounces back off the dense nucleus.",
+    shows: "alpha particles meeting a tiny, dense nucleus — most pass straight through, a few bend, one comes back.",
   },
   {
     id: "quantum",
     label: "Quantum",
+    year: "1926",
+    who: "Erwin Schrödinger",
     note: "An electron has no path here — the dots are probability density. Denser regions are where the electron is more likely to be found.",
+    shows: "a probability cloud around the nucleus: no orbit, only the places the electron is likely to be.",
   },
   {
     id: "lewis",
     label: "Lewis",
+    year: "1916",
+    who: "Gilbert N. Lewis",
     note: "Only the valence shell is drawn. The dots are the electrons available for bonding, arranged in pairs on four sides of the symbol.",
+    shows: "the element symbol ringed by valence electrons drawn in pairs, the way a bond is written down.",
   },
 ];
 
@@ -1037,62 +1058,56 @@ function AtomicModelsTab({ theme }: { theme: "light" | "dark" }) {
 
       </div>
 
-      {/* The right column. The definition of every model lives here, verbatim:
-          a four-tab switcher with one caption underneath explains one model at
-          a time and leaves half the column empty. Listing all four means the
-          student can read what Bohr and Rutherford actually claimed without
-          clicking through each tab to find out. */}
+      {/* The right column. One model at a time: the definition here is the one
+          whose drawing is on the left, and it swaps with the drawing. Listing
+          all four at once made the switch read as a colour change on a list
+          that never moved; the other definitions are one tab away, which is
+          the point of having the tabs. */}
       <div className="flex min-w-0 flex-col gap-5">
         <div className="apple-lab-panel apple-lab-glass min-w-0">
           <div className="flex items-center justify-between gap-3">
             <p className="apple-lab-micro">Model theory</p>
             <span className="apple-lab-chip !py-0.5 !text-[10px]">
-              {ATOM_MODELS.length} models
+              {activeModel.label} model
             </span>
           </div>
 
-          <div className="mt-3 flex flex-col gap-2">
-            {ATOM_MODELS.map((entry) => {
-              const active = entry.id === model;
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => setModel(entry.id)}
-                  aria-pressed={active}
-                  className="apple-lab-card w-full min-w-0 px-3 py-2.5 text-left transition-colors"
-                  style={{
-                    borderColor: active ? tint(catColor, "aa") : undefined,
-                    background: active ? tint(catColor, "12") : undefined,
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: active ? catColor : "var(--lab-line)" }}
-                    />
-                    <span
-                      className="text-[12px] font-semibold"
-                      style={{ color: active ? "var(--lab-ink)" : "var(--lab-ink-dim)" }}
-                    >
-                      {entry.label} model
-                    </span>
-                    {active ? (
-                      <span
-                        className="ml-auto text-[9px] font-semibold uppercase tracking-[0.16em]"
-                        style={{ color: catColor }}
-                      >
-                        showing
-                      </span>
-                    ) : null}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={model}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={transition}
+              className="mt-3 min-w-0"
+            >
+              <div
+                className="apple-lab-card min-w-0 px-3.5 py-3"
+                style={{ borderColor: tint(catColor, "66") }}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="apple-lab-title text-[15px]">{activeModel.label} model</p>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                    style={{ color: catColor }}
+                  >
+                    {activeModel.year}
                   </span>
-                  <span className="apple-lab-note mt-1.5 block text-[11px] leading-[1.6]">
-                    {entry.note}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                </div>
+                <p className="apple-lab-micro mt-1">{activeModel.who}</p>
+                <p className="apple-lab-value mt-2.5 text-[12.5px] leading-relaxed">
+                  {activeModel.note}
+                </p>
+              </div>
+
+              <p className="apple-lab-note mt-3">
+                <span className="font-semibold">In the drawing: </span>
+                {activeModel.shows}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+
+          <p className="apple-lab-micro mt-3">Switch the model for its definition</p>
         </div>
 
         <div className="apple-lab-panel apple-lab-glass min-w-0">

@@ -10,31 +10,47 @@ import { useMemo, useState } from "react";
  * slider; the focal length is the lens's own property. Every ray, the image
  * position, its height and its nature come out of the thin-lens relation
  *
- *     1/v − 1/u = 1/f      m = v / u
+ *     1/v − 1/u = 1/f        m = v / u
  *
- * with the real-is-positive convention used in Indian school textbooks: u is
- * negative for a real object in front of the lens, f is positive for a convex
- * lens and negative for a concave one. That single sign rule is what makes the
- * virtual image appear on the same side as the object for a magnifying glass,
- * and why a concave lens always produces a diminished, upright image.
+ * with the sign convention used in Indian school textbooks: u is negative for a
+ * real object in front of the lens, f is positive for a convex lens and negative
+ * for a concave one. Rearranged that is v = u·f/(u + f). Getting this wrong is
+ * not a rounding error — `u·f/(u − f)` is the *other* convention (u positive,
+ * m = −v/u), and mixing the two printed a wrong image distance for every focal
+ * length. The cases this file is checked against, computed by hand:
  *
- * The drawing is to scale (both axes share one px-per-cm factor), so the ray
- * angles are the real angles rather than a sketch. When the image falls beyond
- * the bench it is reported as a number and the rays keep their true direction,
- * instead of pretending the paper is longer than it is.
+ *     convex f = +12, u = −30  →  v = +20.0, m = −0.67   real, inverted, small
+ *     convex f = +12, u = −24  →  v = +24.0, m = −1.00   real, same size (2F)
+ *     convex f = +12, u = −6   →  v = −12.0, m = +2.00   virtual, upright, big
+ *     concave f = −12, u = −30 →  v = −8.6,  m = +0.29   virtual, upright, small
+ *
+ * The drawing keeps one px-per-cm factor on both axes, so the ray angles are the
+ * real angles rather than a sketch. That factor is *computed* from what has to
+ * be on the plate — the object, both focal points, 2F and the image — so no
+ * arrow can be pushed off the paper when u is slung out to 62 cm.
  */
 
 type LensKind = "convex" | "concave";
 
 const BENCH_W = 760;
-const BENCH_H = 360;
-const AXIS_Y = BENCH_H * 0.52;
-const PX_PER_CM = 5.4;
-const MAX_DRAW_CM = 68;
+const BENCH_H = 330;
+const AXIS_Y = 172;
+const PAD_L = 48;
+const PAD_R = 58;
+/** A 6 cm object needs no more room than this; past it the plate just empties. */
+const MAX_PX_PER_CM = 9;
+/** Everything is clipped to this frame, so no ray bleeds out of the plate. */
+const FRAME = { x: 12, y: 14, w: BENCH_W - 24, h: BENCH_H - 28 };
+/** Vertical bands for the annotations. Fixed rows cannot collide with each other. */
+const F_LABEL_Y = AXIS_Y - 11;
+const MARK_2F_Y = AXIS_Y + 16;
+const CAPTION_Y = AXIS_Y + 34;
+const VIRTUAL_CAPTION_Y = AXIS_Y + 52;
+const RULER_Y = AXIS_Y + 86;
 
 function lensFormula(kind: LensKind, f: number, u: number) {
   const focal = kind === "convex" ? f : -f;
-  const v = (u * focal) / (u - focal);
+  const v = (u * focal) / (u + focal);
   const m = v / u;
   return { focal, v, m };
 }
@@ -46,59 +62,51 @@ export default function OpticsPractical() {
   const [height, setHeight] = useState(4);
   const transition = useSpringTransition();
 
-  const optics = useMemo(() => lensFormula(kind, focal, distance), [kind, focal, distance]);
-  const { focal: f, v, m } = optics;
+  const { focal: f, v, m } = useMemo(() => lensFormula(kind, focal, distance), [kind, focal, distance]);
 
-  const originX = 200;
-  const x = (cm: number) => originX + cm * PX_PER_CM;
-  const y = (cm: number) => AXIS_Y - cm * PX_PER_CM;
+  const convex = kind === "convex";
+  const finite = Number.isFinite(v);
+  /* u = −f puts the image at infinity: the two refracted rays leave parallel. */
+  const atFocus = Math.abs(distance - focal) < 0.5;
 
-  /* Keep the object and the lens on the bench; a 60 cm object distance with a
-     70 cm bench would push the lens off the paper. */
+  /* ---- the scale, and every point on the plate, in one place ---------- */
+  const leftCm = Math.max(distance, f, convex ? 2 * f : f, finite && v < 0 ? -v : 0) + 8;
+  const rightCm = Math.max(finite && v > 0 ? v : 0, f, convex ? 2 * f : f, 10) + 8;
+  const s = Math.min(MAX_PX_PER_CM, (BENCH_W - PAD_L - PAD_R) / (leftCm + rightCm));
+  const lensX = PAD_L + leftCm * s;
+  const x = (cm: number) => lensX + cm * s;
+  const y = (cm: number) => AXIS_Y - cm * s;
+
   const objectX = x(-distance);
-  const lensX = x(0);
-  const focalX = x(f);
-  const imageX = x(v);
   const objectTipY = y(height);
-  /* Signed image height: negative magnification is an inverted image, which
-     must be drawn below the axis, not above it. */
-  const imageHeight = m * height;
-  const imageTipY = y(imageHeight);
+  const imageX = x(v);
+  const imageTipY = y(m * height);
+  /* The point the parallel ray passes through after the lens: the image-side
+     focus for a convex lens, the object-side one its divergence appears to come
+     from for a concave lens. */
+  const axialFocusX = x(f);
+  /* The focus the third ray is aimed through, on the far side of the object. */
+  const ray3FocusX = x(-f);
 
-  const drawable = Number.isFinite(v) && Math.abs(v) <= MAX_DRAW_CM;
-  const imageOnBench = drawable && imageX > 8 && imageX < BENCH_W - 8;
-  const imageShift = imageTipY - AXIS_Y;
+  const imageOnPlate = finite && imageX > FRAME.x + 8 && imageX < FRAME.x + FRAME.w - 8;
+  const imageDown = imageTipY > AXIS_Y;
+  const imageColor = v < 0 ? VIOLET : CYAN;
+  /* Tall images would leave the plate; the arrow stops at the frame and the
+     read-out still carries the true height. */
+  const imageTipClamped = Math.max(FRAME.y + 8, Math.min(FRAME.y + FRAME.h - 8, imageTipY));
 
-  /* Tall images would leave the frame; clamp the drawn arrow, say so in the
-     read-out. The rays still leave in the right direction. */
-  const clampedTipY = Math.max(18, Math.min(BENCH_H - 18, imageTipY));
-
-  /* A ray that starts at the object tip and leaves along a direction. Returns
-     the two points where it meets the lens plane and the bench edge. */
-  const project = (slope: number) => {
-    const lensHit = objectTipY + slope * (lensX - objectX);
-    const farY = objectTipY + slope * (BENCH_W - 8 - objectX);
-    return { lensHit, farY };
-  };
-
-  /* 1 — parallel to the axis, then through F′ (convex) or away from the
-     virtual focus on the object side (concave). The concave line is drawn
-     through the lens point and the near focus, so going right it diverges. */
-  const ray1SlopeAfter =
-    kind === "convex"
-      ? (AXIS_Y - objectTipY) / (focalX - lensX)
-      : (objectTipY - AXIS_Y) / (lensX - focalX);
-  const ray1FarY = objectTipY + ray1SlopeAfter * (BENCH_W - 8 - lensX);
-
-  /* 2 — straight through the optical centre. */
+  /* A ray that leaves the object tip along a slope, in plate coordinates. */
+  const ray1AfterLens = convex
+    ? (AXIS_Y - objectTipY) / (axialFocusX - lensX)
+    : (objectTipY - AXIS_Y) / (lensX - axialFocusX);
+  const ray1FarY = objectTipY + ray1AfterLens * (FRAME.x + FRAME.w - lensX);
   const centreSlope = (AXIS_Y - objectTipY) / (lensX - objectX);
-  const ray2FarY = objectTipY + centreSlope * (BENCH_W - 8 - objectX);
-
-  /* 3 — through the near focus (convex) or aimed at the far focus (concave),
-     leaving the lens parallel to the axis. */
-  const nearFocusX = x(-f);
-  const ray3Slope = (AXIS_Y - objectTipY) / (nearFocusX - objectX);
+  const ray2FarY = objectTipY + centreSlope * (FRAME.x + FRAME.w - objectX);
+  const ray3Slope = (AXIS_Y - objectTipY) / (ray3FocusX - objectX);
   const ray3LensY = objectTipY + ray3Slope * (lensX - objectX);
+  /* Through the focus is undefined when the object *is* on the focus, and that
+     is exactly the u = f case: two rays are the whole construction there. */
+  const drawRay3 = Math.abs(ray3FocusX - objectX) > 6;
 
   const nature = [
     v > 0 ? "real" : "virtual",
@@ -106,14 +114,37 @@ export default function OpticsPractical() {
     m < 0 ? "inverted" : "upright",
   ].join(" · ");
 
-  const equation = `${v >= 0 ? "+" : ""}${v.toFixed(1)} cm image at m = ${m.toFixed(2)}`;
-  const objectOutsideFocus = distance > focal;
-  const hint =
-    kind === "concave"
-      ? "A concave lens diverges: the image is always virtual, upright and smaller, and it sits between the lens and F."
-      : objectOutsideFocus
+  const solved = finite
+    ? `v = ${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)} cm, m = ${m.toFixed(2)}`
+    : "v = ∞ — the refracted rays leave parallel";
+  const hint = !convex
+    ? "A concave lens diverges: the image is always virtual, upright and smaller, and it sits between the lens and F."
+    : atFocus
+      ? "Object at F → every ray leaves parallel, so no image forms: the image is at infinity."
+      : distance > focal
         ? "Object beyond F → a real, inverted image on the other side, the way a camera or the eye uses it."
         : "Object inside F → a virtual, upright, enlarged image on the same side: the magnifying glass.";
+
+  /* ---- annotation set ------------------------------------------------- */
+  const foci = [
+    { px: axialFocusX, label: convex ? "F′" : "F" },
+    { px: ray3FocusX, label: convex ? "F" : "F′" },
+  ];
+  const marks2F = convex
+    ? [
+        { px: x(2 * f), label: "2F′" },
+        { px: x(-2 * f), label: "2F" },
+      ]
+    : [];
+  const rulerStep = s * 10 >= 34 ? 10 : 20;
+  const ticks: number[] = [];
+  for (let cm = -Math.floor(leftCm / rulerStep) * rulerStep; cm <= rightCm; cm += rulerStep / 2) {
+    ticks.push(Math.round(cm * 10) / 10);
+  }
+
+  /* A solid arrow head: readable even when the image is only a centimetre tall. */
+  const head = (px: number, tipY: number, dir: 1 | -1) =>
+    `M ${px - 4.5} ${tipY + 8 * dir} L ${px} ${tipY} L ${px + 4.5} ${tipY + 8 * dir} Z`;
 
   return (
     <div className="flex flex-col gap-4">
@@ -123,9 +154,11 @@ export default function OpticsPractical() {
             <p className="apple-lab-micro">Ray construction</p>
             <h3 className="apple-lab-title mt-1 text-base">Thin lens · image formation</h3>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <span className="apple-lab-chip">f = {kind === "convex" ? "+" : "−"}
-              {focal.toFixed(0)} cm</span>
+          <div className="flex flex-wrap gap-2">
+            <span className="apple-lab-chip">
+              f = {convex ? "+" : "−"}
+              {focal.toFixed(0)} cm
+            </span>
             <span className="apple-lab-chip">u = −{distance.toFixed(0)} cm</span>
             <span className="apple-lab-chip">{nature}</span>
           </div>
@@ -136,50 +169,136 @@ export default function OpticsPractical() {
             viewBox={`0 0 ${BENCH_W} ${BENCH_H}`}
             className="h-auto w-full min-w-[560px]"
             role="img"
-            aria-label={`Ray diagram for a ${kind} lens with focal length ${focal} cm and object at ${distance} cm: ${nature} image`}
+            aria-label={`Ray diagram for a ${kind} lens of focal length ${focal} centimetres with the object ${distance} centimetres away: ${nature} image`}
           >
-            {/* the optical bench: a rail under the principal axis */}
-            <line x1={16} y1={AXIS_Y + 92} x2={BENCH_W - 16} y2={AXIS_Y + 92} stroke={ink(0.1)} strokeWidth={1} />
-            {Array.from({ length: 15 }, (_, i) => (
-              <line
-                key={i}
-                x1={16 + i * ((BENCH_W - 32) / 14)}
-                y1={AXIS_Y + 88}
-                x2={16 + i * ((BENCH_W - 32) / 14)}
-                y2={AXIS_Y + 96}
-                stroke={ink(0.16)}
-                strokeWidth={1}
-              />
-            ))}
+            <defs>
+              <clipPath id="lab-optics-frame">
+                <rect x={FRAME.x} y={FRAME.y} width={FRAME.w} height={FRAME.h} rx={12} />
+              </clipPath>
+            </defs>
+
+            {/* the plate the construction is drawn on */}
+            <rect
+              x={FRAME.x}
+              y={FRAME.y}
+              width={FRAME.w}
+              height={FRAME.h}
+              rx={12}
+              fill={plate(0.35)}
+              stroke={ink(0.08)}
+            />
 
             {/* principal axis */}
             <line
-              x1={16}
+              x1={FRAME.x + 4}
               y1={AXIS_Y}
-              x2={BENCH_W - 16}
+              x2={FRAME.x + FRAME.w - 4}
               y2={AXIS_Y}
-              stroke={ink(0.28)}
+              stroke={ink(0.26)}
               strokeDasharray="5 5"
               strokeWidth={1}
             />
 
-            {/* focal points, on both sides of the lens */}
-            {[focalX, x(-f)].map((px, index) => (
-              <g key={index}>
-                <circle cx={px} cy={AXIS_Y} r={3} fill={AMBER} />
-                <text x={px} y={AXIS_Y + 18} fontSize={10} fill={ink(0.55)} textAnchor="middle">
-                  {/* Convex: F is on the object side (left), F′ on the image
-                      side. Concave: the virtual focus is the near one (left). */}
-                  {kind === "convex" ? (index === 0 ? "F′" : "F") : index === 0 ? "F" : "F′"}
+            {/* ruler — every distance on the plate is read from the lens */}
+            <line
+              x1={FRAME.x + 6}
+              y1={RULER_Y}
+              x2={FRAME.x + FRAME.w - 6}
+              y2={RULER_Y}
+              stroke={ink(0.14)}
+            />
+            {ticks.map((cm) => {
+              const major = Math.abs(cm % 10) < 0.01;
+              return (
+                <line
+                  key={`tick-${cm}`}
+                  x1={x(cm)}
+                  y1={RULER_Y - (major ? 6 : 3)}
+                  x2={x(cm)}
+                  y2={RULER_Y + (major ? 6 : 3)}
+                  stroke={ink(major ? 0.3 : 0.16)}
+                />
+              );
+            })}
+            {ticks
+              .filter((cm) => Math.abs(cm % 10) < 0.01)
+              .map((cm) => (
+                <text
+                  key={`ticklabel-${cm}`}
+                  x={x(cm)}
+                  y={RULER_Y + 19}
+                  fontSize={9.5}
+                  fill={ink(cm === 0 ? 0.55 : 0.4)}
+                  textAnchor="middle"
+                >
+                  {cm === 0 ? "lens" : Math.abs(cm)}
+                </text>
+              ))}
+            <text x={FRAME.x + 6} y={RULER_Y + 19} fontSize={9} fill={ink(0.3)}>
+              cm from the lens
+            </text>
+
+            {/* focal points, and 2F on the convex lens where the standard cases
+                are counted from */}
+            {marks2F.map((mark) => (
+              <g key={mark.label}>
+                <line
+                  x1={mark.px}
+                  y1={AXIS_Y - 6}
+                  x2={mark.px}
+                  y2={AXIS_Y + 6}
+                  stroke={ink(0.3)}
+                  strokeWidth={1}
+                />
+                <text x={mark.px} y={MARK_2F_Y} fontSize={9} fill={ink(0.42)} textAnchor="middle">
+                  {mark.label}
+                </text>
+              </g>
+            ))}
+            {foci.map((mark) => (
+              <g key={mark.label}>
+                <circle cx={mark.px} cy={AXIS_Y} r={3} fill={AMBER} />
+                <text
+                  x={mark.px}
+                  y={F_LABEL_Y}
+                  fontSize={10}
+                  fill={ink(0.55)}
+                  textAnchor="middle"
+                >
+                  {mark.label}
                 </text>
               </g>
             ))}
 
-            {/* the lens: a lens shape, with the arrow direction telling convex
-                from concave at a glance */}
+            {/* the rays, clipped to the plate */}
+            <g clipPath="url(#lab-optics-frame)">
+              {/* 1 — parallel in, then through F′ (convex) or away from F (concave) */}
+              <line x1={objectX} y1={objectTipY} x2={lensX} y2={objectTipY} stroke={VIOLET} strokeWidth={1.2} />
+              <line x1={lensX} y1={objectTipY} x2={FRAME.x + FRAME.w} y2={ray1FarY} stroke={VIOLET} strokeWidth={1.2} />
+
+              {/* 2 — straight through the optical centre */}
+              <line x1={objectX} y1={objectTipY} x2={FRAME.x + FRAME.w} y2={ray2FarY} stroke={MINT} strokeWidth={1.2} />
+
+              {/* 3 — aimed through the focus, leaving parallel to the axis */}
+              {drawRay3 ? (
+                <>
+                  <line x1={objectX} y1={objectTipY} x2={lensX} y2={ray3LensY} stroke={AMBER} strokeWidth={1.2} />
+                  <line
+                    x1={lensX}
+                    y1={ray3LensY}
+                    x2={FRAME.x + FRAME.w}
+                    y2={ray3LensY}
+                    stroke={AMBER}
+                    strokeWidth={1.2}
+                  />
+                </>
+              ) : null}
+            </g>
+
+            {/* the lens itself */}
             <motion.path
               d={
-                kind === "convex"
+                convex
                   ? `M ${lensX} ${AXIS_Y - 78} Q ${lensX + 22} ${AXIS_Y} ${lensX} ${AXIS_Y + 78} Q ${lensX - 22} ${AXIS_Y} ${lensX} ${AXIS_Y - 78} Z`
                   : `M ${lensX} ${AXIS_Y - 72} Q ${lensX - 16} ${AXIS_Y} ${lensX} ${AXIS_Y + 72} L ${lensX} ${AXIS_Y + 72} Q ${lensX + 16} ${AXIS_Y} ${lensX} ${AXIS_Y - 72} Z`
               }
@@ -192,71 +311,52 @@ export default function OpticsPractical() {
               transition={transition}
               style={{ transformBox: "fill-box", transformOrigin: "center" }}
             />
-            <text x={lensX + 16} y={AXIS_Y - 84} fontSize={10} fill={ink(0.55)}>
-              {kind === "convex" ? "convex" : "concave"}
+            <text x={lensX + 16} y={AXIS_Y - 86} fontSize={10} fill={ink(0.55)}>
+              {convex ? "convex" : "concave"}
             </text>
 
-            {/* object */}
-            <line x1={objectX} y1={AXIS_Y} x2={objectX} y2={objectTipY} stroke={CYAN} strokeWidth={2.2} />
-            <path
-              d={`M ${objectX - 4} ${objectTipY + 7} L ${objectX} ${objectTipY} L ${objectX + 4} ${objectTipY + 7}`}
-              fill="none"
-              stroke={CYAN}
-              strokeWidth={2}
-            />
-            <text x={objectX} y={AXIS_Y + 16} fontSize={10} fill={ink(0.6)} textAnchor="middle">
+            {/* the object */}
+            <line x1={objectX} y1={AXIS_Y} x2={objectX} y2={objectTipY} stroke={CYAN} strokeWidth={2.4} />
+            <path d={head(objectX, objectTipY, 1)} fill={CYAN} />
+            <text x={objectX} y={CAPTION_Y} fontSize={10} fill={ink(0.6)} textAnchor="middle">
               object
             </text>
 
-            {/* ray 1 — parallel in, through F′ */}
-            <line x1={objectX} y1={objectTipY} x2={lensX} y2={objectTipY} stroke={VIOLET} strokeWidth={1.2} />
-            <line
-              x1={lensX}
-              y1={objectTipY}
-              x2={BENCH_W - 8}
-              y2={ray1FarY}
-              stroke={VIOLET}
-              strokeWidth={1.2}
-            />
-
-            {/* ray 2 — through the centre, undeviated */}
-            <line x1={objectX} y1={objectTipY} x2={BENCH_W - 8} y2={ray2FarY} stroke={MINT} strokeWidth={1.2} />
-
-            {/* ray 3 — focus ray, leaving parallel */}
-            <line x1={objectX} y1={objectTipY} x2={lensX} y2={ray3LensY} stroke={AMBER} strokeWidth={1.2} />
-            <line x1={lensX} y1={ray3LensY} x2={BENCH_W - 8} y2={ray3LensY} stroke={AMBER} strokeWidth={1.2} />
-
-            {/* image */}
-            {imageOnBench ? (
+            {/* the image: solid for a real one, dashed for a virtual one */}
+            {imageOnPlate ? (
               <g>
                 <line
                   x1={imageX}
                   y1={AXIS_Y}
                   x2={imageX}
-                  y2={clampedTipY}
-                  stroke={imageShift < 0 ? VIOLET : CYAN}
-                  strokeWidth={2.2}
+                  y2={imageTipClamped}
+                  stroke={imageColor}
+                  strokeWidth={2.4}
                   strokeDasharray={v < 0 ? "5 4" : undefined}
                 />
-                <path
-                  d={`M ${imageX - 4} ${clampedTipY + (imageShift < 0 ? 7 : -7)} L ${imageX} ${clampedTipY} L ${imageX + 4} ${clampedTipY + (imageShift < 0 ? 7 : -7)}`}
-                  fill="none"
-                  stroke={imageShift < 0 ? VIOLET : CYAN}
-                  strokeWidth={2}
-                />
-                <text x={imageX} y={AXIS_Y + 16} fontSize={10} fill={ink(0.6)} textAnchor="middle">
+                <path d={head(imageX, imageTipClamped, imageDown ? -1 : 1)} fill={imageColor} />
+                <text
+                  x={imageX}
+                  y={v < 0 ? VIRTUAL_CAPTION_Y : CAPTION_Y}
+                  fontSize={10}
+                  fill={ink(0.62)}
+                  textAnchor="middle"
+                >
                   {v < 0 ? "virtual image" : "real image"}
                 </text>
               </g>
             ) : (
-              <text x={BENCH_W - 20} y={AXIS_Y - 12} fontSize={11} fill={ink(0.55)} textAnchor="end">
-                image forms {Number.isFinite(v) ? `${Math.abs(v).toFixed(0)} cm` : "at infinity"} away — beyond the bench
+              <text x={FRAME.x + FRAME.w - 14} y={FRAME.y + 20} fontSize={11} fill={ink(0.55)} textAnchor="end">
+                the image forms at infinity — the rays leave parallel
               </text>
             )}
           </svg>
         </div>
 
-        <p className="apple-lab-note mt-1">{hint}</p>
+        <p className="apple-lab-note mt-1">
+          {hint} Cyan is the object, its image is drawn in cyan when it is real and dashed violet when it is
+          virtual.
+        </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
@@ -299,19 +399,20 @@ export default function OpticsPractical() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
-          <Readout label="Image distance v" value={Number.isFinite(v) ? `${v.toFixed(1)} cm` : "∞"} />
+        <div className="grid grid-cols-2 gap-2">
+          <Readout label="Image distance v" value={finite ? `${v.toFixed(1)} cm` : "∞"} />
           <Readout label="Magnification m" value={`${m.toFixed(2)}×`} />
-          <Readout label="Image height" value={`${Math.abs(imageHeight).toFixed(1)} cm`} />
+          <Readout label="Image height" value={`${Math.abs(m * height).toFixed(1)} cm`} />
           <Readout label="Image" value={nature} />
           <div className="apple-lab-card col-span-2 px-3 py-2.5">
             <p className="apple-lab-micro">Thin-lens relation</p>
             <p className="apple-lab-value mt-1 text-[12.5px] leading-relaxed">
-              1/v − 1/u = 1/f → 1/{v.toFixed(1)} − 1/(−{distance.toFixed(0)}) = 1/{f.toFixed(0)} · {equation}
+              1/v − 1/u = 1/f → 1/({finite ? v.toFixed(1) : "∞"}) − 1/(−{distance.toFixed(0)}) = 1/
+              {f.toFixed(0)} · {solved}
             </p>
             <p className="apple-lab-note mt-1">
               Sign rule: distances measured against the incoming light are negative. A virtual image has v &lt; 0 and
-              appears on the object side.
+              appears on the object side, so the rays only appear to meet there.
             </p>
           </div>
         </div>
