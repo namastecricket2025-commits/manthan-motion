@@ -34,17 +34,19 @@ const UR = [[-1.569, 2.41, 0.646],  [-1.619, 1.51, 0.546],  [-1.689, -0.758, 0.4
 const KZ0 = -1.785;
 const KZ1 = 0.921;
 
-export default function ExcretoryModelViewer({ label, blurb }: { label: string; blurb: string; theme: "dark" | "light" }) {
+export default function ExcretoryModelViewer({ label, blurb, theme }: { label: string; blurb: string; theme: "dark" | "light" }) {
+  const dark = theme === "dark";
   const holder = useRef<HTMLDivElement>(null);
   const tip = useRef<HTMLDivElement>(null);
   const mats = useRef<Record<string, THREE.MeshStandardMaterial>>({});
   const plane = useRef(new THREE.Plane(new THREE.Vector3(0, 0, -1), KZ1));
-  const st = useRef({ flow: 0.6, xray: false, cutOn: false, hov: null as string | null, pin: null as string | null, fly: null as THREE.Vector3 | null, cam: null as THREE.PerspectiveCamera | null, controls: null as OrbitControls | null });
+  const st = useRef({ flow: 0.6, fill: 0, shown: 0, xray: false, cutOn: false, hov: null as string | null, pin: null as string | null, fly: null as THREE.Vector3 | null, cam: null as THREE.PerspectiveCamera | null, controls: null as OrbitControls | null });
   const [pin, setPin] = useState<string | null>(null);
   const [xray, setXray] = useState(false);
   const [cutOn, setCutOn] = useState(false);
   const [cut, setCut] = useState(50);
   const [flow, setFlow] = useState(60);
+  const [fillUI, setFillUI] = useState(0);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -80,6 +82,7 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
     });
     const meshes: THREE.Mesh[] = [];
     let disposed = false;
+    let pivot: THREE.Group | null = null;
     const tubeCurves: THREE.CatmullRomCurve3[] = [];
     const raw = atob(MODEL_B64);
     const bytes = new Uint8Array(raw.length);
@@ -99,6 +102,22 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
           m.userData = { id, side: /_L(_|$)/.test(m.name) ? "L" : /_R(_|$)/.test(m.name) ? "R" : "" };
           meshes.push(m);
         });
+        const bl = meshes.filter((m) => ["bladder", "trigone", "orifice", "neck"].includes(m.userData.id));
+        if (bl.length) {
+          const box = new THREE.Box3();
+          bl.forEach((m) => {
+            m.geometry.computeBoundingBox();
+            box.union(m.geometry.boundingBox!);
+          });
+          const c0 = box.getCenter(new THREE.Vector3());
+          pivot = new THREE.Group();
+          pivot.position.copy(c0);
+          bl.forEach((m) => {
+            m.geometry.translate(-c0.x, -c0.y, -c0.z);
+            pivot!.add(m);
+          });
+          g.scene.add(pivot);
+        }
         group.add(g.scene);
         [UL, UR].forEach((pts) => {
           const c = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
@@ -112,12 +131,13 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
       },
       () => setFailed(true),
     );
-    const N = 14;
+    const N = 24;
     const pg = new THREE.BufferGeometry();
     pg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(N * 2 * 3), 3));
-    const pm = new THREE.PointsMaterial({ color: "#ffd84a", size: 0.16, sizeAttenuation: true });
+    const pm = new THREE.PointsMaterial({ color: "#ffd84a", size: 0.2, sizeAttenuation: true, depthTest: false, transparent: true });
     const drops = new THREE.Points(pg, pm);
     drops.frustumCulled = false;
+    drops.renderOrder = 10;
     group.add(drops);
     const resize = () => {
       renderer.setSize(el.clientWidth, el.clientHeight);
@@ -161,9 +181,11 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
     const v = new THREE.Vector3();
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let raf = 0;
+    let last = performance.now();
     const loop = () => {
       raf = requestAnimationFrame(loop);
-      const t = (performance.now() - t0) / 1000;
+      const now = performance.now();
+      const t = (now - t0) / 1000;
       if (s.fly) {
         cam.position.lerp(s.fly, 0.12);
         if (cam.position.distanceTo(s.fly) < 0.05) s.fly = null;
@@ -177,14 +199,29 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
       drops.visible = s.flow > 0.02 && tubeCurves.length === 2;
       if (drops.visible) {
         const a = pg.attributes.position as THREE.BufferAttribute;
+        const n = Math.max(2, Math.round(2 + s.flow * (N - 2)));
         tubeCurves.forEach((c, k) => {
           for (let i = 0; i < N; i++) {
-            const u = (((still ? 0 : t) * 0.12 * (0.3 + s.flow) + i / N) % 1 + 1) % 1;
+            if (i >= n) {
+              a.setXYZ(k * N + i, 0, 1e4, 0);
+              continue;
+            }
+            const u = ((((still ? 0 : t) * 0.07 * (0.4 + 1.6 * s.flow) + i / n) % 1) + 1) % 1;
             c.getPoint(u, v);
             a.setXYZ(k * N + i, v.x, v.y, v.z);
           }
         });
         a.needsUpdate = true;
+        pm.size = 0.14 + 0.12 * s.flow;
+      }
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      s.fill = Math.min(1, s.fill + dt * s.flow * 0.05);
+      if (pivot) pivot.scale.setScalar(1 + 0.22 * s.fill);
+      const pct = Math.round(s.fill * 100);
+      if (pct !== s.shown) {
+        s.shown = pct;
+        setFillUI(pct);
       }
       renderer.render(scene, cam);
     };
@@ -250,14 +287,9 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
     if (next && DEFS[next].inner && !xray && !cutOn) setXray(true);
   };
   const sel = pin ? DEFS[pin] : null;
-  /* The stage, its header and the deck below are one dark instrument face in
-     both themes — the model needs a black studio behind it, and a panel split
-     between a black stage and a paper deck read as two different tools. The
-     ink therefore stays light in light mode too; the page around the panel is
-     what follows the theme. */
-  const edge = "border-white/10";
-  const txt = "text-slate-100";
-  const sub = "text-slate-400";
+  const edge = dark ? "border-white/10" : "border-black/10";
+  const txt = dark ? "text-slate-100" : "text-slate-900";
+  const sub = dark ? "text-slate-400" : "text-slate-600";
   const btn = (on: boolean) => `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
 
   return (
@@ -273,12 +305,12 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
             Fit view
           </button>
         </div>
-        <div className="lab-model-stage relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
+        <div className={`relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border ${edge} ${dark ? "bg-black/25" : "bg-white/60"}`}>
           <div ref={holder} className="absolute inset-0" />
-          {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">Loading urinary system model…</div>}
-          {failed && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">Could not load the urinary system model.</div>}
+          {!ready && !failed && <div className={`absolute inset-0 grid place-items-center text-sm ${sub}`}>Loading urinary system model…</div>}
+          {failed && <div className={`absolute inset-0 grid place-items-center px-6 text-center text-sm ${sub}`}>Could not load the urinary system model.</div>}
           <div ref={tip} style={{ display: "none" }} className="pointer-events-none absolute z-10 max-w-[240px] rounded-lg bg-black/90 px-2.5 py-1.5 text-[11px] leading-snug text-white" />
-          <p className="pointer-events-none absolute bottom-2 right-3 hidden text-[10px] text-slate-400 sm:block">drag orbit · scroll zoom · hover or tap a part</p>
+          <p className={`pointer-events-none absolute bottom-2 right-3 text-[10px] ${sub}`}>drag orbit · scroll zoom · hover or tap a part</p>
         </div>
       </div>
       <div className="lab-deck-pane lab-glass-deep space-y-3 p-3.5">
@@ -298,19 +330,23 @@ export default function ExcretoryModelViewer({ label, blurb }: { label: string; 
           <input type="range" min={0} max={100} value={flow} className="flex-1" onChange={(e) => setFlow(+e.target.value)} />
           <b className={txt}>{flow}%</b>
         </label>
+        <div className={`flex items-center justify-between gap-2 text-xs ${sub}`}>
+          <span>Bladder fill: <b className={txt}>{fillUI}%</b></span>
+          <button type="button" className={btn(false)} onClick={() => { st.current.fill = 0; }}>Empty bladder</button>
+        </div>
         <div className={`min-h-20 rounded-xl border ${edge} p-3 text-xs leading-relaxed ${txt}`}>
           {sel ? (<><b style={{ color: sel.color }}>{sel.name}</b><br />{sel.fn}</>) : <span className={sub}>Hover or select a part to see what it does.</span>}
         </div>
         <div className="flex flex-col gap-1">
           {Object.entries(DEFS).map(([id, d]) => (
             <button key={id} type="button" onClick={() => pick(id)} onMouseEnter={() => (st.current.hov = id)} onMouseLeave={() => (st.current.hov = null)}
-              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === id ? "bg-white/10" : ""}`}>
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === id ? "bg-white/10" : ""}`}>
               <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: d.color }} />
               {d.name}
             </button>
           ))}
         </div>
-        <p className={`text-[10px] leading-relaxed ${sub}`}>Use X-ray or Cut kidneys open to see the layers inside. The ureters are drawn as simple tubes joining each renal pelvis to the bladder, and the yellow dots show urine moving down them. Model: Visible Human Male reference organs (NIH 3D / Human Reference Atlas).</p>
+        <p className={`text-[10px] leading-relaxed ${sub}`}>Use X-ray or Cut kidneys open to see the layers inside. The ureters are drawn as simple tubes joining each renal pelvis to the bladder, and the yellow dots show urine moving down them. A higher flow adds more dots, moves them faster and fills the bladder. Model: Visible Human Male reference organs (NIH 3D / Human Reference Atlas).</p>
       </div>
     </div>
   );
