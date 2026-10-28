@@ -16,6 +16,7 @@ import { TextGenerate } from "@/components/landing/TextGenerate";
 import { TiltFrame } from "@/components/landing/TiltFrame";
 import { useAuth } from "@/hooks/use-auth";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
+import { useScrollVelocity } from "@/hooks/use-scroll-velocity";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { settingsRuntime } from "@/lib/app-settings";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
@@ -158,6 +159,42 @@ function Hero() {
             scrub: 0.5,
           },
         });
+      }
+
+      /* The handoff: the frame is not simply scrolled away, it is travelled
+         into. Over its exit it widens toward the viewport and its corners
+         square off, so the last thing the hero does is push the product at
+         the reader instead of cutting to the next section. No pin, no fade:
+         the page keeps its own length and the frame stays a real object as it
+         leaves, which is the difference between a shot and a scroll-jack. */
+      const frame = root.querySelector<HTMLElement>("[data-frame-handoff]");
+      if (frame) {
+        const plate = frame.querySelector<HTMLElement>(".hero-frame");
+        const inner = frame.querySelector<HTMLElement>("[data-frame-inner]");
+        const handoff = gsap.timeline({
+          scrollTrigger: {
+            trigger: frame,
+            start: "top 85%",
+            end: "bottom 40%",
+            scrub: 0.6,
+            invalidateOnRefresh: true,
+          },
+        });
+        handoff.to(frame, {
+          scale: () =>
+            Math.min(
+              1.3,
+              Math.max(1, (window.innerWidth - 24) / frame.offsetWidth),
+            ),
+          duration: 0.72,
+          ease: "none",
+        });
+        if (plate) {
+          handoff.to(plate, { borderRadius: 4, duration: 0.72, ease: "none" }, 0);
+        }
+        if (inner) {
+          handoff.to(inner, { borderRadius: 2, duration: 0.72, ease: "none" }, 0);
+        }
       }
     }, root);
     return () => ctx.revert();
@@ -324,7 +361,7 @@ function Hero() {
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[color-mix(in_srgb,var(--text-main)_50%,transparent)]">
             Reads
           </p>
-          <ul className="flex flex-wrap items-center justify-center gap-2">
+          <ul className="scroll-skew flex flex-wrap items-center justify-center gap-2">
             {FORMATS.map((format) => (
               <li key={format} className="glass-chip px-3 py-1.5 text-[12px] text-text-dim">
                 {format}
@@ -341,9 +378,11 @@ function Hero() {
       <div data-hero-fade className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 sm:pb-24">
         {/* The frame answers the pointer (see `TiltFrame`): it leans toward
             the cursor while the surface inside slides the other way. */}
-        <TiltFrame className="hero-frame">
-          <HeroPreview />
-        </TiltFrame>
+        <div data-frame-handoff>
+          <TiltFrame className="hero-frame">
+            <HeroPreview />
+          </TiltFrame>
+        </div>
       </div>
     </div>
   );
@@ -353,6 +392,8 @@ export default function Landing() {
   // Lenis glide-scrolling for the marketing page (reduced-motion — OS or the
   // app's Motionless Mode — falls back to native scrolling inside the hook).
   useSmoothScroll(!settingsRuntime.reduceMotion);
+  // The reader's velocity, exposed as `--scroll-v` for `.scroll-skew` fields.
+  useScrollVelocity(!settingsRuntime.reduceMotion);
 
   return (
     <div className="relative min-h-screen">

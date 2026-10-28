@@ -550,7 +550,7 @@ export default function DistillStage() {
                 <canvas
                   ref={canvasRef}
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 h-full w-full"
+                  className="scroll-skew pointer-events-none absolute inset-0 h-full w-full"
                 />
               )}
 

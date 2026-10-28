@@ -105,6 +105,9 @@
    ============================================================ */
 :root {
   --radius: 0.75rem;
+  /* Signed scroll velocity in −1…1, written on <html> by
+     `useScrollVelocity`. Zero at rest; only `.scroll-skew` reads it. */
+  --scroll-v: 0;
 
   /* Brand palette (light) — a NEUTRAL near-white canvas with amber kept as
      the single accent.
@@ -1260,6 +1263,25 @@ body::-webkit-scrollbar-thumb:hover {
   }
   html:not(.dark) .hero-frame {
     box-shadow: 0 30px 80px -44px rgba(0, 0, 0, 0.28);
+  }
+
+  /* ------------------------------------------------
+     Scroll inertia.
+
+     `--scroll-v` is the reader's own velocity, signed and clamped. A page
+     that leans 1.4° into the direction of travel and settles when the hand
+     stops reads as a surface with mass; anything above ~2° reads as a bug,
+     which is why the hook clamps before this ever sees it. Only decorative
+     fields opt in — never copy, controls or anything a sentence is read
+     from. Reduced motion leaves the property at zero and the transform off.
+     ------------------------------------------------ */
+  .scroll-skew {
+    transform: skewX(calc(var(--scroll-v) * 1.4deg));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-skew {
+      transform: none;
+    }
   }
 
 

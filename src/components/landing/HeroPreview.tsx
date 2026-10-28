@@ -14,6 +14,8 @@ const DONE = "Study kit ready — 24 flashcards · 12 question prompts";
 /** A compact, looping version of the 5-step pipeline, used as the hero focal. */
 export default function HeroPreview() {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const sessionClockRef = useRef<HTMLSpanElement | null>(null);
+  const nextCardRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -61,19 +63,66 @@ export default function HeroPreview() {
       }
     };
 
+    /* The strip under the diagram keeps its own time. The pipeline above it
+       is a replay, so the two are deliberately independent: a run resetting
+       must not reset the session that says the app is running. */
+    let elapsed = 0;
+    let remaining = 12;
+    let clockTimer: number | undefined;
+    let cardTimer: number | undefined;
+
+    const paintClock = () => {
+      if (!sessionClockRef.current) return;
+      const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+      const seconds = String(elapsed % 60).padStart(2, "0");
+      sessionClockRef.current.textContent = `${minutes}:${seconds}`;
+    };
+    const paintCountdown = () => {
+      if (nextCardRef.current) nextCardRef.current.textContent = `${remaining}s`;
+    };
+    const startSession = () => {
+      if (clockTimer === undefined) {
+        clockTimer = window.setInterval(() => {
+          elapsed += 1;
+          paintClock();
+        }, 1000);
+      }
+      if (cardTimer === undefined) {
+        cardTimer = window.setInterval(() => {
+          remaining = remaining > 1 ? remaining - 1 : 12;
+          paintCountdown();
+        }, 1000);
+      }
+    };
+    const stopSession = () => {
+      if (clockTimer !== undefined) {
+        window.clearInterval(clockTimer);
+        clockTimer = undefined;
+      }
+      if (cardTimer !== undefined) {
+        window.clearInterval(cardTimer);
+        cardTimer = undefined;
+      }
+    };
+
     if (prefersReducedMotion()) {
       activate(-1);
+      if (sessionClockRef.current) sessionClockRef.current.textContent = "00:42";
+      if (nextCardRef.current) nextCardRef.current.textContent = "9s";
       return;
     }
 
+    let timeline: gsap.core.Timeline | null = null;
     const ctx = gsap.context(() => {
       gsap.set(nodes, { scale: 0.6, opacity: 0 });
       gsap.set(segments, { scaleX: 0, scaleY: 0 });
       const tl = gsap.timeline({
+        paused: true,
         repeat: -1,
         repeatDelay: 2.2,
         defaults: { ease: "power2.out" },
       });
+      timeline = tl;
       STEPS.forEach((_, i) => {
         tl.call(() => activate(i), [], ">-0.35");
         if (i > 0) {
@@ -97,7 +146,30 @@ export default function HeroPreview() {
       );
       tl.to({}, { duration: 1.6 });
     }, root);
-    return () => ctx.revert();
+
+    /* Nothing runs until the panel is actually on screen. It sits below the
+       first screen, so without this the loop has already played twice by the
+       time anyone sees it — and the session would be a clock ticking in an
+       empty room. */
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          startSession();
+          timeline?.play();
+        } else {
+          stopSession();
+          timeline?.pause();
+        }
+      },
+      { threshold: 0.2 },
+    );
+    observer.observe(root);
+
+    return () => {
+      observer.disconnect();
+      stopSession();
+      ctx.revert();
+    };
   }, []);
 
   return (
@@ -108,6 +180,7 @@ export default function HeroPreview() {
          inside a card. */
       className="relative overflow-hidden rounded-[10px] bg-[color-mix(in_srgb,var(--text-main)_3%,var(--panel))] p-5 sm:p-6"
       data-hero-fade
+      data-frame-inner
     >
       {/* The panel is a diagram, not a mocked-up application window.
 
@@ -158,6 +231,31 @@ export default function HeroPreview() {
       <p className="mt-4 text-center text-[13px] text-text-dim">
         Summary · 24 flashcards · 12 prompts
       </p>
+
+      {/* Two readouts that are actually live, not a "Live" pill claiming it.
+          The clock starts when the panel enters the viewport; the countdown
+          is the spaced-repetition schedule the product really runs. */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-[var(--panel-line)] pt-3 text-[11px] text-text-dim">
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full bg-[var(--brand)]"
+          />
+          Session{" "}
+          <span
+            ref={sessionClockRef}
+            className="tabular-nums text-foreground"
+          >
+            00:00
+          </span>
+        </span>
+        <span>
+          Next card in{" "}
+          <span ref={nextCardRef} className="tabular-nums text-foreground">
+            12s
+          </span>
+        </span>
+      </div>
     </div>
   );
 }

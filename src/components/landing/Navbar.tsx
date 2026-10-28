@@ -3,6 +3,7 @@ import { openCommandPalette } from "@/components/shared/CommandPalette";
 import { TransitionLink } from "@/components/shared/TransitionLink";
 import { useViewTransitionNavigate } from "@/lib/view-transitions";
 import { Search } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router";
 import { Logo } from "./Logo";
 import { MobileMenu } from "./MobileMenu";
@@ -36,6 +37,58 @@ const LINKS: { label: string; to: string }[] = [
   { label: "Feedback", to: "/feedback" },
   { label: "About", to: "/about" },
 ];
+
+/**
+ * The landing page's reading rule — one hairline under the header that fills
+ * as the page is read.
+ *
+ * Only on the marketing page: a dashboard has no "end", so a progress bar
+ * there would be measuring nothing a visitor cares about. The scroll work is
+ * rAF-throttled and writes a transform, so the header never re-renders while
+ * the page moves.
+ */
+function ReadingRule() {
+  const lineRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    const line = lineRef.current;
+    if (!line) return;
+    let frame = 0;
+
+    const paint = () => {
+      frame = 0;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const progress =
+        max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      line.style.transform = `scaleX(${progress.toFixed(4)})`;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+
+    paint();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 -bottom-px h-px overflow-hidden"
+    >
+      <span
+        ref={lineRef}
+        className="block h-full origin-left bg-[var(--brand)] opacity-45"
+        style={{ transform: "scaleX(0)" }}
+      />
+    </span>
+  );
+}
 
 export default function Navbar() {
   const { isAuthenticated } = useAuth();
@@ -129,6 +182,7 @@ export default function Navbar() {
           </MovingBorderButton>
         </div>
       </nav>
+      {pathname === "/" && <ReadingRule />}
     </header>
   );
 }
