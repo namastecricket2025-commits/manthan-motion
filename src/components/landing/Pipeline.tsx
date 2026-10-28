@@ -7,7 +7,6 @@ import {
 } from "@/lib/gsap";
 import { FileUp, ListChecks, Network, Layers, PackageCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { RevealWords } from "./RevealWords";
 import { useSpotlight } from "./use-spotlight";
 
 /**
@@ -186,10 +185,10 @@ export default function Pipeline() {
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center" data-reveal>
-          <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
+          <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
             One pipeline:{" "}
             <span className="gradient-text">five guided steps</span>
-          </RevealWords>
+          </h2>
           <p className="mt-4 text-base leading-relaxed text-text-dim">
             Keep scrolling — the cards glide as you go, from raw notes to a
             finished study kit.

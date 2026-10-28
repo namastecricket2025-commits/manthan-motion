@@ -1128,24 +1128,76 @@ body::-webkit-scrollbar-thumb:hover {
      contact under the product frame and from the sections' own motion. */
 
   /* ------------------------------------------------
-     The header's scroll indicator.
+     The distill stage (landing/DistillStage.tsx).
 
-     One amber hairline on the bottom edge of the fixed header, growing with
-     page progress (see `landing/Navbar.tsx`). It is the only element on the
-     page that is always moving while the reader moves, and it earns that by
-     saying something true: how much of the document is left. 1px, no glow, no
-     track behind it — the empty part of the line simply is not drawn.
+     One paragraph, read and reduced in front of the reader. The three beats
+     are stacked in the same box and swapped by the scroll trigger; the only
+     static CSS here is what they look like when they are NOT being scrubbed
+     (a narrow screen or reduced motion), where they stack instead.
      ------------------------------------------------ */
-  .nav-progress {
+  .distill-beat {
     position: absolute;
-    inset-inline: 0;
-    bottom: 0;
-    height: 1px;
-    background: var(--signal);
-    opacity: 0.85;
-    transform: scaleX(0);
-    transform-origin: 0 50%;
-    pointer-events: none;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0;
+  }
+  .distill-stage[data-static="true"] .distill-beat {
+    position: relative;
+    opacity: 1;
+  }
+
+  /* The wash: a highlight that grows across the sentence, left to right, as
+     the scrub reaches it. Drawn as a background rather than a marker element
+     so it wraps with the text and needs no measurement.
+
+     `box-decoration-break: clone` is what makes a wrapped sentence behave
+     like one continuous highlight instead of restarting its own background
+     on every line box. */
+  .distill-key {
+    background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--brand) 15%, transparent),
+      color-mix(in srgb, var(--brand) 15%, transparent)
+    );
+    background-repeat: no-repeat;
+    background-position: 0 0.12em;
+    background-size: 0% 1.4em;
+    border-radius: 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .distill-stage[data-static="true"] .distill-key {
+    background-size: 100% 1.4em;
+  }
+
+  /* The three beats, in the margin. The dot is the state; the label only
+     brightens with it, so the rail reads as a position on the pipeline
+     rather than as a nav. */
+  .distill-step {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--text-main) 40%, transparent);
+    transition: color 220ms linear;
+  }
+  .distill-step::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-main) 26%, transparent);
+    transition: background 220ms linear;
+  }
+  .distill-step[data-active="true"] {
+    color: var(--text-main);
+  }
+  .distill-step[data-active="true"]::before {
+    background: var(--brand);
   }
 
   /* ------------------------------------------------

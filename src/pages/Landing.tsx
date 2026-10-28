@@ -1,4 +1,5 @@
 import CtaSection from "@/components/landing/CtaSection";
+import DistillStage from "@/components/landing/DistillStage";
 import Features from "@/components/landing/Features";
 import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
@@ -369,6 +370,10 @@ export default function Landing() {
           <Hero />
           <Features />
           <Pipeline />
+          {/* The transformation itself, between the five steps and their
+              output: one real chapter read, reduced and handed back as cards.
+              Scrubbed by scroll, so it does exactly what the reader does. */}
+          <DistillStage />
           {/* The output, between "how it works" and the numbers: what the five
               steps were for, shown as four real artifacts. */}
           <KitShowcase />

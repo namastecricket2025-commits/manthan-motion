@@ -1,6 +1,5 @@
 import { gsap, prefersReducedMotion, revealConfig } from "@/lib/gsap";
 import { useLayoutEffect, useRef } from "react";
-import { RevealWords } from "./RevealWords";
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -195,10 +194,10 @@ export default function Stats() {
       className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 md:py-24"
     >
       <div data-reveal className="mx-auto max-w-2xl text-center">
-        <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
+        <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
           Numbers that <span className="gradient-text">matter</span> to your
           revision
-        </RevealWords>
+        </h2>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
           No vanity metrics — just the concrete facts of how Manthan turns your
           notes into a ready-to-revise study kit.

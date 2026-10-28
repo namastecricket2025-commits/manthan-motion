@@ -2,7 +2,6 @@ import { gsap, prefersReducedMotion, refreshOnLoad, revealConfig } from "@/lib/g
 import { cn } from "@/lib/utils";
 import { Check, FileText, Plus } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
-import { RevealWords } from "./RevealWords";
 import { useSpotlight } from "./use-spotlight";
 
 /**
@@ -370,10 +369,10 @@ export default function Features() {
       className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-20 md:py-28"
     >
       <div className="mx-auto max-w-2xl text-center" data-reveal>
-        <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
+        <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
           Everything you need to go from{" "}
           <span className="gradient-text">notes</span> to study material
-        </RevealWords>
+        </h2>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
           One upload queue, one guided pipeline, and a study kit that matches how
           you revise — summaries when you're scanning, flashcards when you're

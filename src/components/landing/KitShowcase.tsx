@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { ArrowRight, BookOpen, Check, FileText, GitBranch, Layers, ListChecks } from "lucide-react";
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router";
-import { RevealWords } from "./RevealWords";
 import { useSpotlight } from "./use-spotlight";
 
 /**
@@ -325,10 +324,10 @@ export default function KitShowcase() {
   return (
     <section id="kit" ref={ref} className="relative mx-auto max-w-6xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 md:py-24">
       <div className="mx-auto max-w-2xl text-center" data-reveal>
-        <RevealWords className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
+        <h2 className="text-fade font-display text-[30px] font-normal leading-[1.12] tracking-[-0.03em] text-foreground sm:text-[38px] md:text-[46px]">
           What actually lands in your{" "}
           <span className="gradient-text">dashboard</span>
-        </RevealWords>
+        </h2>
         <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-dim">
           Not a promise about output — the output. Four artifacts from one
           chapter of Class 10 Physics, exactly as the pipeline writes them.
