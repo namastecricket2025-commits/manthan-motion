@@ -98,6 +98,9 @@ const CARDS = [
 
 type Fragment = {
   word: string;
+  /** Which of the three kept ideas the word came from — and therefore which
+   *  artefact ink it carries. */
+  ink: number;
   /** Resting position and shape, all stable across reloads. */
   x: number;
   y: number;
@@ -107,6 +110,13 @@ type Fragment = {
   slot: number;
   rot: number;
 };
+
+/** The three artefact inks, in the order the kept sentences appear. These are
+ *  the same tokens the dashboard uses for each artefact kind, so the canvas is
+ *  a legend rather than confetti: amber was the summary, teal the flashcards,
+ *  plum the question. Both themes carry their own values, and the palette is
+ *  already tuned to sit beside the brand rather than fight it. */
+const INK_TOKENS = ["--kind-summary", "--kind-flashcards", "--kind-quiz"];
 
 function mulberry32(seed: number) {
   return () => {
@@ -119,19 +129,25 @@ function mulberry32(seed: number) {
 }
 
 /** Only the sentences that were kept appear on the canvas — the words you
- *  watched being chosen are the words that go into the kit. */
-const KEY_WORDS = SOURCE.filter((sentence) => sentence.key)
-  .flatMap((sentence) => sentence.text.split(/\s+/))
-  .map((word) => word.replace(/[^A-Za-z0-9=/\-.]/g, ""))
-  .filter((word) => word.length > 3);
+ *  watched being chosen are the words that go into the kit — and each word
+ *  keeps the ink of the idea it belonged to. */
+const KEY_WORDS = SOURCE.filter((sentence) => sentence.key).flatMap(
+  (sentence, ink) =>
+    sentence.text
+      .split(/\s+/)
+      .map((word) => word.replace(/[^A-Za-z0-9=/\-.]/g, ""))
+      .filter((word) => word.length > 3)
+      .map((word) => ({ word, ink })),
+);
 
 const FRAGMENTS: Fragment[] = (() => {
   const rnd = mulberry32(20261028);
-  return Array.from({ length: 88 }, (_, index) => ({
-    word: KEY_WORDS[index % KEY_WORDS.length],
+  return Array.from({ length: 104 }, (_, index) => ({
+    word: KEY_WORDS[index % KEY_WORDS.length].word,
+    ink: KEY_WORDS[index % KEY_WORDS.length].ink,
     x: rnd(),
     y: rnd(),
-    size: 9 + Math.round(rnd() * 3),
+    size: 10 + Math.round(rnd() * 4),
     edge: rnd(),
     slot: rnd(),
     rot: (rnd() - 0.5) * 0.45,
@@ -165,9 +181,13 @@ function paintStage(canvas: HTMLCanvasElement, stage: HTMLElement, progress: num
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  // The canvas carries `text-[var(--brand)]`, so amber comes from the token
-  // rather than a literal that would be wrong in the other theme.
-  const ink = getComputedStyle(canvas).color;
+  // Inks come from the artefact tokens, not literals, so the field is correct
+  // in both themes and matches the cards it is building.
+  const style = getComputedStyle(canvas);
+  const inks = INK_TOKENS.map(
+    (token) => style.getPropertyValue(token).trim() || "#e8a410",
+  );
+  const scale = Math.min(1.28, Math.max(0.86, width / 1080));
   const box = stage.getBoundingClientRect();
   const targets = Array.from(stage.querySelectorAll<HTMLElement>("[data-converge]"))
     .map((el) => {
@@ -216,13 +236,13 @@ function paintStage(canvas: HTMLCanvasElement, stage: HTMLElement, progress: num
 
     // Faint while the sheet is being read, brightest as the kit is written,
     // then gone — the words have become the cards.
-    const alpha = (0.07 + 0.2 * Math.min(1, progress * 2.4)) * (1 - 0.95 * eased);
+    const alpha = (0.09 + 0.22 * Math.min(1, progress * 2.4)) * (1 - 0.95 * eased);
     if (alpha <= 0.004) continue;
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = ink;
-    ctx.font = `${fragment.size}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.fillStyle = inks[fragment.ink] ?? inks[0];
+    ctx.font = `${Math.round(fragment.size * scale)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
     ctx.translate(x, y);
     ctx.rotate(fragment.rot);
     ctx.fillText(fragment.word, 0, 0);
@@ -389,11 +409,11 @@ export default function DistillStage() {
           isStatic ? "" : "flex h-[100svh] min-h-[560px] items-center overflow-hidden",
         )}
       >
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-6">
           <div
             className={cn(
               "grid gap-5",
-              !isStatic && "md:grid-cols-[minmax(0,158px)_minmax(0,1fr)] md:gap-8",
+              !isStatic && "md:grid-cols-[minmax(0,184px)_minmax(0,1fr)] md:gap-10",
             )}
           >
             {!isStatic && (
@@ -415,20 +435,20 @@ export default function DistillStage() {
               data-static={isStatic ? "true" : undefined}
               className={cn(
                 "distill-stage relative",
-                isStatic ? "space-y-4" : "h-[clamp(400px,50svh,480px)]",
+                isStatic ? "space-y-4" : "h-[clamp(470px,58svh,620px)]",
               )}
             >
               {!isStatic && (
                 <canvas
                   ref={canvasRef}
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 h-full w-full text-[var(--brand)]"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
                 />
               )}
 
               {/* 1 — the source */}
               <article data-beat="read" className="distill-beat">
-                <div className="glass-panel card-surface mx-auto w-full max-w-[620px] p-5 sm:p-6">
+                <div className="glass-panel card-surface mx-auto w-full max-w-[720px] p-6 sm:p-8">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--panel-line)] pb-3">
                     <span className="inline-flex items-center gap-2 text-[12px] text-foreground">
                       <FileText className="h-3.5 w-3.5 text-[var(--brand)]" />
@@ -438,7 +458,7 @@ export default function DistillStage() {
                       pages 168–171
                     </span>
                   </div>
-                  <p className="mt-4 space-y-2.5 text-[13px] leading-relaxed text-text-dim sm:text-[13.5px]">
+                  <p className="mt-5 space-y-3 text-[14px] leading-relaxed text-text-dim sm:text-[15px]">
                     {SOURCE.map((sentence) => (
                       <span key={sentence.text} className="block">
                         <span
@@ -451,7 +471,7 @@ export default function DistillStage() {
                       </span>
                     ))}
                   </p>
-                  <p className="mt-4 flex items-center gap-2 border-t border-[var(--panel-line)] pt-3 text-[11px] text-text-dim">
+                  <p className="mt-5 flex items-center gap-2 border-t border-[var(--panel-line)] pt-3.5 text-[12px] text-text-dim">
                     <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--brand)]" />
                     Reading — five paragraphs in, three carry marks.
                   </p>
@@ -460,25 +480,25 @@ export default function DistillStage() {
 
               {/* 2 — what survived the read */}
               <article data-beat="distil" className="distill-beat">
-                <div className="glass-panel card-surface mx-auto w-full max-w-[560px] p-5 sm:p-6">
+                <div className="glass-panel card-surface mx-auto w-full max-w-[680px] p-6 sm:p-8">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--panel-line)] pb-3">
                     <span className="text-[12px] text-foreground">Ranked outline</span>
                     <span className="text-[10px] uppercase tracking-[0.16em] text-text-dim">
                       17 ideas in · 3 kept
                     </span>
                   </div>
-                  <ul className="mt-4 space-y-3.5">
+                  <ul className="mt-5 space-y-4">
                     {OUTLINE.map((row) => (
                       <li key={row.idea} data-row>
                         <div className="flex items-start justify-between gap-3">
-                          <span className="text-[13px] leading-relaxed text-foreground">
+                          <span className="text-[14px] leading-relaxed text-foreground sm:text-[14.5px]">
                             {row.idea}
                           </span>
-                          <span className="shrink-0 font-display text-[11px] tabular-nums text-text-dim">
+                          <span className="shrink-0 font-display text-[12px] tabular-nums text-text-dim">
                             {row.page}
                           </span>
                         </div>
-                        <span className="mt-2 block h-[3px] w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)]">
+                        <span className="mt-2.5 block h-[4px] w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)]">
                           <span
                             className="block h-full rounded-full bg-[var(--brand)] opacity-80"
                             style={{ width: `${row.weight}%` }}
@@ -487,7 +507,7 @@ export default function DistillStage() {
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-4 border-t border-[var(--panel-line)] pt-3 text-[11px] text-text-dim">
+                  <p className="mt-5 border-t border-[var(--panel-line)] pt-3.5 text-[12px] text-text-dim">
                     Ranked by how much of the chapter depends on each idea — the
                     other fourteen were restatement.
                   </p>
@@ -496,21 +516,21 @@ export default function DistillStage() {
 
               {/* 3 — what is handed back */}
               <article data-beat="deliver" className="distill-beat">
-                <div className="mx-auto w-full max-w-[660px]">
-                  <div className="grid gap-3 sm:grid-cols-3">
+                <div className="mx-auto w-full max-w-[860px]">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     {CARDS.map((card) => (
                       <div
                         key={card.tag}
                         data-converge
-                        className="rounded-[12px] border border-[var(--panel-line)] bg-[var(--panel)] p-3.5"
+                        className="rounded-[12px] border border-[var(--panel-line)] bg-[var(--panel)] p-4 sm:p-5"
                       >
-                        <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
+                        <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
                           {card.tag}
                         </span>
-                        <p className="mt-2 text-[12.5px] font-medium leading-snug text-foreground">
+                        <p className="mt-2.5 text-[13.5px] font-medium leading-snug text-foreground sm:text-[14px]">
                           {card.front}
                         </p>
-                        <p className="mt-2 border-t border-[var(--panel-line)] pt-2 text-[12px] leading-relaxed text-text-dim">
+                        <p className="mt-2.5 border-t border-[var(--panel-line)] pt-2.5 text-[12.5px] leading-relaxed text-text-dim sm:text-[13px]">
                           {card.back}
                         </p>
                         <span className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] text-text-dim">
@@ -520,7 +540,7 @@ export default function DistillStage() {
                       </div>
                     ))}
                   </div>
-                  <p className="mt-3.5 text-center text-[11px] text-text-dim">
+                  <p className="mt-4 text-center text-[12px] text-text-dim">
                     Delivered — three artifacts, every line keeping the page it
                     was read from.
                   </p>
