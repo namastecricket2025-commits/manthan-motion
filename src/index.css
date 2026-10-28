@@ -1278,6 +1278,14 @@ body::-webkit-scrollbar-thumb:hover {
   .scroll-skew {
     transform: skewX(calc(var(--scroll-v) * 1.4deg));
   }
+  /* A canvas redrawn every frame has to stay on its own layer while it is
+     being skewed, or each scroll frame re-rasterises the whole field. Text is
+     deliberately left un-promoted: a layer would soften 12px type in motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    canvas.scroll-skew {
+      will-change: transform;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .scroll-skew {
       transform: none;

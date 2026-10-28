@@ -1,29 +1,26 @@
 import { useEffect } from "react";
 
 /**
- * Publishes the reader's scroll velocity as `--scroll-v` on `<html>`, a signed
- * number in −1…1 that CSS can lean against.
+ * Publishes the reader's scroll velocity to the fields that lean with it.
  *
- * This is the cheap half of "the page has weight": nothing here moves on its
- * own, and nothing is scheduled. A wheel notch or a flick pushes the value up,
- * it decays within a few frames once the hand stops, and every element that
- * opts in (`.scroll-skew`) settles back to rest with it. Because it is a CSS
- * custom property, the value can drive transforms without React re-rendering
- * a single component.
+ * The value is written INLINE on each `.scroll-skew` element, never on
+ * `<html>`. A custom property on the root invalidates style for the whole
+ * document on every frame, which is exactly enough to turn a smooth scroll
+ * into a visibly janky one; the same value on two leaf nodes invalidates two
+ * small subtrees. That is the difference between this costing nothing and
+ * being the most expensive thing on the page.
  *
- * Lenis moves the native scroll position, so reading `window.scrollY` is
- * enough — no coupling to the smoothing instance, and the hook still behaves
- * on pages without it. Reduced motion opts out entirely, and the property is
- * reset on unmount so a stale lean can never survive a route change.
+ * Reads `window.scrollY`, so it works with Lenis (which moves the native
+ * scroll position) and without it. Targets are re-queried once per gesture,
+ * not once per frame, so an element that mounts late still leans. Reduced
+ * motion opts out and the property is cleared on unmount.
  */
 export function useScrollVelocity(enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const root = document.documentElement;
-    root.style.setProperty("--scroll-v", "0");
-
+    let nodes: HTMLElement[] = [];
     let lastY = window.scrollY;
     let lastTime = performance.now();
     let target = 0;
@@ -31,20 +28,31 @@ export function useScrollVelocity(enabled = true) {
     let frame = 0;
     let idle = 0;
 
+    const release = () => {
+      nodes.forEach((el) => el.style.removeProperty("--scroll-v"));
+      nodes = [];
+    };
+
     const paint = () => {
       frame = 0;
       value += (target - value) * 0.14;
       if (target === 0 && Math.abs(value) < 0.002) {
         value = 0;
-        root.style.setProperty("--scroll-v", "0");
+        release();
         return;
       }
-      root.style.setProperty("--scroll-v", value.toFixed(3));
+      const text = value.toFixed(3);
+      nodes.forEach((el) => el.style.setProperty("--scroll-v", text));
       frame = requestAnimationFrame(paint);
     };
 
     const kick = () => {
-      if (!frame) frame = requestAnimationFrame(paint);
+      if (frame) return;
+      // One query per gesture, not per frame.
+      nodes = Array.from(
+        document.querySelectorAll<HTMLElement>(".scroll-skew"),
+      );
+      frame = requestAnimationFrame(paint);
     };
 
     const onScroll = () => {
@@ -73,7 +81,10 @@ export function useScrollVelocity(enabled = true) {
       window.removeEventListener("scroll", onScroll);
       window.clearTimeout(idle);
       if (frame) cancelAnimationFrame(frame);
-      root.style.setProperty("--scroll-v", "0");
+      document
+        .querySelectorAll<HTMLElement>(".scroll-skew")
+        .forEach((el) => el.style.removeProperty("--scroll-v"));
+      nodes = [];
     };
   }, [enabled]);
 }

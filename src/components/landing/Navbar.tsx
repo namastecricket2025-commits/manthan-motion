@@ -54,10 +54,19 @@ function ReadingRule() {
     const line = lineRef.current;
     if (!line) return;
     let frame = 0;
+    let max = 0;
 
+    /* Measure the scrollable height when it can actually change, not on every
+       scroll frame: reading `scrollHeight` before writing a transform is the
+       read-write pair that forces layout. */
+    const measure = () => {
+      max = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight,
+      );
+    };
     const paint = () => {
       frame = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
       const progress =
         max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
       line.style.transform = `scaleX(${progress.toFixed(4)})`;
@@ -65,13 +74,21 @@ function ReadingRule() {
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(paint);
     };
+    const remeasure = () => {
+      measure();
+      onScroll();
+    };
 
+    measure();
     paint();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", remeasure);
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(document.body);
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", remeasure);
+      observer.disconnect();
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
