@@ -1,5 +1,6 @@
 import { useLabTheme } from "@/components/lab/lab-theme";
 import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
+import CellModelViewer from "@/components/lab/bio/CellModelViewer";
 import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
 import RespiratoryModelViewer from "@/components/lab/bio/RespiratoryModelViewer";
 import ExcretoryModelViewer from "@/components/lab/bio/ExcretoryModelViewer";
@@ -1274,7 +1275,7 @@ export function BiologyVectorLab() {
             exit="exit"
             transition={transition}
           >
-            <VectorDiagram diagram={active} />
+            <CellModelViewer kind={plant ? "plant" : "animal"} theme={theme} />
           </motion.div>
         )}
       </AnimatePresence>
