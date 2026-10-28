@@ -69,6 +69,7 @@ export default function CtaSection() {
           <div data-reveal className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <MovingBorderButton
               to={isAuthenticated ? "/dashboard" : AUTH_URL}
+              viewTransition
               innerClassName="px-7 py-3.5 text-sm"
             >
               Generate study material

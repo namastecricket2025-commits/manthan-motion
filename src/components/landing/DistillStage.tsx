@@ -1,6 +1,6 @@
 import { gsap, prefersReducedMotion, refreshOnLoad } from "@/lib/gsap";
 import { cn } from "@/lib/utils";
-import { FileText } from "lucide-react";
+import { ArrowUp, FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -77,18 +77,23 @@ const CARDS = [
     front: "A concave mirror has a radius of curvature of 20 cm. Its focal length is",
     back: "f = R/2 = 10 cm, in front of the mirror.",
     cite: "p. 169",
+    /* Which lines of the sheet this artifact was built from. The index is
+       into SOURCE above; the summary is made of all three. */
+    sources: [2],
   },
   {
     tag: "Question",
     front: "The image formed by a plane mirror is",
     back: "virtual and erect — the rays only appear to meet behind it.",
     cite: "p. 171",
+    sources: [3],
   },
   {
     tag: "Summary",
     front: "Three ideas carry this chapter",
     back: "the reflection law · the mirror formula · virtual images",
     cite: "p. 168–171",
+    sources: [0, 2, 3],
   },
 ];
 
@@ -258,7 +263,14 @@ export default function DistillStage() {
   const railRef = useRef<HTMLOListElement | null>(null);
   const progressRef = useRef(0);
   const redrawRef = useRef<() => void>(() => {});
+  const jumpRef = useRef<(progress: number) => void>(() => {});
+  /** Cancels a provenance wash still in flight (fast repeated clicks). */
+  const washRef = useRef<(() => void) | null>(null);
   const [isStatic, setIsStatic] = useState(false);
+  /** The card whose provenance is currently marked, if any. */
+  const [inspected, setInspected] = useState<number | null>(null);
+
+  useEffect(() => () => washRef.current?.(), []);
 
   /* A pinned stage needs a viewport tall enough to hold three beats and a
      screen wide enough to put the rail beside them. Below that — or with
@@ -372,15 +384,111 @@ export default function DistillStage() {
           { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.2 },
           8.1,
         );
+
+      /* Clicking a card asks the sheet a question, so the answer has to be
+         on screen: put the reader back at the read beat, where the timeline
+         has already washed the kept lines. ScrollTrigger owns the scroll
+         position here (the stage is pinned), so the target is derived from
+         its measured start/end rather than from the viewport. */
+      jumpRef.current = (progress: number) => {
+        const trigger = tl.scrollTrigger;
+        if (!trigger) return;
+        const top = trigger.start + (trigger.end - trigger.start) * progress;
+        if (prefersReducedMotion()) {
+          window.scrollTo({ top, behavior: "auto" });
+          return;
+        }
+        /* Lenis is running on this page; a native smooth scroll would fight
+           its rAF loop, so hand the target to it when it is available. */
+        if (window.__lenis) window.__lenis.scrollTo(top, { duration: 0.8 });
+        else window.scrollTo({ top, behavior: "smooth" });
+      };
     }, root);
 
     const stopRefresh = refreshOnLoad();
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      jumpRef.current = () => {};
       ctx.revert();
       stopRefresh();
     };
   }, [isStatic]);
+
+  /**
+   * Replay the sheet's wash on the cited lines once the reader has been taken
+   * back to them — the highlight is meant to arrive as the sentence does, not
+   * to be sitting there finished before they look at it. Delayed past the
+   * rewind (and staggered when an artifact came from several lines); killed on
+   * cleanup and on a second click so two washes can never overlap.
+   */
+  const replayWash = (lines: number[]) => {
+    washRef.current?.();
+    washRef.current = null;
+    if (prefersReducedMotion()) return;
+
+    const nodes = lines
+      .map((line) =>
+        document.querySelector<HTMLElement>(`[data-sentence="${line}"]`),
+      )
+      .filter((node): node is HTMLElement => Boolean(node));
+    if (!nodes.length) return;
+
+    const tweens = nodes.map((node, order) =>
+      gsap.fromTo(
+        node,
+        { backgroundSize: "0% 1.4em" },
+        {
+          backgroundSize: "100% 1.4em",
+          duration: 0.55,
+          delay: (isStatic ? 0.2 : 0.5) + order * 0.12,
+          ease: "power2.out",
+          /* No `overwrite`: the scrub timeline owns this property, and the
+             next scroll must still be able to rewind the wash. */
+        },
+      ),
+    );
+    washRef.current = () => {
+      tweens.forEach((tween) => tween.kill());
+      /* A killed pre-delay tween leaves the line at 0% — settle it back to
+         fully washed rather than leaving an invisible highlight behind. */
+      nodes.forEach((node) => {
+        node.style.backgroundSize = "100% 1.4em";
+      });
+    };
+  };
+
+  /**
+   * Show where a delivered artifact came from. The card names one or more
+   * source sentences; those lines get the stronger wash, and the reader is
+   * taken back to them. Clicking the same card again unmarks it.
+   */
+  const inspect = (index: number) => {
+    if (inspected === index) {
+      setInspected(null);
+      return;
+    }
+    setInspected(index);
+    const card = CARDS[index];
+    if (!card) return;
+
+    replayWash(card.sources);
+
+    if (!isStatic) {
+      jumpRef.current(0.26);
+      return;
+    }
+
+    // Stacked layout: the sheet is in normal flow, so bring the first line
+    // into view instead of driving a timeline that does not exist.
+    const line = document.querySelector<HTMLElement>(
+      `[data-sentence="${card.sources[0]}"]`,
+    );
+    if (!line) return;
+    const top = line.getBoundingClientRect().top + window.scrollY - 96;
+    if (prefersReducedMotion()) window.scrollTo({ top, behavior: "auto" });
+    else if (window.__lenis) window.__lenis.scrollTo(top, { duration: 0.8 });
+    else window.scrollTo({ top, behavior: "smooth" });
+  };
 
   return (
     <section
@@ -459,9 +567,16 @@ export default function DistillStage() {
                     </span>
                   </div>
                   <p className="mt-5 space-y-3 text-[14px] leading-relaxed text-text-dim sm:text-[15px]">
-                    {SOURCE.map((sentence) => (
+                    {SOURCE.map((sentence, index) => (
                       <span key={sentence.text} className="block">
                         <span
+                          data-sentence={index}
+                          data-cited={
+                            inspected !== null &&
+                            CARDS[inspected].sources.includes(index)
+                              ? "true"
+                              : undefined
+                          }
                           className={cn(
                             sentence.key && "distill-key text-foreground",
                           )}
@@ -471,9 +586,14 @@ export default function DistillStage() {
                       </span>
                     ))}
                   </p>
-                  <p className="mt-5 flex items-center gap-2 border-t border-[var(--panel-line)] pt-3.5 text-[12px] text-text-dim">
+                  <p
+                    aria-live="polite"
+                    className="mt-5 flex items-center gap-2 border-t border-[var(--panel-line)] pt-3.5 text-[12px] text-text-dim"
+                  >
                     <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--brand)]" />
-                    Reading — five paragraphs in, three carry marks.
+                    {inspected === null
+                      ? "Reading — five paragraphs in, three carry marks."
+                      : `Source of your ${CARDS[inspected].tag.toLowerCase()} · ${CARDS[inspected].sources.length > 1 ? `${CARDS[inspected].sources.length} lines marked` : "the line is marked"}.`}
                   </p>
                 </div>
               </article>
@@ -518,31 +638,44 @@ export default function DistillStage() {
               <article data-beat="deliver" className="distill-beat">
                 <div className="mx-auto w-full max-w-[860px]">
                   <div className="grid gap-4 sm:grid-cols-3">
-                    {CARDS.map((card) => (
-                      <div
+                    {CARDS.map((card, index) => (
+                      <button
+                        type="button"
                         key={card.tag}
                         data-converge
-                        className="rounded-[12px] border border-[var(--panel-line)] bg-[var(--panel)] p-4 sm:p-5"
+                        data-inspected={inspected === index ? "true" : undefined}
+                        aria-pressed={inspected === index}
+                        onClick={() => inspect(index)}
+                        className={cn(
+                          "group rounded-[12px] border border-[var(--panel-line)] bg-[var(--panel)] p-4 text-left transition-colors hover:border-[var(--brand-line)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)] sm:p-5",
+                          inspected === index && "border-[var(--brand-line)]",
+                        )}
                       >
-                        <span className="text-[10.5px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
+                        <span className="block text-[10.5px] font-medium uppercase tracking-[0.16em] text-[var(--brand)]">
                           {card.tag}
                         </span>
-                        <p className="mt-2.5 text-[13.5px] font-medium leading-snug text-foreground sm:text-[14px]">
+                        <span className="mt-2.5 block text-[13.5px] font-medium leading-snug text-foreground sm:text-[14px]">
                           {card.front}
-                        </p>
-                        <p className="mt-2.5 border-t border-[var(--panel-line)] pt-2.5 text-[12.5px] leading-relaxed text-text-dim sm:text-[13px]">
-                          {card.back}
-                        </p>
-                        <span className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] text-text-dim">
-                          <FileText className="h-3 w-3 shrink-0 text-[var(--brand)]" />
-                          {card.cite}
                         </span>
-                      </div>
+                        <span className="mt-2.5 block border-t border-[var(--panel-line)] pt-2.5 text-[12.5px] leading-relaxed text-text-dim sm:text-[13px]">
+                          {card.back}
+                        </span>
+                        <span className="mt-3 flex items-center justify-between gap-2 text-[10px] text-text-dim">
+                          <span className="inline-flex items-center gap-1.5">
+                            <FileText className="h-3 w-3 shrink-0 text-[var(--brand)]" />
+                            {card.cite}
+                          </span>
+                          <span className="inline-flex items-center gap-1 transition-colors group-hover:text-foreground">
+                            {inspected === index ? "Source marked" : "See the line"}
+                            <ArrowUp className="h-3 w-3" />
+                          </span>
+                        </span>
+                      </button>
                     ))}
                   </div>
                   <p className="mt-4 text-center text-[12px] text-text-dim">
-                    Delivered — three artifacts, every line keeping the page it
-                    was read from.
+                    Delivered — every line keeps the page it was read from.
+                    Click a card to see its line.
                   </p>
                 </div>
               </article>

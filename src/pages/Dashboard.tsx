@@ -242,7 +242,7 @@ export default function Dashboard() {
         >
           <div className="flex min-w-0 flex-col gap-7">
             <div className={collapsed ? "flex justify-center" : "flex items-center justify-between gap-2"}>
-              {!collapsed && <Logo />}
+              {!collapsed && <Logo markClassName="vt-mark" />}
               <SidebarCollapseButton
                 collapsed={collapsed}
                 onToggle={() => setCollapsed((value) => !value)}
@@ -285,7 +285,7 @@ export default function Dashboard() {
 
         {/* ---- Mobile top bar ---- */}
         <header className="app-mobile-bar sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
-          <Logo />
+          <Logo markClassName="vt-mark" />
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

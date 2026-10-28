@@ -1,7 +1,9 @@
 import { useAuth } from "@/hooks/use-auth";
 import { openCommandPalette } from "@/components/shared/CommandPalette";
+import { TransitionLink } from "@/components/shared/TransitionLink";
+import { useViewTransitionNavigate } from "@/lib/view-transitions";
 import { Search } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useLocation } from "react-router";
 import { Logo } from "./Logo";
 import { MobileMenu } from "./MobileMenu";
 import { MovingBorderButton } from "./MovingBorderButton";
@@ -37,7 +39,7 @@ const LINKS: { label: string; to: string }[] = [
 
 export default function Navbar() {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const go = useViewTransitionNavigate();
   const { pathname, search, hash } = useLocation();
   /* Signing in from a deep page should come back to it, not to the dashboard.
      The landing page is the exception: there is nothing to return to. */
@@ -53,16 +55,17 @@ export default function Navbar() {
           <Link
             to="/"
             aria-label="Manthan home"
-            onClick={() => {
+            onClick={(event) => {
               if (pathname === "/") {
                 window.scrollTo({ top: 0, behavior: "smooth" });
               } else {
-                navigate("/");
+                event.preventDefault();
+                go("/");
               }
             }}
             className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--signal)]"
           >
-            <Logo markClassName="h-6 w-6" />
+            <Logo markClassName="vt-mark h-6 w-6" />
           </Link>
 
           <ul className="hidden items-center gap-1 md:flex">
@@ -110,15 +113,16 @@ export default function Navbar() {
             <ThemeToggle />
           </div>
           {!isAuthenticated && (
-            <Link
+            <TransitionLink
               to={authUrl}
               className="hidden rounded-md px-3 py-2 text-sm text-text-dim transition-colors hover:text-foreground md:block"
             >
               Sign in
-            </Link>
+            </TransitionLink>
           )}
           <MovingBorderButton
             to={isAuthenticated ? "/dashboard" : authUrl}
+            viewTransition
             innerClassName="px-4 py-2 text-[13px]"
           >
             {isAuthenticated ? "Dashboard" : "Get started"}

@@ -1,6 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { LogoMark } from "@/components/landing/Logo";
+import { TransitionLink } from "@/components/shared/TransitionLink";
+import { useViewTransitionNavigate } from "@/lib/view-transitions";
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,7 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 
 interface AuthProps {
@@ -74,7 +76,7 @@ function Field({
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
+  const go = useViewTransitionNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
     searchParams.get("returnTo"),
@@ -107,14 +109,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       setNameStep(true);
       return;
     }
-    if (!nameStep) navigate(redirect, { replace: true });
+    if (!nameStep) go(redirect, { replace: true });
   }, [
     authLoading,
     isAuthenticated,
     user,
     nameStep,
     inRecovery,
-    navigate,
+    go,
     redirect,
   ]);
 
@@ -159,7 +161,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         });
         if (signInError) throw signInError;
       }
-      navigate(redirect, { replace: true });
+      go(redirect, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Sign-in failed.";
       setError(
@@ -224,19 +226,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       </div>
 
       <main className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-md flex-col items-center justify-center px-4 py-10">
-        <Link
+        <TransitionLink
           to="/"
           className="mb-7 flex flex-col items-center gap-2 text-center"
           aria-label="Manthan home"
         >
-          <LogoMark className="h-14 w-14" />
+          <LogoMark className="vt-mark h-14 w-14" />
           <span className="font-display text-2xl font-bold tracking-tight">
             Manthan
           </span>
           <span className="text-xs font-medium tracking-wide text-text-dim">
             Study material, distilled.
           </span>
-        </Link>
+        </TransitionLink>
 
         <div className="glass-panel w-full rounded-3xl p-5 sm:p-7">
           {inRecovery ? (
@@ -262,7 +264,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   return;
                 }
                 setRecoveryDone(true);
-                navigate(redirect, { replace: true });
+                go(redirect, { replace: true });
               }}
               className="flex flex-col gap-4"
             >
@@ -340,7 +342,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 setBusy(true);
                 await supabase.auth.updateUser({ data: { name } });
                 setBusy(false);
-                navigate(redirect, { replace: true });
+                go(redirect, { replace: true });
               }}
               className="flex flex-col gap-4"
             >

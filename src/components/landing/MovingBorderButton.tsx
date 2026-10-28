@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useViewTransitionNavigate } from "@/lib/view-transitions";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
@@ -37,6 +38,7 @@ export function MovingBorderButton({
   type = "button",
   disabled,
   loading = false,
+  viewTransition = false,
   ariaLabel,
 }: {
   to?: string;
@@ -51,9 +53,12 @@ export function MovingBorderButton({
   disabled?: boolean;
   /** In-flight marker: the disc spins fast and the button stops looking dead. */
   loading?: boolean;
+  /** Take this button's destination through a View Transition. */
+  viewTransition?: boolean;
   ariaLabel?: string;
 }) {
   const rootRef = useRef<HTMLElement | null>(null);
+  const go = useViewTransitionNavigate();
 
   // Registry membership + hover wiring is the same for every element kind.
   useEffect(() => {
@@ -102,7 +107,17 @@ export function MovingBorderButton({
         to={to}
         ref={setRef as never}
         className={cn("moving-border block w-fit", loading && "is-busy", className)}
-        onClick={onClick}
+        onClick={(event) => {
+          onClick?.();
+          if (!viewTransition || event.defaultPrevented) return;
+          if (event.button !== 0) return;
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+          }
+          if ((target && target !== "_self") || rel?.includes("external")) return;
+          event.preventDefault();
+          go(to);
+        }}
         aria-label={ariaLabel}
         target={target}
         rel={rel}

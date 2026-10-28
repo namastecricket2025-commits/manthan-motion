@@ -2,6 +2,15 @@ import { gsap, ScrollTrigger } from "@/lib/gsap";
 import Lenis from "lenis";
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    /** The landing page's Lenis instance, when smooth scrolling is running.
+     *  Exposed so scroll-driven UI can hand Lenis a target instead of
+     *  fighting its rAF loop with a native smooth scroll. */
+    __lenis?: Lenis;
+  }
+}
+
 /**
  * Lenis smooth scrolling, synced into GSAP's ticker so ScrollTrigger's
  * scrubbing stays frame-accurate with the smoothed scroll position.
@@ -28,6 +37,8 @@ export function useSmoothScroll(enabled = true) {
       syncTouch: false,
       touchMultiplier: 1.4,
     });
+
+    window.__lenis = lenis;
 
     // Frame-accurate sync: Lenis.raf receives GSAP's delta time (seconds → ms).
     lenis.on("scroll", ScrollTrigger.update);
@@ -57,6 +68,7 @@ export function useSmoothScroll(enabled = true) {
     document.addEventListener("click", onAnchorClick);
 
     return () => {
+      if (window.__lenis === lenis) delete window.__lenis;
       document.removeEventListener("click", onAnchorClick);
       gsap.ticker.remove(raf);
       lenis.destroy();

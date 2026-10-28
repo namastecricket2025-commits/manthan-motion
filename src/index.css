@@ -1172,6 +1172,19 @@ body::-webkit-scrollbar-thumb:hover {
     background-size: 100% 1.4em;
   }
 
+  /* A cited line. When a reader asks a delivered card where it came from, the
+     sheet answers: the sentence that produced it keeps a deeper tint and a
+     rule under the text, so it is still marked after the scroll wash has
+     already played. */
+  .distill-key[data-cited="true"] {
+    background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--brand) 26%, transparent),
+      color-mix(in srgb, var(--brand) 26%, transparent)
+    );
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--brand) 62%, transparent);
+  }
+
   /* The three beats, in the margin. The dot is the state; the label only
      brightens with it, so the rail reads as a position on the pipeline
      rather than as a nav. */
@@ -2802,6 +2815,42 @@ html[data-theme="dark"] .how-card:hover .card-tile {
      home indicator, not under it. */
   .feedback-prompt {
     bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ------------------------------------------------
+   Route transitions (landing → auth → workspace).
+
+   The mark is the one element that survives a route change. It is named on
+   each page — the landing header, the auth card, the dashboard sidebar — so
+   the browser measures it before and after and interpolates the difference:
+   one object travelling and resizing, not two pages cutting. Everything else
+   crossfades underneath it.
+
+   A name must be unique among rendered elements, which is why pages add
+   `.vt-mark` to exactly one visible logo, never to the component by default.
+   ------------------------------------------------ */
+.vt-mark {
+  view-transition-name: manthan-mark;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+}
+
+::view-transition-group(manthan-mark) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Belt and braces: the JS skips the transition under reduced motion, and this
+   makes sure a transition started elsewhere still resolves instantly. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

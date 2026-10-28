@@ -399,7 +399,12 @@ createRoot(document.getElementById("root")!).render(
       </ToolbarErrorBoundary>
       <ConvexBridge>
         <SettingsProvider>
-        <BrowserRouter>
+        {/* `useTransitions={false}` makes a route change a synchronous commit.
+            Route transitions (see src/lib/view-transitions.ts) need the new
+            DOM to exist inside the View Transitions callback; a
+            React.startTransition update would still be pending when the
+            browser takes its "after" snapshot. */}
+        <BrowserRouter useTransitions={false}>
           {/* The plan gate lives inside the router: its lock prompt offers a
               jump to /pricing, and it wraps every route so any workspace can
               gate a click. */}
