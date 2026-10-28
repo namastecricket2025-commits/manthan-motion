@@ -160,42 +160,6 @@ function Hero() {
           },
         });
       }
-
-      /* The handoff: the frame is not simply scrolled away, it is travelled
-         into. Over its exit it widens toward the viewport and its corners
-         square off, so the last thing the hero does is push the product at
-         the reader instead of cutting to the next section. No pin, no fade:
-         the page keeps its own length and the frame stays a real object as it
-         leaves, which is the difference between a shot and a scroll-jack. */
-      const frame = root.querySelector<HTMLElement>("[data-frame-handoff]");
-      if (frame) {
-        const plate = frame.querySelector<HTMLElement>(".hero-frame");
-        const inner = frame.querySelector<HTMLElement>("[data-frame-inner]");
-        const handoff = gsap.timeline({
-          scrollTrigger: {
-            trigger: frame,
-            start: "top 85%",
-            end: "bottom 40%",
-            scrub: 0.6,
-            invalidateOnRefresh: true,
-          },
-        });
-        handoff.to(frame, {
-          scale: () =>
-            Math.min(
-              1.3,
-              Math.max(1, (window.innerWidth - 24) / frame.offsetWidth),
-            ),
-          duration: 0.72,
-          ease: "none",
-        });
-        if (plate) {
-          handoff.to(plate, { borderRadius: 4, duration: 0.72, ease: "none" }, 0);
-        }
-        if (inner) {
-          handoff.to(inner, { borderRadius: 2, duration: 0.72, ease: "none" }, 0);
-        }
-      }
     }, root);
     return () => ctx.revert();
   }, []);
@@ -378,11 +342,9 @@ function Hero() {
       <div data-hero-fade className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 sm:pb-24">
         {/* The frame answers the pointer (see `TiltFrame`): it leans toward
             the cursor while the surface inside slides the other way. */}
-        <div data-frame-handoff>
-          <TiltFrame className="hero-frame">
-            <HeroPreview />
-          </TiltFrame>
-        </div>
+        <TiltFrame className="hero-frame">
+          <HeroPreview />
+        </TiltFrame>
       </div>
     </div>
   );
