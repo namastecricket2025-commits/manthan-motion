@@ -145,6 +145,8 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
         g.scene.traverse((o) => {
           const mesh = o as THREE.Mesh;
           if (!mesh.isMesh) return;
+          // heart.glb ships without normals; without them the lit material renders black
+          mesh.geometry.computeVertexNormals();
           const old = mesh.material as THREE.MeshStandardMaterial;
           const mat = new THREE.MeshPhysicalMaterial({ map: old.map, normalMap: old.normalMap, roughness: 0.5, metalness: 0, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 0.8 });
           old.dispose();
