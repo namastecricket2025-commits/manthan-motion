@@ -15,6 +15,7 @@ import { NarrationPlayer } from "@/components/mathlab/NarrationPlayer";
 import { useNarration, type NarrationLine } from "@/components/mathlab/useNarration";
 import { GraphingCalculator } from "@/components/mathlab/GraphingCalculator";
 import { ScientificCalculator } from "@/components/mathlab/ScientificCalculator";
+import { ConstructionBench } from "@/components/mathlab/ConstructionBench";
 import { FormulaSheet } from "@/components/mathlab/FormulaSheet";
 import { MathHistory } from "@/components/mathlab/MathHistory";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
@@ -42,6 +43,7 @@ import {
   Camera,
   Check,
   Code,
+  Compass,
   Copy,
   CornerDownLeft,
   FileDown,
@@ -79,6 +81,7 @@ const DETAIL_OPTIONS = [
 const VIEW_TABS = [
   { id: "solve", label: "Solve", icon: PenLine },
   { id: "graph", label: "Graph", icon: LineChart },
+  { id: "construct", label: "Geometry", icon: Compass },
   { id: "tools", label: "Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
   { id: "practice", label: "Practice", icon: Sparkles },
@@ -1108,6 +1111,10 @@ export function MathLab() {
         ) : view === "graph" ? (
           <section className="mathlab-card mathlab-viewcard">
             <GraphingCalculator />
+          </section>
+        ) : view === "construct" ? (
+          <section className="mathlab-card mathlab-viewcard">
+            <ConstructionBench />
           </section>
         ) : view === "tools" ? (
           <section className="mathlab-card mathlab-viewcard">

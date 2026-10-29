@@ -4,6 +4,7 @@ import CellModelViewer from "@/components/lab/bio/CellModelViewer";
 import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
 import RespiratoryModelViewer from "@/components/lab/bio/RespiratoryModelViewer";
 import ExcretoryModelViewer from "@/components/lab/bio/ExcretoryModelViewer";
+import NerveStage from "@/components/lab/bio/NerveStage";
 import { useSpringTransition, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type ReactNode } from "react";
@@ -44,9 +45,9 @@ type Part = {
   flag: [number, number];
 };
 
-/** The four plates: the cell stays a vector schematic, the three organ
+/** The cell and the nervous system stay vector schematics; the three organ
     systems render in the shared Three.js stage (OrganStage). */
-type Plate = "cell" | OrganSystem;
+type Plate = "cell" | "nervous" | OrganSystem;
 
 type Diagram = {
   id: Plate;
@@ -1196,6 +1197,13 @@ export function BiologyVectorLab() {
       ),
       parts: excretoryParts(),
     },
+    {
+      id: "nervous",
+      label: "Nervous System",
+      blurb: "A neuron and a reflex loop you can fire",
+      viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
+      parts: [],
+    },
   ];
 
   const active = diagrams.find((diagram) => diagram.id === plate) ?? diagrams[0];
@@ -1251,7 +1259,9 @@ export function BiologyVectorLab() {
             exit="exit"
             transition={transition}
           >
-            {plate === "heart" ? (
+            {plate === "nervous" ? (
+              <NerveStage label={active.label} blurb={active.blurb} />
+            ) : plate === "heart" ? (
               <HeartModelViewer label={active.label} blurb={active.blurb} theme={theme} />
             ) : plate === "respiratory" ? (
               <RespiratoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />

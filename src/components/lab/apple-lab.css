@@ -1386,3 +1386,11 @@ html[data-comfort="on"] .apple-lab[data-lab-theme="light"]::after {
     border-radius: 999px;
   }
 }
+
+/* The nerve plate's numbered markers are SVG groups. A default focus ring on
+   an SVG <g> is invisible in every current browser, so the ring is drawn on
+   the marker's own disc instead. */
+.nerve-marker:focus-visible circle:nth-of-type(2) {
+  stroke: var(--lab-ink);
+  stroke-width: 2;
+}

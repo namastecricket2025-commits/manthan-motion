@@ -11,6 +11,7 @@ import {
   type ElementData,
 } from "@/components/lab/periodic-data";
 import Atom3D from "@/components/lab/Atom3D";
+import MoleBench from "@/components/lab/MoleBench";
 import { LabPicker, type LabPickerOption } from "@/components/lab/lab-picker";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
@@ -20,8 +21,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-react";
 
 /**
- * Chemistry — a frosted periodic table, a live Bohr model, a titration bench
- * and a reaction stage, in four sub-tabs.
+ * Chemistry — a frosted periodic table, a live Bohr model, a titration bench,
+ * a reaction stage and a balancing bench, in five sub-tabs.
  *
  * The periodic table is a glass grid: each tile carries a 1px border tinted by
  * its category, all 18 groups share the panel's width, and selecting an element
@@ -36,13 +37,14 @@ import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-rea
 
 /* ---- Sub-tab model -------------------------------------------------- */
 
-type SubTab = "table" | "bohr" | "titration" | "reactions";
+type SubTab = "table" | "bohr" | "titration" | "reactions" | "balance";
 
 const SUBTABS: Array<{ id: SubTab; label: string }> = [
   { id: "table", label: "Periodic Table" },
   { id: "bohr", label: "Atomic Models" },
   { id: "titration", label: "Titration" },
   { id: "reactions", label: "Reactions" },
+  { id: "balance", label: "Balancing" },
 ];
 
 /* ---- Category colours ------------------------------------------------
@@ -2387,6 +2389,7 @@ export function ChemistryGlassLab() {
           {tab === "bohr" && <AtomicModelsTab theme={theme} />}
           {tab === "titration" && <TitrationTab />}
           {tab === "reactions" && <ReactionsTab />}
+          {tab === "balance" && <MoleBench />}
         </motion.div>
       </AnimatePresence>
     </div>
