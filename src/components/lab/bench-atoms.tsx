@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+
 /**
  * The small parts every physics bench is assembled from.
  *
@@ -88,6 +91,12 @@ export function Questions({
   columns?: 1 | 2;
   className?: string;
 }) {
+  /* Folded to one line by default. Every bench answers a handful of questions
+     and a screen of prose under a working bench reads as more to learn before
+     you can use it; the count says the answers are here, and one click opens
+     them. Nothing is hidden from a reader who wants them. */
+  const [open, setOpen] = useState(false);
+
   return (
     <div
       className={[
@@ -97,25 +106,40 @@ export function Questions({
         .filter(Boolean)
         .join(" ")}
     >
-      <p className="apple-lab-micro">{title}</p>
-      <div
-        className={
-          columns === 2
-            ? "mt-2 grid gap-x-5 gap-y-2.5 sm:grid-cols-2"
-            : "mt-2 grid gap-y-2.5"
-        }
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 text-left"
       >
-        {items.map((entry) => (
-          <div key={entry.q}>
-            <p className="text-[11.5px] font-semibold text-[var(--lab-ink)]">
-              {entry.q}
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
-              {entry.a}
-            </p>
-          </div>
-        ))}
-      </div>
+        <span className="apple-lab-micro">
+          {title} · {items.length}
+        </span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          style={{ color: "var(--lab-ink-micro)" }}
+        />
+      </button>
+      {open ? (
+        <div
+          className={
+            columns === 2
+              ? "mt-2 grid gap-x-5 gap-y-2.5 sm:grid-cols-2"
+              : "mt-2 grid gap-y-2.5"
+          }
+        >
+          {items.map((entry) => (
+            <div key={entry.q}>
+              <p className="text-[11.5px] font-semibold text-[var(--lab-ink)]">
+                {entry.q}
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
+                {entry.a}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -273,7 +273,12 @@ export default function Titration() {
     setAuto(false);
   };
 
-  const level = 252 - (vol / 60) * 238;
+  /* The scale runs downward — 0 at the top of the tube, 60 at the bottom — so a
+     full burette has its meniscus on 0 and the surface moves DOWN as titrant
+     leaves. This was inverted (the meniscus sat at 60 when the burette was
+     full, and at the wrong mark for every reading in between), which put the
+     liquid surface somewhere else from the number being reported. */
+  const level = 8 + Math.min(1, vol / 60) * 238;
 
   const acidFormula = weak ? "CH₃COOH" : "HCl";
   const flaskLabel = mode === "acid-into-base" ? `NaOH · ${C0.toFixed(2)} M` : `${acidFormula} · ${C0.toFixed(2)} M`;
@@ -324,7 +329,7 @@ export default function Titration() {
               </linearGradient>
             </defs>
             <rect x="42" y="8" width="36" height="252" rx="5" fill="url(#bur-glass)" stroke="rgba(148,163,184,0.4)" strokeWidth="1" />
-            <rect x="44" y={level} width="32" height={252 - level + 4} rx="3" fill="rgba(103,232,249,0.18)" />
+            <rect x="44" y={level} width="32" height={Math.max(0, 260 - level)} rx="3" fill="rgba(103,232,249,0.18)" />
             <line x1="44" y1={level} x2="76" y2={level} stroke="rgba(165,243,252,0.6)" strokeWidth="1.4" />
             {Array.from({ length: 13 }, (_, i) => {
               const y = 8 + (i * 238) / 12;
