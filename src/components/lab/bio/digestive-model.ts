@@ -50,12 +50,23 @@ export function toScene(p: Pt3) {
 
 /** Oesophagus: from the pharynx cut down to the cardia on the lesser curve. */
 const OESO: Pt3[] = [
-  [0.0, 0.615, 0.036],
-  [0.002, 0.585, 0.036],
-  [0.004, 0.55, 0.038],
-  [0.012, 0.522, 0.042],
+  [0.0, 0.612, 0.036],
+  [0.001, 0.596, 0.036],
+  [0.003, 0.575, 0.037],
+  [0.005, 0.552, 0.038],
+  [0.009, 0.53, 0.04],
+  [0.014, 0.512, 0.042],
   [0.02, 0.5, 0.044],
 ];
+
+/**
+ * Oesophageal calibre. A real oesophagus is not a pipe: it is widest just
+ * under the pharynx, narrows through the thoracic stretch, and opens again at
+ * the cardia. The rings are peristalsis, not decoration.
+ */
+const OESO_R = (t: number) => 0.0132 - 0.0034 * Math.sin(Math.PI * Math.min(1, t * 1.1)) + 0.0018 * t;
+const oesoSkin = (t: number, angle: number) =>
+  1 + 0.035 * Math.sin(t * Math.PI * 9) + 0.012 * Math.cos(angle * 3 + t * 4);
 
 /**
  * The stomach's greater curvature, fundus → body → antrum → pylorus.
@@ -95,45 +106,58 @@ const GALL: Pt3[] = [
 
 /** The pylorus the small intestine's own mesh begins at. */
 export const SI_START: Pt3 = [-0.018, 0.366, 0.042];
-/** The ileum's end, where the colon's caecum is. */
-const ILEUM_END: Pt3 = [-0.055, 0.118, 0.05];
 
 /**
- * The coils. The path stays inside the small intestine's own bounding box
- * (x −0.06…0.13, y 0.10…0.37), alternating depth so the run reads as a volume
- * and not as a zigzag on one plane.
+ * The route through the gut is anchored to the HRA model's own named segments:
+ * each centroid is the middle of that piece of tube, so the path is inside the
+ * lumen by construction rather than by eye. The two coiled pieces (jejunum,
+ * ileum) are the exception — a coil's centroid falls in the gap between its
+ * loops — so those get a tight swirl sized to the piece's own bounding box.
+ *
+ * The point is not to reproduce six metres of tubing; it is that the food is
+ * always in the gut the student is looking at, in a direction that reads.
  */
-function ileum(): Pt3[] {
-  const points: Pt3[] = [SI_START];
-  const rows = 5;
-  for (let row = 0; row < rows; row += 1) {
-    const y = 0.33 - row * 0.045;
-    const z = row % 2 === 0 ? 0.075 : 0.1;
-    const from = row === 0 ? 0.02 : row % 2 === 0 ? -0.035 : 0.1;
-    const to = from > 0.02 ? -0.035 : 0.1;
-    points.push([from, y, z], [(from + to) / 2, y + 0.004, z + 0.008], [to, y - 0.006, z]);
+function swirl(center: Pt3, rx: number, ry: number, turns: number, count: number, phase: number): Pt3[] {
+  const out: Pt3[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const t = i / (count - 1);
+    const angle = phase + t * turns * Math.PI * 2;
+    const radius = 1 - 0.45 * t;
+    out.push([
+      center[0] + Math.cos(angle) * rx * radius,
+      center[1] + Math.sin(angle) * ry * radius * 0.85,
+      center[2] + Math.sin(angle * 1.5 + phase) * 0.012,
+    ]);
   }
-  points.push([-0.05, 0.135, 0.085], ILEUM_END);
-  return points;
+  return out;
 }
+
+const SI_ROUTE: Pt3[] = [
+  SI_START,
+  [-0.016, 0.353, 0.049],
+  [-0.001, 0.352, 0.066],
+  [-0.036, 0.323, 0.022],
+  [-0.009, 0.289, 0.028],
+  [0.034, 0.321, 0.037],
+  ...swirl([0.051, 0.279, 0.06], 0.044, 0.05, 2.2, 14, 2.4),
+  ...swirl([0.012, 0.168, 0.071], 0.036, 0.04, 1.6, 10, 0.6),
+  [-0.016, 0.151, 0.043],
+  [-0.044, 0.17, 0.061],
+];
 
 /** Caecum → ascending → transverse → descending → sigmoid → rectum. */
 const COLON: Pt3[] = [
-  [-0.055, 0.118, 0.05],
-  [-0.095, 0.115, 0.03],
-  [-0.1, 0.2, 0.02],
-  [-0.098, 0.3, 0.012],
-  [-0.07, 0.36, 0.02],
-  [-0.02, 0.385, 0.03],
-  [0.05, 0.396, 0.03],
-  [0.1, 0.38, 0.015],
-  [0.118, 0.32, -0.005],
-  [0.118, 0.22, -0.02],
-  [0.105, 0.15, -0.035],
-  [0.07, 0.085, -0.05],
-  [0.03, 0.03, -0.062],
-  [0.004, -0.005, -0.07],
-  [0.001, -0.03, -0.074],
+  [-0.055, 0.147, 0.07],
+  [-0.066, 0.146, 0.07],
+  [-0.078, 0.263, 0.046],
+  [-0.063, 0.323, 0.059],
+  [0.022, 0.314, 0.069],
+  [0.099, 0.372, 0.036],
+  [0.098, 0.235, 0.035],
+  [0.007, 0.083, 0.034],
+  [0.004, 0.05, -0.01],
+  [-0.002, 0.037, -0.049],
+  [0.0, 0.008, -0.058],
 ];
 
 /* ------------------------------------------------------------------ */
@@ -290,11 +314,12 @@ function buildFood(): FoodRig {
     transparent: true,
     depthWrite: false,
   });
-  /* 11 mm radius: a chewed bolus, small enough to sit inside the oesophagus
-     (23 mm across) rather than swallowing it. */
-  const bolus = new THREE.Mesh(lumpy(0.011, 1.7), bolusMaterial);
+  /* Sizes are lumen sizes, not marker sizes: a chewed bolus is about 17 mm
+     across and the oesophagus is 23, so the food fits the tube carrying it
+     instead of swallowing it. */
+  const bolus = new THREE.Mesh(lumpy(0.0085, 1.7), bolusMaterial);
 
-  const chyme = cloud(16, 0.038, 0.008, 0.4, "#a58447", 0.9);
+  const chyme = cloud(9, 0.014, 0.004, 0.4, "#a58447", 0.9);
 
   const nutrientMaterial = new THREE.MeshStandardMaterial({
     color: "#e8c98a",
@@ -304,11 +329,11 @@ function buildFood(): FoodRig {
     depthWrite: false,
   });
   const nutrients = new THREE.Group();
-  for (let i = 0; i < 12; i += 1) {
+  for (let i = 0; i < 6; i += 1) {
     const a = i * 2.399;
-    const r = 0.008 + 0.022 * Math.sqrt(i / 12);
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), nutrientMaterial);
-    dot.position.set(Math.cos(a) * r, Math.sin(a) * r * 0.6, Math.sin(a * 1.9) * 0.012);
+    const r = 0.004 + 0.009 * Math.sqrt(i / 6);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0026, 8, 6), nutrientMaterial);
+    dot.position.set(Math.cos(a) * r, Math.sin(a) * r * 0.6, Math.sin(a * 1.9) * 0.006);
     nutrients.add(dot);
   }
 
@@ -319,11 +344,14 @@ function buildFood(): FoodRig {
     transparent: true,
     depthWrite: false,
   });
+  /* Two beads, 12 mm across, 21 mm long: the anal canal is about 25 mm, and the
+     old three 28 mm spheres hung outside the rectum, which is what made the
+     last stop look fake. */
   const waste = new THREE.Group();
-  for (let i = 0; i < 3; i += 1) {
-    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.014, 14, 10), wasteMaterial);
-    bead.scale.set(1, 0.9, 0.9);
-    bead.position.y = (i - 1) * 0.021;
+  for (let i = 0; i < 2; i += 1) {
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.0062, 14, 10), wasteMaterial);
+    bead.scale.set(1, 0.92, 0.92);
+    bead.position.y = (i - 0.5) * 0.0115;
     waste.add(bead);
   }
 
@@ -356,7 +384,7 @@ function buildFood(): FoodRig {
       /* The chyme cloud breathes without wandering: the offset is computed
          from the rest position every frame, never accumulated. */
       chyme.children.forEach((child, i) => {
-        child.position.y = (child.userData.y as number) + Math.sin(t * 2.2 + i) * 0.003;
+        child.position.y = (child.userData.y as number) + Math.sin(t * 2.2 + i) * 0.0012;
       });
     },
   };
@@ -414,25 +442,22 @@ export function buildTract(): Tract {
   };
 
   /* Oesophagus. Two layers, as the wall really is, so the tube has a lip at
-     the pharynx cut instead of ending in mid-air. */
-  add(
-    new THREE.Mesh(sweep(OESO, 0.0115, { tubular: 46, radial: 18 }), organMaterial("#a97562", 0.6, 0.25)),
+     the pharynx cut instead of ending in mid-air. */  add(
+    new THREE.Mesh(
+      sweep(OESO, OESO_R, { tubular: 96, radial: 28, wobble: oesoSkin }),
+      organMaterial("#a97562", 0.58, 0.28),
+    ),
     [1],
   );
-  add(
-    new THREE.Mesh(
-      sweep(
-  [
-    [0.0, 0.62, 0.036],
-    [0.0, 0.6, 0.036],
-  ],
-        0.0155,
-        { tubular: 6, radial: 22 },
-      ),
-      organMaterial("#8e5f50", 0.55, 0.3),
-    ),
-    [0, 1],
+  /* The cut at the pharynx, closed with a rounded lip. A tube that simply stops
+     in mid-air is what made this read as a pipe; an atlas cuts and rims it. */
+  const pharynxRim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0134, 0.0024, 10, 30),
+    organMaterial("#8e5f50", 0.52, 0.35),
   );
+  pharynxRim.position.set(0, 0.6125, 0.036);
+  pharynxRim.rotation.x = Math.PI / 2;
+  add(pharynxRim, [0, 1]);
 
   /* The stomach. The wobble is rugae: six soft folds that fade out at both
      sphincters, which is what keeps the fundus smooth and the pylorus tight. */
@@ -544,13 +569,13 @@ const ROUTES: Pt3[][] = [
   ],
   OESO,
   STOMACH,
-  [...ileum()],
+  SI_ROUTE,
   COLON,
   [
-    [0.02, 0.02, -0.06],
-    [0.008, -0.002, -0.068],
-    [0.002, -0.022, -0.073],
-    [0.0, -0.034, -0.074],
+    [0.004, 0.05, -0.01],
+    [-0.002, 0.037, -0.049],
+    [0.0, 0.018, -0.055],
+    [0.0, 0.004, -0.058],
   ],
 ];
 
@@ -559,6 +584,13 @@ export const STAGE_CURVES = ROUTES.map((points, index) =>
     ? curveOf(points, 0.12)
     : curveOf(points, index === 3 ? 0.12 : 0.2),
 );
+
+/**
+ * Food size at each stop, relative to life size. The gut narrows as it goes, so
+ * a bolus that fits the oesophagus has to shrink again for the terminal colon
+ * and the anal canal — otherwise it hangs outside the organ it is inside.
+ */
+export const STAGE_FOOD_SIZE = [1, 1, 1.15, 0.8, 0.68, 0.58];
 
 /** Where the camera looks for each stop, and how close it gets. */
 export const STAGE_CAMERA: Array<{ at: Pt3; distance: number; azimuth: number }> = [
