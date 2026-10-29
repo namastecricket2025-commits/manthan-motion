@@ -13,11 +13,20 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * route is a real SVG path and the dot is `getPointAtLength` along it, so the
  * signal cannot drift off the fibre it is supposed to be travelling on.
  *
+ * Both figures are drawn as plates rather than as icons. The neuron is a
+ * tapering dendritic arbor, an axon hillock, a segmented sheath and a terminal
+ * arbor of five boutons; the reflex is a skin section, a dorsal root ganglion,
+ * a spinal-cord cross-section with its own butterfly of grey matter, and a
+ * muscle spindle. Numbers sit on leaders, the way they would on a printed
+ * figure, and the notes beside them use the space a real figure leaves for
+ * prose: the questions the drawing raises are answered in type, not in boxes.
+ *
  * The one number that is not drawn to scale is time: a myelinated axon carries
  * an impulse at 120 m/s and a bare one at 2 m/s, so the animation is compressed
- * to a second or two and the *readout* carries the true latency. That split is
- * stated on the panel rather than hidden, because a diagram that pretends to be
- * real-time teaches the wrong thing about the thing it is drawing.
+ * to a second or two and the *readout* carries the true latency. Myelinated
+ * travel is stepped between nodes, because that is what saltatory conduction
+ * looks like — the impulse is rebuilt at the gaps, not carried under the
+ * sheath.
  *
  * The impulse is the only warm colour on the plate. Everything structural is
  * ink at three weights, which is what keeps a moving amber dot legible without
@@ -25,7 +34,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  */
 
 const W = 760;
-const H = 420;
+const H = 432;
 
 const INK = "var(--lab-ink)";
 const SIGNAL = "var(--lab-diagram-amber)";
@@ -35,10 +44,13 @@ const ink = (alpha: number) =>
 
 type Mode = "neuron" | "reflex";
 
+/* The route the impulse follows. It starts on a dendrite, passes through the
+   soma, runs the axon and ends on a bouton — the visible fibres are drawn
+   separately so each can be dimmed on its own. */
 const NEURON_ROUTE =
-  "M 110 150 C 142 166 172 190 206 208 L 596 212 L 636 212";
+  "M 96 150 C 136 164 176 190 204 228 L 250 228 L 596 228 C 624 224 648 204 664 186";
 const REFLEX_ROUTE =
-  "M 96 296 C 112 246 168 184 240 160 C 292 142 342 132 410 132 C 470 132 500 172 548 220 C 578 250 600 274 630 296";
+  "M 104 288 C 132 250 186 196 250 176 C 296 164 330 158 356 158 C 372 156 382 172 386 190 C 394 214 410 238 430 246 C 448 262 462 280 478 290 C 506 302 548 300 576 294 L 602 292";
 
 type Part = { id: string; label: string; note: string };
 
@@ -46,32 +58,32 @@ const NEURON_PARTS: Part[] = [
   {
     id: "dendrites",
     label: "Dendrites",
-    note: "The receiving branches. One neuron can carry thousands of these, and each one collects a small input from another cell.",
+    note: "The receiving branches. A single neuron can carry thousands of them, and each one collects a small input from another cell. They taper as they divide, which is why the tips are the thinnest strokes on the plate.",
   },
   {
     id: "soma",
     label: "Cell body",
-    note: "The soma adds up every input arriving at the dendrites. If the total crosses the threshold, the neuron fires — all of it, or none of it.",
+    note: "The soma adds up every input arriving at the dendrites. If the total crosses the threshold, the neuron fires — all of it, or none of it. The nucleus sits inside, and the axon leaves from the cone-shaped hillock on its right.",
   },
   {
     id: "axon",
     label: "Axon",
-    note: "One long fibre leaving the soma. The impulse travels down it without fading, because the membrane regenerates the signal as it goes.",
+    note: "One long fibre leaving the soma. The impulse travels down it without fading, because the membrane rebuilds the signal as it goes. The first stretch is bare even when the rest is myelinated.",
   },
   {
     id: "myelin",
     label: "Myelin sheath",
-    note: "Fatty insulation wrapped around the axon. The impulse jumps from one gap to the next instead of crawling along every patch of membrane — up to sixty times faster.",
+    note: "Fatty insulation wrapped around the axon. The membrane under it cannot fire, so the impulse is rebuilt only at the gaps — up to sixty times faster than a bare fibre, for the same fibre and the same distance.",
   },
   {
     id: "node",
     label: "Node of Ranvier",
-    note: "A bare gap between two myelin sheaths. The signal is rebuilt here, so the jump does not lose strength between nodes.",
+    note: "A bare gap between two myelin sheaths. The signal is regenerated here at full amplitude, so the jump between nodes loses nothing. The gaps are spaced by the sheath, not by the impulse.",
   },
   {
     id: "synapse",
     label: "Synapse",
-    note: "The junction with the next cell. There is a gap here, so the electrical impulse becomes a chemical message — then becomes electrical again.",
+    note: "The junction with the next cell. There is a gap here, so the electrical impulse becomes a chemical message and then becomes electrical again. One axon branches to make many of these contacts, not one.",
   },
 ];
 
@@ -79,37 +91,170 @@ const REFLEX_PARTS: Part[] = [
   {
     id: "receptor",
     label: "Receptor",
-    note: "Sensors in the skin detect the pin and start an impulse. This is the input end of the loop.",
+    note: "Free nerve endings in the skin. The twigs drawn here are branches of one ending, not separate sensors. They respond to a stimulus strong enough to threaten tissue and start an impulse — the input end of the loop, and the one place on the fibre that is bare.",
+  },
+  {
+    id: "ganglion",
+    label: "Dorsal root ganglion",
+    note: "The swelling on the incoming fibre. Sensory neurons keep their cell bodies out here, not inside the cord, and their fibre runs unbroken from skin to spinal cord — so no synapse is needed on the way in.",
   },
   {
     id: "sensory",
     label: "Sensory neuron",
-    note: "Carries the impulse inward, to the spinal cord. Its cell body sits in a ganglion just outside the cord.",
+    note: "Carries the impulse inward to the dorsal horn of the cord. It is a single fibre with its cell body in the ganglion, which is why the signal reaches the cord without being relayed first.",
   },
   {
     id: "cord",
     label: "Spinal cord",
-    note: "The relay. Its own interneuron connects the incoming fibre straight to the outgoing one — the brain is informed afterwards, not asked first.",
+    note: "The relay. Its own interneuron connects the incoming fibre straight to the outgoing one, inside the butterfly of grey matter. The brain is informed afterwards, not asked first.",
   },
   {
     id: "motor",
     label: "Motor neuron",
-    note: "Carries the answer back out to the muscle, on the opposite side of the cord from the incoming signal.",
+    note: "Carries the answer back out through the ventral root to the muscle, on the opposite side of the cord from the incoming signal. Its cell body sits inside the grey matter, unlike the sensory neuron's.",
   },
   {
     id: "muscle",
     label: "Muscle",
-    note: "Contracts. By the time the brain registers the pain, the hand has already moved — which is the entire point of a reflex.",
+    note: "Contracts. By the time the brain registers the pain, the hand has already moved — which is the entire point of a reflex. The spindle shortens a little when the impulse lands.",
   },
 ];
 
-/** True latency, in milliseconds, for the route drawn on the plate. */
-function latency(mode: Mode, myelinated: boolean) {
-  const metres = mode === "neuron" ? 1 : 1.4;
-  const speed = myelinated ? 120 : 2;
-  const synapse = mode === "reflex" ? 5 : 0.5;
-  return (metres / speed) * 1000 + synapse;
+/** Route length, fibre speed and the number of synapses it has to cross. */
+function routeOf(mode: Mode) {
+  return mode === "neuron"
+    ? { metres: 1, synapses: 1 }
+    : { metres: 1.4, synapses: 3 };
 }
+
+const SYNAPSE_MS = 0.7;
+
+function latency(mode: Mode, myelinated: boolean) {
+  const { metres, synapses } = routeOf(mode);
+  const speed = myelinated ? 120 : 2;
+  return (metres / speed) * 1000 + synapses * SYNAPSE_MS;
+}
+
+/**
+ * Saltatory travel: the impulse rests at a node, hops to the next, rests
+ * again. `p` is progress along the myelinated stretch, `nodes` the number of
+ * hops. The 14% hold at each end is what makes the jump read as a jump rather
+ * than as a stutter.
+ */
+function hop(p: number, nodes: number) {
+  const span = 1 / nodes;
+  const index = Math.min(nodes - 1, Math.floor(p / span));
+  const local = (p - index * span) / span;
+  const eased =
+    local < 0.14 ? 0 : local > 0.72 ? 1 : (local - 0.14) / 0.58;
+  return (index + eased) / nodes;
+}
+
+/**
+ * A dendritic arbor, generated once at module load. Hand-drawing sixty
+ * branches produces either a starburst or a scribble; a seeded generator with
+ * a taper gives the same figure on every load and reads like a real cell.
+ */
+type Stroke = { d: string; w: number; o: number };
+
+function growArbor(cx: number, cy: number): Stroke[] {
+  let seed = 0x5eed;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const out: Stroke[] = [];
+
+  const grow = (
+    x: number,
+    y: number,
+    angle: number,
+    len: number,
+    width: number,
+    opacity: number,
+    depth: number,
+  ) => {
+    const nx = x + Math.cos(angle) * len;
+    const ny = y + Math.sin(angle) * len;
+    const bend = (rnd() - 0.5) * len * 0.55;
+    const mx = (x + nx) / 2 - Math.sin(angle) * bend;
+    const my = (y + ny) / 2 + Math.cos(angle) * bend;
+    out.push({
+      d: `M${x.toFixed(1)} ${y.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${nx.toFixed(1)} ${ny.toFixed(1)}`,
+      w: width,
+      o: opacity,
+    });
+    if (depth === 0) return;
+    const children = depth === 3 ? 2 : rnd() > 0.72 ? 3 : 2;
+    for (let i = 0; i < children; i += 1) {
+      const spread = 0.3 + rnd() * 0.22;
+      grow(
+        nx,
+        ny,
+        angle + (i - (children - 1) / 2) * spread + (rnd() - 0.5) * 0.14,
+        len * (0.6 + rnd() * 0.16),
+        Math.max(0.55, width * 0.64),
+        opacity * 0.82,
+        depth - 1,
+      );
+    }
+  };
+
+  [116, 144, 172, 200, 228, 256].forEach((degrees) => {
+    const angle = (degrees * Math.PI) / 180;
+    grow(
+      cx + Math.cos(angle) * 30,
+      cy + Math.sin(angle) * 32,
+      angle,
+      42 + rnd() * 9,
+      2,
+      0.5,
+      3,
+    );
+  });
+
+  return out;
+}
+
+const ARBOR = growArbor(206, 228);
+
+const NEURON_QUESTIONS = [
+  {
+    q: "Why does the impulse appear to jump?",
+    a: "Myelin is a sheath the membrane cannot fire through. The impulse is rebuilt only at the bare gaps between sheaths, so it crosses each insulated stretch in one step. Remove the sheath and every patch of membrane has to fire in turn: 2 m/s instead of 120.",
+  },
+  {
+    q: "Why five terminal boutons?",
+    a: "One axon ends in a terminal arbor — often hundreds of boutons, each on a different cell. Five are drawn. The count is a choice of the drawing, not a property of the neuron, and the same is true of the number of sheaths.",
+  },
+  {
+    q: "Does the signal weaken on the way?",
+    a: "No. It is not a current leaking along a wire: each node rebuilds the impulse at full amplitude. All-or-none applies to the whole length, which is why a metre of axon delivers what it started with.",
+  },
+  {
+    q: "Why is the animation not real time?",
+    a: "A metre of myelinated axon takes about nine milliseconds. At real speed the dot would be gone before you saw it, so the travel is slowed down and the real time is carried in the panel.",
+  },
+];
+
+const REFLEX_QUESTIONS = [
+  {
+    q: "Why doesn't the brain decide?",
+    a: "The whole circuit sits in the cord: sensory fibre, interneuron, motor fibre. It answers in about fourteen milliseconds. The copy sent up to the brain arrives after the hand has already moved.",
+  },
+  {
+    q: "Why is there a swelling on the sensory fibre?",
+    a: "That is the dorsal root ganglion, where sensory neurons keep their cell bodies — outside the cord. Their fibre runs unbroken from skin to cord, so the signal is not relayed on the way in.",
+  },
+  {
+    q: "What does myelin buy a reflex?",
+    a: "Time: about fourteen milliseconds instead of seven hundred. The loop still works without it, but slowly — demyelinating disease slows exactly this, and the reflex that protects you arrives late.",
+  },
+  {
+    q: "Why only one muscle?",
+    a: "A withdrawal uses a handful of muscles and relaxes their opposites. One spindle is drawn; the circuit is the same for every one of them, and the brain recruits the rest afterwards.",
+  },
+];
 
 export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
   const still = useStillMotion();
@@ -127,14 +272,22 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
   const lengthRef = useRef(0);
   const startedAt = useRef(0);
   const [routeLength, setRouteLength] = useState(0);
+  /* Where the axon starts and ends on the route, as fractions of its length.
+     Myelinated travel is stepped inside this window only: the dendrites and
+     the terminal arbor are not insulated. */
+  const axonSpan = useRef({ a: 0, b: 1 });
 
   const parts = mode === "neuron" ? NEURON_PARTS : REFLEX_PARTS;
   const part = parts.find((entry) => entry.id === selected) ?? null;
-
   const route = mode === "neuron" ? NEURON_ROUTE : REFLEX_ROUTE;
+  const questions = mode === "neuron" ? NEURON_QUESTIONS : REFLEX_QUESTIONS;
 
-  /* The length is measured once per route (not per frame): the trail's
-     dash-offset and the dot's position both come from it. */
+  const { metres, synapses } = routeOf(mode);
+  const ms = latency(mode, myelin);
+  const fastMs = latency(mode, true);
+  /* How far the bare fibre gets in the time the myelinated one arrives. */
+  const bareCover = (metres / 120) * 2;
+
   useEffect(() => {
     setFiring(false);
     setFired(false);
@@ -147,14 +300,33 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
   useEffect(() => {
     const path = routeRef.current;
     if (!path) return;
-    lengthRef.current = path.getTotalLength();
-    setRouteLength(lengthRef.current);
+    const total = path.getTotalLength();
+    lengthRef.current = total;
+    setRouteLength(total);
+
+    if (mode === "neuron") {
+      let a = 0;
+      let b = total;
+      for (let d = 0; d <= total; d += 2) {
+        const point = path.getPointAtLength(d);
+        if (!a && point.x >= 252 && Math.abs(point.y - 228) < 4) a = d;
+        if (point.x >= 596) {
+          b = d;
+          break;
+        }
+      }
+      axonSpan.current = { a: a || total * 0.28, b };
+    } else {
+      axonSpan.current = { a: 0, b: total };
+    }
   }, [mode, route]);
 
   const fire = () => {
     if (firing) return;
     if (stimulus < 3) {
-      setNote("No impulse — the stimulus is below threshold. A neuron fires all of it, or not at all.");
+      setNote(
+        "No impulse — the stimulus is below threshold. A neuron fires all of it, or not at all.",
+      );
       setFired(false);
       setProgress(0);
       setPulse(null);
@@ -180,15 +352,29 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
 
   useAnimationFrame(() => {
     if (!firing) return;
-    const duration = mode === "reflex" ? (myelin ? 1.3 : 2.7) : myelin ? 1.1 : 2.5;
+    const duration =
+      mode === "reflex" ? (myelin ? 1.4 : 2.9) : myelin ? 1.2 : 2.7;
     const elapsed = (performance.now() - startedAt.current) / 1000;
     const next = Math.min(1, elapsed / duration);
     const path = routeRef.current;
-    if (path && lengthRef.current) {
-      const point = path.getPointAtLength(lengthRef.current * next);
+    const total = lengthRef.current;
+
+    /* Time → distance. With myelin the distance is stepped along the axon. */
+    let travelled = next;
+    if (myelin && mode === "neuron" && total) {
+      const { a, b } = axonSpan.current;
+      const from = a / total;
+      const to = b / total;
+      if (next > from && next < to) {
+        travelled = from + (to - from) * hop((next - from) / (to - from), 5);
+      }
+    }
+
+    if (path && total) {
+      const point = path.getPointAtLength(total * travelled);
       setPulse({ x: point.x, y: point.y });
     }
-    setProgress(next);
+    setProgress(travelled);
     if (next >= 1) {
       setFiring(false);
       setFired(true);
@@ -203,12 +389,14 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
     setNote(null);
   };
 
-  const ms = latency(mode, myelin);
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Nervous system plates">
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="tablist"
+          aria-label="Nervous system plates"
+        >
           {(
             [
               { id: "neuron", label: "Neuron" },
@@ -251,7 +439,12 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
           >
             Myelin {myelin ? "on" : "off"}
           </button>
-          <button type="button" className="apple-lab-btn" onClick={reset} aria-label="Reset the signal">
+          <button
+            type="button"
+            className="apple-lab-btn"
+            onClick={reset}
+            aria-label="Reset the signal"
+          >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -262,7 +455,9 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
           <div className="mb-1.5 flex items-start justify-between gap-2 px-1">
             <div className="min-w-0">
               <p className="apple-lab-title truncate text-[13px]">{label}</p>
-              <p className="truncate text-[11px] text-[var(--lab-ink-dim)]">{blurb}</p>
+              <p className="truncate text-[11px] text-[var(--lab-ink-dim)]">
+                {blurb}
+              </p>
             </div>
             <span className="apple-lab-chip shrink-0 !gap-1.5">
               <Zap className="h-3 w-3" style={{ color: SIGNAL }} />
@@ -277,9 +472,6 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
               role="group"
               aria-label={`${mode === "neuron" ? "Neuron" : "Reflex arc"}, fired at stimulus ${stimulus} of 5`}
             >
-              {/* The route is hidden geometry: the visible fibres are drawn
-                  separately so each can be lit on its own, but the dot and the
-                  trail both follow this one path end to end. */}
               <path ref={routeRef} d={route} fill="none" stroke="none" />
 
               {mode === "neuron" ? (
@@ -287,6 +479,7 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
                   myelin={myelin}
                   selected={selected}
                   onSelect={setSelected}
+                  fired={fired}
                 />
               ) : (
                 <ReflexDrawing
@@ -298,46 +491,69 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
               )}
 
               {/* The trail: the same route, revealed by dash length. It sits
-                  under the dot and over the fibres. */}
+                  under the dot and over the fibres. Saltatory travel makes it
+                  appear in lengths rather than as one growing line. */}
               {progress > 0 ? (
                 <path
                   d={route}
                   fill="none"
                   stroke={SIGNAL}
-                  strokeOpacity={0.55}
-                  strokeWidth={2.4}
+                  strokeOpacity={0.5}
+                  strokeWidth={2.2}
                   strokeLinecap="round"
                   strokeDasharray={`${routeLength * progress} ${routeLength}`}
                 />
               ) : null}
               {pulse ? (
                 <g>
-                  <circle cx={pulse.x} cy={pulse.y} r={14} fill={SIGNAL} opacity={0.14} />
-                  <circle cx={pulse.x} cy={pulse.y} r={4.6} fill={SIGNAL} />
+                  <circle cx={pulse.x} cy={pulse.y} r={13} fill={SIGNAL} opacity={0.12} />
+                  <circle cx={pulse.x} cy={pulse.y} r={4.2} fill={SIGNAL} />
                 </g>
               ) : null}
             </svg>
           </div>
 
-          <p className="mt-2 px-1 text-[10.5px] text-[var(--lab-ink-micro)]">
+          <p className="mt-2 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
             {mode === "neuron"
-              ? "Time is compressed; the panel carries the real conduction time."
-              : "The loop completes in the cord. Nothing here waits for the brain."}
+              ? "Drawn flat and not to scale: five sheaths, five boutons, one axon. Time in the panel is real; the travel is slowed so you can see it."
+              : "The loop completes inside the cord. Nothing on this plate waits for the brain, and the drawing is a schematic — one muscle of the several a withdrawal uses."}
           </p>
+
+          {/* The questions the figure raises, answered where a plate would
+              leave its notes: plain text, hairline rules, no callout boxes. */}
+          <div className="mt-2.5 border-t border-[var(--lab-line-soft)] px-1 pt-2.5">
+            <p className="apple-lab-micro">Questions this plate invites</p>
+            <div className="mt-2 grid gap-x-5 gap-y-2.5 sm:grid-cols-2">
+              {questions.map((entry) => (
+                <div key={entry.q}>
+                  <p className="text-[11.5px] font-semibold text-[var(--lab-ink)]">
+                    {entry.q}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
+                    {entry.a}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <aside className="flex flex-col gap-3">
           <section className="apple-lab-card p-3.5">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-baseline justify-between gap-2">
               <p className="apple-lab-micro">Signal</p>
               <span className="text-[10.5px] text-[var(--lab-ink-micro)]">real time</span>
             </div>
 
             <div className="mt-2 flex flex-col">
-              <Reading label="Route" value={mode === "neuron" ? "1.0 m axon" : "1.4 m loop"} />
               <Reading
-                label="Conduction"
-                value={myelin ? "120 m/s" : "2 m/s"}
+                label="Route"
+                value={mode === "neuron" ? "1.0 m axon" : "1.4 m loop"}
+              />
+              <Reading label="Conduction" value={myelin ? "120 m/s" : "2 m/s"} />
+              <Reading
+                label="Synapses"
+                value={`${synapses} × ${SYNAPSE_MS} ms`}
               />
               <Reading
                 label={mode === "neuron" ? "Travel time" : "Response time"}
@@ -345,7 +561,37 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
               />
             </div>
 
-            <div className="mt-3">
+            {/* The whole point of the toggle. The two bars share one instant,
+                so the 60× gap is visible as a sliver rather than asserted in
+                a sentence. */}
+            <div className="mt-3 border-t border-[var(--lab-line-soft)] pt-3">
+              <p className="apple-lab-micro">Same instant</p>
+              <div className="mt-2 flex flex-col gap-2">
+                <CoverRow
+                  label="Myelinated"
+                  detail="120 m/s"
+                  value={`${metres.toFixed(1)} m`}
+                  fill={1}
+                  active={myelin}
+                />
+                <CoverRow
+                  label="Bare"
+                  detail="2 m/s"
+                  value={`${bareCover.toFixed(2)} m`}
+                  fill={bareCover / metres}
+                  active={!myelin}
+                />
+              </div>
+              <p className="mt-2 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
+                In the {Math.round(fastMs)} ms the myelinated impulse needs, the
+                bare fibre covers {Math.round(bareCover * 100)} cm of the same
+                route. Myelin is not a faster cable; it stops the membrane under
+                the sheath from firing, so the impulse is rebuilt only at the
+                gaps.
+              </p>
+            </div>
+
+            <div className="mt-3 border-t border-[var(--lab-line-soft)] pt-3">
               <Range
                 label="Stimulus"
                 value={stimulus}
@@ -358,26 +604,25 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
                   setNote(null);
                 }}
               />
+              <p
+                className="mt-2 min-h-[2.6rem] text-[11px] leading-relaxed"
+                style={{ color: note ? SIGNAL : "var(--lab-ink-dim)" }}
+              >
+                {note ??
+                  (stimulus < 3
+                    ? "Below threshold: the membrane will not reach an action potential, and nothing is sent."
+                    : fired
+                      ? mode === "neuron"
+                        ? "Impulse delivered to the synapse."
+                        : "Impulse delivered. The muscle has already contracted."
+                      : "Threshold is 3. Below it, nothing fires.")}
+              </p>
             </div>
-
-            <p
-              className="mt-2 min-h-[2.6rem] text-[11px] leading-relaxed"
-              style={{ color: note ? SIGNAL : "var(--lab-ink-dim)" }}
-            >
-              {note ??
-                (stimulus < 3
-                  ? "Below threshold: the membrane will not reach an action potential."
-                  : fired
-                    ? mode === "neuron"
-                      ? "Impulse delivered to the synapse."
-                      : "Impulse delivered. The muscle has already contracted."
-                    : "Threshold is 3. Below it, nothing fires.")}
-            </p>
           </section>
 
           <section className="apple-lab-card p-3.5">
             <p className="apple-lab-micro">Structures</p>
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="mt-2 flex flex-col gap-0.5">
               {parts.map((entry, index) => {
                 const active = selected === entry.id;
                 return (
@@ -386,16 +631,18 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
                     type="button"
                     aria-pressed={active}
                     onClick={() => setSelected(active ? null : entry.id)}
-                    className="flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-left text-[12px] transition-colors"
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors"
                     style={{
-                      borderColor: active ? ink(0.3) : "transparent",
                       background: active ? ink(0.07) : "transparent",
                       color: active ? "var(--lab-ink)" : "var(--lab-ink-dim)",
                     }}
                   >
                     <span
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[9.5px] font-semibold"
-                      style={{ borderColor: ink(0.22), color: "var(--lab-ink)" }}
+                      style={{
+                        borderColor: active ? ink(0.4) : ink(0.2),
+                        color: "var(--lab-ink)",
+                      }}
                     >
                       {index + 1}
                     </span>
@@ -405,16 +652,22 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
               })}
             </div>
 
-            <div className="mt-2 min-h-[4.5rem] rounded-xl border border-[var(--lab-line-soft)] p-2.5 text-[11.5px] leading-relaxed">
+            <div className="mt-2.5 border-t border-[var(--lab-line-soft)] pt-2.5">
               {part ? (
                 <>
-                  <strong className="font-semibold text-[var(--lab-ink)]">{part.label}</strong>
-                  <span className="mt-1 block text-[var(--lab-ink-dim)]">{part.note}</span>
+                  <p className="text-[12px] font-semibold text-[var(--lab-ink)]">
+                    {part.label}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
+                    {part.note}
+                  </p>
                 </>
               ) : (
-                <span className="text-[var(--lab-ink-micro)]">
-                  Pick a numbered marker on the plate, or a structure above.
-                </span>
+                <p className="text-[11px] leading-relaxed text-[var(--lab-ink-micro)]">
+                  Pick a numbered marker on the plate, or a structure above. The
+                  notes in the plate below answer what the drawing itself does
+                  not.
+                </p>
               )}
             </div>
           </section>
@@ -433,6 +686,50 @@ function Reading({ label, value }: { label: string; value: string }) {
   );
 }
 
+function CoverRow({
+  label,
+  detail,
+  value,
+  fill,
+  active,
+}: {
+  label: string;
+  detail: string;
+  value: string;
+  fill: number;
+  active: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 text-[10.5px]">
+        <span
+          style={{ color: active ? "var(--lab-ink)" : "var(--lab-ink-micro)" }}
+        >
+          {label}
+        </span>
+        <span
+          className="apple-lab-value text-[10.5px]"
+          style={{ color: active ? "var(--lab-ink)" : "var(--lab-ink-micro)" }}
+        >
+          {value}
+        </span>
+      </div>
+      <div className="mt-1 flex h-[3px] w-full overflow-hidden rounded-full bg-[var(--lab-line-soft)]">
+        <span
+          className="block h-full rounded-full"
+          style={{
+            width: `${Math.max(fill * 100, 2)}%`,
+            background: active ? "var(--lab-ink-dim)" : "var(--lab-line)",
+          }}
+        />
+      </div>
+      <p className="mt-0.5 text-[9.5px] tracking-[0.02em] text-[var(--lab-ink-micro)]">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
 /* The figures ------------------------------------------------------- */
 
 function Marker({
@@ -442,6 +739,8 @@ function Marker({
   active,
   onSelect,
   label,
+  tx,
+  ty,
 }: {
   x: number;
   y: number;
@@ -449,6 +748,8 @@ function Marker({
   active: boolean;
   onSelect: () => void;
   label: string;
+  tx?: number;
+  ty?: number;
 }) {
   return (
     <g
@@ -466,6 +767,17 @@ function Marker({
         }
       }}
     >
+      {tx !== undefined && ty !== undefined ? (
+        <line
+          x1={x}
+          y1={y}
+          x2={tx}
+          y2={ty}
+          stroke={INK}
+          strokeOpacity={active ? 0.5 : 0.24}
+          strokeWidth={1}
+        />
+      ) : null}
       <circle cx={x} cy={y} r={16} fill="transparent" />
       <circle
         cx={x}
@@ -492,107 +804,220 @@ function Marker({
 
 /** A part that can be dimmed when another part is in focus. */
 function Group({ dim, children }: { dim: boolean; children: ReactNode }) {
-  return <g opacity={dim ? 0.45 : 1}>{children}</g>;
+  return <g opacity={dim ? 0.32 : 1}>{children}</g>;
+}
+
+/** Small caps used for the anatomy labels inside the drawing. */
+function PlateLabel({
+  x,
+  y,
+  children,
+  anchor = "middle",
+}: {
+  x: number;
+  y: number;
+  children: string;
+  anchor?: "start" | "middle" | "end";
+}) {
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={anchor}
+      fontSize="8.6"
+      letterSpacing="1.3"
+      fill={INK}
+      fillOpacity={0.34}
+    >
+      {children}
+    </text>
+  );
 }
 
 function NeuronDrawing({
   myelin,
   selected,
   onSelect,
+  fired,
 }: {
   myelin: boolean;
   selected: string | null;
   onSelect: (id: string | null) => void;
+  fired: boolean;
 }) {
   const dim = (id: string) => Boolean(selected) && selected !== id;
   const pick = (id: string) => () => onSelect(selected === id ? null : id);
 
   return (
     <g>
-      {/* Dendrites. The first one is also the start of the signal path, so the
-          dot begins on a visible fibre rather than in empty space. */}
+      {/* Dendrites. The arbor hangs off the left of the soma, so the axon has
+          the right half of the plate to itself. */}
       <Group dim={dim("dendrites")}>
-        <path d="M 110 150 C 142 166 172 190 206 208" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.6} strokeLinecap="round" />
-        <path d="M 140 165 C 128 151 122 143 116 131" fill="none" stroke={INK} strokeOpacity={0.34} strokeWidth={1.1} strokeLinecap="round" />
-        <path d="M 140 165 C 154 153 160 145 168 133" fill="none" stroke={INK} strokeOpacity={0.34} strokeWidth={1.1} strokeLinecap="round" />
-
-        <path d="M 128 250 C 158 234 182 224 208 219" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.6} strokeLinecap="round" />
-        <path d="M 152 238 C 142 250 136 256 128 264" fill="none" stroke={INK} strokeOpacity={0.34} strokeWidth={1.1} strokeLinecap="round" />
-        <path d="M 176 184 C 170 158 168 142 166 118" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.6} strokeLinecap="round" />
-        <path d="M 170 152 C 158 144 150 140 140 136" fill="none" stroke={INK} strokeOpacity={0.34} strokeWidth={1.1} strokeLinecap="round" />
-        <path d="M 168 146 C 180 138 188 136 198 134" fill="none" stroke={INK} strokeOpacity={0.34} strokeWidth={1.1} strokeLinecap="round" />
-        <path d="M 154 292 C 178 268 192 248 204 234" fill="none" stroke={INK} strokeOpacity={0.42} strokeWidth={1.4} strokeLinecap="round" />
-        <path d="M 230 190 C 242 170 248 158 256 144" fill="none" stroke={INK} strokeOpacity={0.38} strokeWidth={1.3} strokeLinecap="round" />
-      </Group>
-
-      {/* Soma, with the nucleus inside it. */}
-      <Group dim={dim("soma")}>
-        <circle cx={206} cy={212} r={36} fill={INK} fillOpacity={0.035} stroke={INK} strokeOpacity={0.55} strokeWidth={1.5} />
-        <circle cx={198} cy={214} r={11} fill={INK} fillOpacity={0.07} stroke={INK} strokeOpacity={0.3} strokeWidth={1} />
-        {selected === "soma" ? (
-          <circle cx={206} cy={212} r={48} fill="none" stroke={INK} strokeOpacity={0.16} strokeWidth={1} />
-        ) : null}
-      </Group>
-
-      {/* Axon: plain fibre when the myelin is stripped off. */}
-      <Group dim={dim("axon")}>
-        <line x1={242} y1={212} x2={596} y2={212} stroke={INK} strokeOpacity={0.55} strokeWidth={myelin ? 3 : 1.6} />
-      </Group>
-
-      {/* Myelin sheaths. Off is not "hidden": the ghost outlines show where
-          the insulation sits, so turning it off reads as removing something. */}
-      <Group dim={dim("myelin")}>
-        {[270, 332, 394, 456, 518].map((x) => (
-          <rect
-            key={x}
-            x={x}
-            y={204}
-            width={54}
-            height={16}
-            rx={8}
-            fill={INK}
-            fillOpacity={myelin ? 0.045 : 0}
+        {ARBOR.map((branch, index) => (
+          <path
+            key={index}
+            d={branch.d}
+            fill="none"
             stroke={INK}
-            strokeOpacity={myelin ? 0.34 : 0.12}
-            strokeDasharray={myelin ? undefined : "3 5"}
-            strokeWidth={1}
+            strokeOpacity={branch.o}
+            strokeWidth={branch.w}
+            strokeLinecap="round"
           />
         ))}
       </Group>
 
-      {/* Nodes of Ranvier — the gaps the impulse jumps between. */}
-      <Group dim={dim("node")}>
-        {[328, 390, 452, 514].map((x) => (
-          <line key={x} x1={x} y1={202} x2={x} y2={222} stroke={INK} strokeOpacity={0.5} strokeWidth={1.2} />
-        ))}
+      {/* Axon hillock: the cone the fibre leaves from. */}
+      <Group dim={dim("axon")}>
+        <path
+          d="M 232 208 C 244 212 250 220 256 226 L 256 230 C 250 236 244 244 234 248 Z"
+          fill={INK}
+          fillOpacity={0.13}
+          stroke={INK}
+          strokeOpacity={0.4}
+          strokeWidth={1}
+        />
       </Group>
 
-      {/* Terminal knobs and the synaptic gap. */}
+      {/* Myelin sheaths, drawn as one dashed capsule stroke over the fibre so
+          the segments are evenly spaced and sit exactly on the axon. The
+          ghost dashes stay when it is stripped, so "off" reads as removed
+          insulation rather than as a different fibre. */}
+      <Group dim={dim("myelin")}>
+        <path
+          d="M 270 228 L 596 228"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={myelin ? 0.16 : 0.1}
+          strokeWidth={15}
+          strokeLinecap="round"
+          strokeDasharray="42 26"
+        />
+      </Group>
+
+      {/* The fibre itself. It is visible between the sheaths: those gaps are
+          the nodes, and the only places the membrane can fire. */}
+      <Group dim={dim("axon")}>
+        <line
+          x1={250}
+          y1={228}
+          x2={600}
+          y2={228}
+          stroke={INK}
+          strokeOpacity={0.55}
+          strokeWidth={myelin ? 2.4 : 1.6}
+        />
+      </Group>
+
+      {/* Soma, over the arbor stubs so the branches attach to the cell body. */}
+      <Group dim={dim("soma")}>
+        <path
+          d="M 236 204 C 246 214 250 224 246 238 C 242 254 228 266 212 266 C 194 266 178 254 172 238 C 166 222 172 206 186 198 C 200 190 224 192 236 204 Z"
+          fill={INK}
+          fillOpacity={0.04}
+          stroke={INK}
+          strokeOpacity={0.55}
+          strokeWidth={1.5}
+        />
+        <ellipse
+          cx={206}
+          cy={226}
+          rx={15}
+          ry={14}
+          fill={INK}
+          fillOpacity={0.07}
+          stroke={INK}
+          strokeOpacity={0.28}
+          strokeWidth={1}
+        />
+        <circle cx={212} cy={222} r={3.2} fill={INK} fillOpacity={0.28} />
+      </Group>
+
+      {/* Terminal arbor. One axon, five contacts — the count is illustrative,
+          and the plate's note says so. */}
       <Group dim={dim("synapse")}>
-        <path d="M 596 212 C 610 212 618 198 628 188" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.5} strokeLinecap="round" />
-        <path d="M 596 212 C 612 212 620 226 632 236" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.5} strokeLinecap="round" />
-        <line x1={596} y1={212} x2={636} y2={212} stroke={INK} strokeOpacity={0.5} strokeWidth={1.5} strokeLinecap="round" />
+        <path
+          d="M 596 228 C 616 222 638 202 656 186"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 596 228 C 620 222 648 212 676 204"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 596 228 C 626 228 656 228 686 228"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 596 228 C 620 234 648 244 676 252"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 596 228 C 616 234 638 254 656 270"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+        />
         {[
-          { x: 628, y: 188 },
-          { x: 632, y: 236 },
-          { x: 636, y: 212 },
-        ].map((knob) => (
-          <circle key={`${knob.x}-${knob.y}`} cx={knob.x} cy={knob.y} r={4.5} fill={INK} fillOpacity={0.25} stroke={INK} strokeOpacity={0.45} strokeWidth={1} />
+          { x: 656, y: 186 },
+          { x: 676, y: 204 },
+          { x: 686, y: 228 },
+          { x: 676, y: 252 },
+          { x: 656, y: 270 },
+        ].map((bouton) => (
+          <ellipse
+            key={`${bouton.x}-${bouton.y}`}
+            cx={bouton.x}
+            cy={bouton.y}
+            rx={5.2}
+            ry={4.2}
+            fill={INK}
+            fillOpacity={0.34}
+            stroke={INK}
+            strokeOpacity={0.5}
+            strokeWidth={1}
+          />
         ))}
-        <path d="M 660 212 C 680 200 694 194 712 192" fill="none" stroke={INK} strokeOpacity={0.22} strokeWidth={1.2} strokeLinecap="round" />
-        <path d="M 660 212 C 680 224 694 230 712 232" fill="none" stroke={INK} strokeOpacity={0.22} strokeWidth={1.2} strokeLinecap="round" />
+
+        {/* The postsynaptic membrane, across the cleft. It is the only line on
+            the plate that changes when the impulse arrives. */}
+        <path
+          d="M 702 164 C 716 194 716 260 702 290"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={fired ? 0.42 : 0.18}
+          strokeWidth={1.2}
+          strokeLinecap="round"
+        />
       </Group>
 
-      <text x={648} y={252} fontSize="10.5" fill={INK} fillOpacity={0.4} textAnchor="middle">
-        synapse
-      </text>
+      <PlateLabel x={716} y={320} anchor="end">
+        next cell
+      </PlateLabel>
 
-      <Marker x={120} y={124} n={1} label="Dendrites" active={selected === "dendrites"} onSelect={pick("dendrites")} />
-      <Marker x={250} y={252} n={2} label="Cell body" active={selected === "soma"} onSelect={pick("soma")} />
-      <Marker x={476} y={188} n={3} label="Axon" active={selected === "axon"} onSelect={pick("axon")} />
-      <Marker x={300} y={186} n={4} label="Myelin sheath" active={selected === "myelin"} onSelect={pick("myelin")} />
-      <Marker x={368} y={246} n={5} label="Node of Ranvier" active={selected === "node"} onSelect={pick("node")} />
-      <Marker x={616} y={166} n={6} label="Synapse" active={selected === "synapse"} onSelect={pick("synapse")} />
+      <Marker x={96} y={100} n={1} label="Dendrites" active={selected === "dendrites"} onSelect={pick("dendrites")} tx={124} ty={140} />
+      <Marker x={158} y={326} n={2} label="Cell body" active={selected === "soma"} onSelect={pick("soma")} tx={192} ty={264} />
+      <Marker x={520} y={290} n={3} label="Axon" active={selected === "axon"} onSelect={pick("axon")} tx={520} ty={240} />
+      <Marker x={350} y={158} n={4} label="Myelin sheath" active={selected === "myelin"} onSelect={pick("myelin")} tx={350} ty={218} />
+      <Marker x={398} y={300} n={5} label="Node of Ranvier" active={selected === "node"} onSelect={pick("node")} tx={398} ty={238} />
+      <Marker x={696} y={134} n={6} label="Synapse" active={selected === "synapse"} onSelect={pick("synapse")} tx={664} ty={180} />
     </g>
   );
 }
@@ -611,88 +1036,258 @@ function ReflexDrawing({
   const dim = (id: string) => Boolean(selected) && selected !== id;
   const pick = (id: string) => () => onSelect(selected === id ? null : id);
 
+  const sensory =
+    "M 104 288 C 132 250 186 196 250 176 C 296 164 330 158 356 158";
+  const motor =
+    "M 438 250 C 450 264 462 278 476 288 C 506 302 546 300 576 294 L 602 292";
+
   return (
     <g>
-      {/* Skin / receptor */}
+      {/* Skin, in section: two lines for epidermis and dermis, with the free
+          nerve endings inside. */}
       <Group dim={dim("receptor")}>
-        <rect x={66} y={258} width={60} height={84} rx={26} fill={INK} fillOpacity={0.03} stroke={INK} strokeOpacity={0.35} strokeWidth={1.3} />
-        {[288, 300, 312].map((y) => (
-          <circle key={y} cx={96} cy={y} r={2.4} fill={INK} fillOpacity={0.4} />
+        <path
+          d="M 82 178 C 58 228 58 322 82 374 L 118 360 C 98 312 98 236 118 190 Z"
+          fill={INK}
+          fillOpacity={0.035}
+          stroke={INK}
+          strokeOpacity={0.42}
+          strokeWidth={1.4}
+        />
+        <path
+          d="M 92 190 C 74 234 74 314 92 360"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.18}
+          strokeWidth={1}
+        />
+        <path
+          d="M 104 288 C 96 272 90 266 82 262"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.3}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 104 288 C 96 294 90 302 82 308"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.3}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 104 288 C 100 266 98 250 90 240"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.5}
+          strokeWidth={1.3}
+          strokeLinecap="round"
+        />
+        {[
+          { x: 82, y: 262 },
+          { x: 82, y: 308 },
+          { x: 90, y: 240 },
+        ].map((tip) => (
+          <circle key={`${tip.x}-${tip.y}`} cx={tip.x} cy={tip.y} r={1.8} fill={INK} fillOpacity={0.42} />
         ))}
       </Group>
 
-      {/* Sensory neuron, with its cell body in the dorsal root ganglion. */}
+      {/* Sensory fibre: myelinated right up to the endings, with the cell body
+          in the dorsal root ganglion. */}
       <Group dim={dim("sensory")}>
-        <path d="M 96 280 C 112 238 168 182 240 160 C 292 144 342 134 384 132" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.6} strokeLinecap="round" />
-        <circle cx={236} cy={162} r={11} fill={INK} fillOpacity={0.04} stroke={INK} strokeOpacity={0.35} strokeWidth={1.1} />
         {myelin ? (
-          <>
-            <rect x={146} y={190} width={26} height={14} rx={7} fill={INK} fillOpacity={0.04} stroke={INK} strokeOpacity={0.25} strokeWidth={1} transform="rotate(-36 159 197)" />
-            <rect x={196} y={162} width={24} height={14} rx={7} fill={INK} fillOpacity={0.04} stroke={INK} strokeOpacity={0.25} strokeWidth={1} transform="rotate(-14 208 169)" />
-            <rect x={290} y={136} width={24} height={14} rx={7} fill={INK} fillOpacity={0.04} stroke={INK} strokeOpacity={0.25} strokeWidth={1} transform="rotate(-5 302 143)" />
-          </>
+          <path
+            d={sensory}
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.16}
+            strokeWidth={13}
+            strokeLinecap="round"
+            strokeDasharray="40 26"
+            strokeDashoffset={40}
+          />
         ) : null}
+        <path
+          d={sensory}
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.55}
+          strokeWidth={myelin ? 2 : 1.5}
+          strokeLinecap="round"
+        />
       </Group>
 
-      {/* Spinal cord: the relay. Its interneuron is drawn inside the capsule. */}
+      <Group dim={dim("ganglion")}>
+        <ellipse
+          cx={300}
+          cy={166}
+          rx={17}
+          ry={11}
+          transform="rotate(-9 300 166)"
+          fill="var(--lab-canvas)"
+          stroke={INK}
+          strokeOpacity={0.45}
+          strokeWidth={1.2}
+        />
+        <circle cx={300} cy={166} r={4.6} fill={INK} fillOpacity={0.1} stroke={INK} strokeOpacity={0.3} strokeWidth={0.9} />
+      </Group>
+
+      {/* Spinal cord, in cross-section: white matter outside, the butterfly of
+          grey matter inside, and the central canal at its waist. */}
       <Group dim={dim("cord")}>
-        <rect x={380} y={62} width={60} height={160} rx={30} fill={INK} fillOpacity={0.03} stroke={INK} strokeOpacity={0.38} strokeWidth={1.3} />
-        <line x1={410} y1={132} x2={410} y2={176} stroke={INK} strokeOpacity={0.28} strokeWidth={1.1} strokeDasharray="3 4" />
-        <circle cx={410} cy={152} r={5} fill={INK} fillOpacity={0.18} stroke={INK} strokeOpacity={0.4} strokeWidth={1} />
-        <text x={410} y={52} textAnchor="middle" fontSize="10" letterSpacing="1.4" fill={INK} fillOpacity={0.38}>
-          SPINAL CORD
-        </text>
+        <ellipse
+          cx={406}
+          cy={214}
+          rx={63}
+          ry={115}
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.14}
+          strokeWidth={1}
+        />
+        <ellipse
+          cx={406}
+          cy={214}
+          rx={59}
+          ry={111}
+          fill={INK}
+          fillOpacity={0.028}
+          stroke={INK}
+          strokeOpacity={0.34}
+          strokeWidth={1.3}
+        />
+        {/* The butterfly of grey matter: two dorsal horns above, two broad
+            ventral horns below, joined by the commissure around the canal. */}
+        <path
+          d="M 406 222 C 399 208 393 190 388 172 C 384 158 380 146 374 144 C 366 142 366 156 370 168 C 376 186 381 202 381 216 C 379 228 368 240 358 252 C 352 262 354 274 368 272 C 384 270 396 254 402 238 C 403 236 405 236 406 238 C 410 254 424 270 442 270 C 454 272 458 260 450 250 C 442 238 433 228 431 216 C 431 202 436 186 442 168 C 446 156 446 142 438 144 C 432 146 428 158 424 172 C 420 190 413 208 406 222 Z"
+          fill={INK}
+          fillOpacity={0.06}
+          stroke={INK}
+          strokeOpacity={0.3}
+          strokeWidth={1}
+        />
+        <circle cx={406} cy={230} r={2} fill="none" stroke={INK} strokeOpacity={0.26} strokeWidth={0.9} />
       </Group>
 
-      {/* Motor neuron, leaving from the other side of the cord. */}
+      {/* The interneuron that closes the loop inside the grey matter. */}
+      <Group dim={dim("cord")}>
+        <path
+          d="M 371 158 C 378 172 386 186 392 200 C 400 216 412 232 426 242"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.38}
+          strokeWidth={1.3}
+          strokeDasharray="4 3"
+        />
+        <circle cx={396} cy={208} r={4.4} fill={INK} fillOpacity={0.12} stroke={INK} strokeOpacity={0.4} strokeWidth={1} />
+      </Group>
+
+      {/* Motor neuron: cell body in the ventral horn, axon out through the
+          ventral root, ending on the muscle. */}
       <Group dim={dim("motor")}>
-        <path d="M 434 152 C 486 170 540 224 600 278" fill="none" stroke={INK} strokeOpacity={0.5} strokeWidth={1.6} strokeLinecap="round" />
         {myelin ? (
-          <>
-            <rect x={474} y={176} width={26} height={14} rx={7} fill={INK} fillOpacity={0.04} stroke={INK} strokeOpacity={0.25} strokeWidth={1} transform="rotate(38 487 183)" />
-            <rect x={528} y={218} width={26} height={14} rx={7} fill={INK} fillOpacity={0.04} stroke={INK} strokeOpacity={0.25} strokeWidth={1} transform="rotate(44 541 225)" />
-          </>
+          <path
+            d={motor}
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.16}
+            strokeWidth={13}
+            strokeLinecap="round"
+            strokeDasharray="40 26"
+          />
         ) : null}
+        <path
+          d={motor}
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.55}
+          strokeWidth={myelin ? 2 : 1.5}
+          strokeLinecap="round"
+        />
+        <circle cx={432} cy={246} r={8} fill={INK} fillOpacity={0.07} stroke={INK} strokeOpacity={0.42} strokeWidth={1.1} />
+        <circle cx={432} cy={246} r={3.2} fill={INK} fillOpacity={0.18} />
       </Group>
 
-      {/* Muscle spindle. It shortens a little once the impulse lands. */}
+      {/* Muscle spindle, with tendons and three fibres. It shortens a little
+          once the impulse lands. */}
       <Group dim={dim("muscle")}>
         <g
           style={{
-            transform: fired ? "scale(0.94, 0.9)" : "scale(1, 1)",
-            transformOrigin: "646px 300px",
+            transform: fired ? "scale(0.95, 0.91)" : "scale(1, 1)",
+            transformOrigin: "656px 298px",
             transition: "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         >
-          <ellipse cx={646} cy={300} rx={62} ry={24} fill={INK} fillOpacity={0.045} stroke={INK} strokeOpacity={0.4} strokeWidth={1.3} transform="rotate(-18 646 300)" />
-          {[-30, -12, 6, 24].map((offset) => (
-            <path
-              key={offset}
-              d={`M ${604 + offset} ${282 - offset * 0.2} C ${626 + offset} ${292 - offset * 0.2} ${660 + offset} ${306 - offset * 0.2} ${684 + offset} ${318 - offset * 0.2}`}
-              fill="none"
-              stroke={INK}
-              strokeOpacity={0.28}
-              strokeWidth={1}
-            />
-          ))}
+          <path
+            d="M 604 292 C 626 274 654 270 682 278 C 702 284 706 300 688 311 C 662 326 626 318 604 292 Z"
+            fill={INK}
+            fillOpacity={0.045}
+            stroke={INK}
+            strokeOpacity={0.42}
+            strokeWidth={1.3}
+          />
+          <path
+            d="M 618 292 C 640 283 664 282 688 290"
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.24}
+            strokeWidth={1}
+          />
+          <path
+            d="M 616 300 C 642 294 668 294 692 300"
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.24}
+            strokeWidth={1}
+          />
+          <path
+            d="M 620 308 C 642 306 666 308 686 312"
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.24}
+            strokeWidth={1}
+          />
+          <path
+            d="M 700 302 C 712 304 720 306 728 308"
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.22}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
         </g>
+        {/* Motor end plate. */}
+        <ellipse cx={602} cy={291} rx={5} ry={3.6} fill={INK} fillOpacity={0.34} stroke={INK} strokeOpacity={0.48} strokeWidth={0.9} />
         {fired ? (
-          <g stroke={INK} strokeOpacity={0.35} strokeWidth={1.2} strokeLinecap="round">
-            <path d="M 588 344 C 596 352 596 362 590 370" fill="none" />
-            <path d="M 618 352 C 626 360 626 370 620 378" fill="none" />
-          </g>
+          <path
+            d="M 616 334 C 628 340 644 340 656 334"
+            fill="none"
+            stroke={INK}
+            strokeOpacity={0.3}
+            strokeWidth={1.1}
+            strokeLinecap="round"
+          />
         ) : null}
       </Group>
 
-      <text x={96} y={368} textAnchor="middle" fontSize="10.5" fill={INK} fillOpacity={0.4}>
-        skin
-      </text>
+      <PlateLabel x={406} y={82}>
+        SPINAL CORD
+      </PlateLabel>
+      <PlateLabel x={66} y={390} anchor="start">
+        SKIN
+      </PlateLabel>
+      <PlateLabel x={664} y={350} anchor="middle">
+        MUSCLE
+      </PlateLabel>
 
-      <Marker x={116} y={344} n={1} label="Receptor" active={selected === "receptor"} onSelect={pick("receptor")} />
-      <Marker x={262} y={128} n={2} label="Sensory neuron" active={selected === "sensory"} onSelect={pick("sensory")} />
-      <Marker x={452} y={94} n={3} label="Spinal cord" active={selected === "cord"} onSelect={pick("cord")} />
-      <Marker x={512} y={188} n={4} label="Motor neuron" active={selected === "motor"} onSelect={pick("motor")} />
-      <Marker x={712} y={336} n={5} label="Muscle" active={selected === "muscle"} onSelect={pick("muscle")} />
+      <Marker x={124} y={238} n={1} label="Receptor" active={selected === "receptor"} onSelect={pick("receptor")} tx={100} ty={250} />
+      <Marker x={300} y={122} n={2} label="Dorsal root ganglion" active={selected === "ganglion"} onSelect={pick("ganglion")} tx={300} ty={152} />
+      <Marker x={192} y={226} n={3} label="Sensory neuron" active={selected === "sensory"} onSelect={pick("sensory")} tx={204} ty={194} />
+      <Marker x={486} y={104} n={4} label="Spinal cord" active={selected === "cord"} onSelect={pick("cord")} tx={446} ty={128} />
+      <Marker x={520} y={338} n={5} label="Motor neuron" active={selected === "motor"} onSelect={pick("motor")} tx={536} ty={306} />
+      <Marker x={704} y={354} n={6} label="Muscle" active={selected === "muscle"} onSelect={pick("muscle")} tx={686} ty={320} />
     </g>
   );
 }
