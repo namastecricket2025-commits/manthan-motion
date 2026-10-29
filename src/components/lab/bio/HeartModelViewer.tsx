@@ -298,11 +298,18 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
   };
   const sel = PARTS.find((p) => p.id === pin);
 
-  const edge = "border-white/10";
-  const txt = "text-slate-100";
-  const sub = "text-slate-400";
+  /* The approved light/dark tokens, not white text. This deck used to be drawn
+     as one dark instrument face in both themes, which left the structure list
+     white-on-paper in light mode — readable in the screenshot only because the
+     stage behind the model is black in both. Only the studio inside the
+     stage keeps its own light ink now. */
+  const edge = "border-[var(--lab-line)]";
+  const txt = "text-[var(--lab-ink)]";
+  const sub = "text-[var(--lab-ink-dim)]";
+  const hover = "hover:bg-[color-mix(in_srgb,var(--lab-ink)_7%,transparent)]";
+  const active = "bg-[color-mix(in_srgb,var(--lab-ink)_9%,transparent)]";
   const btn = (on: boolean) =>
-    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
+    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} ${hover}`}`;
 
   return (
     <div className="lab-split">
@@ -319,8 +326,8 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
         </div>
         <div className="lab-model-stage relative h-[58vh] min-h-[340px] overflow-hidden rounded-xl border border-white/10 bg-[#08080a]">
           <div ref={holder} className="absolute inset-0" />
-          {!ready && !failed && <div className={`absolute inset-0 grid place-items-center text-sm ${sub}`}>Loading heart model…</div>}
-          {failed && <div className={`absolute inset-0 grid place-items-center px-6 text-center text-sm ${sub}`}>Could not load the heart model.</div>}
+          {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-sm text-slate-400">Loading heart model…</div>}
+          {failed && <div className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-slate-400">Could not load the heart model.</div>}
           {PARTS.map((a, i) => (
             <button
               key={a.id}
@@ -346,7 +353,7 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
               round.
             </p>
           )}
-          <p className={`pointer-events-none absolute bottom-2 right-3 hidden text-[10px] ${sub} sm:block`}>
+          <p className="pointer-events-none absolute bottom-2 right-3 hidden text-[10px] text-slate-400 sm:block">
             drag orbit · scroll zoom · tap a numbered dot
           </p>
         </div>
@@ -406,7 +413,7 @@ export default function HeartModelViewer({ label, blurb }: { label: string; blur
               type="button"
               onClick={() => pick(a.id)}
               aria-pressed={pin === a.id}
-              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === a.id ? "bg-white/10" : ""}`}
+              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${hover} ${pin === a.id ? active : ""}`}
             >
               <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: a.color }} />
               {i + 1}. {a.name}

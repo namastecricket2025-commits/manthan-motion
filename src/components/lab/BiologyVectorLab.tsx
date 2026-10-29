@@ -1138,7 +1138,11 @@ export function BiologyVectorLab() {
   const diagrams: Diagram[] = [
     {
       id: "cell",
-      label: plant ? "Plant cell" : "Animal cell",
+      /* One plate, two cells: the tab says what the plate is about, and the
+         Plant cell / Animal cell switch above it says which one you are
+         looking at. Naming the tab after the current cell made the rail
+         rename itself under the pointer. */
+      label: "Cells",
       blurb: plant
         ? "Rigid wall, chloroplasts and one huge vacuole"
         : "Membrane, nucleus, mitochondria and the protein line",

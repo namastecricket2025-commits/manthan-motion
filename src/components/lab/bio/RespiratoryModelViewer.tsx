@@ -214,16 +214,17 @@ export default function RespiratoryModelViewer({ label, blurb }: { label: string
     ctl.current.pin = pin;
     if (!pin) setFacing(true);
   }, [pin]);
-  /* The stage, its header and the deck below are one dark instrument face in
-     both themes — the model needs a black studio behind it, and a panel split
-     between a black stage and a paper deck read as two different tools. The
-     ink therefore stays light in light mode too; the page around the panel is
-     what follows the theme. */
-  const edge = "border-white/10";
-  const txt = "text-slate-100";
-  const sub = "text-slate-400";
+  /* Only the studio inside the stage is dark in both themes. Everything around
+     it is a surface of the page, so it reads the bench's tokens: this deck used
+     to set white ink in both themes, and in light mode the structure list was
+     white on paper — present, unreadable. */
+  const edge = "border-[var(--lab-line)]";
+  const txt = "text-[var(--lab-ink)]";
+  const sub = "text-[var(--lab-ink-dim)]";
+  const hover = "hover:bg-[color-mix(in_srgb,var(--lab-ink)_7%,transparent)]";
+  const active = "bg-[color-mix(in_srgb,var(--lab-ink)_9%,transparent)]";
   const btn = (on: boolean) =>
-    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} hover:bg-white/10`}`;
+    `cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${edge} ${on ? "bg-[#6f7cff] text-white" : `${txt} ${hover}`}`;
 
   return (
     <div className="lab-split">
@@ -317,7 +318,7 @@ export default function RespiratoryModelViewer({ label, blurb }: { label: string
               key={a.id}
               type="button"
               onClick={() => pick(a.id)}
-              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${pin === a.id ? "bg-white/10" : ""}`}
+              className={`lab-part-row flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs ${edge} ${txt} ${hover} ${pin === a.id ? active : ""}`}
             >
               <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: a.color }} />
               {i + 1}. {a.name}
