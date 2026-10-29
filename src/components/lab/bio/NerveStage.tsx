@@ -218,6 +218,9 @@ function growArbor(cx: number, cy: number): Stroke[] {
 
 const ARBOR = growArbor(206, 228);
 
+/** Five sheaths, each 46 long, leaving a 24-unit node between them. */
+const MYELIN_SEGMENTS = [262, 332, 402, 472, 542].map((x) => ({ x }));
+
 const NEURON_QUESTIONS = [
   {
     q: "Why does the impulse appear to jump?",
@@ -234,6 +237,10 @@ const NEURON_QUESTIONS = [
   {
     q: "Why is the animation not real time?",
     a: "A metre of myelinated axon takes about nine milliseconds. At real speed the dot would be gone before you saw it, so the travel is slowed down and the real time is carried in the panel.",
+  },
+  {
+    q: "Why is the bare fibre so much slower?",
+    a: "Not because the current runs slower, but because every patch of membrane along it has to fire in turn: the impulse is rebuilt step by step for the whole metre. Myelin skips all of it except the gaps, so the same metre takes 8 ms instead of 500.",
   },
 ];
 
@@ -253,6 +260,14 @@ const REFLEX_QUESTIONS = [
   {
     q: "Why only one muscle?",
     a: "A withdrawal uses a handful of muscles and relaxes their opposites. One spindle is drawn; the circuit is the same for every one of them, and the brain recruits the rest afterwards.",
+  },
+  {
+    q: "Are those twigs three separate sensors?",
+    a: "No. They are branches of one free nerve ending, drawn apart so the branching is visible. A single sensory neuron samples its patch of skin through many such twigs, and all of them report up the same fibre.",
+  },
+  {
+    q: "Why does the dot pause at the cord?",
+    a: "Because each synapse costs time. The signal stops being electrical, crosses a gap as a chemical, and starts again on the next cell — about 0.7 ms each, and this loop has three of them.",
   },
 ];
 
@@ -878,20 +893,37 @@ function NeuronDrawing({
         />
       </Group>
 
-      {/* Myelin sheaths, drawn as one dashed capsule stroke over the fibre so
-          the segments are evenly spaced and sit exactly on the axon. The
-          ghost dashes stay when it is stripped, so "off" reads as removed
-          insulation rather than as a different fibre. */}
+      {/* Myelin sheaths as five segments rather than a dashed line: each has an
+          edge and a Schwann-cell nucleus, and the gaps between them are the
+          nodes. Stripped, the ghost outlines stay, so "off" reads as removed
+          insulation on the same fibre. */}
       <Group dim={dim("myelin")}>
-        <path
-          d="M 270 228 L 596 228"
-          fill="none"
-          stroke={INK}
-          strokeOpacity={myelin ? 0.16 : 0.1}
-          strokeWidth={15}
-          strokeLinecap="round"
-          strokeDasharray="42 26"
-        />
+        {MYELIN_SEGMENTS.map((segment, index) => (
+          <g key={segment.x}>
+            <rect
+              x={segment.x}
+              y={220}
+              width={46}
+              height={16}
+              rx={8}
+              fill={INK}
+              fillOpacity={myelin ? 0.09 : 0.015}
+              stroke={INK}
+              strokeOpacity={myelin ? 0.34 : 0.1}
+              strokeWidth={1.1}
+            />
+            {myelin ? (
+              <ellipse
+                cx={segment.x + 23}
+                cy={233.4}
+                rx={4.6}
+                ry={2.2}
+                fill={INK}
+                fillOpacity={0.2 + index * 0.015}
+              />
+            ) : null}
+          </g>
+        ))}
       </Group>
 
       {/* The fibre itself. It is visible between the sheaths: those gaps are
@@ -930,6 +962,14 @@ function NeuronDrawing({
           strokeWidth={1}
         />
         <circle cx={212} cy={222} r={3.2} fill={INK} fillOpacity={0.28} />
+        {/* Nissl bodies: the rough endoplasmic reticulum that makes a neuron's
+            cytoplasm look grainy under a microscope. */}
+        <g fill={INK} fillOpacity={0.22}>
+          <ellipse cx={195} cy={232} rx={2.6} ry={1.5} transform="rotate(20 195 232)" />
+          <ellipse cx={201} cy={240} rx={2.2} ry={1.4} transform="rotate(-14 201 240)" />
+          <ellipse cx={216} cy={236} rx={2.4} ry={1.4} transform="rotate(10 216 236)" />
+          <ellipse cx={223} cy={228} rx={1.9} ry={1.3} transform="rotate(-24 223 228)" />
+        </g>
       </Group>
 
       {/* Terminal arbor. One axon, five contacts — the count is illustrative,
@@ -981,19 +1021,29 @@ function NeuronDrawing({
           { x: 686, y: 228 },
           { x: 676, y: 252 },
           { x: 656, y: 270 },
-        ].map((bouton) => (
-          <ellipse
-            key={`${bouton.x}-${bouton.y}`}
-            cx={bouton.x}
-            cy={bouton.y}
-            rx={5.2}
-            ry={4.2}
-            fill={INK}
-            fillOpacity={0.34}
-            stroke={INK}
-            strokeOpacity={0.5}
-            strokeWidth={1}
-          />
+        ].map((bouton, index) => (
+          <g key={`${bouton.x}-${bouton.y}`}>
+            <ellipse
+              cx={bouton.x}
+              cy={bouton.y}
+              rx={6.2}
+              ry={5}
+              fill={INK}
+              fillOpacity={0.3}
+              stroke={INK}
+              strokeOpacity={0.52}
+              strokeWidth={1}
+            />
+            {/* Vesicles, on the bouton that sits nearest the next cell. */}
+            {index === 2 ? (
+              <g fill={INK} fillOpacity={0.55}>
+                <circle cx={bouton.x - 2} cy={bouton.y - 1.6} r={0.95} />
+                <circle cx={bouton.x + 1.4} cy={bouton.y - 1.1} r={0.95} />
+                <circle cx={bouton.x - 0.4} cy={bouton.y + 1.8} r={0.95} />
+                <circle cx={bouton.x + 2.2} cy={bouton.y + 1.2} r={0.8} />
+              </g>
+            ) : null}
+          </g>
         ))}
 
         {/* The postsynaptic membrane, across the cleft. It is the only line on
@@ -1014,9 +1064,9 @@ function NeuronDrawing({
 
       <Marker x={96} y={100} n={1} label="Dendrites" active={selected === "dendrites"} onSelect={pick("dendrites")} tx={124} ty={140} />
       <Marker x={158} y={326} n={2} label="Cell body" active={selected === "soma"} onSelect={pick("soma")} tx={192} ty={264} />
-      <Marker x={520} y={290} n={3} label="Axon" active={selected === "axon"} onSelect={pick("axon")} tx={520} ty={240} />
+      <Marker x={520} y={290} n={3} label="Axon" active={selected === "axon"} onSelect={pick("axon")} tx={530} ty={236} />
       <Marker x={350} y={158} n={4} label="Myelin sheath" active={selected === "myelin"} onSelect={pick("myelin")} tx={350} ty={218} />
-      <Marker x={398} y={300} n={5} label="Node of Ranvier" active={selected === "node"} onSelect={pick("node")} tx={398} ty={238} />
+      <Marker x={398} y={300} n={5} label="Node of Ranvier" active={selected === "node"} onSelect={pick("node")} tx={390} ty={231} />
       <Marker x={696} y={134} n={6} label="Synapse" active={selected === "synapse"} onSelect={pick("synapse")} tx={664} ty={180} />
     </g>
   );
@@ -1054,13 +1104,36 @@ function ReflexDrawing({
           strokeOpacity={0.42}
           strokeWidth={1.4}
         />
+        {/* Epidermis as its own band, with the dermo-epidermal junction drawn
+            as interlocking papillae — that boundary is why a blister lifts the
+            whole epidermis and leaves the dermis behind. */}
         <path
-          d="M 92 190 C 74 234 74 314 92 360"
+          d="M 82 178 C 58 228 58 322 82 374 L 92 368 C 70 312 70 236 92 184 Z"
+          fill={INK}
+          fillOpacity={0.07}
+          stroke={INK}
+          strokeOpacity={0.26}
+          strokeWidth={0.9}
+        />
+        <g stroke={INK} strokeOpacity={0.2} strokeWidth={0.9}>
+          <line x1={81} y1={218} x2={87} y2={218} />
+          <line x1={78} y1={246} x2={84} y2={246} />
+          <line x1={77} y1={275} x2={83} y2={275} />
+          <line x1={78} y1={304} x2={84} y2={304} />
+          <line x1={81} y1={332} x2={87} y2={332} />
+        </g>
+        <path
+          d="M 105 198 C 89 240 89 312 105 354"
           fill="none"
           stroke={INK}
-          strokeOpacity={0.18}
+          strokeOpacity={0.14}
           strokeWidth={1}
         />
+        {/* The stimulus, drawn as what it is: something touching the skin. */}
+        <g>
+          <line x1={24} y1={288} x2={56} y2={288} stroke={INK} strokeOpacity={0.42} strokeWidth={1.2} />
+          <path d="M 51 284.2 L 58 288 L 51 291.8 Z" fill={INK} fillOpacity={0.45} />
+        </g>
         <path
           d="M 104 288 C 96 272 90 266 82 262"
           fill="none"
@@ -1085,14 +1158,41 @@ function ReflexDrawing({
           strokeWidth={1.3}
           strokeLinecap="round"
         />
+        {/* Two more twigs, fanning the other way: the ending samples a patch
+            of skin through many of these, not through one wire. */}
+        <path
+          d="M 104 288 C 106 306 110 316 112 324"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.4}
+          strokeWidth={1.1}
+          strokeLinecap="round"
+        />
+        <path
+          d="M 104 288 C 108 274 112 264 114 256"
+          fill="none"
+          stroke={INK}
+          strokeOpacity={0.4}
+          strokeWidth={1.1}
+          strokeLinecap="round"
+        />
         {[
           { x: 82, y: 262 },
           { x: 82, y: 308 },
           { x: 90, y: 240 },
+          { x: 112, y: 324 },
+          { x: 114, y: 256 },
         ].map((tip) => (
           <circle key={`${tip.x}-${tip.y}`} cx={tip.x} cy={tip.y} r={1.8} fill={INK} fillOpacity={0.42} />
         ))}
       </Group>
+
+      <PlateLabel x={20} y={276} anchor="start">
+        STIMULUS
+      </PlateLabel>
+      <PlateLabel x={120} y={352} anchor="start">
+        ONE BRANCHED ENDING
+      </PlateLabel>
 
       {/* Sensory fibre: myelinated right up to the endings, with the cell body
           in the dorsal root ganglion. */}
@@ -1170,6 +1270,19 @@ function ReflexDrawing({
         />
         <circle cx={406} cy={230} r={2} fill="none" stroke={INK} strokeOpacity={0.26} strokeWidth={0.9} />
       </Group>
+
+      {/* White matter outside, grey matter inside — the two tissues the
+          butterfly and its surround are made of. */}
+      <g>
+        <line x1={458} y1={196} x2={488} y2={196} stroke={INK} strokeOpacity={0.2} strokeWidth={0.9} />
+        <line x1={458} y1={222} x2={488} y2={222} stroke={INK} strokeOpacity={0.2} strokeWidth={0.9} />
+      </g>
+      <PlateLabel x={490} y={199} anchor="start">
+        GREY MATTER
+      </PlateLabel>
+      <PlateLabel x={490} y={225} anchor="start">
+        WHITE MATTER
+      </PlateLabel>
 
       {/* The interneuron that closes the loop inside the grey matter. */}
       <Group dim={dim("cord")}>
