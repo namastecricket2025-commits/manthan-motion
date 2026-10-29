@@ -12,6 +12,7 @@ import {
 } from "@/components/lab/periodic-data";
 import Atom3D from "@/components/lab/Atom3D";
 import MoleBench from "@/components/lab/MoleBench";
+import { Questions, type BenchQuestion } from "@/components/lab/bench-atoms";
 import { LabPicker, type LabPickerOption } from "@/components/lab/lab-picker";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
@@ -1190,19 +1191,24 @@ interface Titrant {
   /** Equivalents of H⁺ or OH⁻ delivered per formula unit. */
   protons: number;
   pKa?: number;
+  /** The second dissociation of a diprotic strong acid (H₂SO₄, pKa₂ ≈ 1.99). */
+  pKa2?: number;
 }
 
 const ANALYTES: Titrant[] = [
   { id: "hcl", formula: "HCl", name: "Hydrochloric acid", kind: "strong-acid", protons: 1 },
+  { id: "hno3", formula: "HNO₃", name: "Nitric acid", kind: "strong-acid", protons: 1 },
+  { id: "h2so4", formula: "H₂SO₄", name: "Sulfuric acid", kind: "strong-acid", protons: 2, pKa2: 1.99 },
   { id: "ch3cooh", formula: "CH₃COOH", name: "Acetic acid", kind: "weak-acid", protons: 1, pKa: 4.76 },
   { id: "naoh", formula: "NaOH", name: "Sodium hydroxide", kind: "strong-base", protons: 1 },
+  { id: "koh", formula: "KOH", name: "Potassium hydroxide", kind: "strong-base", protons: 1 },
 ];
 
 const TITRANTS: Titrant[] = [
   { id: "naoh", formula: "NaOH", name: "Sodium hydroxide", kind: "strong-base", protons: 1 },
   { id: "koh", formula: "KOH", name: "Potassium hydroxide", kind: "strong-base", protons: 1 },
   { id: "hcl", formula: "HCl", name: "Hydrochloric acid", kind: "strong-acid", protons: 1 },
-  { id: "h2so4", formula: "H₂SO₄", name: "Sulfuric acid", kind: "strong-acid", protons: 2 },
+  { id: "h2so4", formula: "H₂SO₄", name: "Sulfuric acid", kind: "strong-acid", protons: 2, pKa2: 1.99 },
   { id: "ch3cooh", formula: "CH₃COOH", name: "Acetic acid", kind: "weak-acid", protons: 1, pKa: 4.76 },
 ];
 
@@ -1238,6 +1244,44 @@ function weakPairPH(acidTotal: number, strongBase: number, pKa: number): number 
 }
 
 /**
+ * pH of a diprotic acid against a strong base, from the full charge balance.
+ *
+ * H₂SO₄ is not two equally strong protons. The first is effectively complete,
+ * the second has pKa₂ ≈ 1.99, so the real curve has a small step at half the
+ * equivalence volume before the main jump at the second equivalence. Solving
+ *
+ *   [H⁺] + [B⁺] = [OH⁻] + [HSO₄⁻] + 2[SO₄²⁻]
+ *
+ * with the two acid fractions keeps both steps instead of averaging them into
+ * one. `pKa1 = −3` is the “first proton is strong” limit: Ka₁ = 1000 makes the
+ * undissociated acid vanish at any pH a titration visits.
+ */
+function diproticPH(
+  acidTotal: number,
+  strongBase: number,
+  pKa2: number,
+  pKa1 = -3,
+): number {
+  const k1 = 10 ** -pKa1;
+  const k2 = 10 ** -pKa2;
+  const kw = 1e-14;
+  let low = 0;
+  let high = 14;
+  for (let step = 0; step < 90; step++) {
+    const mid = (low + high) / 2;
+    const h = 10 ** -mid;
+    const denom = h * h + k1 * h + k1 * k2;
+    const acidMinus = (acidTotal * k1 * h) / denom;
+    const acid2Minus = (acidTotal * k1 * k2) / denom;
+    const residual =
+      h + strongBase - kw / h - acidMinus - 2 * acid2Minus;
+    if (residual > 0) low = mid;
+    else high = mid;
+  }
+  return (low + high) / 2;
+}
+
+/**
  * pH of the flask after `volume` mL of titrant.
  *
  * Acid in the flask is neutralised by a base (and vice versa), so only the
@@ -1245,10 +1289,33 @@ function weakPairPH(acidTotal: number, strongBase: number, pKa: number): number 
  * the buffer plateau and the basic equivalence point both fall out of the
  * same equation instead of being stitched together from special cases.
  */
-export function phAt(volume: number, analyte: Titrant, titrant: Titrant, c0: number, ct: number): number {
-  const V = TITRATION_V0 + volume;
-  const nAnalyte = c0 * TITRATION_V0 * analyte.protons;
+export function phAt(
+  volume: number,
+  analyte: Titrant,
+  titrant: Titrant,
+  c0: number,
+  ct: number,
+  v0 = TITRATION_V0,
+): number {
+  const V = v0 + volume;
+  const nAnalyte = c0 * v0 * analyte.protons;
   const nTitrant = ct * volume * titrant.protons;
+
+  /* Sulfuric acid, on either side of the bench: two protons, two strengths. */
+  if (analyte.kind === "strong-acid" && analyte.pKa2 !== undefined) {
+    return diproticPH(
+      (c0 * v0) / V,
+      (ct * volume * titrant.protons) / V,
+      analyte.pKa2,
+    );
+  }
+  if (titrant.kind === "strong-acid" && titrant.pKa2 !== undefined) {
+    return diproticPH(
+      (ct * volume) / V,
+      (c0 * v0 * analyte.protons) / V,
+      titrant.pKa2,
+    );
+  }
 
   if (analyte.kind === "weak-acid") {
     return weakPairPH(nAnalyte / V, nTitrant / V, analyte.pKa!);
@@ -1319,6 +1386,25 @@ const INDICATORS: Indicator[] = [
   },
 ];
 
+const TITRATION_QUESTIONS: BenchQuestion[] = [
+  {
+    q: "Why is the equivalence point not at pH 7?",
+    a: "Only a strong acid neutralised by a strong base leaves a neutral salt. A weak acid leaves its conjugate base, which takes H⁺ from water and pulls the equivalence point up (acetate sits near 8.7); a weak base leaves an acidic salt. Equivalence is about moles, not about pH 7.",
+  },
+  {
+    q: "Why is the curve almost flat before the jump?",
+    a: "A weak acid and its own salt form a buffer: added OH⁻ is consumed by HA instead of building up, so [H⁺] barely moves. At half the equivalence volume pH equals pKa — that is where the plateau is flattest.",
+  },
+  {
+    q: "Why does one drop matter near the end?",
+    a: "The buffer is used up and there is no excess left to absorb the next addition. One drop is about 0.005 mmol, yet the volume it enters is only ~25–50 mL, so pH can move several units in a single drop. Real titrations slow to dropwise there, with constant swirling.",
+  },
+  {
+    q: "What does the indicator actually tell you?",
+    a: "Only that the pH crossed its own transition range. A good indicator's range brackets the equivalence pH, so the colour change lands within a drop of it; methyl orange (3.1–4.4) changes long before an acetate endpoint, which is why it is the wrong choice here.",
+  },
+];
+
 function mixHex(from: string, to: string, t: number) {
   const parse = (hex: string) => [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
   const [r1, g1, b1] = parse(from);
@@ -1351,6 +1437,10 @@ function TitrationTab() {
   const [indicatorId, setIndicatorId] = useState("pp");
   const [c0, setC0] = useState(0.1);
   const [ct, setCt] = useState(0.1);
+  /* The pipette volume is part of the experiment, not a constant of the room:
+     10, 25 or 50 mL changes the moles in the flask, and with them the volume
+     of titrant needed — at fixed concentrations, doubling V₀ doubles V_eq. */
+  const [flaskVolume, setFlaskVolume] = useState(TITRATION_V0);
   const [rate, setRate] = useState(1.5);
   const [running, setRunning] = useState(true);
   const [volume, setVolume] = useState(0);
@@ -1377,12 +1467,12 @@ function TitrationTab() {
   const titrant = titrantOptions.find((entry) => entry.id === titrantId) ?? titrantOptions[0];
   const indicator = INDICATORS.find((entry) => entry.id === indicatorId) ?? INDICATORS[0];
 
-  const eqVolume = (c0 * TITRATION_V0 * analyte.protons) / (ct * titrant.protons);
+  const eqVolume = (c0 * flaskVolume * analyte.protons) / (ct * titrant.protons);
   const beyondBurette = eqVolume > BURETTE_ML;
-  const ph = phAt(volume, analyte, titrant, c0, ct);
-  const eqPH = phAt(eqVolume, analyte, titrant, c0, ct);
+  const ph = phAt(volume, analyte, titrant, c0, ct, flaskVolume);
+  const eqPH = phAt(eqVolume, analyte, titrant, c0, ct, flaskVolume);
   const look = indicatorLook(indicator, ph);
-  const fill = Math.min(1, (TITRATION_V0 + volume) / (TITRATION_V0 + BURETTE_ML));
+  const fill = Math.min(1, (flaskVolume + volume) / (flaskVolume + BURETTE_ML));
   /* Surface height inside the flask. It only ever depends on the volume, so it
      rises by exactly the amount delivered — no spring overshoot, no bob. */
   const surface = 408 - 84 * fill;
@@ -1420,11 +1510,13 @@ function TitrationTab() {
     const points: string[] = [];
     for (let millilitres = 0; millilitres <= BURETTE_ML; millilitres += 0.25) {
       const x = 34 + (millilitres / BURETTE_ML) * 312;
-      const y = 146 - (clampPH(phAt(millilitres, analyte, titrant, c0, ct)) / 14) * 126;
+      const y =
+        146 -
+        (clampPH(phAt(millilitres, analyte, titrant, c0, ct, flaskVolume)) / 14) * 126;
       points.push(`${millilitres === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`);
     }
     return points.join(" ");
-  }, [analyte, titrant, c0, ct]);
+  }, [analyte, titrant, c0, ct, flaskVolume]);
 
   const pointX = 34 + (volume / BURETTE_ML) * 312;
   const pointY = 146 - (clampPH(ph) / 14) * 126;
@@ -1702,6 +1794,27 @@ function TitrationTab() {
           </div>
         </div>
 
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="apple-lab-micro mr-1">Flask volume</span>
+          {[10, 25, 50].map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                setFlaskVolume(value);
+                setVolume(0);
+              }}
+              data-active={flaskVolume === value}
+              className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+            >
+              {value} mL
+            </button>
+          ))}
+          <span className="ml-auto text-[10.5px] text-[var(--lab-ink-micro)]">
+            V₀ = {flaskVolume} mL
+          </span>
+        </div>
+
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="apple-lab-card block px-3 py-2.5">
             <span className="flex items-baseline justify-between gap-2">
@@ -1843,11 +1956,21 @@ function TitrationTab() {
           <p className="apple-lab-micro">What is happening</p>
           <p className="apple-lab-note mt-1">{status}</p>
         </div>
+        {analyte.id === "h2so4" || titrant.id === "h2so4" ? (
+          <p className="apple-lab-note mt-2 px-1">
+            H₂SO₄ gives up its protons in stages: the first completely, the
+            second only partly (pKa₂ 1.99). So the first equivalence is only an
+            inflection, not a jump — the second proton starts leaving at once,
+            and the single sharp jump is the second equivalence. Even that salt
+            is slightly basic (pH ≈ 7.3), because SO₄²⁻ is a weak base.
+          </p>
+        ) : null}
         <div className="apple-lab-card mt-2 px-3 py-2.5">
           <p className="apple-lab-micro">{indicator.label} · {indicator.range}</p>
           <p className="apple-lab-note mt-1">{indicatorNote}</p>
         </div>
 
+        <Questions items={TITRATION_QUESTIONS} columns={1} className="mt-4" />
       </div>
     </div>
   );

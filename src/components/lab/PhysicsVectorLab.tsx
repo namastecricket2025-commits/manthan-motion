@@ -1,4 +1,4 @@
-import { AMBER, CYAN, MINT, Picker, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
+import { AMBER, CYAN, MINT, Picker, Questions, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
 import DynamicsBench from "@/components/lab/DynamicsBench";
 import MagnetismBench from "@/components/lab/physics/MagnetismBench";
 import OpticsPractical from "@/components/lab/physics/OpticsPractical";
@@ -1531,6 +1531,92 @@ const WAVE_TYPES: Array<{ id: WaveType; label: string }> = [
   { id: "triangle", label: "Triangle" },
 ];
 
+/**
+ * Four set-ups worth seeing before touching a slider.
+ *
+ * The interesting cases are not the individual controls but the relationships
+ * between the two streams: same frequency and phase (they add), same frequency
+ * and opposite phase (they cancel), close frequencies (they beat), and two
+ * shapes at one frequency (the sum is neither shape). Applying one rewinds
+ * both clocks so "antiphase" really starts 180° apart instead of inheriting a
+ * drift from whatever was running before.
+ */
+const WAVE_SETUPS: Array<{
+  id: string;
+  label: string;
+  typeA: WaveType;
+  typeB: WaveType;
+  amplitudeA: number;
+  amplitudeB: number;
+  cyclesA: number;
+  cyclesB: number;
+  phaseDeg: number;
+}> = [
+  {
+    id: "in-phase",
+    label: "In phase",
+    typeA: "sine",
+    typeB: "sine",
+    amplitudeA: 40,
+    amplitudeB: 26,
+    cyclesA: 2.2,
+    cyclesB: 2.2,
+    phaseDeg: 0,
+  },
+  {
+    id: "antiphase",
+    label: "Antiphase",
+    typeA: "sine",
+    typeB: "sine",
+    amplitudeA: 40,
+    amplitudeB: 40,
+    cyclesA: 2.2,
+    cyclesB: 2.2,
+    phaseDeg: 180,
+  },
+  {
+    id: "beats",
+    label: "Beats",
+    typeA: "sine",
+    typeB: "sine",
+    amplitudeA: 36,
+    amplitudeB: 36,
+    cyclesA: 2.2,
+    cyclesB: 2.5,
+    phaseDeg: 0,
+  },
+  {
+    id: "shapes",
+    label: "Sine + triangle",
+    typeA: "sine",
+    typeB: "triangle",
+    amplitudeA: 40,
+    amplitudeB: 26,
+    cyclesA: 2.2,
+    cyclesB: 2.2,
+    phaseDeg: 0,
+  },
+];
+
+const WAVE_QUESTIONS = [
+  {
+    q: "Why can two waves add up to nothing?",
+    a: "Displacement is signed. A crest of +A meeting a trough of −A adds to zero at that point, even though both waves are still carrying energy through it. The graph shows displacement, not effort.",
+  },
+  {
+    q: "Why does the sum never exceed A + B?",
+    a: "Superposition is plain addition. The tallest crest possible is when both crests arrive together, and that is exactly A + B; two waves cannot conspire to make more than the sum of what they carry.",
+  },
+  {
+    q: "What does the phase control actually set?",
+    a: "It delays stream B relative to A at the start. At equal frequencies that offset is permanent — 180° on two sines cancels everywhere. At different frequencies it is only the starting offset; the clocks then drift apart on their own.",
+  },
+  {
+    q: "What is a beat, if neither wave changes?",
+    a: "Two close frequencies keep slipping in and out of step. The envelope swells and fades at |fA − fB|, while each individual wave keeps its own amplitude. The beat is the interference of the pair, not a third wave with a life of its own.",
+  },
+];
+
 /** One shape function covers the whole picker — no branch per drawing call. */
 function waveShape(type: WaveType, angle: number) {
   if (type === "square") return Math.sin(angle) >= 0 ? 1 : -1;
@@ -1610,6 +1696,33 @@ function WaveBench() {
   const clockA = useRef(0);
   const clockB = useRef(0);
 
+  const activeSetup = WAVE_SETUPS.find(
+    (setup) =>
+      setup.typeA === typeA &&
+      setup.typeB === typeB &&
+      setup.amplitudeA === amplitudeA &&
+      setup.amplitudeB === amplitudeB &&
+      setup.cyclesA === cyclesA &&
+      setup.cyclesB === cyclesB &&
+      setup.phaseDeg === phaseDeg,
+  )?.id;
+
+  const applySetup = (id: string) => {
+    const setup = WAVE_SETUPS.find((entry) => entry.id === id);
+    if (!setup) return;
+    setTypeA(setup.typeA);
+    setTypeB(setup.typeB);
+    setAmplitudeA(setup.amplitudeA);
+    setAmplitudeB(setup.amplitudeB);
+    setCyclesA(setup.cyclesA);
+    setCyclesB(setup.cyclesB);
+    setPhaseDeg(setup.phaseDeg);
+    setShowB(true);
+    setShowSum(true);
+    clockA.current = 0;
+    clockB.current = 0;
+  };
+
   /* One clock, two streams. Each advances at its own frequency, so the pair
      drifts in and out of step — which is exactly what the sum trace shows. */
   useAnimationFrame((_, delta) => {
@@ -1674,10 +1787,25 @@ function WaveBench() {
           </div>
         </div>
 
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="apple-lab-micro mr-1">Set-ups</span>
+          {WAVE_SETUPS.map((setup) => (
+            <button
+              key={setup.id}
+              type="button"
+              onClick={() => applySetup(setup.id)}
+              data-active={activeSetup === setup.id}
+              className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+            >
+              {setup.label}
+            </button>
+          ))}
+        </div>
+
         <svg
           viewBox={`0 0 ${WAVE_WIDTH} 224`}
           preserveAspectRatio="none"
-          className="mt-4 h-[240px] w-full"
+          className="mt-3 h-[240px] w-full"
           role="img"
           aria-label="Two travelling wave streams and the sum they make"
         >
@@ -1714,6 +1842,7 @@ function WaveBench() {
         </svg>
 
         <p className="apple-lab-note mt-4">{note}</p>
+        <Questions items={WAVE_QUESTIONS} className="mt-4" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

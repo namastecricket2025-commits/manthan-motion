@@ -1,4 +1,4 @@
-import { Picker, Range, Readout, ink, plate, VIOLET, CYAN, AMBER, MINT } from "@/components/lab/bench-atoms";
+import { Picker, Questions, Range, Readout, ink, plate, VIOLET, CYAN, AMBER, MINT } from "@/components/lab/bench-atoms";
 import { useSpringTransition } from "@/lib/motion";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -38,6 +38,39 @@ import { useMemo, useState } from "react";
  */
 
 type LensKind = "convex" | "concave";
+
+/**
+ * The five object positions every textbook draws, as multiples of f. They are
+ * buttons rather than another slider because a student is not shopping for a
+ * distance here — they are trying to see the case they were told to remember
+ * (beyond 2F, at 2F, between F and 2F, at F, inside F).
+ */
+const OBJECT_CASES = [
+  { id: "beyond", label: "Beyond 2F", factor: 2.6 },
+  { id: "at-2f", label: "At 2F", factor: 2 },
+  { id: "between", label: "F → 2F", factor: 1.5 },
+  { id: "at-f", label: "At F", factor: 1 },
+  { id: "inside", label: "Inside F", factor: 0.6 },
+];
+
+const OPTICS_QUESTIONS = [
+  {
+    q: "Why is the virtual image drawn dashed?",
+    a: "No light actually passes through it. The refracted rays are still diverging when they leave the lens; only their backward extensions meet there. A screen placed at I would catch nothing, which is exactly why the arrow is dotted.",
+  },
+  {
+    q: "Why does the image turn upside down?",
+    a: "Beyond F the lens bends every ray across the axis: the ray from the object's tip that passes the optical centre continues straight but downward, and the other two cross it below the axis. The crossing point is below, so the arrow points the other way.",
+  },
+  {
+    q: "Why is there no image when the object is at F?",
+    a: "The rays leave the lens parallel. Parallel rays never meet on either side, so v is infinite — not merely far away. A camera focused at infinity is the practical version of this case.",
+  },
+  {
+    q: "What is special about 2F?",
+    a: "At 2F the image lands at 2F on the other side with the same size (m = −1). It is the boundary between a diminished real image (object beyond 2F) and a magnified one (object between F and 2F).",
+  },
+];
 
 const BENCH_W = 780;
 const BENCH_H = 344;
@@ -91,6 +124,13 @@ export default function OpticsPractical() {
 
   const convex = kind === "convex";
   const finite = Number.isFinite(v);
+  const objectCaseAt = (factor: number) =>
+    Math.min(62, Math.max(2, Math.round(factor * focal)));
+  const activeCase = convex
+    ? OBJECT_CASES.find(
+        (entry) => Math.abs(distance - objectCaseAt(entry.factor)) < 0.5,
+      )?.id
+    : undefined;
   /* u = −f puts the image at infinity: the two refracted rays leave parallel. */
   const atFocus = Math.abs(distance - focal) < 0.5;
 
@@ -596,6 +636,8 @@ export default function OpticsPractical() {
             Virtual image · dashed, on the object side
           </span>
         </div>
+
+        <Questions items={OPTICS_QUESTIONS} className="mt-4" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
@@ -609,6 +651,24 @@ export default function OpticsPractical() {
             ]}
             onChange={(next) => setKind(next)}
           />
+          {convex ? (
+            <div>
+              <p className="apple-lab-micro">Standard position</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {OBJECT_CASES.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => setDistance(objectCaseAt(entry.factor))}
+                    data-active={activeCase === entry.id}
+                    className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <Range
             label="Focal length f"
             value={focal}
@@ -621,7 +681,7 @@ export default function OpticsPractical() {
           <Range
             label="Object distance u"
             value={distance}
-            min={6}
+            min={2}
             max={62}
             step={1}
             unit="cm"

@@ -1,4 +1,4 @@
-import { Picker, Range, Readout, ink, plate, AMBER, MINT } from "@/components/lab/bench-atoms";
+import { Picker, Questions, Range, Readout, ink, plate, AMBER, MINT } from "@/components/lab/bench-atoms";
 import { useMemo, useState } from "react";
 
 /**
@@ -264,8 +264,30 @@ function WireLawInset({
   );
 }
 
+const MAGNET_QUESTIONS = [
+  {
+    q: "Why can two field lines never cross?",
+    a: "The field at any point has one direction and one strength. If two lines crossed, a compass placed there would have to point two ways at once. The lines are streamlines of a single resultant field, so they pack together but never meet.",
+  },
+  {
+    q: "Why are the lines crowded at the poles?",
+    a: "The same magnetic flux passes through a much smaller area at a pole face, so the field is stronger there. Line density is the drawing's way of showing strength — it is also why iron filings clump at the ends of a bar magnet.",
+  },
+  {
+    q: "Why does the compass point along a line?",
+    a: "A compass needle is a small magnet. The field exerts a torque that swings its north end to lie along the local field — tangent to the line at that point, not aimed at the pole. Off the axis those two directions are visibly different.",
+  },
+  {
+    q: "Why 1/r at the wire but 1/r³ at the magnet?",
+    a: "An ideal long straight wire is an infinite line of current, and its field falls as 1/r. A bar magnet is a dipole: from far away its two poles almost cancel, leaving a field that falls as 1/r³. The plate sums the two poles exactly, so near the magnet it needs no power law at all.",
+  },
+];
+
 export default function MagnetismBench() {
   const [source, setSource] = useState<Source>("magnet");
+  /* Iron filings are a second reading of the same field, useful to compare with
+     the traced lines but not always wanted on top of them. */
+  const [showFilings, setShowFilings] = useState(true);
   /* Compass position on the magnet plate, in centimetres from the magnet centre. */
   const [compassX, setCompassX] = useState(9);
   const [compassY, setCompassY] = useState(3);
@@ -309,7 +331,14 @@ export default function MagnetismBench() {
     source === "magnet"
       ? [
           ["Ten field lines, traced from B — they never cross", MINT],
-          ["Iron filings: a dash along B, darker where B is strong", ink(0.5)],
+          ...(showFilings
+            ? ([
+                [
+                  "Iron filings: a dash along B, darker where B is strong",
+                  ink(0.5),
+                ],
+              ] as Array<[string, string]>)
+            : []),
           ["Compass: needle along the field where it stands", "#e05b45"],
         ]
       : [
@@ -413,20 +442,22 @@ export default function MagnetismBench() {
 
                 <g clipPath="url(#lab-magnet-frame)">
                   {/* Iron filings: the texture the field actually makes. */}
-                  {FILINGS.map((filing) => (
-                    <line
-                      key={`${filing.x}-${filing.y}`}
-                      x1={filing.x - 4}
-                      y1={filing.y}
-                      x2={filing.x + 4}
-                      y2={filing.y}
-                      stroke={ink(1)}
-                      strokeOpacity={filing.opacity}
-                      strokeWidth={1.4}
-                      strokeLinecap="round"
-                      transform={`rotate(${filing.angle.toFixed(1)} ${filing.x} ${filing.y})`}
-                    />
-                  ))}
+                  {showFilings
+                    ? FILINGS.map((filing) => (
+                        <line
+                          key={`${filing.x}-${filing.y}`}
+                          x1={filing.x - 4}
+                          y1={filing.y}
+                          x2={filing.x + 4}
+                          y2={filing.y}
+                          stroke={ink(1)}
+                          strokeOpacity={filing.opacity}
+                          strokeWidth={1.4}
+                          strokeLinecap="round"
+                          transform={`rotate(${filing.angle.toFixed(1)} ${filing.x} ${filing.y})`}
+                        />
+                      ))
+                    : null}
                 </g>
 
                 {/* the axial line: straight out of N to infinity, and back from
@@ -656,7 +687,19 @@ export default function MagnetismBench() {
               {text}
             </span>
           ))}
+          {source === "magnet" ? (
+            <button
+              type="button"
+              onClick={() => setShowFilings((on) => !on)}
+              data-active={showFilings}
+              className="apple-lab-btn ml-auto !px-2.5 !py-1 !text-[10.5px]"
+            >
+              {showFilings ? "Filings on" : "Filings off"}
+            </button>
+          ) : null}
         </div>
+
+        <Questions items={MAGNET_QUESTIONS} className="mt-4" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">

@@ -1,4 +1,5 @@
-import { Picker } from "@/components/lab/bench-atoms";
+import { Questions, type BenchQuestion } from "@/components/lab/bench-atoms";
+import { LabPicker } from "@/components/lab/lab-picker";
 import { useStillMotion } from "@/lib/motion";
 import { motion } from "motion/react";
 import { Minus, Plus, RotateCcw } from "lucide-react";
@@ -28,44 +29,128 @@ type Reaction = {
   id: string;
   name: string;
   note: string;
+  group: string;
   left: string[];
   right: string[];
   /** The one solution, left then right. Used only to seed the mass defaults. */
   solution: number[];
 };
 
+/**
+ * Ten reactions, grouped the way a student meets them rather than by chapter
+ * number. Every entry is a real equation with one smallest whole-number
+ * solution; the bench never needs a lookup table, because the atom ledger
+ * checks any set of coefficients the student can reach.
+ */
 const REACTIONS: Reaction[] = [
   {
     id: "methane",
     name: "Methane",
     note: "The flame on a gas stove.",
+    group: "Everyday",
     left: ["CH4", "O2"],
     right: ["CO2", "H2O"],
     solution: [1, 2, 1, 2],
   },
   {
-    id: "water",
-    name: "Water",
-    note: "Two gases, one liquid.",
-    left: ["H2", "O2"],
-    right: ["H2O"],
-    solution: [2, 1, 2],
-  },
-  {
     id: "rust",
     name: "Rust",
     note: "Iron meeting oxygen, slowly.",
+    group: "Everyday",
     left: ["Fe", "O2"],
     right: ["Fe2O3"],
     solution: [4, 3, 2],
   },
   {
+    id: "vinegar",
+    name: "Baking soda + vinegar",
+    note: "The fizz in a kitchen volcano.",
+    group: "Everyday",
+    left: ["CH3COOH", "NaHCO3"],
+    right: ["CH3COONa", "H2O", "CO2"],
+    solution: [1, 1, 1, 1, 1],
+  },
+  {
+    id: "photosynthesis",
+    name: "Photosynthesis",
+    note: "Air and water becoming sugar in light.",
+    group: "Everyday",
+    left: ["CO2", "H2O"],
+    right: ["C6H12O6", "O2"],
+    solution: [6, 6, 1, 6],
+  },
+  {
+    id: "water",
+    name: "Water",
+    note: "Two gases, one liquid.",
+    group: "Industry",
+    left: ["H2", "O2"],
+    right: ["H2O"],
+    solution: [2, 1, 2],
+  },
+  {
+    id: "ammonia",
+    name: "Ammonia",
+    note: "The Haber process, over an iron catalyst.",
+    group: "Industry",
+    left: ["N2", "H2"],
+    right: ["NH3"],
+    solution: [1, 3, 2],
+  },
+  {
+    id: "limestone",
+    name: "Limestone",
+    note: "Roasting limestone to make quicklime.",
+    group: "Industry",
+    left: ["CaCO3"],
+    right: ["CaO", "CO2"],
+    solution: [1, 1, 1],
+  },
+  {
+    id: "sodium",
+    name: "Sodium + water",
+    note: "Sodium skittering on the surface.",
+    group: "Metals",
+    left: ["Na", "H2O"],
+    right: ["NaOH", "H2"],
+    solution: [2, 2, 2, 1],
+  },
+  {
+    id: "magnesium",
+    name: "Magnesium + acid",
+    note: "A ribbon dissolving in dilute acid.",
+    group: "Metals",
+    left: ["Mg", "HCl"],
+    right: ["MgCl2", "H2"],
+    solution: [1, 2, 1, 1],
+  },
+  {
     id: "thermite",
     name: "Thermite",
     note: "Aluminium takes the oxygen from iron.",
+    group: "Metals",
     left: ["Al", "Fe2O3"],
     right: ["Al2O3", "Fe"],
     solution: [2, 1, 1, 2],
+  },
+];
+
+const BALANCE_QUESTIONS: BenchQuestion[] = [
+  {
+    q: "Why change the number in front, never the subscript?",
+    a: "H₂O is water; H₂O₂ is hydrogen peroxide. A subscript is part of the substance's identity, so changing it changes the chemical. A coefficient only says how many of that substance take part.",
+  },
+  {
+    q: "Why is ×2 balanced but still wrong?",
+    a: "Matter is conserved either way, but a chemical equation is written for the smallest whole-number ratio. Every coefficient sharing a factor means the reaction can be divided through — the bench flags it instead of silently calling it finished.",
+  },
+  {
+    q: "Why check every element separately?",
+    a: "One coefficient multiplies every atom in its formula, so a single nudge moves several rows of the ledger at once. Matching O can unmatch H again, which is why every element is checked instead of the total.",
+  },
+  {
+    q: "Why is the gram calculation locked until it balances?",
+    a: "Grams become moles, and moles become grams through the coefficients — the mole ratio. Without the balanced ratio there is no conversion factor, so any mass answer would be arithmetic on a reaction that does not exist.",
   },
 ];
 
@@ -209,6 +294,10 @@ export function MoleBench() {
   function initialGrams(target: Reaction) {
     const [first, second] = target.left;
     const firstMass = molarMass(first) * target.solution[0];
+    /* A decomposition has one reactant: there is no second mass to seed, and
+       inventing one would put a reagent on the bench that the equation does
+       not contain. */
+    if (!second) return [Math.max(1, Math.round(firstMass))];
     const secondMass = molarMass(second) * target.solution[1];
     return [
       Math.max(1, Math.round(firstMass)),
@@ -265,6 +354,11 @@ export function MoleBench() {
   }, [coefficients, elements, reaction]);
 
   const balanced = counts.every((entry) => entry.left === entry.right);
+  /* A balanced equation can still be a multiple of the real one. The divisor
+     is the largest number every coefficient shares; above 1 the bench says so
+     rather than calling 4 H₂ + 2 O₂ → 4 H₂O finished. */
+  const divisor = coefficients.reduce((a, b) => gcd(a, b));
+  const simplest = divisor === 1;
   const leftTotal = counts.reduce((total, entry) => total + entry.left, 0);
   const rightTotal = counts.reduce((total, entry) => total + entry.right, 0);
 
@@ -283,15 +377,21 @@ export function MoleBench() {
             The equation has to weigh the same on both sides
           </h2>
           <p className="apple-lab-note mt-2 max-w-xl">
-            Only the numbers in front are yours to change — the formulas are
-            fixed. Match every atom, then read what the ratio means in grams.
+            {reaction.note} Only the numbers in front are yours to change — the
+            formulas are fixed. Match every atom, then read what the ratio means
+            in grams.
           </p>
         </div>
         <div className="w-full sm:w-auto sm:min-w-[15rem]">
-          <Picker
+          <LabPicker
             label="Reaction"
             value={reactionId}
-            options={REACTIONS.map((entry) => ({ id: entry.id, label: entry.name }))}
+            options={REACTIONS.map((entry) => ({
+              value: entry.id,
+              label: entry.name,
+              badge: prettyFormula(entry.left[0]),
+              group: entry.group,
+            }))}
             onChange={chooseReaction}
           />
         </div>
@@ -304,23 +404,29 @@ export function MoleBench() {
             <span
               className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-semibold"
               style={{
-                borderColor: balanced
-                  ? "color-mix(in srgb, var(--lab-diagram-mint) 40%, transparent)"
-                  : "color-mix(in srgb, var(--lab-diagram-rose) 34%, transparent)",
-                color: balanced
-                  ? "var(--lab-diagram-mint)"
-                  : "var(--lab-diagram-rose)",
+                borderColor: !balanced
+                  ? "color-mix(in srgb, var(--lab-diagram-rose) 34%, transparent)"
+                  : simplest
+                    ? "color-mix(in srgb, var(--lab-diagram-mint) 40%, transparent)"
+                    : "color-mix(in srgb, var(--lab-diagram-amber) 40%, transparent)",
+                color: !balanced
+                  ? "var(--lab-diagram-rose)"
+                  : simplest
+                    ? "var(--lab-diagram-mint)"
+                    : "var(--lab-diagram-amber)",
               }}
             >
               <span
                 className="h-1.5 w-1.5 rounded-full"
                 style={{
-                  background: balanced
-                    ? "var(--lab-diagram-mint)"
-                    : "var(--lab-diagram-rose)",
+                  background: !balanced
+                    ? "var(--lab-diagram-rose)"
+                    : simplest
+                      ? "var(--lab-diagram-mint)"
+                      : "var(--lab-diagram-amber)",
                 }}
               />
-              {balanced ? "Balanced" : "Not balanced"}
+              {!balanced ? "Not balanced" : simplest ? "Balanced" : `Divide by ${divisor}`}
             </span>
             <button
               type="button"
@@ -476,10 +582,14 @@ export function MoleBench() {
         </div>
 
         <p className="apple-lab-note mt-4 text-[11.5px]">
-          {balanced
-            ? `${reaction.name}: ${equationSummary(reaction, coefficients)}. Every element matches, so the coefficients are the mole ratio of the reaction.`
-            : "A coefficient multiplies every atom in the formula. Change one and the ledger moves in more than one row at once."}
+          {!balanced
+            ? "A coefficient multiplies every atom in the formula. Change one and the ledger moves in more than one row at once."
+            : simplest
+              ? `${reaction.name}: ${equationSummary(reaction, coefficients)}. Every element matches, so the coefficients are the mole ratio of the reaction.`
+              : `Every element matches, but all the coefficients share a factor of ${divisor}. Divide through — a textbook equation is written in its smallest whole-number ratio.`}
         </p>
+
+        <Questions items={BALANCE_QUESTIONS} className="mt-4" />
       </section>
 
       <MassCheck
@@ -543,13 +653,20 @@ function CoefficientRow({
   );
 }
 
+/** Digits inside a formula become true subscripts, in text as on the plate. */
+function prettyFormula(formula: string) {
+  return formula.replace(/\d/g, (digit) => "₀₁₂₃₄₅₆₇₈₉"[Number(digit)]);
+}
+
+function gcd(a: number, b: number): number {
+  return b === 0 ? Math.abs(a) : gcd(b, a % b);
+}
+
 /** `2 H₂ + O₂ → 2 H₂O`, as plain text for the summary sentence. */
 function equationSummary(reaction: Reaction, coefficients: number[]) {
-  const subscript = (formula: string) =>
-    formula.replace(/\d/g, (digit) => "₀₁₂₃₄₅₆₇₈₉"[Number(digit)]);
   const side = (formulas: string[], offset: number) =>
     formulas
-      .map((formula, index) => `${coefficients[offset + index]} ${subscript(formula)}`)
+      .map((formula, index) => `${coefficients[offset + index]} ${prettyFormula(formula)}`)
       .join(" + ");
   return `${side(reaction.left, 0)} → ${side(reaction.right, reaction.left.length)}`;
 }

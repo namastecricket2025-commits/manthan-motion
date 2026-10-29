@@ -65,6 +65,61 @@ export function Readout({ label, value }: { label: string; value: string }) {
   );
 }
 
+export type BenchQuestion = { q: string; a: string };
+
+/**
+ * The questions a figure raises, answered in type.
+ *
+ * A bench can put a headline number on screen and still leave a student asking
+ * "but why is it not seven?". The answer belongs beside the drawing, in plain
+ * text on the plate's own paper — not in a callout box with a glow. This is the
+ * same hairline block the biology plates use, so every lab answers in the same
+ * voice: the question in ink, the answer one step quieter, no container.
+ */
+export function Questions({
+  items,
+  title = "Questions this bench invites",
+  columns = 2,
+  className,
+}: {
+  items: BenchQuestion[];
+  title?: string;
+  /** One column when the block sits in a narrow side panel. */
+  columns?: 1 | 2;
+  className?: string;
+}) {
+  return (
+    <div
+      className={[
+        "border-t border-[var(--lab-line-soft)] pt-3",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <p className="apple-lab-micro">{title}</p>
+      <div
+        className={
+          columns === 2
+            ? "mt-2 grid gap-x-5 gap-y-2.5 sm:grid-cols-2"
+            : "mt-2 grid gap-y-2.5"
+        }
+      >
+        {items.map((entry) => (
+          <div key={entry.q}>
+            <p className="text-[11.5px] font-semibold text-[var(--lab-ink)]">
+              {entry.q}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
+              {entry.a}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** A row of buttons that choose one option — the picker every bench leans on. */
 export function Picker<T extends string>({
   label,
