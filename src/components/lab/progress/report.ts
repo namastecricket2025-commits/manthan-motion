@@ -1,4 +1,4 @@
-import { EXPERIMENTS, matchesExperiment } from "./catalog";
+import { EXPERIMENTS, matchesExperiment, progressKey } from "./catalog";
 
 export type ProgressRow = {
   key: string;
@@ -154,7 +154,11 @@ export function buildLabReport({ name, progress, records, notebooks }: ReportInp
         : "Not attempted";
     const matching = progress.filter((row) => matchesExperiment(row.key, experiment));
     const time = matching.reduce((total, row) => total + row.timeSeconds, 0);
-    const observed = matching.reduce((total, row) => total + row.observations, 0);
+    const observed = records
+      .filter((record) =>
+        matchesExperiment(progressKey(record.subject, record.title), experiment),
+      )
+      .reduce((total, record) => total + record.observations.length, 0);
     return `<tr><td>${escapeHtml(experiment.title)}</td><td>${escapeHtml(experiment.subject)}</td><td>${status}</td><td>${duration(time)}</td><td>${observed}</td></tr>`;
   }).join("");
 

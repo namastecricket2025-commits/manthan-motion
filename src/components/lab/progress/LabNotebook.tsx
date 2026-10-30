@@ -372,6 +372,19 @@ export function LabNotebook({ open, onOpenChange }: { open: boolean; onOpenChang
     }
   };
 
+  const stopSharingWorksheet = async () => {
+    if (!worksheet) return;
+    try {
+      await revokeShare({ notebookId: worksheet.id });
+      setWorksheetCode(null);
+      toast.success("Worksheet sharing stopped");
+    } catch (error) {
+      toast.error("Could not stop sharing", {
+        description: error instanceof Error ? error.message : "Try again.",
+      });
+    }
+  };
+
   const shareNotes = async () => {
     try {
       const book = await ensureNotes({});
@@ -745,14 +758,23 @@ export function LabNotebook({ open, onOpenChange }: { open: boolean; onOpenChang
                   {worksheetCode ? "Share code" : "Share"}
                 </button>
                 {worksheetCode ? (
-                  <button
-                    type="button"
-                    onClick={() => void copyCode(worksheetCode)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--card-border)] px-2.5 py-1 font-mono text-[11px]"
-                  >
-                    <Copy className="h-3 w-3" />
-                    {worksheetCode}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void copyCode(worksheetCode)}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--card-border)] px-2.5 py-1 font-mono text-[11px]"
+                    >
+                      <Copy className="h-3 w-3" />
+                      {worksheetCode}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void stopSharingWorksheet()}
+                      className="text-[10.5px] text-text-dim underline-offset-2 hover:underline"
+                    >
+                      Stop sharing
+                    </button>
+                  </>
                 ) : null}
               </div>
 
