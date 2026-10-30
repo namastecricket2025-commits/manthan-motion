@@ -1,8 +1,9 @@
 import { Range } from "@/components/lab/bench-atoms";
 import { useStillMotion } from "@/lib/motion";
 import { useAnimationFrame } from "motion/react";
-import { Play, RotateCcw, Zap } from "lucide-react";
+import { Box, Play, RotateCcw, Zap } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import NerveModelView from "./NerveModelView";
 
 /**
  * The nervous system plate.
@@ -280,6 +281,10 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
   const [firing, setFiring] = useState(false);
   const [fired, setFired] = useState(false);
   const [progress, setProgress] = useState(0);
+  /* The same instant, before the plate's saltatory stepping is applied. The 3D
+     model has its own internode boundaries, so it steps its own copy. */
+  const [phase, setPhase] = useState(0);
+  const [view, setView] = useState<"plate" | "model">("plate");
   const [pulse, setPulse] = useState<{ x: number; y: number } | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -307,6 +312,7 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
     setFiring(false);
     setFired(false);
     setProgress(0);
+    setPhase(0);
     setPulse(null);
     setNote(null);
     setSelected(null);
@@ -358,6 +364,7 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
         setPulse({ x: end.x, y: end.y });
       }
       setProgress(1);
+      setPhase(1);
       setFired(true);
       return;
     }
@@ -390,6 +397,7 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
       setPulse({ x: point.x, y: point.y });
     }
     setProgress(travelled);
+    setPhase(next);
     if (next >= 1) {
       setFiring(false);
       setFired(true);
@@ -400,6 +408,7 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
     setFiring(false);
     setFired(false);
     setProgress(0);
+    setPhase(0);
     setPulse(null);
     setNote(null);
   };
@@ -430,6 +439,26 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
               {entry.label}
             </button>
           ))}
+          <span className="mx-1 h-4 w-px bg-[var(--lab-line)]" aria-hidden="true" />
+          <button
+            type="button"
+            className="apple-lab-btn !px-2.5 !py-1.5 !text-[11px]"
+            data-active={view === "plate"}
+            aria-pressed={view === "plate"}
+            onClick={() => setView("plate")}
+          >
+            Plate
+          </button>
+          <button
+            type="button"
+            className="apple-lab-btn !px-2.5 !py-1.5 !text-[11px]"
+            data-active={view === "model"}
+            aria-pressed={view === "model"}
+            onClick={() => setView("model")}
+          >
+            <Box className="h-3 w-3" />
+            3D
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -480,6 +509,14 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
             </span>
           </div>
 
+          {view === "model" ? (
+            <NerveModelView
+              mode={mode}
+              myelin={myelin}
+              phase={phase}
+              fired={fired}
+            />
+          ) : (
           <div className="relative overflow-hidden rounded-xl border border-[var(--lab-line-soft)] bg-[color-mix(in_srgb,var(--lab-ink)_2%,transparent)]">
             <svg
               viewBox={`0 0 ${W} ${H}`}
@@ -527,17 +564,24 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
               ) : null}
             </svg>
           </div>
+          )}
 
           <p className="mt-2 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
-            {mode === "neuron"
-              ? "Drawn flat and not to scale: five sheaths, five boutons, one axon. Time in the panel is real; the travel is slowed so you can see it."
-              : "The loop completes inside the cord. Nothing on this plate waits for the brain, and the drawing is a schematic — one muscle of the several a withdrawal uses."}
+            {view === "model"
+              ? mode === "neuron"
+                ? "Modelled cell: nucleus, nucleolus and Nissl bodies in the soma, a dendrite arbor that tapers at every fork, six myelin internodes with their Schwann cells, and seven boutons on the next membrane. Turn it, and the impulse jumps node to node."
+                : "A real Human Reference Atlas cord segment (NIH 3D) with the grey-matter butterfly inside it; skin, the branched ending, the dorsal-root ganglion, the rootlets, the motor fibre and one muscle are modelled around it. Everything you see completing, completes inside the cord."
+              : mode === "neuron"
+                ? "Drawn flat and not to scale: five sheaths, five boutons, one axon. Time in the panel is real; the travel is slowed so you can see it."
+                : "The loop completes inside the cord. Nothing on this plate waits for the brain, and the drawing is a schematic — one muscle of the several a withdrawal uses."}
           </p>
 
           {/* The questions the figure raises, answered where a plate would
               leave its notes: plain text, hairline rules, no callout boxes. */}
           <div className="mt-2.5 border-t border-[var(--lab-line-soft)] px-1 pt-2.5">
-            <p className="apple-lab-micro">Questions this plate invites</p>
+            <p className="apple-lab-micro">
+              Questions this {view === "model" ? "model" : "plate"} invites
+            </p>
             <div className="mt-2 grid gap-x-5 gap-y-2.5 sm:grid-cols-2">
               {questions.map((entry) => (
                 <div key={entry.q}>
@@ -679,9 +723,9 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
                 </>
               ) : (
                 <p className="text-[11px] leading-relaxed text-[var(--lab-ink-micro)]">
-                  Pick a numbered marker on the plate, or a structure above. The
-                  notes in the plate below answer what the drawing itself does
-                  not.
+                  {view === "model"
+                    ? "Pick a structure above for the note it carries in the figure. The model is the same cell from the other side of the same fact."
+                    : "Pick a numbered marker on the plate, or a structure above. The notes below the plate answer what the drawing itself does not."}
                 </p>
               )}
             </div>
