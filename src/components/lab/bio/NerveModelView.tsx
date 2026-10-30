@@ -137,8 +137,10 @@ function buildNeuron(root: THREE.Group): Built {
   const somaMaterial = membrane("#c9a494", { roughness: 0.55 });
   const deepMaterial = membrane("#8d6470", { roughness: 0.6 });
   const axonMaterial = membrane("#b08272", { roughness: 0.58 });
-  /* Slightly translucent, so the impulse stays visible under its sheath. */
-  const myelinMaterial = membrane("#efe4d6", { roughness: 0.42, opacity: 0.74 });
+  /* Opaque myelin reads as a sheath, not a string of bubbles. The pulse is
+     drawn over it (depth test off), so it stays visible without transparency
+     sorting artefacts. */
+  const myelinMaterial = membrane("#efe4d6", { roughness: 0.42 });
   const boutonMaterial = membrane("#d8bd93", { roughness: 0.5 });
   const myelin: THREE.Object3D[] = [];
   const ends: THREE.Object3D[] = [];
@@ -204,13 +206,13 @@ function buildNeuron(root: THREE.Group): Built {
     ),
   );
 
-  /* Six internodes. Each is a capsule with its own Schwann cell, and the gaps
-     between them are the nodes — the only places the membrane can fire. */
+  /* Six internodes. Each is a long, thin capsule with its own Schwann cell and
+     a narrow node at each end; the old fat capsules read as beads on a string. */
   const span = (AXON_END - AXON_START) / INTERNODES;
   for (let i = 0; i < INTERNODES; i += 1) {
     const x = AXON_START + span * (i + 0.5);
     const capsule = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.18, span - 0.5, 10, 18),
+      new THREE.CapsuleGeometry(0.145, span - 0.34, 10, 18),
       myelinMaterial,
     );
     capsule.rotation.z = Math.PI / 2;
@@ -238,13 +240,22 @@ function buildNeuron(root: THREE.Group): Built {
     ends.push(bouton);
   }
 
-  /* The postsynaptic membrane, across the cleft. */
+  /* The postsynaptic membrane, across the cleft. A solid curved surface with
+     receptor knobs reads as the next cell; a translucent grey panel read as a
+     floating rectangle. */
   const post = new THREE.Mesh(
     new THREE.CylinderGeometry(1.02, 1.02, 1.5, 30, 1, true, -1.1, 2.2),
-    membrane("#a2999a", { roughness: 0.7, opacity: 0.55 }),
+    membrane("#b78d86", { roughness: 0.7 }),
   );
   post.position.set(AXON_END + 1.12, 0, 0);
   root.add(post);
+  const receptorMat = membrane("#8fb8ad", { roughness: 0.45 });
+  for (let i = 0; i < 7; i += 1) {
+    const angle = (i / 7) * Math.PI * 2;
+    const receptor = new THREE.Mesh(new THREE.SphereGeometry(0.062, 10, 8), receptorMat);
+    receptor.position.set(AXON_END + 1.0, Math.sin(angle) * 0.74, Math.cos(angle) * 0.74);
+    root.add(receptor);
+  }
 
   const path = new THREE.CatmullRomCurve3(
     [V(-2.4, 1.05, 0.5), V(-1.3, 0.6, 0.3), V(-0.5, 0.1, 0), V(0.4, 0, 0), V(3.8, 0, 0), V(AXON_END, 0, 0), V(AXON_END + 1.0, 0.35, 0.1)],
@@ -263,8 +274,8 @@ const CORD_URL = "/models/spinal-cord.glb";
 
 function buildReflex(root: THREE.Group, onCord?: (mesh: THREE.Mesh) => void): Built {
   const nerveMaterial = membrane("#b08272", { roughness: 0.55 });
-  const myelinMaterial = membrane("#efe4d6", { roughness: 0.42, opacity: 0.74 });
-  const cordMaterial = membrane("#b79080", { roughness: 0.62, opacity: 0.55 });
+  const myelinMaterial = membrane("#efe4d6", { roughness: 0.42 });
+  const cordMaterial = membrane("#b79080", { roughness: 0.62, opacity: 0.6 });
   const greyMaterial = membrane("#8b6370", { roughness: 0.66, opacity: 0.85 });
   const muscleMaterial = membrane("#b06f66", { roughness: 0.6 });
   const myelin: THREE.Object3D[] = [];
@@ -538,10 +549,20 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
     root.updateMatrixWorld(true);
 
     const pulse = new THREE.Group();
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), new THREE.MeshBasicMaterial({ color: SIGNAL }));
+    pulse.renderOrder = 10;
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 16, 12),
+      new THREE.MeshBasicMaterial({ color: SIGNAL, depthTest: false, depthWrite: false }),
+    );
     const halo = new THREE.Mesh(
       new THREE.SphereGeometry(0.24, 16, 12),
-      new THREE.MeshBasicMaterial({ color: SIGNAL, transparent: true, opacity: 0.22, depthWrite: false }),
+      new THREE.MeshBasicMaterial({
+        color: SIGNAL,
+        transparent: true,
+        opacity: 0.22,
+        depthTest: false,
+        depthWrite: false,
+      }),
     );
     pulse.add(core, halo);
     scene.add(pulse);
@@ -605,10 +626,14 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
       }
       const at = built.path.getPointAt(p);
       pulse.position.copy(at);
-      const beat = 1 + 0.18 * Math.sin(performance.now() / 130);
-      core.scale.setScalar(p > 0 ? beat : 1);
-      halo.scale.setScalar(p > 0 ? beat * 1.1 : 1);
-      pulse.visible = p > 0.0005 || ctl.current.fired;
+      /* The throb belongs to a travelling impulse. Once it has arrived, the
+         pulse holds still: a marker that keeps pulsing forever is the flicker
+         this view is meant to avoid. */
+      const travelling = ctl.current.phase > 0.0005 && ctl.current.phase < 0.9995;
+      const beat = travelling ? 1 + 0.12 * Math.sin(performance.now() / 150) : 1;
+      core.scale.setScalar(beat);
+      halo.scale.setScalar(beat * 1.1);
+      pulse.visible = ctl.current.phase > 0.0005;
 
       if (built.muscle) {
         const goal = ctl.current.fired ? 0.86 : 1;
@@ -618,11 +643,7 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
       }
       applyMyelin();
 
-      /* Arrival at the terminal: the boutons swell as their vesicles fuse. */
-      if (built.ends) {
-        const swell = clock > 0.93 ? 1 + 0.07 * Math.sin(performance.now() / 90) : 1;
-        for (const end of built.ends) end.scale.setScalar(swell);
-      }
+      if (built.ends) for (const end of built.ends) end.scale.setScalar(1);
 
       controls.update();
       renderer.render(scene, camera);
@@ -652,7 +673,7 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
     <div className="apple-lab-stage relative">
       <div ref={holder} className="w-full" style={{ aspectRatio: "1.52" }} />
       <span className="apple-lab-chip pointer-events-none absolute left-3 top-3 !text-[10px]">
-        {mode === "neuron" ? "Neuron · modelled" : "Reflex arc · NIH cord"}
+        {mode === "neuron" ? "Neuron · impulse →" : "Reflex · skin → cord → muscle"}
       </span>
       {!ready ? (
         <span className="pointer-events-none absolute inset-0 grid place-items-center text-[11px] text-[var(--lab-ink-dim)]">

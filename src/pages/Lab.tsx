@@ -12,6 +12,7 @@ import { DisplayToggles } from "@/components/landing/DisplayToggles";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { StemAsk } from "@/components/lab/StemAsk";
 import { PracticalNotebook } from "@/components/lab/practical/PracticalNotebook";
+import { LabNotebook } from "@/components/lab/progress/LabNotebook";
 import { useResolvedTheme } from "@/lib/app-settings";
 import { useSpringTransition, viewVariants } from "@/lib/motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +20,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Atom,
   Beaker,
+  BookOpen,
   Dna,
   FlaskConical,
   ListChecks,
@@ -81,6 +83,7 @@ export default function Lab() {
   const [askSeed, setAskSeed] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
+  const [labBookOpen, setLabBookOpen] = useState(false);
   const [collapsed, setCollapsed] = useSidebarCollapsed();
   const transition = useSpringTransition();
   const theme = useResolvedTheme();
@@ -316,6 +319,14 @@ export default function Lab() {
                     <NotebookPen className="h-3.5 w-3.5" />
                     Practical notebook
                   </button>
+                  <button
+                    type="button"
+                    className="apple-lab-btn"
+                    onClick={() => setLabBookOpen(true)}
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Lab notebook
+                  </button>
                   <SearchWithGoogle
                     topic={`${active.label} practical experiment — NCERT CBSE explained`}
                     label="Search on Google"
@@ -350,6 +361,7 @@ export default function Lab() {
       </div>
 
       <PracticalNotebook open={notebookOpen} onOpenChange={setNotebookOpen} />
+      <LabNotebook open={labBookOpen} onOpenChange={setLabBookOpen} />
 
       {/* Mounted only while open: each visit starts from the subject, mode and
           seed in hand, and the seed is spent on close. */}

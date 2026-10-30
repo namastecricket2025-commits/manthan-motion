@@ -26,9 +26,10 @@ export interface AppSettings {
   textComfort: TextComfort;
   /**
    * Eye comfort: a low-glare rendering of whichever theme is active — warm
-   * off-white paper in the day theme, candlelit charcoal at night, plus a warm
-   * veil over every surface (including the 3D canvases, which tokens cannot
-   * reach). It is meant to be unmistakable: a reading mode, not a tint.
+   * neutral stone in the day theme, warm charcoal at night, with every surface
+   * token (including the sidebar, menus and lab) redefined and a small
+   * luminance trim on images and canvases. It is a reading mode, not a yellow
+   * filter; colour-critical stains and spectra keep their meaning.
    */
   eyeComfort: boolean;
 }

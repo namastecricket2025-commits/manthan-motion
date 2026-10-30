@@ -645,150 +645,144 @@
 /* ============================================================
    Eye comfort — a low-glare rendering of whichever theme is on
    ============================================================
-   This is not a third theme. It is a filter over the two themes, in the same
-   sense a reading lamp is: the layout, the accent and every component stay
-   exactly where they are, but the two things that make a backlit screen
-   tiring — pure-white paper and pure-black ink, plus the blue end of the
-   spectrum — are pulled in.
+   This is not a third theme and it is not a yellow filter. It is a
+   warm-neutral, lower-glare version of whichever theme is on, modelled on
+   reading modes rather than on an amber lens: reduce the paper's white point,
+   reduce the night theme's pure-white ink, and remove the hardest contrast.
+   The layout, accent and every component stay where they are.
 
    Three mechanisms, no JavaScript beyond the one `data-comfort` attribute
    `applySettings` writes on <html>:
 
-     1. Warm surfaces. In the day theme white becomes warm paper (#f6efdd)
-        and `--text-main` relaxes from near-black to #2b251c. Not a tint — the
-        page stops being white, which is the single biggest reduction in
-        glare a screen can make.
-     2. Candlelight surfaces in the night theme. #000 lifts to warm charcoal
-        (#131009) and the white type drops to #f0e6d3, removing the hard edge
-        a white glyph has against a black field.
-     3. A warm veil (multiply) over the whole viewport. Tokens reach every
-        styled surface but not the pixels a <canvas> draws, so the veil is
-        what makes the 3D lab, the charts and the code blocks sit in the same
-        candlelight as the chrome around them. It is pointer-transparent and
-        above everything, so nothing becomes unclickable.
+     1. Warm-neutral surfaces. Day paper becomes a low-saturation stone
+        (#f4f1ea), not cream or yellow; ink relaxes to #25231e. Night lifts
+        #000 to a warm charcoal (#1a1815) and pulls the white type down to
+        #eee9e0.
+     2. Every surface token is redefined, including the sidebar's
+        `--panel-bg`, menus, inputs, cards and the lab's own `--lab-*` tokens.
+        Missing one surface is what used to leave the side panel cold while
+        the page turned yellow.
+     3. Canvas, image and video pixels get a small brightness/saturation trim.
+        Tokens cannot reach a WebGL canvas; a colour cast would change the
+        meaning of a stain or a spectrum, so the correction is luminance, not
+        a yellow film.
 
-   The veil is deliberately deep enough to be obvious: reading mode should be
-   a change you can see across the room, not a 2% tint you have to hunt for.
+   There is no full-screen overlay. It would tint every diagram, cannot be
+   scoped to the blue end of the spectrum from CSS, and was the source of the
+   old "everything is yellow except the sidebar" result.
    ------------------------------------------------ */
 html[data-comfort="on"]:not(.dark) {
-  --comfort-veil: 0.17;
-  --ink: #efe6d2;
-  --panel: #f6efdd;
-  --card: #f8f2e3;
-  --popover: #f8f2e3;
-  --menu-bg: #f8f2e3;
-  --menu-ink: #2b251c;
-  --text-main: #2b251c;
-  --text-dim: #5d5445;
-  --card-border: rgba(76, 58, 26, 0.17);
-  --panel-line: rgba(76, 58, 26, 0.15);
-  --panel-line-strong: rgba(76, 58, 26, 0.26);
-  --border: rgba(76, 58, 26, 0.17);
-  --input: rgba(76, 58, 26, 0.18);
-  --secondary: #ece2cf;
-  --secondary-foreground: #2b251c;
-  --muted: #efe7d8;
-  --muted-foreground: #665d4e;
-  --accent: #eadfc9;
-  --accent-foreground: #2b251c;
-  --sidebar: #f1e8d5;
-  --sidebar-foreground: #2b251c;
-  --sidebar-accent: #eadfc9;
-  --sidebar-accent-foreground: #2b251c;
-  --sidebar-border: rgba(76, 58, 26, 0.13);
-  --bg-canvas-a: #e9dfca;
-  --bg-canvas-b: #efe6d4;
-  --bg-canvas-c: #f4ecdd;
-  --halo-near: rgba(255, 246, 224, 0.85);
-  --halo-far: rgba(90, 70, 30, 0.04);
-  --glass-fill-strong: rgba(60, 45, 20, 0.05);
-  /* The accent loses a touch of glare too: same amber, a shade deeper, so it
-     stays the single brand colour without being the one bright thing left. */
-  --signal-strong: #b97c06;
-  --brand: #b97c06;
-  --brand-soft: rgba(185, 124, 6, 0.18);
-  --brand-line: rgba(185, 124, 6, 0.55);
+  /* A warm-neutral reading surface, not a cream wash. Hue stays near 40deg at
+     a low saturation so white paper reads softer without reading as yellow. */
+  --ink: #e9e6de;
+  --panel: #f4f1ea;
+  --panel-bg: rgba(244, 241, 234, 0.9);
+  --card: #f8f5ef;
+  --popover: #f8f5ef;
+  --menu-bg: #f8f5ef;
+  --menu-ink: #25231e;
+  --text-main: #25231e;
+  --text-dim: #5c574e;
+  --card-border: rgba(52, 48, 40, 0.16);
+  --panel-line: rgba(52, 48, 40, 0.14);
+  --panel-line-strong: rgba(52, 48, 40, 0.26);
+  --border: rgba(52, 48, 40, 0.16);
+  --input: rgba(52, 48, 40, 0.17);
+  --secondary: #ece8df;
+  --secondary-foreground: #25231e;
+  --muted: #efebe4;
+  --muted-foreground: #625c52;
+  --accent: #e7e2d9;
+  --accent-foreground: #25231e;
+  --sidebar: #eeebe3;
+  --sidebar-foreground: #25231e;
+  --sidebar-accent: #e6e2da;
+  --sidebar-accent-foreground: #25231e;
+  --sidebar-border: rgba(52, 48, 40, 0.12);
+  --bg-canvas-a: #e4e0d8;
+  --bg-canvas-b: #ebe7df;
+  --bg-canvas-c: #f1eee8;
+  --halo-near: rgba(255, 250, 240, 0.7);
+  --halo-far: rgba(80, 72, 58, 0.035);
+  --glass-fill-strong: rgba(52, 48, 40, 0.045);
+  /* The brand is still the brand: a slightly deeper amber, not a second
+     yellow field. */
+  --signal: #9a5a0a;
+  --signal-strong: #c98708;
+  --brand: #c98708;
+  --brand-soft: rgba(201, 135, 8, 0.16);
+  --brand-line: rgba(201, 135, 8, 0.5);
   --brand-mark: var(--brand);
   color-scheme: light;
 }
 
 html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
-  --comfort-veil: 0.14;
-  --ink: #131009;
-  --panel: #1a1611;
-  --card: #17130e;
-  --popover: #1d1913;
-  --menu-bg: #1d1913;
-  --menu-ink: rgba(255, 246, 232, 0.9);
-  --text-main: #f0e6d3;
-  --text-dim: rgba(255, 246, 232, 0.76);
-  --card-border: rgba(255, 236, 205, 0.13);
-  --panel-line: rgba(255, 236, 205, 0.14);
-  --panel-line-strong: rgba(255, 236, 205, 0.26);
-  --border: rgba(255, 236, 205, 0.13);
-  --input: rgba(255, 236, 205, 0.14);
-  --secondary: #211c15;
-  --secondary-foreground: #f0e6d3;
-  --muted: #1e1913;
-  --muted-foreground: rgba(255, 246, 232, 0.72);
-  --accent: #272117;
-  --accent-foreground: #f0e6d3;
-  --sidebar: #17130e;
-  --sidebar-accent: #211c15;
-  --sidebar-border: rgba(255, 236, 205, 0.1);
-  --bg-canvas-a: #131009;
-  --bg-canvas-b: #0e0b07;
-  --bg-canvas-c: #090704;
-  /* Warm light instead of white light: the halo and the filled action are
-     the brightest pixels in this theme, so they are the ones worth dialling
-     back rather than the greys. */
-  --signal: #e8dcc8;
-  --signal-strong: #f6eddd;
-  --primary-foreground: #17130e;
-  --halo-near: rgba(255, 224, 178, 0.18);
-  --halo-mid: rgba(255, 224, 178, 0.06);
-  --halo-far: rgba(255, 224, 178, 0.045);
-  --brand: #e8b04a;
-  --brand-soft: rgba(232, 176, 74, 0.14);
-  --brand-line: rgba(232, 176, 74, 0.32);
-  --brand-ink: #e8b04a;
+  /* Warm charcoal, not candlelit amber. The white point is pulled down a
+     little, but the surfaces remain near-neutral so reds, greens and the
+     histology stains still mean what they mean. */
+  --ink: #12110f;
+  --panel: #1a1815;
+  --panel-bg: rgba(18, 17, 15, 0.92);
+  --card: #171512;
+  --popover: #1d1a16;
+  --menu-bg: #1d1a16;
+  --menu-ink: rgba(241, 236, 227, 0.9);
+  --text-main: #eee9e0;
+  --text-dim: rgba(238, 233, 224, 0.76);
+  --card-border: rgba(244, 238, 228, 0.14);
+  --panel-line: rgba(244, 238, 228, 0.14);
+  --panel-line-strong: rgba(244, 238, 228, 0.26);
+  --border: rgba(244, 238, 228, 0.14);
+  --input: rgba(244, 238, 228, 0.15);
+  --secondary: #211e19;
+  --secondary-foreground: #eee9e0;
+  --muted: #1e1b17;
+  --muted-foreground: rgba(238, 233, 224, 0.72);
+  --accent: #27231d;
+  --accent-foreground: #eee9e0;
+  --sidebar: #171512;
+  --sidebar-accent: #211e19;
+  --sidebar-border: rgba(244, 238, 228, 0.1);
+  --bg-canvas-a: #12110f;
+  --bg-canvas-b: #0e0d0b;
+  --bg-canvas-c: #090807;
+  --signal: #e4ddd1;
+  --signal-strong: #f2ece2;
+  --primary-foreground: #15130f;
+  --halo-near: rgba(240, 224, 200, 0.14);
+  --halo-mid: rgba(240, 224, 200, 0.05);
+  --halo-far: rgba(240, 224, 200, 0.035);
+  --brand: #dfac54;
+  --brand-soft: rgba(223, 172, 84, 0.14);
+  --brand-line: rgba(223, 172, 84, 0.3);
+  --brand-ink: #dfac54;
   color-scheme: dark;
 }
 
-/* The veil: one pointer-transparent amber wash above every layer, including
-   the 3D canvases and dialogs. Multiply keeps blacks black and only pulls the
-   highlights toward candlelight, which is exactly the direction that removes
-   glare. */
-html[data-comfort="on"]::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 2147483000;
-  pointer-events: none;
-  background: rgb(255, 173, 88);
-  opacity: var(--comfort-veil, 0.17);
-  mix-blend-mode: multiply;
+/* Tokens cannot reach the pixels a canvas, chart or photograph draws. A small
+   luminance/saturation trim lowers glare on those surfaces without putting a
+   yellow film over the page. This is intentionally not a sepia or hue-rotate
+   filter: the lab's stains, pH colours and spectrum diagrams must stay
+   readable. */
+html[data-comfort="on"] canvas,
+html[data-comfort="on"] img,
+html[data-comfort="on"] video {
+  filter: brightness(0.96) saturate(0.94);
+}
+
+/* Static decoration is the first thing a low-glare mode should quiet. It is
+   opacity only, so it can never interfere with a control or animate on its
+   own. */
+html[data-comfort="on"] .dot-field,
+html[data-comfort="on"] .glow-aura {
+  opacity: 0.62;
 }
 
 /* Glow strength is pinned inline by `applySettings`; eye comfort is the one
    case allowed to quiet it, so the aurora cannot out-shine the softened
    surfaces it sits behind. */
 html[data-comfort="on"] {
-  --bg-glow-opacity: 0.34 !important;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  html[data-comfort="on"]::after {
-    animation: comfort-in 0.28s ease-out both;
-  }
-  @keyframes comfort-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: var(--comfort-veil, 0.17);
-    }
-  }
+  --bg-glow-opacity: 0.3 !important;
 }
 
 /* ============================================================

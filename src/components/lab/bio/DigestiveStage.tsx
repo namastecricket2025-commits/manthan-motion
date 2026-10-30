@@ -196,6 +196,7 @@ const ACCESSORY = [
 ];
 
 const LABELS: Array<{ id: string; text: string }> = [
+  { id: "mouth", text: "Mouth" },
   { id: "liver", text: "Liver" },
   { id: "stomach", text: "Stomach" },
   { id: "gallbladder", text: "Gallbladder" },

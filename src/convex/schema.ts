@@ -229,6 +229,71 @@ const schema = defineSchema(
       updatedAt: v.number(),
     }).index("by_owner", ["ownerId"]),
 
+    // One row per experiment the student has touched in the STEM Lab. It is
+    // written by the benches (a reading), by a worksheet save, and by the
+    // notebook when a note is added. Time is accumulated in bounded seconds,
+    // never inferred from a page being open indefinitely.
+    labProgress: defineTable({
+      ownerId: v.id("users"),
+      experimentKey: v.string(),
+      subject: v.string(),
+      title: v.string(),
+      status: v.union(v.literal("in_progress"), v.literal("completed")),
+      timeSeconds: v.number(),
+      observations: v.number(),
+      answers: v.number(),
+      notebookEntries: v.number(),
+      attempts: v.number(),
+      startedAt: v.number(),
+      lastActiveAt: v.number(),
+      completedAt: v.optional(v.number()),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_experiment", ["ownerId", "experimentKey"]),
+
+    // A lab notebook, worksheet or free note. The worksheet fields live in
+    // `content`; `entries` is the shared margin where collaborators add
+    // observations. `shareCode` is a capability: knowing the code lets another
+    // signed-in student read the page and add an entry, but not overwrite the
+    // owner's worksheet.
+    labNotebooks: defineTable({
+      ownerId: v.id("users"),
+      kind: v.union(
+        v.literal("worksheet"),
+        v.literal("journal"),
+        v.literal("notes"),
+      ),
+      title: v.string(),
+      subject: v.string(),
+      experimentKey: v.optional(v.string()),
+      content: v.object({
+        aim: v.string(),
+        apparatus: v.string(),
+        procedure: v.string(),
+        observations: v.string(),
+        conclusion: v.string(),
+        answers: v.array(
+          v.object({ question: v.string(), answer: v.string() }),
+        ),
+      }),
+      entries: v.array(
+        v.object({
+          id: v.string(),
+          authorId: v.id("users"),
+          authorName: v.string(),
+          text: v.string(),
+          at: v.number(),
+        }),
+      ),
+      shareCode: v.optional(v.string()),
+      completedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_owner", ["ownerId"])
+      .index("by_owner_kind", ["ownerId", "kind"])
+      .index("by_share_code", ["shareCode"]),
+
     // One card in the daily spaced-repetition queue. Cards are materialised
     // from real study material and Math Lab mistakes, never invented; `key` is
     // stable across regeneration so a rebuilding pass updates the schedule

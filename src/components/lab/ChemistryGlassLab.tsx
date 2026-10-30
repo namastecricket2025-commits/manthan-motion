@@ -12,6 +12,7 @@ import {
 } from "@/components/lab/periodic-data";
 import Atom3D from "@/components/lab/Atom3D";
 import { ChemistrySaltBench } from "@/components/lab/ChemistrySaltBench";
+import { ChemistryInstruments } from "@/components/lab/ChemistryInstruments";
 import { useRecorder } from "@/components/lab/practical/useRecorder";
 import MoleBench from "@/components/lab/MoleBench";
 import { Questions, type BenchQuestion } from "@/components/lab/bench-atoms";
@@ -41,13 +42,21 @@ import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-rea
 
 /* ---- Sub-tab model -------------------------------------------------- */
 
-type SubTab = "table" | "bohr" | "titration" | "reactions" | "balance" | "salts";
+type SubTab =
+  | "table"
+  | "bohr"
+  | "titration"
+  | "salts"
+  | "instruments"
+  | "reactions"
+  | "balance";
 
 const SUBTABS: Array<{ id: SubTab; label: string }> = [
   { id: "table", label: "Periodic Table" },
   { id: "bohr", label: "Atomic Models" },
   { id: "titration", label: "Titration" },
   { id: "salts", label: "Salt Analysis" },
+  { id: "instruments", label: "Instruments" },
   { id: "reactions", label: "Reactions" },
   { id: "balance", label: "Balancing" },
 ];
@@ -2552,6 +2561,7 @@ export function ChemistryGlassLab() {
           {tab === "reactions" && <ReactionsTab />}
           {tab === "balance" && <MoleBench />}
           {tab === "salts" && <ChemistrySaltBench />}
+          {tab === "instruments" && <ChemistryInstruments />}
         </motion.div>
       </AnimatePresence>
     </div>

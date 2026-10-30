@@ -102,15 +102,15 @@
 html[data-comfort="on"] .apple-lab::before {
   background-image: radial-gradient(
     circle at center,
-    rgba(255, 238, 214, 0.11) 1px,
+    rgba(240, 235, 225, 0.085) 1px,
     transparent 1.2px
   );
 }
 
 html[data-comfort="on"] .apple-lab::after {
   background:
-    radial-gradient(64% 300px at 50% -48%, rgba(255, 222, 178, 0.065), transparent 74%),
-    radial-gradient(110% 420px at 50% -60%, rgba(255, 214, 160, 0.04), transparent 80%);
+    radial-gradient(64% 300px at 50% -48%, rgba(255, 248, 235, 0.04), transparent 74%),
+    radial-gradient(110% 420px at 50% -60%, rgba(255, 245, 228, 0.025), transparent 80%);
 }
 
 /* ---- Surfaces ------------------------------------------------------
@@ -828,53 +828,51 @@ html[data-motion="reduced"] .apple-lab-drop {
 /* ============================================================
    Eye comfort inside the lab
 
-   Eye comfort works by warming the tokens and laying an amber multiply
-   veil over the viewport. Multiply keeps black black, and the room's
-   canvas is #000 — so the veil had nothing to warm and the lab looked
-   exactly the same with the preference on. The room therefore carries its
-   own low-glare values here: a warm charcoal plate instead of a cold black
-   one, and warm ink instead of pure white. The light bench gets the
-   matching paper values.
+   The room carries its own low-glare values here: a warm-neutral charcoal
+   plate instead of a cold black one, and soft off-white ink instead of pure
+   white. The light bench gets the matching stone-paper values. There is no
+   amber veil — the lab's stains and diagram colours have to keep their
+   meaning.
    ============================================================ */
 
 html[data-comfort="on"] .apple-lab {
-  --lab-canvas: #0d0b09;
-  --lab-ink: rgba(250, 240, 226, 0.92);
-  --lab-ink-dim: rgba(250, 240, 226, 0.7);
-  --lab-ink-micro: rgba(250, 240, 226, 0.6);
-  --lab-line: rgba(255, 240, 220, 0.1);
-  --lab-line-soft: rgba(255, 240, 220, 0.06);
-  --lab-fill: rgba(255, 240, 220, 0.032);
+  --lab-canvas: #14120f;
+  --lab-ink: rgba(238, 233, 224, 0.92);
+  --lab-ink-dim: rgba(238, 233, 224, 0.72);
+  --lab-ink-micro: rgba(238, 233, 224, 0.6);
+  --lab-line: rgba(244, 238, 228, 0.1);
+  --lab-line-soft: rgba(244, 238, 228, 0.06);
+  --lab-fill: rgba(244, 238, 228, 0.032);
   --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9);
-  --lab-violet: #f4ead8;
-  --lab-cyan: #a9d7e8;
-  --lab-diagram-ink: 250, 240, 226;
-  --lab-diagram-plate: 13, 11, 9;
-  --lab-diagram-violet: #f4ead8;
-  --lab-diagram-lilac: #d8cfc0;
+  --lab-violet: #e9e3d8;
+  --lab-cyan: #9fc7d4;
+  --lab-diagram-ink: 238, 233, 224;
+  --lab-diagram-plate: 20, 18, 15;
+  --lab-diagram-violet: #e9e3d8;
+  --lab-diagram-lilac: #d6cfc4;
 }
 
 html[data-comfort="on"] .apple-lab-glass {
-  background: #0c0a08;
+  background: #100e0c;
 }
 
 html[data-comfort="on"] .apple-lab-card {
-  background: #0f0d0a;
+  background: #15130f;
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] {
-  --lab-canvas: #f6f1e6;
-  --lab-ink: rgba(50, 46, 39, 0.94);
-  --lab-ink-dim: rgba(70, 62, 50, 0.72);
-  --lab-ink-micro: rgba(80, 70, 56, 0.6);
-  --lab-line: rgba(72, 58, 30, 0.14);
-  --lab-line-soft: rgba(72, 58, 30, 0.08);
-  --lab-diagram-ink: 50, 46, 39;
-  --lab-diagram-plate: 246, 241, 230;
+  --lab-canvas: #f1eee7;
+  --lab-ink: rgba(38, 35, 30, 0.94);
+  --lab-ink-dim: rgba(66, 60, 52, 0.74);
+  --lab-ink-micro: rgba(80, 72, 62, 0.6);
+  --lab-line: rgba(45, 40, 34, 0.14);
+  --lab-line-soft: rgba(45, 40, 34, 0.08);
+  --lab-diagram-ink: 38, 35, 30;
+  --lab-diagram-plate: 241, 238, 231;
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
-  background: #fbf7ee;
+  background: #faf8f3;
 }
 
 /* ============================================================

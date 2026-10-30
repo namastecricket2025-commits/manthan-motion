@@ -17,11 +17,21 @@ import { ShareSetup, useBenchPreset } from "@/components/lab/practical/preset";
 type SlideId = "onion" | "blood" | "cheek";
 type Objective = 4 | 10 | 40;
 
-const OBJECTIVES: Array<{ id: string; label: string }> = [
-  { id: "4", label: "4×" },
-  { id: "10", label: "10×" },
-  { id: "40", label: "40×" },
+const OBJECTIVES: Array<{ id: Objective; label: string; detail: string }> = [
+  { id: 4, label: "4×", detail: "scan" },
+  { id: 10, label: "10×", detail: "study" },
+  { id: 40, label: "40×", detail: "detail" },
 ];
+
+/**
+ * The drawing is already scaled per objective, so this is only the extra
+ * optical zoom the eyepiece sees when the nosepiece turns. Keeping it separate
+ * means the transition is a real magnification change rather than a label swap.
+ */
+const OBJECTIVE_ZOOM: Record<Objective, number> = { 4: 0.84, 10: 1, 40: 1.2 };
+
+/** The field closes and the lamp's cone gets smaller as power rises. */
+const OBJECTIVE_LIGHT: Record<Objective, number> = { 4: 1.06, 10: 0.96, 40: 0.76 };
 
 const SLIDES: Array<{
   id: SlideId;
@@ -86,6 +96,8 @@ export function MicroscopeBench() {
     coarse?: number;
     fine?: number;
     light?: number;
+    stageX?: number;
+    stageY?: number;
   }>();
 
   const initialSlide = SLIDES.find((entry) => entry.id === preset?.slide) ?? SLIDES[0];
@@ -105,6 +117,12 @@ export function MicroscopeBench() {
   const [light, setLight] = useState(() =>
     typeof preset?.light === "number" ? Math.min(100, Math.max(0, preset.light)) : 62,
   );
+  const [stageX, setStageX] = useState(() =>
+    typeof preset?.stageX === "number" ? Math.min(100, Math.max(-100, preset.stageX)) : 0,
+  );
+  const [stageY, setStageY] = useState(() =>
+    typeof preset?.stageY === "number" ? Math.min(100, Math.max(-100, preset.stageY)) : 0,
+  );
   const [answer, setAnswer] = useState<number | null>(null);
   const recorder = useRecorder();
 
@@ -123,16 +141,31 @@ export function MicroscopeBench() {
   const sharp = clarity >= 82 && blur < 2.2;
   const magnification = objective * 10;
 
-  const resetFocus = () => {
-    setCoarse(38);
+  const resetMicroscope = () => {
+    setSlideId("onion");
+    setObjective(10);
+    setCoarse(50);
     setFine(0);
     setLight(62);
+    setStageX(0);
+    setStageY(0);
     setAnswer(null);
     recorder.reset();
   };
 
   const changeSlide = (next: SlideId) => {
     setSlideId(next);
+    setStageX(0);
+    setStageY(0);
+    setAnswer(null);
+    recorder.reset();
+  };
+
+  const changeObjective = (next: Objective) => {
+    setObjective(next);
+    /* A real nosepiece does not move the stage, but changing power changes the
+       patch of specimen in the field; the stage offsets stay put so a student
+       can switch up and keep the same cell centred. */
     setAnswer(null);
     recorder.reset();
   };
@@ -170,16 +203,29 @@ export function MicroscopeBench() {
                 options={SLIDES.map((entry) => ({ id: entry.id, label: entry.name }))}
                 onChange={changeSlide}
               />
-              <Picker
-                label="Objective"
-                value={String(objective)}
-                options={OBJECTIVES}
-                onChange={(next) => {
-                  setObjective(Number(next) as Objective);
-                  setAnswer(null);
-                  recorder.reset();
-                }}
-              />
+              <div className="flex flex-col gap-1.5">
+                <span className="apple-lab-micro">Objective turret</span>
+                <div className="flex gap-1" role="radiogroup" aria-label="Objective lens">
+                  {OBJECTIVES.map((entry) => {
+                    const active = objective === entry.id;
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        data-active={active}
+                        className="apple-lab-btn !gap-1 !px-2.5 !py-1.5 !text-[11px]"
+                        onClick={() => changeObjective(entry.id)}
+                        title={`${entry.id}× objective — ${entry.detail}`}
+                      >
+                        <span className="tabular-nums">{entry.label}</span>
+                        <span className="text-[9px] opacity-55">{entry.detail}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -204,15 +250,27 @@ export function MicroscopeBench() {
                 <g
                   filter={`url(#micro-blur-${slide.id})`}
                   opacity={
-                    (0.55 + Math.min(1, light) * 0.0045) *
-                    (objective === 40 ? 0.9 : objective === 10 ? 0.96 : 1)
+                    (0.55 + Math.min(1, light) * 0.0045) * OBJECTIVE_LIGHT[objective]
                   }
+                  style={{
+                    transformOrigin: "210px 210px",
+                    transform: `translate(${stageX * 0.4}px, ${stageY * 0.4}px) scale(${OBJECTIVE_ZOOM[objective]})`,
+                    transition: "transform 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+                  }}
                 >
                   {slide.id === "onion" ? <OnionField objective={objective} /> : null}
                   {slide.id === "blood" ? <BloodField objective={objective} /> : null}
                   {slide.id === "cheek" ? <CheekField objective={objective} /> : null}
                 </g>
                 <rect x="0" y="0" width="420" height="420" fill={`url(#micro-light-${slide.id})`} />
+                {/* A reticle is the one piece of a real eyepiece that makes the
+                    field feel like an instrument rather than an illustration. */}
+                <g stroke="rgba(40, 32, 26, 0.2)" strokeWidth="0.8" pointerEvents="none">
+                  <line x1="210" y1="26" x2="210" y2="394" />
+                  <line x1="26" y1="210" x2="394" y2="210" />
+                  <circle cx="210" cy="210" r="34" fill="none" strokeDasharray="2 5" />
+                  <circle cx="210" cy="210" r="1.4" fill="rgba(40, 32, 26, 0.5)" stroke="none" />
+                </g>
                 <text
                   x="210"
                   y="392"
@@ -222,6 +280,15 @@ export function MicroscopeBench() {
                   fill="rgba(40, 32, 26, 0.58)"
                 >
                   {objective}× · FIELD {slide.fieldMm[objective].toFixed(2)} mm
+                </text>
+                <text
+                  x="26"
+                  y="32"
+                  fontSize="9"
+                  letterSpacing="0.1em"
+                  fill="rgba(40, 32, 26, 0.55)"
+                >
+                  {objective}× OBJ · {magnification}× TOTAL
                 </text>
               </g>
               <circle cx="210" cy="210" r="196" fill="none" stroke="rgba(var(--lab-diagram-ink), 0.4)" strokeWidth="2" />
@@ -268,10 +335,31 @@ export function MicroscopeBench() {
                 onChange={setLight}
               />
             </div>
-            <button type="button" className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]" onClick={resetFocus}>
+            <button type="button" className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]" onClick={resetMicroscope}>
               <RotateCcw className="h-3.5 w-3.5" />
-              Reset focus
+              Reset microscope
             </button>
+          </div>
+
+          <div className="grid gap-3 border-t border-[var(--lab-line-soft)] pt-3 sm:grid-cols-2">
+            <Range
+              label="Stage X"
+              value={stageX}
+              min={-100}
+              max={100}
+              step={1}
+              unit="%"
+              onChange={setStageX}
+            />
+            <Range
+              label="Stage Y"
+              value={stageY}
+              min={-100}
+              max={100}
+              step={1}
+              unit="%"
+              onChange={setStageY}
+            />
           </div>
 
           {sharp ? (
@@ -324,7 +412,7 @@ export function MicroscopeBench() {
           <ShareSetup
             subject="biology"
             bench="microscope"
-            preset={{ slide: slide.id, objective, coarse, fine, light }}
+            preset={{ slide: slide.id, objective, coarse, fine, light, stageX, stageY }}
           />
         </aside>
       </div>

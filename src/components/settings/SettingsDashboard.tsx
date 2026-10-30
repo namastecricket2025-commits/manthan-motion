@@ -41,6 +41,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/convex/_generated/api";
+import { downloadLabReport, type NotebookRow, type ProgressRow, type RecordRow } from "@/components/lab/progress/report";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import type { TextComfort, ThemeMode } from "@/lib/app-settings";
@@ -265,6 +266,9 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const account = useQuery(api.settings.myAccount);
   const saveProfileMutation = useMutation(api.settings.updateProfile);
   const deleteAccountMutation = useMutation(api.settings.deleteAccount);
+  const labProgress = useQuery(api.labProgress.overview) ?? [];
+  const labRecords = useQuery(api.labRecords.list) ?? [];
+  const labNotebooks = useQuery(api.labNotebooks.list) ?? [];
 
   /* ---- profile ---- */
   const [name, setName] = useState("");
@@ -399,27 +403,21 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
   /* ---- export ---- */
   const onExport = () => {
-    const payload = {
-      app: "Manthan STEM Labs",
-      exportedAt: new Date().toISOString(),
-      profile: { displayName: account?.name ?? user?.name ?? "", email: account?.email ?? user?.email ?? "" },
-      preferences: settings,
-      localData: collectLocalData(),
-      activeSessions: account?.sessions ?? [],
-    };
     try {
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `manthan-lab-progress-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success("Lab progress exported", { description: "Your Manthan data was downloaded as JSON." });
-    } catch {
-      toast.error("Export failed", { description: "Your browser blocked the download." });
+      downloadLabReport({
+        name: account?.name ?? user?.name ?? "Student",
+        progress: labProgress as ProgressRow[],
+        records: labRecords as RecordRow[],
+        notebooks: labNotebooks as NotebookRow[],
+      });
+      toast.success("Lab progress exported", {
+        description:
+          "A printable report with your completed practicals, readings, worksheet answers and notebook entries was downloaded.",
+      });
+    } catch (err) {
+      toast.error("Export failed", {
+        description: err instanceof Error ? err.message : "Your browser blocked the download.",
+      });
     }
   };
 
@@ -574,10 +572,10 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     than next to the type scale. */}
                 <ListRow
                   title="Eye comfort"
-                  hint="Turns the whole display into warm paper — off-white surfaces in the day theme, candlelit charcoal at night, and a warm veil over every canvas. It is deliberately a visible change, not a faint tint. Also available as the glasses button in the header."
+                  hint="A low-glare reading mode across the whole app: warm-neutral surfaces instead of hard white or pure black, softer menu, sidebar and input surfaces, and a slight dimming of images and 3D canvases. It is not a yellow filter — stains and data colours keep their meaning. Also available as the glasses button in every header."
                   note={
                     settings.eyeComfort
-                      ? "Paper mode is on. Layout, accent and every control stay exactly where they were."
+                      ? "On. Every surface, including the sidebar and menus, uses the softened palette; canvas pixels are dimmed, not recoloured."
                       : undefined
                   }
                 >
@@ -844,8 +842,9 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                 <div className="set-card set-card--danger">
                   <p className="set-note set-note--plain">
                     <Info className="h-3 w-3" />
-                    Export keeps every preference, lab metric and account detail Manthan holds for
-                    you. Deletion is permanent and cannot be undone.
+                    Export produces a printable lab report: completed practicals, saved
+                    readings, worksheet answers, time at the bench and notebook entries.
+                    Deletion is permanent and cannot be undone.
                   </p>
                   <div className="set-actions">
                     <button type="button" className="set-btn set-btn--primary" onClick={onExport}>

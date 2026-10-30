@@ -74,6 +74,9 @@ const OESO: Pt3[] = [
   [0.02, 0.5, 0.0445],
 ];
 
+/** The mesh overlaps the stomach; the food route stays on the original points. */
+const OESO_MESH: Pt3[] = [...OESO, [0.023, 0.494, 0.0452]];
+
 /**
  * Oesophageal calibre. A real oesophagus is not a pipe: it is widest just
  * under the pharynx, narrows through the thoracic stretch, and opens again at
@@ -103,14 +106,28 @@ const STOMACH: Pt3[] = [
 ];
 const STOMACH_R = [0.0145, 0.027, 0.044, 0.052, 0.04, 0.023, 0.011];
 
+/* Starts above the cardia, inside the oesophagus, and finishes past the
+   pylorus, inside the duodenum. Both ends are sleeves rather than lids; the
+   route keeps the exact meeting points so the bolus does not reverse. */
+const STOMACH_MESH: Pt3[] = [
+  [0.016, 0.505, 0.0435],
+  ...STOMACH,
+  [-0.022, 0.361, 0.041],
+];
+const STOMACH_MESH_R = [0.0135, ...STOMACH_R, 0.009];
+
 const PANCREAS: Pt3[] = [
+  /* The head is tucked into the duodenal C; the tail tapers to a point rather
+     than ending in a flat disc in the middle of the abdomen. */
+  [-0.036, 0.346, 0.004],
   [-0.028, 0.348, 0.0],
   [-0.006, 0.35, -0.004],
   [0.03, 0.356, -0.008],
   [0.062, 0.362, -0.012],
   [0.082, 0.368, -0.014],
+  [0.094, 0.371, -0.016],
 ];
-const PANCREAS_R = [0.016, 0.013, 0.01, 0.007, 0.004];
+const PANCREAS_R = [0.015, 0.016, 0.013, 0.01, 0.007, 0.004, 0.0007];
 
 /** Gallbladder: a pear hanging under the right lobe, neck up to the liver. */
 const GALL: Pt3[] = [
@@ -545,35 +562,52 @@ export function buildTract(): Tract {
      the mouth's pharynx ends, so the two tubes share one lumen. */
   add(
     new THREE.Mesh(
-      sweep(OESO, OESO_R, { tubular: 96, radial: 28, wobble: oesoSkin }),
+      sweep(OESO_MESH, OESO_R, { tubular: 96, radial: 28, wobble: oesoSkin }),
       organMaterial("#a97562", 0.58, 0.28),
     ),
     [1],
   );
-  /* The mouth, cut open. An oval face with the cavity bored through it, teeth
-     on the rim, the tongue on the floor, and a short pharynx that meets the
-     oesophagus at its own first point — so the bolus starts between the teeth
-     and stays inside flesh all the way down. Modelled in the plate's own
+  /* The mouth, cut open. A real cavity with the palate above, cheeks at the
+     sides, teeth around the opening and the tongue on the floor, feeding a
+     short pharynx that overlaps the oesophagus. Modelled in the plate's own
      frame rather than drawn in a corner of the screen. */
   const mouth = new THREE.Group();
-  const face = new THREE.Shape();
-  face.absellipse(0, 0, 0.038, 0.0265, 0, Math.PI * 2);
-  const cavity = new THREE.Path();
-  cavity.absellipse(0, -0.0008, 0.0275, 0.0148, 0, Math.PI * 2, true);
-  face.holes.push(cavity);
-  const mouthWall = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(face, {
-      depth: 0.042,
-      bevelEnabled: true,
-      bevelSize: 0.0034,
-      bevelThickness: 0.0034,
-      bevelSegments: 3,
-      curveSegments: 22,
-    }),
-    organMaterial("#a97562", 0.6, 0.22),
+  /* The old mouth was an extruded oval with a hole: at some angles the rim
+     read as a short pipe. A cavity has to be a cavity. The dark oral mucosa is
+     a shaped ellipsoid set behind the lips, with the palate above it and the
+     cheeks closing the sides; the teeth and tongue then sit in a real opening
+     rather than on the rim of a ring. */
+  const cavity = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 28, 20),
+    organMaterial("#3d2022", 0.88, 0.02),
   );
-  mouthWall.position.set(0, 0.6555, 0.06);
-  mouth.add(mouthWall);
+  cavity.scale.set(0.033, 0.024, 0.024);
+  cavity.position.set(0, 0.651, 0.073);
+  mouth.add(cavity);
+
+  const palate = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 22, 14),
+    organMaterial("#b0716b", 0.6, 0.2),
+  );
+  palate.scale.set(0.031, 0.0065, 0.018);
+  palate.position.set(0, 0.664, 0.075);
+  mouth.add(palate);
+
+  const cheekMaterial = organMaterial("#a97562", 0.62, 0.18);
+  for (const side of [1, -1]) {
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 14), cheekMaterial);
+    cheek.scale.set(0.013, 0.018, 0.017);
+    cheek.position.set(side * 0.031, 0.65, 0.075);
+    mouth.add(cheek);
+  }
+
+  const jaw = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 20, 14),
+    organMaterial("#a97562", 0.62, 0.16),
+  );
+  jaw.scale.set(0.026, 0.008, 0.018);
+  jaw.position.set(0, 0.6385, 0.076);
+  mouth.add(jaw);
 
   const toothMaterial = organMaterial("#e6d9c7", 0.52, 0.2);
   const toothGeometry = new THREE.SphereGeometry(1, 12, 9);
@@ -608,8 +642,8 @@ export function buildTract(): Tract {
   mouth.add(gums);
 
   const tongue = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), organMaterial("#b0716b", 0.5, 0.3));
-  tongue.scale.set(0.019, 0.0064, 0.019);
-  tongue.position.set(0, 0.6452, 0.082);
+  tongue.scale.set(0.019, 0.0064, 0.016);
+  tongue.position.set(0, 0.6452, 0.075);
   mouth.add(tongue);
 
   const uvula = new THREE.Mesh(new THREE.SphereGeometry(0.004, 12, 10), organMaterial("#b0716b", 0.5, 0.3));
@@ -645,7 +679,7 @@ export function buildTract(): Tract {
   /* The stomach. The wobble is rugae: six soft folds that fade out at both
      sphincters, which is what keeps the fundus smooth and the pylorus tight. */
   const stomach = new THREE.Mesh(
-    sweep(STOMACH, radii(STOMACH_R), {
+    sweep(STOMACH_MESH, radii(STOMACH_MESH_R), {
       squash: 0.8,
       tubular: 132,
       radial: 44,
@@ -667,7 +701,7 @@ export function buildTract(): Tract {
   };
 
   const cardia = new THREE.Mesh(
-    new THREE.TorusGeometry(0.0175, 0.0035, 10, 30),
+    new THREE.TorusGeometry(0.0165, 0.003, 10, 30),
     organMaterial("#a06b58", 0.6, 0.3),
   );
   cardia.position.set(0.02, 0.5, 0.0445);
@@ -712,8 +746,14 @@ export function buildTract(): Tract {
   add(
     new THREE.Mesh(
       sweep(
-        [PANCREAS[0], [-0.03, 0.344, 0.018], [-0.036, 0.337, 0.035], [-0.04, 0.332, 0.044]],
-        0.0028,
+        [
+          [-0.033, 0.345, 0.008],
+          [-0.036, 0.34, 0.022],
+          [-0.04, 0.335, 0.038],
+          /* The papilla sits on the duodenal centre-line, inside the wall. */
+          [-0.043, 0.331, 0.052],
+        ],
+        0.0026,
         { tubular: 46, radial: 10 },
       ),
       organMaterial("#d8c39a", 0.55, 0.2),
@@ -739,8 +779,8 @@ export function buildTract(): Tract {
           GALL[GALL.length - 1],
           [-0.062, 0.3, 0.05],
           [-0.052, 0.32, 0.051],
-          [-0.042, 0.337, 0.048],
-          [-0.037, 0.344, 0.045],
+          [-0.044, 0.333, 0.05],
+          [-0.039, 0.339, 0.052],
         ],
         0.0024,
         { tubular: 54, radial: 10 },

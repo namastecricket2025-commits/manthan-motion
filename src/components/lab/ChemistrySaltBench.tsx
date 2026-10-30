@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Check, FlaskConical, RotateCcw, TriangleAlert } from "lucide-react";
 import { Picker, Questions } from "@/components/lab/bench-atoms";
 import { ShareSetup, useBenchPreset } from "@/components/lab/practical/preset";
+import { useRecorder } from "@/components/lab/practical/useRecorder";
 
 /**
  * Qualitative salt analysis.
@@ -21,7 +22,12 @@ type SaltId =
   | "ammonium"
   | "calcium-chloride"
   | "ammonium-sulphate"
-  | "zinc-carbonate";
+  | "zinc-carbonate"
+  | "lead-nitrate"
+  | "barium-chloride"
+  | "magnesium-sulphate"
+  | "sodium-carbonate"
+  | "potassium-nitrate";
 type TestId = "hcl" | "naoh" | "nh4oh" | "bacl2" | "agno3" | "flame" | "heat" | "water";
 
 const TESTS: Array<{ id: TestId; label: string; reagent: string; group: "anion" | "cation" | "physical" }> = [
@@ -41,8 +47,26 @@ const TEST_GROUPS: Array<{ id: "anion" | "cation" | "physical"; label: string }>
   { id: "physical", label: "Physical checks" },
 ];
 
-const CATIONS = ["Cu²⁺", "Fe²⁺", "Zn²⁺", "Ca²⁺", "NH₄⁺"];
-const ANIONS = ["SO₄²⁻", "CO₃²⁻", "Cl⁻"];
+const CATIONS = ["Cu²⁺", "Fe²⁺", "Zn²⁺", "Ca²⁺", "NH₄⁺", "Pb²⁺", "Ba²⁺", "Mg²⁺", "Na⁺", "K⁺"];
+const ANIONS = ["SO₄²⁻", "CO₃²⁻", "Cl⁻", "NO₃⁻"];
+
+/* A small, honest swatch: the colours a student would actually see in the
+   sample bottle, not a decorative gradient. */
+const SALT_SWATCH: Record<SaltId, string> = {
+  copper: "#6d9ebd",
+  iron: "#95aa8f",
+  zinc: "#e8e4da",
+  calcium: "#f0ede5",
+  ammonium: "#f4f1e8",
+  "calcium-chloride": "#f2efe6",
+  "ammonium-sulphate": "#f4f1e8",
+  "zinc-carbonate": "#eeeae0",
+  "lead-nitrate": "#f1efe8",
+  "barium-chloride": "#f2efe6",
+  "magnesium-sulphate": "#f4f1e8",
+  "sodium-carbonate": "#f1eee5",
+  "potassium-nitrate": "#f4f1e8",
+};
 
 type Salt = {
   id: SaltId;
@@ -216,6 +240,106 @@ const SALTS: Salt[] = [
     note:
       "The carbonate is proved by CO₂, and the zinc by the hydroxide that dissolves in both excess NaOH and excess ammonia — amphoteric, unlike copper or iron.",
   },
+  {
+    id: "lead-nitrate",
+    name: "Lead nitrate",
+    formula: "Pb(NO₃)₂",
+    colour: "White crystalline",
+    cation: "Pb²⁺",
+    anion: "NO₃⁻",
+    observation: {
+      hcl: "A white precipitate of PbCl₂ forms; it dissolves when the tube is warmed and reappears on cooling.",
+      naoh: "A white precipitate of Pb(OH)₂ forms, which dissolves in excess NaOH as plumbite.",
+      nh4oh: "A white precipitate forms and stays insoluble in excess ammonia.",
+      bacl2: "No precipitate — no sulphate present.",
+      agno3: "No curdy chloride precipitate; nitrate does not give AgCl here.",
+      flame: "No reliable characteristic flame colour.",
+      heat: "Decrepitates and gives brown nitrogen dioxide fumes; a yellow lead oxide residue remains.",
+      water: "Dissolves readily to a colourless solution.",
+    },
+    note:
+      "Lead chloride is the useful confirmation: it is sparingly soluble cold and dissolves in hot water, which separates lead from barium and calcium.",
+  },
+  {
+    id: "barium-chloride",
+    name: "Barium chloride",
+    formula: "BaCl₂·2H₂O",
+    colour: "White crystalline",
+    cation: "Ba²⁺",
+    anion: "Cl⁻",
+    observation: {
+      hcl: "No gas; the salt dissolves.",
+      naoh: "A white precipitate of Ba(OH)₂ forms; it is only sparingly soluble.",
+      nh4oh: "No precipitate.",
+      bacl2: "No new precipitate — the salt already contains barium.",
+      agno3: "A curdy white precipitate of AgCl forms, soluble in excess ammonium hydroxide.",
+      flame: "An apple-green flame, characteristic of barium.",
+      heat: "No decomposition at ordinary flame temperature; water of crystallisation may be lost.",
+      water: "Dissolves readily to a colourless solution.",
+    },
+    note:
+      "Barium gives the apple-green flame and the chloride gives curdy AgCl. The flame colour is the quickest way to separate barium from calcium.",
+  },
+  {
+    id: "magnesium-sulphate",
+    name: "Magnesium sulphate",
+    formula: "MgSO₄·7H₂O",
+    colour: "White crystalline",
+    cation: "Mg²⁺",
+    anion: "SO₄²⁻",
+    observation: {
+      hcl: "No gas; the solution stays colourless.",
+      naoh: "A white precipitate of Mg(OH)₂ forms and does not dissolve in excess NaOH.",
+      nh4oh: "A white precipitate forms, only slightly soluble in excess.",
+      bacl2: "A white precipitate of BaSO₄ forms, insoluble in dilute HCl.",
+      agno3: "No curdy precipitate.",
+      flame: "No characteristic flame colour.",
+      heat: "Loses water of crystallisation and turns anhydrous white; no gas is evolved.",
+      water: "Dissolves readily to a colourless solution.",
+    },
+    note:
+      "Magnesium hydroxide is insoluble in excess NaOH, unlike zinc hydroxide. That difference is the clean separation between the two white hydroxides.",
+  },
+  {
+    id: "sodium-carbonate",
+    name: "Sodium carbonate",
+    formula: "Na₂CO₃·10H₂O",
+    colour: "White powder",
+    cation: "Na⁺",
+    anion: "CO₃²⁻",
+    observation: {
+      hcl: "Brisk effervescence; the gas turns lime water milky, so it is CO₂.",
+      naoh: "No precipitate; sodium hydroxide is soluble.",
+      nh4oh: "No precipitate.",
+      bacl2: "A white precipitate of BaCO₃ forms, which dissolves in dilute HCl with effervescence.",
+      agno3: "A pale yellow precipitate of silver carbonate forms, soluble in dilute nitric acid.",
+      flame: "A golden-yellow flame, characteristic of sodium.",
+      heat: "The decahydrate loses water and becomes a white powder; the anhydrous salt is stable.",
+      water: "Dissolves readily; the solution is alkaline.",
+    },
+    note:
+      "Sodium's golden-yellow flame is unmistakable, but the carbonate still has to be proved by CO₂ — the flame only identifies the cation.",
+  },
+  {
+    id: "potassium-nitrate",
+    name: "Potassium nitrate",
+    formula: "KNO₃",
+    colour: "White crystalline",
+    cation: "K⁺",
+    anion: "NO₃⁻",
+    observation: {
+      hcl: "No visible change.",
+      naoh: "No precipitate; potassium hydroxide is soluble.",
+      nh4oh: "No precipitate.",
+      bacl2: "No precipitate.",
+      agno3: "No curdy precipitate.",
+      flame: "A lilac flame; sodium contamination can add yellow.",
+      heat: "Melts and gives off oxygen; a glowing splint relights in the gas.",
+      water: "Dissolves readily to a colourless solution.",
+    },
+    note:
+      "Nitrate is confirmed by the brown NO₂ from lead nitrate or by the oxygen from heating potassium nitrate; a flame colour alone cannot prove the anion.",
+  },
 ];
 
 export function ChemistrySaltBench() {
@@ -227,6 +351,7 @@ export function ChemistrySaltBench() {
   const [cation, setCation] = useState("");
   const [anion, setAnion] = useState("");
   const [verdict, setVerdict] = useState<"idle" | "right" | "wrong">("idle");
+  const recorder = useRecorder();
 
   const salt = useMemo(() => SALTS.find((entry) => entry.id === saltId) ?? SALTS[0], [saltId]);
   const testsRun = TESTS.filter((test) => run[test.id]).length;
@@ -237,6 +362,7 @@ export function ChemistrySaltBench() {
     setCation("");
     setAnion("");
     setVerdict("idle");
+    recorder.reset();
   };
 
   const check = () => {
@@ -245,6 +371,14 @@ export function ChemistrySaltBench() {
       return;
     }
     setVerdict(cation === salt.cation && anion === salt.anion ? "right" : "wrong");
+  };
+
+  const recordResult = () => {
+    const sample = SALTS.findIndex((entry) => entry.id === salt.id) + 1;
+    void recorder.record("chemistry", `Salt analysis · Sample ${sample}`, [
+      { label: "Tests run", value: testsRun },
+      { label: "Correct inference", value: 1 },
+    ]);
   };
 
   return (
@@ -261,7 +395,12 @@ export function ChemistrySaltBench() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="apple-lab-micro">Unknown salt</p>
-              <p className="apple-lab-value mt-1 text-[15px] font-semibold">
+              <p className="apple-lab-value mt-1 flex items-center gap-2 text-[15px] font-semibold">
+                <span
+                  className="inline-block h-3.5 w-3.5 rounded-full border border-[var(--lab-line)]"
+                  style={{ background: SALT_SWATCH[salt.id] }}
+                  aria-hidden="true"
+                />
                 Sample {SALTS.findIndex((entry) => entry.id === salt.id) + 1} · {salt.colour}
               </p>
             </div>
@@ -380,6 +519,23 @@ export function ChemistrySaltBench() {
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
                   {salt.note}
                 </p>
+                <div className="mt-2 flex flex-col gap-1 border-t border-[var(--lab-line-soft)] pt-2 text-[11px] text-[var(--lab-ink-dim)]">
+                  <p><span className="text-[var(--lab-ink)]">Appearance:</span> {salt.colour}</p>
+                  <p><span className="text-[var(--lab-ink)]">Ions:</span> {salt.cation}, {salt.anion}</p>
+                  <p><span className="text-[var(--lab-ink)]">In water:</span> {salt.observation.water}</p>
+                </div>
+                <button
+                  type="button"
+                  className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]"
+                  onClick={recordResult}
+                  disabled={recorder.state === "saving" || recorder.state === "done"}
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  {recorder.state === "done" ? "Result recorded" : recorder.state === "saving" ? "Recording…" : "Record result"}
+                </button>
+                {recorder.message ? (
+                  <span className="text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">{recorder.message}</span>
+                ) : null}
               </div>
             ) : verdict === "wrong" ? (
               <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
@@ -401,6 +557,36 @@ export function ChemistrySaltBench() {
           <ShareSetup subject="chemistry" bench="salts" preset={{ salt: salt.id }} />
         </aside>
       </div>
+
+      <details className="apple-lab-card px-3 py-2.5">
+        <summary className="cursor-pointer text-[11.5px] font-semibold text-[var(--lab-ink)]">
+          Salt library · {SALTS.length} examples
+        </summary>
+        <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
+          Open a sample after you have made your inference. These are the same
+          salts used in the bench; the unknown above is one of them.
+        </p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {SALTS.map((entry, index) => (
+            <div key={entry.id} className="rounded-lg border border-[var(--lab-line-soft)] px-2.5 py-2">
+              <p className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--lab-ink)]">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full border border-[var(--lab-line)]"
+                  style={{ background: SALT_SWATCH[entry.id] }}
+                  aria-hidden="true"
+                />
+                {index + 1}. {entry.name}
+              </p>
+              <p className="mt-0.5 font-mono text-[10.5px] text-[var(--lab-ink-dim)]">
+                {entry.formula} · {entry.cation} / {entry.anion}
+              </p>
+              <p className="mt-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+                {entry.colour}. {entry.note}
+              </p>
+            </div>
+          ))}
+        </div>
+      </details>
 
       <Questions
         items={[

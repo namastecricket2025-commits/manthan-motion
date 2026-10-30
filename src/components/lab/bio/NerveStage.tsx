@@ -562,11 +562,37 @@ export function NerveStage({ label, blurb }: { label: string; blurb: string }) {
                   <circle cx={pulse.x} cy={pulse.y} r={4.2} fill={SIGNAL} />
                 </g>
               ) : null}
+
+              {/* Static direction chevrons. They are present before the first
+                  firing, so the plate explains the route even when it is still. */}
+              <g fill="none" stroke={INK} strokeOpacity={0.34} strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round">
+                {mode === "neuron" ? (
+                  <>
+                    <path d="M 462 216 l 10 10 l -10 10" />
+                    <path d="M 536 216 l 10 10 l -10 10" />
+                    <path d="M 610 216 l 10 10 l -10 10" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M 252 186 l 12 -4 l -1 12" />
+                    <path d="M 500 292 l 12 4 l -7 10" />
+                  </>
+                )}
+              </g>
             </svg>
           </div>
           )}
 
-          <p className="mt-2 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+            <span className="apple-lab-micro">Direction</span>
+            <span>
+              {mode === "neuron"
+                ? "dendrites → cell body → axon → myelin nodes → synapse"
+                : "skin → sensory neuron → dorsal root → spinal cord → motor neuron → muscle"}
+            </span>
+          </p>
+
+          <p className="mt-1.5 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
             {view === "model"
               ? mode === "neuron"
                 ? "Modelled cell: nucleus, nucleolus and Nissl bodies in the soma, a dendrite arbor that tapers at every fork, six myelin internodes with their Schwann cells, and seven boutons on the next membrane. Turn it, and the impulse jumps node to node."
