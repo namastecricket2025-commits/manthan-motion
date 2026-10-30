@@ -28,10 +28,10 @@ import {
  * Reference Atlas meshes, registered in one body frame. See digestive-model.ts
  * for why three of the organs are lofts instead.
  *
- * The plate is cut at the pharynx the way an atlas is, because a mouth modelled
- * at this scale reads as a funnel and explains nothing; the mouth is still the
- * first stop, with its own read-out, and the bolus enters at the top already
- * chewed.
+ * The mouth is part of the model, not a drawing in the margin: an oval face cut
+ * open, teeth on its rim, the tongue on the floor and a pharynx that meets the
+ * oesophagus at its own first point. The bolus starts between the teeth, so the
+ * first stop is something you watch rather than something you are told.
  *
  * The organ holding the food fades to a third of its opacity while the rest
  * stay solid, so the bolus is visible without making the whole model ghostly.
@@ -132,7 +132,7 @@ const STAGES: Stage[] = [
         a: "The liver makes it, the gallbladder stores it, and the duodenum receives it to emulsify fat into droplets the enzymes can attack.",
       },
     ],
-    seconds: 3.4,
+    seconds: 3.8,
   },
   {
     id: "large",
@@ -152,7 +152,7 @@ const STAGES: Stage[] = [
         a: "The haustra are pouches between the taeniae coli. They knead and hold the contents instead of pushing them steadily along.",
       },
     ],
-    seconds: 3.0,
+    seconds: 4.2,
   },
   {
     id: "rectum",
@@ -249,8 +249,8 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
     /* The plate is tall and narrow — the oesophagus cut at the top, the rectum
        at the bottom — so home is pulled back far enough to hold both ends. */
     const home = {
-      target: toScene([0.02, 0.29, 0.0]),
-      look: toScene([0.02, 0.29, 0.0]).add(new THREE.Vector3(0.5, 0.12, 5.85)),
+      target: toScene([0.015, 0.305, 0.0]),
+      look: toScene([0.015, 0.305, 0.0]).add(new THREE.Vector3(0.5, 0.12, 6.1)),
     };
     camera.position.copy(home.look);
 
@@ -260,7 +260,7 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
     controls.dampingFactor = 0.08;
     controls.enablePan = true;
     controls.screenSpacePanning = true;
-    controls.minDistance = 1.2;
+    controls.minDistance = 0.6;
     controls.maxDistance = 9;
     controls.minPolarAngle = 0.2;
     controls.maxPolarAngle = Math.PI - 0.2;
@@ -609,17 +609,15 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
 
           <p className="mt-2 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
             Liver and both intestines are NIH Human Reference Atlas meshes; the
-            stomach, oesophagus and gallbladder are modelled. The plate is cut at
-            the pharynx, and the mouth is drawn in section in the panel for the
-            first two stops. The route through the coils is schematic — the
-            food stays inside the gut, but it does not trace every metre. Times
-            on the panel are the body's, not the animation's.
+            mouth, pharynx, stomach, oesophagus, gallbladder and pancreas are
+            modelled. The mouth is cut open above the oesophagus, and the bolus
+            starts between its teeth. The route through the gut follows the
+            meshes' own lumen, though it does not trace every metre of the small
+            intestine. Times on the panel are the body's, not the animation's.
           </p>
         </div>
 
         <aside className="flex flex-col gap-3">
-          {stage <= 1 ? <MouthSection /> : null}
-
           <section className="apple-lab-card p-3.5">
             <div className="flex items-baseline justify-between gap-2">
               <p className="apple-lab-micro">Journey</p>
@@ -682,95 +680,6 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
         </aside>
       </div>
     </div>
-  );
-}
-
-/**
- * The mouth, in section.
- *
- * A mouth modelled at the plate's scale is a funnel: it cannot be labelled, and
- * a face in profile at 40 mm is a cartoon. This is how an atlas solves it — a
- * sagittal section of the oral cavity and pharynx, drawn in the plate's own
- * ink, on the two stops where the mouth is what the stop is about.
- */
-function MouthSection() {
-  const ink = "var(--lab-ink)";
-  const line = (opacity: number) => ({ stroke: ink, strokeOpacity: opacity, fill: "none" as const });
-
-  return (
-    <section className="apple-lab-card p-3.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="apple-lab-micro">The mouth, in section</p>
-        <span className="text-[10px] text-[var(--lab-ink-micro)]">sagittal</span>
-      </div>
-
-      <svg viewBox="0 0 240 182" className="mt-2 w-full" role="img" aria-label="Sagittal section of the mouth and pharynx">
-        {/* Lips, at the opening. */}
-        <path d="M 36 74 C 30 78 30 84 36 86" {...line(0.5)} strokeWidth={1.4} strokeLinecap="round" />
-        <path d="M 36 94 C 30 96 30 102 36 104" {...line(0.5)} strokeWidth={1.4} strokeLinecap="round" />
-
-        {/* Oral cavity: palate above, floor below, the tongue on the floor. */}
-        <path d="M 38 72 C 62 64 88 64 106 72" {...line(0.55)} strokeWidth={2.2} strokeLinecap="round" />
-        <path d="M 38 106 C 60 112 90 112 108 104" {...line(0.4)} strokeWidth={1.6} strokeLinecap="round" />
-
-        {/* Teeth, upper and lower. */}
-        <g fill={ink} fillOpacity={0.14} stroke={ink} strokeOpacity={0.4} strokeWidth={0.8}>
-          {[44, 60, 76].map((x) => (
-            <rect key={`u${x}`} x={x} y={75} width={12} height={6} rx={1.6} />
-          ))}
-          {[46, 62, 78].map((x) => (
-            <rect key={`l${x}`} x={x} y={99} width={12} height={6} rx={1.6} />
-          ))}
-        </g>
-
-        {/* Tongue. */}
-        <path d="M 42 104 C 54 92 84 90 100 96 C 88 104 62 108 42 104 Z" fill={ink} fillOpacity={0.07} stroke={ink} strokeOpacity={0.45} strokeWidth={1} />
-
-        {/* Soft palate and the uvula hanging from it. */}
-        <path d="M 106 72 C 112 78 112 84 108 88" {...line(0.45)} strokeWidth={1.2} strokeLinecap="round" />
-        <ellipse cx={108} cy={92} rx={2.6} ry={5} fill={ink} fillOpacity={0.08} stroke={ink} strokeOpacity={0.35} strokeWidth={0.8} />
-
-        {/* Pharynx, then the two tubes it forks into. */}
-        <path d="M 106 72 C 120 80 126 94 126 110 L 126 122" {...line(0.28)} strokeWidth={1} />
-        {/* Epiglottis: the leaf that closes the airway during a swallow. */}
-        <path d="M 108 92 C 116 96 122 102 124 110 C 118 108 112 104 106 98 Z" fill={ink} fillOpacity={0.1} stroke={ink} strokeOpacity={0.5} strokeWidth={1} />
-
-        {/* Trachea in front, oesophagus behind. */}
-        <g {...line(0.4)} strokeWidth={1.3} strokeLinecap="round">
-          <path d="M 114 116 L 116 172" />
-          <path d="M 130 118 L 134 172" />
-          {[126, 138, 150, 162].map((y) => (
-            <line key={y} x1={115} y1={y} x2={130} y2={y + 1} strokeOpacity={0.22} strokeWidth={0.8} />
-          ))}
-          <path d="M 140 120 L 146 172" strokeOpacity={0.55} />
-          <path d="M 152 122 L 158 172" strokeOpacity={0.55} />
-        </g>
-
-        {/* The bolus, in the mouth and then in the pharynx. */}
-        <circle cx={68} cy={92} r={6} fill="#c49a63" fillOpacity={0.9} />
-        <circle cx={120} cy={112} r={3.4} fill="#c49a63" fillOpacity={0.45} />
-
-        <g fontSize="7.4" letterSpacing="1.1" fill={ink} fillOpacity={0.42}>
-          <text x={16} y={54}>HARD PALATE</text>
-          <text x={16} y={128}>TONGUE</text>
-          <text x={166} y={96}>EPIGLOTTIS</text>
-          <text x={70} y={178}>TRACHEA · AIR</text>
-          <text x={162} y={166}>OESOPHAGUS</text>
-        </g>
-        <g stroke={ink} strokeOpacity={0.2} strokeWidth={0.8}>
-          <line x1={56} y1={58} x2={72} y2={68} />
-          <line x1={50} y1={122} x2={62} y2={104} />
-          <line x1={164} y1={92} x2={124} y2={100} />
-          <line x1={160} y1={162} x2={146} y2={152} />
-        </g>
-      </svg>
-
-      <p className="mt-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
-        In a swallow the epiglottis folds down over the larynx, so the bolus goes
-        behind it into the oesophagus and the airway is shut for that instant.
-        Talk while swallowing and the flap is late.
-      </p>
-    </section>
   );
 }
 

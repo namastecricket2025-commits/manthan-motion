@@ -48,6 +48,22 @@ export function toScene(p: Pt3) {
 /* centre-lines, in metres                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The mouth: lips, cavity, tongue, then the pharynx handing the bolus to the
+ * top of the oesophagus. The route starts between the teeth; everything below
+ * is the same tube the plate models, so the food never hops a gap between the
+ * mouth and the oesophagus.
+ */
+const MOUTH_ROUTE: Pt3[] = [
+  [0.0, 0.6515, 0.1],
+  [0.0, 0.6505, 0.09],
+  [0.0, 0.6475, 0.076],
+  [0.0, 0.6425, 0.062],
+  [0.0, 0.633, 0.052],
+  [0.0, 0.621, 0.043],
+  [0.0, 0.612, 0.036],
+];
+
 /** Oesophagus: from the pharynx cut down to the cardia on the lesser curve. */
 const OESO: Pt3[] = [
   [0.0, 0.612, 0.036],
@@ -139,25 +155,46 @@ const SI_ROUTE: Pt3[] = [
   [-0.036, 0.323, 0.022],
   [-0.009, 0.289, 0.028],
   [0.034, 0.321, 0.037],
-  ...swirl([0.051, 0.279, 0.06], 0.044, 0.05, 2.2, 14, 2.4),
-  ...swirl([0.012, 0.168, 0.071], 0.036, 0.04, 1.6, 10, 0.6),
+  ...swirl([0.051, 0.279, 0.06], 0.037, 0.042, 2.2, 14, 2.4),
+  ...swirl([0.012, 0.168, 0.071], 0.03, 0.034, 1.6, 10, 0.6),
   [-0.016, 0.151, 0.043],
-  [-0.044, 0.17, 0.061],
+  /* The terminal ileum ends at the ileocaecal valve; the last two points carry
+     the bolus through the valve into the caecum, so the hand-over to the colon
+     is a continuation rather than a jump of five centimetres. */
+  [-0.0444, 0.1744, 0.061],
+  [-0.0558, 0.1664, 0.0596],
+  [-0.075, 0.146, 0.062],
 ];
 
-/** Caecum → ascending → transverse → descending → sigmoid → rectum. */
+/**
+ * Caecum → ascending → hepatic flexure → transverse → splenic flexure →
+ * descending → sigmoid. Every point is the centre of a cross-section of the
+ * HRA colon mesh itself, found by taking the ring of vertices around a seed
+ * and moving the seed to that ring's centre; the old hand-placed path cut the
+ * corner of the descending colon and threw the bolus out through the wall.
+ */
 const COLON: Pt3[] = [
-  [-0.055, 0.147, 0.07],
-  [-0.066, 0.146, 0.07],
-  [-0.078, 0.263, 0.046],
-  [-0.063, 0.323, 0.059],
-  [0.022, 0.314, 0.069],
-  [0.099, 0.372, 0.036],
-  [0.098, 0.235, 0.035],
-  [0.007, 0.083, 0.034],
-  [0.004, 0.05, -0.01],
-  [-0.002, 0.037, -0.049],
-  [0.0, 0.008, -0.058],
+  [-0.0875, 0.1404, 0.0651],
+  [-0.0667, 0.1949, 0.0554],
+  [-0.0798, 0.2534, 0.0525],
+  [-0.0532, 0.2993, 0.0518],
+  [-0.0177, 0.3081, 0.0873],
+  [0.0408, 0.3161, 0.0825],
+  [0.0878, 0.3418, 0.0688],
+  [0.0969, 0.3483, 0.0197],
+  [0.1031, 0.2884, 0.0146],
+  [0.0927, 0.2306, 0.0289],
+  [0.0872, 0.1725, 0.0434],
+  [0.0676, 0.1166, 0.0544],
+  [0.0216, 0.0802, 0.056],
+  [-0.0059, 0.081, 0.0082],
+];
+
+/** The rectum and anal canal, handed on from the sigmoid without a jump. */
+const RECTUM: Pt3[] = [
+  [-0.0059, 0.081, 0.0082],
+  [0.0012, 0.0495, -0.0499],
+  [0.0016, -0.0109, -0.0634],
 ];
 
 /* ------------------------------------------------------------------ */
@@ -441,23 +478,85 @@ export function buildTract(): Tract {
     return mesh;
   };
 
-  /* Oesophagus. Two layers, as the wall really is, so the tube has a lip at
-     the pharynx cut instead of ending in mid-air. */  add(
+  /* Oesophagus, from the pharynx down to the cardia. Its first point is where
+     the mouth's pharynx ends, so the two tubes share one lumen. */
+  add(
     new THREE.Mesh(
       sweep(OESO, OESO_R, { tubular: 96, radial: 28, wobble: oesoSkin }),
       organMaterial("#a97562", 0.58, 0.28),
     ),
     [1],
   );
-  /* The cut at the pharynx, closed with a rounded lip. A tube that simply stops
-     in mid-air is what made this read as a pipe; an atlas cuts and rims it. */
-  const pharynxRim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.0134, 0.0024, 10, 30),
-    organMaterial("#8e5f50", 0.52, 0.35),
+  /* The mouth, cut open. An oval face with the cavity bored through it, teeth
+     on the rim, the tongue on the floor, and a short pharynx that meets the
+     oesophagus at its own first point — so the bolus starts between the teeth
+     and stays inside flesh all the way down. Modelled in the plate's own
+     frame rather than drawn in a corner of the screen. */
+  const mouth = new THREE.Group();
+  const face = new THREE.Shape();
+  face.absellipse(0, 0, 0.038, 0.0265, 0, Math.PI * 2);
+  const cavity = new THREE.Path();
+  cavity.absellipse(0, -0.0008, 0.0275, 0.0148, 0, Math.PI * 2, true);
+  face.holes.push(cavity);
+  const mouthWall = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(face, {
+      depth: 0.042,
+      bevelEnabled: true,
+      bevelSize: 0.0034,
+      bevelThickness: 0.0034,
+      bevelSegments: 3,
+      curveSegments: 22,
+    }),
+    organMaterial("#a97562", 0.6, 0.22),
   );
-  pharynxRim.position.set(0, 0.6125, 0.036);
-  pharynxRim.rotation.x = Math.PI / 2;
-  add(pharynxRim, [0, 1]);
+  mouthWall.position.set(0, 0.6555, 0.06);
+  mouth.add(mouthWall);
+
+  const toothMaterial = organMaterial("#e6d9c7", 0.52, 0.2);
+  for (const side of [1, -1]) {
+    for (let i = 0; i < 8; i += 1) {
+      const x = -0.021 + (i / 7) * 0.042;
+      const lift = Math.sqrt(Math.max(0, 1 - (x / 0.0275) ** 2)) * 0.0125;
+      const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.0046, 0.005, 0.004), toothMaterial);
+      tooth.position.set(x, 0.6555 + side * lift, 0.0985);
+      mouth.add(tooth);
+    }
+  }
+
+  const tongue = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), organMaterial("#b0716b", 0.5, 0.3));
+  tongue.scale.set(0.019, 0.0064, 0.019);
+  tongue.position.set(0, 0.6452, 0.082);
+  mouth.add(tongue);
+
+  const uvula = new THREE.Mesh(new THREE.SphereGeometry(0.004, 12, 10), organMaterial("#b0716b", 0.5, 0.3));
+  uvula.scale.set(0.7, 1.4, 0.7);
+  uvula.position.set(0, 0.6645, 0.0635);
+  mouth.add(uvula);
+
+  const lips = new THREE.Mesh(
+    new THREE.TorusGeometry(0.030, 0.0038, 10, 40),
+    organMaterial("#8f5b4e", 0.5, 0.32),
+  );
+  lips.position.set(0, 0.6555, 0.1035);
+  lips.scale.set(1.2, 0.88, 1);
+  mouth.add(lips);
+
+  body.add(mouth);
+
+  const pharynx = new THREE.Mesh(
+    sweep(
+      [
+        [0.0, 0.6515, 0.062],
+        [0.0, 0.638, 0.052],
+        [0.0, 0.624, 0.044],
+        [0.0, 0.6115, 0.036],
+      ],
+      (t) => 0.0142 + 0.0034 * (1 - t),
+      { tubular: 44, radial: 22 },
+    ),
+    organMaterial("#a97562", 0.6, 0.22),
+  );
+  add(pharynx, [0]);
 
   /* The stomach. The wobble is rugae: six soft folds that fade out at both
      sphincters, which is what keeps the fundus smooth and the pylorus tight. */
@@ -508,6 +607,7 @@ export function buildTract(): Tract {
   body.add(food.root);
 
   const anchors: Record<string, THREE.Vector3> = {
+    mouth: new THREE.Vector3(0.0, 0.653, 0.086),
     oesophagus: new THREE.Vector3(0.004, 0.56, 0.038),
     stomach: new THREE.Vector3(0.052, 0.45, 0.078),
     pylorus: new THREE.Vector3(-0.014, 0.368, 0.042),
@@ -560,23 +660,12 @@ export function loadOrgans(tract: Tract, onReady?: (id: string) => void, onFail?
 /* ------------------------------------------------------------------ */
 
 const ROUTES: Pt3[][] = [
-  [
-    [0.0, 0.615, 0.036],
-    [0.002, 0.6, 0.036],
-    [0.006, 0.57, 0.036],
-    [0.012, 0.53, 0.04],
-    [0.02, 0.5, 0.044],
-  ],
+  MOUTH_ROUTE,
   OESO,
   STOMACH,
   SI_ROUTE,
   COLON,
-  [
-    [0.004, 0.05, -0.01],
-    [-0.002, 0.037, -0.049],
-    [0.0, 0.018, -0.055],
-    [0.0, 0.004, -0.058],
-  ],
+  RECTUM,
 ];
 
 export const STAGE_CURVES = ROUTES.map((points, index) =>
@@ -590,16 +679,16 @@ export const STAGE_CURVES = ROUTES.map((points, index) =>
  * a bolus that fits the oesophagus has to shrink again for the terminal colon
  * and the anal canal — otherwise it hangs outside the organ it is inside.
  */
-export const STAGE_FOOD_SIZE = [1, 1, 1.15, 0.8, 0.68, 0.58];
+export const STAGE_FOOD_SIZE = [0.95, 0.85, 1.15, 0.7, 0.62, 0.52];
 
 /** Where the camera looks for each stop, and how close it gets. */
 export const STAGE_CAMERA: Array<{ at: Pt3; distance: number; azimuth: number }> = [
-  { at: [0.004, 0.585, 0.036], distance: 3.6, azimuth: 0.24 },
-  { at: [0.008, 0.535, 0.04], distance: 3.3, azimuth: 0.24 },
+  { at: [0.0, 0.648, 0.07], distance: 0.85, azimuth: 0.2 },
+  { at: [0.006, 0.555, 0.04], distance: 2.2, azimuth: 0.24 },
   { at: [0.035, 0.44, 0.05], distance: 3.4, azimuth: 0.3 },
   { at: [0.03, 0.24, 0.04], distance: 3.6, azimuth: 0.2 },
   { at: [0.03, 0.24, 0.0], distance: 3.9, azimuth: 0.12 },
-  { at: [0.008, 0.02, -0.05], distance: 3.3, azimuth: 0.1 },
+  { at: [0.0, 0.02, -0.05], distance: 3.3, azimuth: 0.1 },
 ];
 
 /**
