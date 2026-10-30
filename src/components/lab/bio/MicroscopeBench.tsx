@@ -201,12 +201,28 @@ export function MicroscopeBench() {
               <circle cx="210" cy="210" r="204" fill="rgba(var(--lab-diagram-plate), 0.9)" stroke="rgba(var(--lab-diagram-ink), 0.28)" strokeWidth="2" />
               <g clipPath={`url(#micro-field-${slide.id})`}>
                 <rect x="0" y="0" width="420" height="420" fill={`rgba(255, 250, 236, ${0.14 + lightFactor * 0.22})`} />
-                <g filter={`url(#micro-blur-${slide.id})`} opacity={0.55 + Math.min(1, light) * 0.0045}>
-                  {slide.id === "onion" ? <OnionField /> : null}
-                  {slide.id === "blood" ? <BloodField /> : null}
-                  {slide.id === "cheek" ? <CheekField /> : null}
+                <g
+                  filter={`url(#micro-blur-${slide.id})`}
+                  opacity={
+                    (0.55 + Math.min(1, light) * 0.0045) *
+                    (objective === 40 ? 0.9 : objective === 10 ? 0.96 : 1)
+                  }
+                >
+                  {slide.id === "onion" ? <OnionField objective={objective} /> : null}
+                  {slide.id === "blood" ? <BloodField objective={objective} /> : null}
+                  {slide.id === "cheek" ? <CheekField objective={objective} /> : null}
                 </g>
                 <rect x="0" y="0" width="420" height="420" fill={`url(#micro-light-${slide.id})`} />
+                <text
+                  x="210"
+                  y="392"
+                  textAnchor="middle"
+                  fontSize="10"
+                  letterSpacing="0.1em"
+                  fill="rgba(40, 32, 26, 0.58)"
+                >
+                  {objective}× · FIELD {slide.fieldMm[objective].toFixed(2)} mm
+                </text>
               </g>
               <circle cx="210" cy="210" r="196" fill="none" stroke="rgba(var(--lab-diagram-ink), 0.4)" strokeWidth="2" />
               {/* dark field edge as illumination falls off */}
@@ -370,22 +386,35 @@ export function MicroscopeBench() {
 /* Deterministic fields keep the slide identical across renders, which is what a
    prepared slide is: the same specimen every time you look down the tube. */
 
-function OnionField() {
+function OnionField({ objective }: { objective: Objective }) {
   const cells: ReactNode[] = [];
+  const scale = objective === 4 ? 0.52 : objective === 10 ? 1 : 2.05;
+  const w = 74 * scale;
+  const h = 62 * scale;
+  const gap = 6 * scale;
+  const cols = Math.ceil(440 / (w + gap)) + 1;
+  const rows = Math.ceil(440 / (h + gap)) + 1;
   let key = 0;
-  for (let row = 0; row < 6; row += 1) {
-    for (let col = 0; col < 5; col += 1) {
-      const x = 20 + col * 80 + (row % 2 === 0 ? 0 : 12);
-      const y = 18 + row * 68;
-      const w = 74;
-      const h = 62;
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const x = -20 + col * (w + gap) + (row % 2 === 0 ? 0 : w * 0.18);
+      const y = -20 + row * (h + gap);
       const nx = x + w * (0.35 + ((row + col) % 3) * 0.12);
       const ny = y + h * (0.4 + ((row * 2 + col) % 2) * 0.12);
       cells.push(
         <g key={key++}>
-          <rect x={x} y={y} width={w} height={h} rx={6} fill="rgba(186, 214, 126, 0.22)" stroke="rgba(116, 150, 62, 0.75)" strokeWidth="2" />
-          <circle cx={nx} cy={ny} r={6} fill="rgba(120, 92, 48, 0.75)" />
-          <circle cx={nx - 2} cy={ny - 2} r={2} fill="rgba(245, 232, 196, 0.7)" />
+          <rect
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            rx={6 * scale}
+            fill="rgba(186, 214, 126, 0.22)"
+            stroke="rgba(116, 150, 62, 0.75)"
+            strokeWidth={Math.max(1, 2 * scale)}
+          />
+          <circle cx={nx} cy={ny} r={6 * scale} fill="rgba(120, 92, 48, 0.75)" />
+          <circle cx={nx - 2 * scale} cy={ny - 2 * scale} r={2 * scale} fill="rgba(245, 232, 196, 0.7)" />
         </g>,
       );
     }
@@ -393,17 +422,19 @@ function OnionField() {
   return <>{cells}</>;
 }
 
-function BloodField() {
+function BloodField({ objective }: { objective: Objective }) {
   const discs: ReactNode[] = [];
+  const scale = objective === 4 ? 0.45 : objective === 10 ? 1 : 2.1;
+  const count = objective === 4 ? 82 : objective === 10 ? 46 : 22;
   let seed = 7;
   const next = () => {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647;
   };
-  for (let index = 0; index < 46; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const x = 26 + next() * 368;
     const y = 26 + next() * 368;
-    const r = 9 + next() * 3;
+    const r = (9 + next() * 3) * scale;
     discs.push(
       <g key={index}>
         <circle cx={x} cy={y} r={r} fill="rgba(196, 92, 88, 0.6)" stroke="rgba(132, 48, 46, 0.5)" />
@@ -414,29 +445,31 @@ function BloodField() {
   return (
     <>
       {discs}
-      <circle cx="300" cy="128" r="17" fill="rgba(120, 108, 176, 0.55)" stroke="rgba(80, 68, 140, 0.65)" />
-      <circle cx="300" cy="128" r="8" fill="rgba(96, 84, 150, 0.6)" />
+      <circle cx="300" cy="128" r={17 * scale} fill="rgba(120, 108, 176, 0.55)" stroke="rgba(80, 68, 140, 0.65)" />
+      <circle cx="300" cy="128" r={8 * scale} fill="rgba(96, 84, 150, 0.6)" />
     </>
   );
 }
 
-function CheekField() {
+function CheekField({ objective }: { objective: Objective }) {
   const cells: ReactNode[] = [];
+  const scale = objective === 4 ? 0.5 : objective === 10 ? 1 : 2.1;
+  const count = objective === 4 ? 30 : objective === 10 ? 13 : 7;
   let seed = 11;
   const next = () => {
     seed = (seed * 48271) % 2147483647;
     return seed / 2147483647;
   };
-  for (let index = 0; index < 13; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const x = 50 + next() * 310;
     const y = 44 + next() * 320;
-    const rx = 28 + next() * 18;
-    const ry = 22 + next() * 14;
+    const rx = (28 + next() * 18) * scale;
+    const ry = (22 + next() * 14) * scale;
     const rotate = next() * 180;
     cells.push(
       <g key={index} transform={`rotate(${rotate} ${x} ${y})`}>
-        <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="rgba(150, 188, 208, 0.18)" stroke="rgba(104, 144, 168, 0.7)" strokeWidth="1.8" />
-        <ellipse cx={x + 3} cy={y - 2} rx={6.5} ry={5} fill="rgba(74, 92, 140, 0.65)" />
+        <ellipse cx={x} cy={y} rx={rx} ry={ry} fill="rgba(150, 188, 208, 0.18)" stroke="rgba(104, 144, 168, 0.7)" strokeWidth={Math.max(1, 1.8 * scale)} />
+        <ellipse cx={x + 3 * scale} cy={y - 2 * scale} rx={6.5 * scale} ry={5 * scale} fill="rgba(74, 92, 140, 0.65)" />
       </g>,
     );
   }

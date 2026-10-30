@@ -30,12 +30,30 @@ const SPECIMENS: Record<Tool, Specimen[]> = {
     { name: "Glass tube", size: 1.24 },
     { name: "Aluminium block", size: 3.78 },
     { name: "Copper wire bundle", size: 0.86 },
+    { name: "Brass cylinder", size: 2.03 },
+    { name: "Plastic washer", size: 0.42 },
   ],
   screw: [
     { name: "Wire", size: 2.36 },
     { name: "Sheet metal", size: 1.24 },
     { name: "Small ball", size: 3.48 },
     { name: "Thin rod", size: 0.78 },
+    { name: "Copper strip", size: 1.67 },
+    { name: "Needle", size: 0.49 },
+  ],
+};
+
+/** A deliberately imperfect instrument: the zero is not the only reading. */
+const ZERO_ERRORS: Record<Tool, Array<{ id: string; label: string; value: number }>> = {
+  vernier: [
+    { id: "0", label: "0.00 cm", value: 0 },
+    { id: "0.02", label: "+0.02 cm", value: 0.02 },
+    { id: "-0.03", label: "−0.03 cm", value: -0.03 },
+  ],
+  screw: [
+    { id: "0", label: "0.00 mm", value: 0 },
+    { id: "0.02", label: "+0.02 mm", value: 0.02 },
+    { id: "-0.03", label: "−0.03 mm", value: -0.03 },
   ],
 };
 
@@ -261,23 +279,30 @@ export function InstrumentsBench() {
       : 0;
   });
   const [entry, setEntry] = useState("");
+  const [zero, setZero] = useState(0);
+  const [hint, setHint] = useState(false);
   const [verdict, setVerdict] = useState<"idle" | "right" | "wrong">("idle");
   const [revealed, setRevealed] = useState(false);
   const recorder = useRecorder();
 
   const specimen = SPECIMENS[tool][index] ?? SPECIMENS[tool][0];
-  const vernier = useMemo(() => vernierParts(specimen.size), [specimen.size]);
-  const screw = useMemo(() => screwParts(specimen.size), [specimen.size]);
+  /* The scale shows the instrument's reading; the true size is what remains
+     after the zero error is subtracted. Keeping both numbers is the point. */
+  const observed = specimen.size + zero;
+  const vernier = useMemo(() => vernierParts(observed), [observed]);
+  const screw = useMemo(() => screwParts(observed), [observed]);
 
-  const expected = tool === "vernier" ? vernier.reading : screw.reading;
+  const expected = specimen.size;
   const unit = tool === "vernier" ? "cm" : "mm";
 
   const switchTool = (next: Tool) => {
     setTool(next);
     setIndex(0);
+    setZero(0);
     setEntry("");
     setVerdict("idle");
     setRevealed(false);
+    setHint(false);
     recorder.reset();
   };
 
@@ -286,6 +311,25 @@ export function InstrumentsBench() {
     setEntry("");
     setVerdict("idle");
     setRevealed(false);
+    setHint(false);
+    recorder.reset();
+  };
+
+  const chooseSpecimen = (next: number) => {
+    setIndex(next);
+    setEntry("");
+    setVerdict("idle");
+    setRevealed(false);
+    setHint(false);
+    recorder.reset();
+  };
+
+  const changeZero = (next: number) => {
+    setZero(next);
+    setEntry("");
+    setVerdict("idle");
+    setRevealed(false);
+    setHint(false);
     recorder.reset();
   };
 
@@ -309,13 +353,17 @@ export function InstrumentsBench() {
       void recorder.record("physics", "Vernier calipers", [
         { label: "Main scale", value: vernier.msrCm, unit: "cm" },
         { label: "Vernier divisions", value: vernier.vsd, unit: "div" },
-        { label: "Reading", value: vernier.reading, unit: "cm" },
+        { label: "Observed reading", value: vernier.reading, unit: "cm" },
+        { label: "Zero error", value: zero, unit: "cm" },
+        { label: "Corrected reading", value: expected, unit: "cm" },
       ]);
     } else {
       void recorder.record("physics", "Screw gauge", [
         { label: "Main scale", value: screw.msr, unit: "mm" },
         { label: "Circular divisions", value: screw.csd, unit: "div" },
-        { label: "Diameter", value: screw.reading, unit: "mm" },
+        { label: "Observed reading", value: screw.reading, unit: "mm" },
+        { label: "Zero error", value: zero, unit: "mm" },
+        { label: "Corrected diameter", value: expected, unit: "mm" },
       ]);
     }
   };
@@ -343,12 +391,36 @@ export function InstrumentsBench() {
             />
           </div>
 
+          <div className="flex flex-wrap items-start gap-x-5 gap-y-2">
+            <Picker
+              label="Specimen"
+              value={String(index)}
+              options={SPECIMENS[tool].map((entry, at) => ({
+                id: String(at),
+                label: entry.name,
+              }))}
+              onChange={(next) => chooseSpecimen(Number(next))}
+            />
+            <Picker
+              label="Zero error"
+              value={String(zero)}
+              options={ZERO_ERRORS[tool].map((entry) => ({ id: entry.id, label: entry.label }))}
+              onChange={(next) => changeZero(Number(next))}
+            />
+          </div>
+
           <div className="rounded-xl border border-[var(--lab-line)] p-2">
             {tool === "vernier" ? (
-              <VernierFigure cm={specimen.size} reveal={revealed} />
+              <VernierFigure cm={observed} reveal={revealed} />
             ) : (
-              <ScrewFigure mm={specimen.size} reveal={revealed} />
+              <ScrewFigure mm={observed} reveal={revealed} />
             )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-[var(--lab-ink-dim)]">
+            <span className="apple-lab-chip">1 · main scale</span>
+            <span className="apple-lab-chip">2 · {tool === "vernier" ? "vernier" : "thimble"} division</span>
+            <span className="apple-lab-chip">3 · subtract zero error</span>
           </div>
 
           <div className="flex flex-wrap items-end gap-2">
@@ -375,21 +447,45 @@ export function InstrumentsBench() {
             </button>
             <button type="button" className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]" onClick={nextSpecimen}>
               <RotateCcw className="h-3.5 w-3.5" />
-              New specimen
+              Next specimen
+            </button>
+            <button
+              type="button"
+              className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]"
+              onClick={() => setHint((value) => !value)}
+              aria-expanded={hint}
+            >
+              {hint ? "Hide hint" : "Hint"}
             </button>
           </div>
+
+          {hint ? (
+            <div className="rounded-lg border border-[var(--lab-line)] px-3 py-2 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">
+              <p className="text-[var(--lab-ink)]">
+                {tool === "vernier"
+                  ? "Read the last whole centimetre to the left of the vernier zero, then find the vernier division that lines up with any main-scale line."
+                  : "Read the last half-millimetre exposed on the sleeve, then the thimble division that meets the sleeve's index line."}
+              </p>
+              <p className="mt-1">
+                Corrected reading = observed reading − zero error. A positive
+                zero error makes every reading too large; a negative one makes
+                it too small.
+              </p>
+            </div>
+          ) : null}
 
           {verdict === "right" ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--lab-line)] px-3 py-2 text-[11.5px] text-[var(--lab-ink-dim)]">
               <Check className="h-3.5 w-3.5 text-[var(--lab-diagram-mint)]" />
               {tool === "vernier"
-                ? `Correct — ${vernier.msrCm.toFixed(2)} cm on the main scale, division ${vernier.vsd} on the vernier, so ${expected.toFixed(2)} cm.`
-                : `Correct — ${screw.msr.toFixed(1)} mm on the sleeve, division ${screw.csd} on the thimble, so ${expected.toFixed(2)} mm.`}
+                ? `Correct — scale reads ${vernier.reading.toFixed(2)} cm; zero error ${zero >= 0 ? "+" : "−"}${Math.abs(zero).toFixed(2)} cm; corrected ${expected.toFixed(2)} cm.`
+                : `Correct — scale reads ${screw.reading.toFixed(2)} mm; zero error ${zero >= 0 ? "+" : "−"}${Math.abs(zero).toFixed(2)} mm; corrected ${expected.toFixed(2)} mm.`}
             </div>
           ) : verdict === "wrong" ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--lab-line)] px-3 py-2 text-[11.5px] text-[var(--lab-ink-dim)]">
               <CircleAlert className="h-3.5 w-3.5 text-[var(--lab-diagram-rose)]" />
-              Not yet. Read the last whole division before the zero, then find the division on the moving scale that lines up exactly.
+              Not yet. Read the scales, then subtract the zero error — the scale
+              reading and the true size are not the same number.
             </div>
           ) : null}
 
@@ -417,6 +513,10 @@ export function InstrumentsBench() {
             value={revealed ? String(tool === "vernier" ? vernier.vsd : screw.csd) : "—"}
           />
           <Readout label="Scale" value={tool === "vernier" ? "10 div = 9 mm" : "50 div = 0.5 mm"} />
+          <Readout
+            label="Zero error"
+            value={`${zero >= 0 ? "+" : "−"}${Math.abs(zero).toFixed(2)} ${unit}`}
+          />
           <div className="apple-lab-card px-3 py-2.5">
             <p className="apple-lab-micro">Why the zero matters</p>
             <p className="mt-1 text-[11px] leading-relaxed text-[var(--lab-ink-dim)]">

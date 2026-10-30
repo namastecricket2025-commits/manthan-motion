@@ -13,16 +13,32 @@ import { ShareSetup, useBenchPreset } from "@/components/lab/practical/preset";
  * whole practical is the reasoning from observation to ion.
  */
 
-type SaltId = "copper" | "iron" | "zinc" | "calcium" | "ammonium";
-type TestId = "hcl" | "naoh" | "nh4oh" | "bacl2" | "agno3" | "flame";
+type SaltId =
+  | "copper"
+  | "iron"
+  | "zinc"
+  | "calcium"
+  | "ammonium"
+  | "calcium-chloride"
+  | "ammonium-sulphate"
+  | "zinc-carbonate";
+type TestId = "hcl" | "naoh" | "nh4oh" | "bacl2" | "agno3" | "flame" | "heat" | "water";
 
-const TESTS: Array<{ id: TestId; label: string; reagent: string }> = [
-  { id: "hcl", label: "Dilute HCl", reagent: "A few drops of dilute hydrochloric acid" },
-  { id: "naoh", label: "NaOH", reagent: "Sodium hydroxide solution, drop by drop, then in excess" },
-  { id: "nh4oh", label: "NH₄OH", reagent: "Ammonium hydroxide, drop by drop, then in excess" },
-  { id: "bacl2", label: "BaCl₂", reagent: "Barium chloride solution, acidified with dilute HCl" },
-  { id: "agno3", label: "AgNO₃", reagent: "Silver nitrate solution, then excess ammonium hydroxide" },
-  { id: "flame", label: "Flame test", reagent: "A little of the salt on a clean nichrome wire" },
+const TESTS: Array<{ id: TestId; label: string; reagent: string; group: "anion" | "cation" | "physical" }> = [
+  { id: "hcl", label: "Dilute HCl", reagent: "A few drops of dilute hydrochloric acid", group: "anion" },
+  { id: "bacl2", label: "BaCl₂", reagent: "Barium chloride solution, acidified with dilute HCl", group: "anion" },
+  { id: "agno3", label: "AgNO₃", reagent: "Silver nitrate solution, then excess ammonium hydroxide", group: "anion" },
+  { id: "naoh", label: "NaOH", reagent: "Sodium hydroxide solution, drop by drop, then in excess", group: "cation" },
+  { id: "nh4oh", label: "NH₄OH", reagent: "Ammonium hydroxide, drop by drop, then in excess", group: "cation" },
+  { id: "flame", label: "Flame test", reagent: "A little of the salt on a clean nichrome wire", group: "cation" },
+  { id: "heat", label: "Dry heating", reagent: "A small amount heated gently in a dry test tube", group: "physical" },
+  { id: "water", label: "Solubility", reagent: "A little salt shaken with distilled water", group: "physical" },
+];
+
+const TEST_GROUPS: Array<{ id: "anion" | "cation" | "physical"; label: string }> = [
+  { id: "anion", label: "Tests for the anion" },
+  { id: "cation", label: "Tests for the cation" },
+  { id: "physical", label: "Physical checks" },
 ];
 
 const CATIONS = ["Cu²⁺", "Fe²⁺", "Zn²⁺", "Ca²⁺", "NH₄⁺"];
@@ -54,6 +70,8 @@ const SALTS: Salt[] = [
       bacl2: "A white precipitate of BaSO₄ forms and does not dissolve in dilute HCl.",
       agno3: "No curdy precipitate.",
       flame: "A green-blue flame, characteristic of copper.",
+      heat: "The blue crystals turn white as water is driven off; strong heating leaves black copper(II) oxide.",
+      water: "Dissolves readily to a clear blue solution.",
     },
     note:
       "The deep blue solution in excess ammonia is the confirmatory test for copper: [Cu(NH₃)₄]²⁺.",
@@ -72,6 +90,8 @@ const SALTS: Salt[] = [
       bacl2: "A white precipitate of BaSO₄ forms, insoluble in dilute HCl.",
       agno3: "No curdy precipitate.",
       flame: "No characteristic flame colour.",
+      heat: "The green crystals lose water and turn white; strong heating gives reddish-brown iron(III) oxide and sulphur dioxide.",
+      water: "Dissolves to a pale green solution that slowly turns brown in air.",
     },
     note:
       "Ferrous salts oxidise in air; a brown tinge at the surface is Fe³⁺, and it changes the NaOH result.",
@@ -90,6 +110,8 @@ const SALTS: Salt[] = [
       bacl2: "A white precipitate of BaSO₄ forms, insoluble in dilute HCl.",
       agno3: "No curdy precipitate.",
       flame: "No characteristic flame colour.",
+      heat: "The white crystals lose water; strong heating leaves white zinc oxide and sulphur dioxide.",
+      water: "Dissolves to a colourless solution.",
     },
     note:
       "Zinc hydroxide is amphoteric: it dissolves in both excess NaOH and excess ammonia, which separates it from copper and iron.",
@@ -108,6 +130,8 @@ const SALTS: Salt[] = [
       bacl2: "A white precipitate of BaCO₃ forms, which dissolves in dilute HCl with effervescence.",
       agno3: "No curdy precipitate.",
       flame: "A brick-red flame, characteristic of calcium.",
+      heat: "Decomposes to white calcium oxide and carbon dioxide; the gas turns lime water milky.",
+      water: "Insoluble — a white powder sinks and the water stays clear.",
     },
     note:
       "Carbonate is confirmed by the gas, not by the precipitate: CO₂ turns lime water milky and the milkiness clears in excess gas.",
@@ -126,9 +150,71 @@ const SALTS: Salt[] = [
       bacl2: "No precipitate.",
       agno3: "A curdy white precipitate of AgCl forms, soluble in excess ammonium hydroxide.",
       flame: "No characteristic flame colour.",
+      heat: "Sublimes as white fumes and gives a sharp smell of ammonia; no residue is left.",
+      water: "Dissolves readily to a colourless solution.",
     },
     note:
       "Ammonium salts are confirmed by the gas test, not by a precipitate: NH₃ is the only common gas that turns red litmus blue.",
+  },
+  {
+    id: "calcium-chloride",
+    name: "Calcium chloride",
+    formula: "CaCl₂",
+    colour: "White crystalline",
+    cation: "Ca²⁺",
+    anion: "Cl⁻",
+    observation: {
+      hcl: "No gas; the salt simply dissolves.",
+      naoh: "A white precipitate of Ca(OH)₂ forms; it is only sparingly soluble in excess.",
+      nh4oh: "No precipitate at this concentration.",
+      bacl2: "No precipitate — no sulphate present.",
+      agno3: "A curdy white precipitate of AgCl forms, soluble in excess ammonium hydroxide.",
+      flame: "A brick-red flame, characteristic of calcium.",
+      heat: "No decomposition at ordinary flame temperature; the salt may lose absorbed water.",
+      water: "Very soluble; the tube warms as it dissolves.",
+    },
+    note:
+      "Calcium gives the brick-red flame and a white hydroxide; the curdy AgCl then identifies the chloride half. Both are needed.",
+  },
+  {
+    id: "ammonium-sulphate",
+    name: "Ammonium sulphate",
+    formula: "(NH₄)₂SO₄",
+    colour: "White crystalline",
+    cation: "NH₄⁺",
+    anion: "SO₄²⁻",
+    observation: {
+      hcl: "No visible change.",
+      naoh: "Warm gently: a pungent gas evolves that turns moist red litmus blue — ammonia.",
+      nh4oh: "No precipitate.",
+      bacl2: "A white precipitate of BaSO₄ forms and does not dissolve in dilute HCl.",
+      agno3: "No curdy precipitate.",
+      flame: "No characteristic flame colour.",
+      heat: "Decomposes with a smell of ammonia; a white residue remains.",
+      water: "Dissolves readily to a colourless solution.",
+    },
+    note:
+      "Two different tests are needed: NaOH proves ammonium by the gas, acidified BaCl₂ proves sulphate by the insoluble precipitate.",
+  },
+  {
+    id: "zinc-carbonate",
+    name: "Zinc carbonate",
+    formula: "ZnCO₃",
+    colour: "White powder",
+    cation: "Zn²⁺",
+    anion: "CO₃²⁻",
+    observation: {
+      hcl: "Brisk effervescence; the gas turns lime water milky, so it is CO₂.",
+      naoh: "A white gelatinous precipitate of Zn(OH)₂ forms, which dissolves in excess NaOH.",
+      nh4oh: "A white precipitate forms, which dissolves in excess ammonium hydroxide.",
+      bacl2: "A white precipitate of BaCO₃ forms, which dissolves in dilute HCl with effervescence.",
+      agno3: "No curdy precipitate.",
+      flame: "No characteristic flame colour.",
+      heat: "Turns yellow while hot and white again on cooling, giving off CO₂; this is the ZnO residue.",
+      water: "Insoluble — a white powder sinks and the water stays clear.",
+    },
+    note:
+      "The carbonate is proved by CO₂, and the zinc by the hydroxide that dissolves in both excess NaOH and excess ammonia — amphoteric, unlike copper or iron.",
   },
 ];
 

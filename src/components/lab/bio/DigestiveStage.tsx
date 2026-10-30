@@ -24,9 +24,10 @@ import {
  * change happens while the food is inside an organ, not at the cut between two
  * stops.
  *
- * The organs are real: the liver and both intestines are the NIH Human
- * Reference Atlas meshes, registered in one body frame. See digestive-model.ts
- * for why three of the organs are lofts instead.
+ * The liver is a real NIH Human Reference Atlas mesh. The mouth, throat,
+ * oesophagus, stomach, gut and accessory ducts are modelled as one continuous
+ * lumen, because stitched scans leave cut ends exactly where the eye looks
+ * first. See digestive-model.ts.
  *
  * The mouth is part of the model, not a drawing in the margin: an oval face cut
  * open, teeth on its rim, the tongue on the floor and a pharynx that meets the
@@ -278,13 +279,13 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
     rim.position.set(-3, 4, -5);
     scene.add(rim);
 
-    let pending = 3;
+    let disposed = false;
+    let pending = 0;
     const settle = () => {
       pending -= 1;
       if (pending <= 0 && !disposed) setLoading(false);
     };
-    let disposed = false;
-    loadOrgans(tract, settle, settle);
+    pending = loadOrgans(tract, settle, settle);
 
     const camGoal = camera.position.clone();
     const targetGoal = controls.target.clone();
@@ -608,12 +609,13 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
           </div>
 
           <p className="mt-2 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
-            Liver and both intestines are NIH Human Reference Atlas meshes; the
-            mouth, pharynx, stomach, oesophagus, gallbladder and pancreas are
-            modelled. The mouth is cut open above the oesophagus, and the bolus
-            starts between its teeth. The route through the gut follows the
-            meshes' own lumen, though it does not trace every metre of the small
-            intestine. Times on the panel are the body's, not the animation's.
+            The liver is a NIH Human Reference Atlas mesh; the mouth, throat,
+            oesophagus, stomach, gut and ducts are modelled as one continuous
+            lumen, so the food never crosses a cut edge. The mouth is cut open
+            above the oesophagus and the bolus starts between its teeth. The
+            route through the gut follows the same centre-line the tube is
+            built on; it does not trace every metre of the small intestine.
+            Times on the panel are the body's, not the animation's.
           </p>
         </div>
 
