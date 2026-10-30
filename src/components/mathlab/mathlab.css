@@ -4077,7 +4077,7 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 .cwork__option.is-correct {
   border-color: color-mix(in srgb, #3fa971 44%, transparent);
   background: color-mix(in srgb, #3fa971 8%, transparent);
-}禁止;
+}
 
 .cwork__option span {
   font-weight: 700;
