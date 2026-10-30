@@ -12,7 +12,7 @@ import { toast } from "sonner";
  */
 export const SITE_URL = "https://manthan.freebuff.app";
 
-export const SUPPORT_EMAIL = "luvmoond1508@gmail.com";
+export const SUPPORT_EMAIL = "manthanbyluv@gmail.com";
 
 /** A mailto with an optional prefilled subject and body, correctly encoded. */
 export function supportMailto(subject?: string, body?: string): string {

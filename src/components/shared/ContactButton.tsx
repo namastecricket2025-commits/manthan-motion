@@ -1,7 +1,7 @@
 import { Check, Copy, Mail, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { SUPPORT_EMAIL, gmailComposeUrl, supportMailto } from "@/lib/site";
+import { SUPPORT_EMAIL, gmailComposeUrl } from "@/lib/site";
 
 /**
  * A contact action that always visibly does something.
@@ -10,8 +10,8 @@ import { SUPPORT_EMAIL, gmailComposeUrl, supportMailto } from "@/lib/site";
  * mail app, which read as a dead link. The click opens a small card that shows
  * the address and offers a copy button; the main action opens Gmail's compose
  * window with the recipient and subject already filled in, because Gmail in a
- * browser is what almost every student actually has. A small `mailto:` link is
- * still there for a desktop mail client.
+ * browser is what almost every student actually has. Those two actions are the
+ * whole card: no second mail client to choose between.
  */
 export function ContactButton({
   subject,
@@ -114,22 +114,14 @@ export function ContactButton({
               Open in Gmail
             </a>
 
-            <div className="mt-2 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void copyEmail()}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--card-border)] px-4 py-2 text-[12px] font-medium text-text-dim transition-colors hover:text-foreground"
-              >
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copied" : "Copy address"}
-              </button>
-              <a
-                href={supportMailto(subject, body)}
-                className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--card-border)] px-4 py-2 text-[12px] font-medium text-text-dim transition-colors hover:text-foreground"
-              >
-                Another mail app
-              </a>
-            </div>
+            <button
+              type="button"
+              onClick={() => void copyEmail()}
+              className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-[var(--card-border)] px-4 py-2 text-[12px] font-medium text-text-dim transition-colors hover:text-foreground"
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied" : "Copy address"}
+            </button>
 
             <p className="mt-2.5 text-center text-[11px] leading-relaxed text-text-dim">
               Gmail opens a new message to us — add your own words and send.
