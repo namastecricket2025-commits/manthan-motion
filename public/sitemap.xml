@@ -1,38 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
   <url>
-    <loc>https://manthan.freebuff.app/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+       <loc>https://manthan.freebuff.app/</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>1.0000</priority>
   </url>
   <url>
-    <loc>https://manthan.freebuff.app/pricing</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+       <loc>https://manthan.freebuff.app/pricing</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>0.5120</priority>
   </url>
   <url>
-    <loc>https://manthan.freebuff.app/about</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+       <loc>https://manthan.freebuff.app/feedback</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>0.5120</priority>
   </url>
   <url>
-    <loc>https://manthan.freebuff.app/feedback</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+       <loc>https://manthan.freebuff.app/about</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>0.5120</priority>
   </url>
   <url>
-    <loc>https://manthan.freebuff.app/terms</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+       <loc>https://manthan.freebuff.app/terms</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>0.5120</priority>
   </url>
   <url>
-    <loc>https://manthan.freebuff.app/privacy</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+       <loc>https://manthan.freebuff.app/privacy</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>0.5120</priority>
   </url>
   <url>
-    <loc>https://manthan.freebuff.app/honor</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+       <loc>https://manthan.freebuff.app/honor</loc>
+       <lastmod>2026-10-30T09:33:25+00:00</lastmod>
+       <priority>0.5120</priority>
   </url>
 </urlset>
