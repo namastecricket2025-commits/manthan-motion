@@ -3898,6 +3898,49 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   opacity: 0.4;
 }
 
+.cwork__radius {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--glass-line);
+  border-radius: 9px;
+  padding: 3px 4px 3px 8px;
+}
+
+.cwork__radius label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cwork__radiuslabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.cwork__radius input {
+  width: 48px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+  outline: none;
+}
+
+.cwork__radiusunit {
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.cwork__radius .cwork__tool.is-active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--signal) 16%, transparent);
+}
+
 .cwork__toolsep {
   width: 1px;
   height: 18px;
@@ -4115,6 +4158,7 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 /* ================================================================== */
 
 .mathlab-practice-modes {
+  flex-wrap: wrap;
   margin-bottom: 14px;
 }
 

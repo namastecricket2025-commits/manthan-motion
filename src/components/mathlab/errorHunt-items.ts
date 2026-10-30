@@ -42,7 +42,6 @@ export const HUNT_ITEMS: HuntItem[] = [
       "Total parts = 2 + 3 = 6",
       "One part = ₹60 ÷ 6 = ₹10",
       "Shares = 2 × ₹10 = ₹20 and 3 × ₹10 = ₹30",
-      "Check: ₹20 + ₹30 = ₹50, not ₹60",
     ],
     wrongIndex: 0,
     reason:

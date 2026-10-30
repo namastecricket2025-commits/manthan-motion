@@ -11,6 +11,7 @@ import { Logo } from "@/components/landing/Logo";
 import { DisplayToggles } from "@/components/landing/DisplayToggles";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { StemAsk } from "@/components/lab/StemAsk";
+import { PracticalNotebook } from "@/components/lab/practical/PracticalNotebook";
 import { useResolvedTheme } from "@/lib/app-settings";
 import { useSpringTransition, viewVariants } from "@/lib/motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,10 +24,11 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  NotebookPen,
   Sparkles,
 } from "lucide-react";
-import { useState, type CSSProperties } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState, type CSSProperties } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   Sheet,
   SheetContent,
@@ -67,11 +69,18 @@ const SUBJECTS: Array<{
  * outgoing bench lifts away and the incoming one settles in.
  */
 export default function Lab() {
-  const [subject, setSubject] = useState<Subject>("physics");
+  /* A shared setup link names its subject and bench. Reading the address once,
+     on mount, lets the bench own its state afterwards. */
+  const [search] = useSearchParams();
+  const [subject, setSubject] = useState<Subject>(() => {
+    const wanted = search.get("subject");
+    return SUBJECTS.find((entry) => entry.id === wanted)?.id ?? "physics";
+  });
   const [askOpen, setAskOpen] = useState(false);
   const [askMode, setAskMode] = useState<"ask" | "drill">("ask");
   const [askSeed, setAskSeed] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [notebookOpen, setNotebookOpen] = useState(false);
   const [collapsed, setCollapsed] = useSidebarCollapsed();
   const transition = useSpringTransition();
   const theme = useResolvedTheme();
@@ -100,6 +109,14 @@ export default function Lab() {
     setAskMode(mode);
     setAskOpen(true);
   }
+
+  /* A bench may finish a reading while the notebook is closed; the event is
+     the one way it asks the shell to show the page. */
+  useEffect(() => {
+    const openNotebook = () => setNotebookOpen(true);
+    window.addEventListener("manthan:notebook-open", openNotebook);
+    return () => window.removeEventListener("manthan:notebook-open", openNotebook);
+  }, []);
 
   const nav = (
     <DashboardNav active="lab" onSelect={selectSection} collapsed={collapsed} />
@@ -291,6 +308,14 @@ export default function Lab() {
                     <ListChecks className="h-3.5 w-3.5" />
                     Quick drill
                   </button>
+                  <button
+                    type="button"
+                    className="apple-lab-btn"
+                    onClick={() => setNotebookOpen(true)}
+                  >
+                    <NotebookPen className="h-3.5 w-3.5" />
+                    Practical notebook
+                  </button>
                   <SearchWithGoogle
                     topic={`${active.label} practical experiment — NCERT CBSE explained`}
                     label="Search on Google"
@@ -323,6 +348,8 @@ export default function Lab() {
           </div>
         </main>
       </div>
+
+      <PracticalNotebook open={notebookOpen} onOpenChange={setNotebookOpen} />
 
       {/* Mounted only while open: each visit starts from the subject, mode and
           seed in hand, and the seed is spent on close. */}

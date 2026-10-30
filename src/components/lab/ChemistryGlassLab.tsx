@@ -11,6 +11,8 @@ import {
   type ElementData,
 } from "@/components/lab/periodic-data";
 import Atom3D from "@/components/lab/Atom3D";
+import { ChemistrySaltBench } from "@/components/lab/ChemistrySaltBench";
+import { useRecorder } from "@/components/lab/practical/useRecorder";
 import MoleBench from "@/components/lab/MoleBench";
 import { Questions, type BenchQuestion } from "@/components/lab/bench-atoms";
 import { LabPicker, type LabPickerOption } from "@/components/lab/lab-picker";
@@ -19,6 +21,7 @@ import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/componen
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-react";
 
 /**
@@ -38,12 +41,13 @@ import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-rea
 
 /* ---- Sub-tab model -------------------------------------------------- */
 
-type SubTab = "table" | "bohr" | "titration" | "reactions" | "balance";
+type SubTab = "table" | "bohr" | "titration" | "reactions" | "balance" | "salts";
 
 const SUBTABS: Array<{ id: SubTab; label: string }> = [
   { id: "table", label: "Periodic Table" },
   { id: "bohr", label: "Atomic Models" },
   { id: "titration", label: "Titration" },
+  { id: "salts", label: "Salt Analysis" },
   { id: "reactions", label: "Reactions" },
   { id: "balance", label: "Balancing" },
 ];
@@ -1432,6 +1436,7 @@ const FLASK_D =
 function TitrationTab() {
   const still = useStillMotion();
   const transition = useSpringTransition();
+  const recorder = useRecorder();
   const [analyteId, setAnalyteId] = useState("hcl");
   const [titrantId, setTitrantId] = useState("naoh");
   const [indicatorId, setIndicatorId] = useState("pp");
@@ -1885,6 +1890,35 @@ function TitrationTab() {
               <p className="apple-lab-value mt-1 text-[14px] font-semibold">{item.value}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]"
+            disabled={volume < 0.05 || recorder.state === "saving"}
+            onClick={() => {
+              void recorder.record(
+                "chemistry",
+                `Titration · ${analyte.formula} / ${titrant.formula}`,
+                [
+                  { label: "Titrant added", value: Number(volume.toFixed(2)), unit: "mL" },
+                  { label: "pH", value: Number(ph.toFixed(2)), unit: "" },
+                ],
+              );
+            }}
+          >
+            Record reading
+          </button>
+          {recorder.message ? (
+            <span className="text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+              {recorder.message}
+            </span>
+          ) : (
+            <span className="text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+              Record a point to build the curve in the practical notebook.
+            </span>
+          )}
         </div>
 
         <div className="mt-4">
@@ -2460,7 +2494,11 @@ function ReactionsTab() {
    ============================================================ */
 
 export function ChemistryGlassLab() {
-  const [tab, setTab] = useState<SubTab>("table");
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<SubTab>(() => {
+    const wanted = params.get("bench") ?? params.get("tab");
+    return SUBTABS.find((entry) => entry.id === wanted)?.id ?? "table";
+  });
   const [selected, setSelected] = useState<number | null>(null);
   const theme = useLabTheme();
   const transition = useSpringTransition();
@@ -2513,6 +2551,7 @@ export function ChemistryGlassLab() {
           {tab === "titration" && <TitrationTab />}
           {tab === "reactions" && <ReactionsTab />}
           {tab === "balance" && <MoleBench />}
+          {tab === "salts" && <ChemistrySaltBench />}
         </motion.div>
       </AnimatePresence>
     </div>

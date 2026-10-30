@@ -1,4 +1,5 @@
 import { Picker, Questions, Range, Readout, ink, plate, VIOLET, CYAN, AMBER, MINT } from "@/components/lab/bench-atoms";
+import { useRecorder } from "@/components/lab/practical/useRecorder";
 import { useSpringTransition } from "@/lib/motion";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -116,6 +117,7 @@ export default function OpticsPractical() {
   const [distance, setDistance] = useState(30);
   const [height, setHeight] = useState(4);
   const transition = useSpringTransition();
+  const recorder = useRecorder();
 
   const { focal: f, v, m } = useMemo(
     () => lensFormula(kind, focal, distance),
@@ -703,6 +705,35 @@ export default function OpticsPractical() {
           <Readout label="Magnification m" value={`${m.toFixed(2)}×`} />
           <Readout label="Image height" value={`${Math.abs(m * height).toFixed(1)} cm`} />
           <Readout label="Image" value={nature} />
+          <div className="col-span-2 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]"
+              disabled={!finite || recorder.state === "saving"}
+              onClick={() => {
+                void recorder.record(
+                  "physics",
+                  `Lens practical · ${convex ? "Convex" : "Concave"} lens`,
+                  [
+                    { label: "Object distance", value: distance, unit: "cm" },
+                    { label: "Image distance", value: Number(v.toFixed(2)), unit: "cm" },
+                    { label: "Focal length", value: f, unit: "cm" },
+                  ],
+                );
+              }}
+            >
+              Record reading
+            </button>
+            {recorder.message ? (
+              <span className="text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+                {recorder.message}
+              </span>
+            ) : (
+              <span className="text-[10.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+                Record u and v to plot the lens relation in the practical notebook.
+              </span>
+            )}
+          </div>
           <div className="apple-lab-card col-span-2 px-3 py-2.5">
             <p className="apple-lab-micro">Thin-lens relation</p>
             <p className="apple-lab-value mt-1 text-[12.5px] leading-relaxed">

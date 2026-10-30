@@ -2,12 +2,14 @@ import { AMBER, CYAN, MINT, Picker, Questions, Range, Readout, VIOLET, ink, plat
 import DynamicsBench from "@/components/lab/DynamicsBench";
 import MagnetismBench from "@/components/lab/physics/MagnetismBench";
 import OpticsPractical from "@/components/lab/physics/OpticsPractical";
+import InstrumentsBench from "@/components/lab/physics/InstrumentsBench";
 import { CircuitsBench } from "@/components/lab/CircuitDiagram";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
 import { Pause, Play, Power, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 
 /**
  * Physics — four vector instruments on the lab's glass.
@@ -46,7 +48,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 /* Accents, ink and the shared bench atoms come from `bench-atoms` so the
    Dynamics bench (its own file) draws with exactly the same vocabulary. */
 
-type Bench = "circuits" | "motion" | "dynamics" | "waves" | "optics" | "magnet";
+type Bench = "circuits" | "motion" | "dynamics" | "waves" | "optics" | "magnet" | "instruments";
 
 const BENCHES: { id: Bench; label: string }[] = [
   { id: "circuits", label: "Circuits" },
@@ -55,6 +57,7 @@ const BENCHES: { id: Bench; label: string }[] = [
   { id: "waves", label: "Waves" },
   { id: "optics", label: "Optics" },
   { id: "magnet", label: "Magnetism" },
+  { id: "instruments", label: "Instruments" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -1894,7 +1897,13 @@ function WaveBench() {
 /* ------------------------------------------------------------------ */
 
 export function PhysicsVectorLab() {
-  const [bench, setBench] = useState<Bench>("circuits");
+  /* A shared setup link names its bench. The URL is read once, on mount, so
+     later clicks on the rail own the state without fighting the address bar. */
+  const [params] = useSearchParams();
+  const [bench, setBench] = useState<Bench>(() => {
+    const wanted = params.get("bench");
+    return BENCHES.find((entry) => entry.id === wanted)?.id ?? "circuits";
+  });
   const transition = useSpringTransition();
   const theme = useLabTheme();
 
@@ -1941,6 +1950,7 @@ export function PhysicsVectorLab() {
           {bench === "waves" && <WaveBench />}
           {bench === "optics" && <OpticsPractical />}
           {bench === "magnet" && <MagnetismBench />}
+          {bench === "instruments" && <InstrumentsBench />}
         </motion.div>
       </AnimatePresence>
     </div>

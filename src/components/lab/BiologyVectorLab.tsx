@@ -6,9 +6,11 @@ import RespiratoryModelViewer from "@/components/lab/bio/RespiratoryModelViewer"
 import ExcretoryModelViewer from "@/components/lab/bio/ExcretoryModelViewer";
 import NerveStage from "@/components/lab/bio/NerveStage";
 import DigestiveStage from "@/components/lab/bio/DigestiveStage";
+import MicroscopeBench from "@/components/lab/bio/MicroscopeBench";
 import { useSpringTransition, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router";
 
 /**
  * Biology — premium structural schematics.
@@ -48,7 +50,7 @@ type Part = {
 
 /** The cell and the nervous system stay vector schematics; the three organ
     systems render in the shared Three.js stage (OrganStage). */
-type Plate = "cell" | "nervous" | "digestive" | OrganSystem;
+type Plate = "cell" | "nervous" | "digestive" | "microscope" | OrganSystem;
 
 type Diagram = {
   id: Plate;
@@ -1132,7 +1134,10 @@ function VectorDiagram({ diagram }: { diagram: Diagram }) {
 export function BiologyVectorLab() {
   const transition = useSpringTransition();
   const theme = useLabTheme();
-  const [plate, setPlate] = useState<Plate>("cell");
+  const [params] = useSearchParams();
+  const [plate, setPlate] = useState<Plate>(() =>
+    params.get("plate") === "microscope" ? "microscope" : "cell",
+  );
   const [plant, setPlant] = useState(false);
 
   const diagrams: Diagram[] = [
@@ -1149,6 +1154,13 @@ export function BiologyVectorLab() {
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: cellBase(plant),
       parts: cellParts(plant),
+    },
+    {
+      id: "microscope",
+      label: "Microscope",
+      blurb: "Focus a prepared slide and identify the tissue",
+      viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
+      parts: [],
     },
     {
       id: "heart",
@@ -1271,7 +1283,9 @@ export function BiologyVectorLab() {
             exit="exit"
             transition={transition}
           >
-            {plate === "nervous" ? (
+            {plate === "microscope" ? (
+              <MicroscopeBench />
+            ) : plate === "nervous" ? (
               <NerveStage label={active.label} blurb={active.blurb} />
             ) : plate === "digestive" ? (
               <DigestiveStage label={active.label} blurb={active.blurb} />

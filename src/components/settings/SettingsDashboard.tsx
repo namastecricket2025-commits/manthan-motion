@@ -574,10 +574,10 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     than next to the type scale. */}
                 <ListRow
                   title="Eye comfort"
-                  hint="Warms the entire display — off-white paper, softer ink and a warm veil over every canvas — so long sessions read like paper instead of like a lamp. Works in both themes and applies instantly."
+                  hint="Turns the whole display into warm paper — off-white surfaces in the day theme, candlelit charcoal at night, and a warm veil over every canvas. It is deliberately a visible change, not a faint tint. Also available as the glasses button in the header."
                   note={
                     settings.eyeComfort
-                      ? "Glare reduced. Everything else — layout, accent, controls — is unchanged."
+                      ? "Paper mode is on. Layout, accent and every control stay exactly where they were."
                       : undefined
                   }
                 >

@@ -26,9 +26,9 @@ export interface AppSettings {
   textComfort: TextComfort;
   /**
    * Eye comfort: a low-glare rendering of whichever theme is active — warm
-   * off-white paper in the day theme, warm charcoal at night, plus a faint
-   * amber veil that takes the blue edge off every surface (including the 3D
-   * canvases, which tokens cannot reach).
+   * off-white paper in the day theme, candlelit charcoal at night, plus a warm
+   * veil over every surface (including the 3D canvases, which tokens cannot
+   * reach). It is meant to be unmistakable: a reading mode, not a tint.
    */
   eyeComfort: boolean;
 }

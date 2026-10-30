@@ -58,11 +58,11 @@ const TASKS: Task[] = [
     reason: {
       question: "Why does that construction produce the perpendicular bisector?",
       options: [
-        "Both crossing points are equidistant from A and B, and the points equidistant from two fixed points form their perpendicular bisector.",
         "The two arcs have the same radius, so the line joining their crossings is parallel to AB.",
+        "Both crossing points are equidistant from A and B, and the points equidistant from two fixed points form their perpendicular bisector.",
         "The midpoint of AB is the centre of both arcs, so the line through it is perpendicular.",
       ],
-      correct: 0,
+      correct: 1,
       note:
         "Each crossing point is the same distance from A as from B, because both arcs were drawn with one radius. Two such points fix the perpendicular bisector exactly.",
     },
@@ -108,11 +108,11 @@ const TASKS: Task[] = [
     reason: {
       question: "Three given sides fix the triangle. Which criterion says so?",
       options: [
-        "SSS — if three sides of one triangle equal three sides of another, the triangles are congruent.",
         "SAS — two sides and a non-included angle are enough.",
         "AAA — equal angles give an equal triangle.",
+        "SSS — if three sides of one triangle equal three sides of another, the triangles are congruent.",
       ],
-      correct: 0,
+      correct: 2,
       note:
         "SSS is the criterion: the three lengths decide the shape completely. AAA would only make the triangles similar, not necessarily equal.",
     },
@@ -124,7 +124,7 @@ const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
 
 /** The two intersections of two circles (empty when they miss or are nested). */
 function circleCross(a: Circle, b: Circle): Pt[] {
-  const d = dist(a, b);
+  const d = dist({ x: a.cx, y: a.cy }, { x: b.cx, y: b.cy });
   if (d < 1e-6 || d > a.r + b.r || d < Math.abs(a.r - b.r)) return [];
   const x = (d * d + a.r * a.r - b.r * b.r) / (2 * d);
   const h2 = a.r * a.r - x * x;
@@ -183,6 +183,8 @@ export function ConstructionWorkbench() {
   const [circles, setCircles] = useState<Circle[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [compassFrom, setCompassFrom] = useState<Pt | null>(null);
+  const [lastRadius, setLastRadius] = useState<number | null>(null);
+  const [radiusCm, setRadiusCm] = useState(5);
   const [lineFrom, setLineFrom] = useState<Pt | null>(null);
   const [cursor, setCursor] = useState<Pt | null>(null);
   const [checked, setChecked] = useState<null | { pass: boolean; message: string }>(null);
@@ -193,6 +195,7 @@ export function ConstructionWorkbench() {
     setCircles([]);
     setSegments([]);
     setCompassFrom(null);
+    setLastRadius(null);
     setLineFrom(null);
     setChecked(null);
     setReasonPick(null);
@@ -204,6 +207,7 @@ export function ConstructionWorkbench() {
     setCircles([]);
     setSegments([]);
     setCompassFrom(null);
+    setLastRadius(null);
     setLineFrom(null);
     setChecked(null);
     setReasonPick(null);
@@ -223,6 +227,9 @@ export function ConstructionWorkbench() {
     if (task.id === "angle") {
       const [O, A, B] = task.given;
       for (const circle of circles) {
+        /* Only the arc struck from O cuts both rays at equal distances. An arc
+           centred on one of the cuts does not lie on the ray at all. */
+        if (Math.hypot(circle.cx - O.x, circle.cy - O.y) > 0.5) continue;
         const cutA = rayCut(O, A, circle, "A");
         const cutB = rayCut(O, B, circle, "B");
         if (cutA) list.push(cutA);
@@ -272,11 +279,15 @@ export function ConstructionWorkbench() {
   };
 
   const addCircle = (from: Pt, r: number) => {
-    const safe = Math.max(14, Math.min(300, r));
+    const safe = Math.max(14, Math.min(300, Number.isFinite(r) ? r : 14));
     setCircles((current) => [
       ...current,
       { id: `arc${current.length + 1}`, cx: from.x, cy: from.y, r: safe },
     ]);
+    /* A real compass keeps its opening between centres. Remembering the last
+       radius lets the second arc be struck at exactly the same distance, which
+       is the step the construction actually depends on. */
+    setLastRadius(safe);
     setCompassFrom(null);
     setChecked(null);
   };
@@ -326,7 +337,7 @@ export function ConstructionWorkbench() {
     <div className="cwork">
       <header className="cwork__head">
         <div className="min-w-0">
-          <p className="mathlab-card__kicker">Construction bench</p>
+          <p className="mathlab-card__kicker">Task</p>
           <h2 className="mathlab-card__title">{task.title}</h2>
           <p className="cwork__prompt">{task.prompt}</p>
         </div>
@@ -374,6 +385,39 @@ export function ConstructionWorkbench() {
               <Minus className="h-3.5 w-3.5" />
               Straightedge
             </button>
+            {compassFrom ? (
+              <span className="cwork__radius">
+                <label>
+                  <span className="cwork__radiuslabel">Opening</span>
+                  <input
+                    type="number"
+                    min={0.3}
+                    max={7.5}
+                    step={0.1}
+                    value={radiusCm}
+                    onChange={(event) => setRadiusCm(Number(event.target.value))}
+                    aria-label="Compass opening in centimetres"
+                  />
+                  <span className="cwork__radiusunit">cm</span>
+                </label>
+                <button
+                  type="button"
+                  className="cwork__tool is-active"
+                  onClick={() => addCircle(compassFrom, Math.max(0.3, radiusCm) * SCALE)}
+                >
+                  Draw arc
+                </button>
+              </span>
+            ) : null}
+            {compassFrom && lastRadius ? (
+              <button
+                type="button"
+                className="cwork__tool"
+                onClick={() => addCircle(compassFrom, lastRadius)}
+              >
+                Same radius ({(lastRadius / SCALE).toFixed(1)} cm)
+              </button>
+            ) : null}
             <span className="cwork__toolsep" aria-hidden />
             <button
               type="button"

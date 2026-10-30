@@ -294,11 +294,15 @@ export function ConstructionBench() {
       <header className="cbench-head">
         <div className="min-w-0">
           <p className="mathlab-card__kicker">Construction bench</p>
-          <h2 className="mathlab-card__title">Drag the figure, not the proof</h2>
+          <h2 className="mathlab-card__title">
+            {scene === "construct"
+              ? "Build the figure, then explain it"
+              : "Drag the figure, not the proof"}
+          </h2>
           <p className="cbench-sub">
-            Every length and angle below is measured from the point you are
-            holding — nothing is printed in advance. The theorem has to survive
-            your hand.
+            {scene === "construct"
+              ? "Use the compass and the straightedge. The check measures the arcs and lines you actually drew against the givens, then asks for the reason the construction works."
+              : "Every length and angle below is measured from the point you are holding — nothing is printed in advance. The theorem has to survive your hand."}
           </p>
         </div>
         <div className="cbench-tabs" role="tablist" aria-label="Construction figures">
@@ -375,12 +379,10 @@ export function ConstructionBench() {
             {active.hint}
           </motion.div>
 
-          {scene !== "construct" ? (
-            <button type="button" className="cbench-reset" onClick={reset}>
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset</span>
-            </button>
-          ) : null}
+          <button type="button" className="cbench-reset" onClick={reset}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Reset</span>
+          </button>
         </div>
 
         <aside className="cbench-panel">

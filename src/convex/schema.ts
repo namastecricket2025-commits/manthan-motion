@@ -199,6 +199,36 @@ const schema = defineSchema(
       .index("by_material", ["materialId"])
       .index("by_owner", ["ownerId"]),
 
+    // A practical record: one experiment's observation table, kept on the
+    // account so a student can close the lab and come back to the same
+    // readings. Each observation is a row of labelled numbers because real
+    // practicals do not all have two columns — a vernier reading is main
+    // scale, vernier scale and total, while Ohm's law is voltage and current.
+    // The table, the graph and the exported record image all read from here.
+    labRecords: defineTable({
+      ownerId: v.id("users"),
+      subject: v.string(),
+      title: v.string(),
+      observations: v.array(
+        v.object({
+          values: v.array(
+            v.object({
+              label: v.string(),
+              value: v.number(),
+              unit: v.optional(v.string()),
+            }),
+          ),
+          at: v.number(),
+        }),
+      ),
+      /** The result the student calculated, and the book value to compare. */
+      measured: v.optional(v.number()),
+      accepted: v.optional(v.number()),
+      resultUnit: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }).index("by_owner", ["ownerId"]),
+
     // One card in the daily spaced-repetition queue. Cards are materialised
     // from real study material and Math Lab mistakes, never invented; `key` is
     // stable across regeneration so a rebuilding pass updates the schedule

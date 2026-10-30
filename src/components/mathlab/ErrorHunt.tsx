@@ -23,7 +23,9 @@ export function ErrorHunt({
   const [cursor, setCursor] = useState(0);
   const [found, setFound] = useState(false);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
-  const [solved, setSolved] = useState(0);
+  /* Solved items are tracked by id, not by a counter: cycling through the pool
+     must never report more found than the pool holds. */
+  const [solvedIds, setSolvedIds] = useState<string[]>([]);
 
   const item = pool[cursor % pool.length];
 
@@ -31,7 +33,7 @@ export function ErrorHunt({
     setCursor(0);
     setFound(false);
     setWrongPicks([]);
-    setSolved(0);
+    setSolvedIds([]);
   };
 
   const next = () => {
@@ -44,7 +46,9 @@ export function ErrorHunt({
     if (found) return;
     if (index === item.wrongIndex) {
       setFound(true);
-      setSolved((value) => value + 1);
+      setSolvedIds((current) =>
+        current.includes(item.id) ? current : [...current, item.id],
+      );
       return;
     }
     setWrongPicks((current) => (current.includes(index) ? current : [...current, index]));
@@ -67,7 +71,7 @@ export function ErrorHunt({
             Class {grade?.id ?? gradeId} · {item.topic}
           </span>
           <span className="hunt__score">
-            Found <strong>{solved}</strong>
+            Found <strong>{solvedIds.length}</strong>
             <span aria-hidden> / </span>
             <span className="hunt__score-total">{pool.length}</span>
           </span>
@@ -77,7 +81,9 @@ export function ErrorHunt({
       <div className="hunt__prompt">
         <span className="hunt__promptlabel">Question</span>
         <p>{item.prompt}</p>
-        <span className="hunt__context">{chapterName}</span>
+        <span className="hunt__context">
+          Drawn from the whole Class {grade?.id ?? gradeId} course · {chapterName} chapter open
+        </span>
       </div>
 
       <ol className="hunt__steps" aria-label="Solution lines">
@@ -113,7 +119,7 @@ export function ErrorHunt({
                     <X className="h-3.5 w-3.5" />
                     Sound
                   </span>
-                ) : (
+                ) : found ? null : (
                   <span className="hunt__pick" aria-hidden>
                     Tap
                   </span>

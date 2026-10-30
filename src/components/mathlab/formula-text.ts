@@ -128,6 +128,53 @@ function fraction(numerator: string, denominator: string) {
   return `${top}/${bottom}`;
 }
 
+/** Read a balanced `{…}` group starting at `start`, which must be a brace. */
+function readGroup(source: string, start: number): { content: string; end: number } | null {
+  if (source[start] !== "{") return null;
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return { content: source.slice(start + 1, index), end: index + 1 };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * `\frac{a}{b}` with balanced groups, not a regex that stops at the first
+ * closing brace. The quadratic formula nests a `\sqrt` inside the numerator;
+ * a one-level regex leaves "frac" in the answer, which is exactly the kind of
+ * quietly wrong card this helper exists to avoid.
+ */
+function replaceFractions(text: string): string {
+  let output = "";
+  let index = 0;
+  while (index < text.length) {
+    if (text.startsWith("\\frac", index)) {
+      let cursor = index + 5;
+      while (text[cursor] === " ") cursor += 1;
+      const numerator = readGroup(text, cursor);
+      if (numerator) {
+        cursor = numerator.end;
+        while (text[cursor] === " ") cursor += 1;
+        const denominator = readGroup(text, cursor);
+        if (denominator) {
+          output += fraction(numerator.content, denominator.content);
+          index = denominator.end;
+          continue;
+        }
+      }
+    }
+    output += text[index];
+    index += 1;
+  }
+  return output;
+}
+
 export function latexToPlain(source: string): string {
   let text = source ?? "";
 
@@ -136,17 +183,17 @@ export function latexToPlain(source: string): string {
     text = text.replace(/\\(?:text|mathrm|operatorname|mathbf|textbf)\s*\{([^{}]*)\}/g, "$1");
   }
 
-  // Fractions, innermost group first, a few passes for simple nesting.
+  // Fractions, a few passes so a fraction inside a fraction is reached.
   for (let pass = 0; pass < 4; pass += 1) {
-    text = text.replace(
-      /\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g,
-      (_match, numerator: string, denominator: string) => fraction(numerator, denominator),
-    );
+    text = replaceFractions(text);
   }
 
   for (const [pattern, replacement] of SYMBOLS) {
     text = text.replace(pattern, replacement);
   }
+
+  // A degree written as a power reads as a degree, not as "^°".
+  text = text.replace(/\^\s*\{?\s*°\s*\}?/g, "°");
 
   // Exponents and subscripts.
   text = text.replace(/\^\{([^{}]*)\}|\^([A-Za-z0-9+-])/g, (_match, braced, single) => {
@@ -158,9 +205,11 @@ export function latexToPlain(source: string): string {
     return mapChars(value, SUBSCRIPTS, "_");
   });
 
-  // Anything left that is still a command keeps its readable name.
-  text = text.replace(/\\([A-Za-z]+)/g, "$1");
-  text = text.replace(/[{}]/g, "");
+  // Anything left that is still a command keeps its readable name; environment
+  // wrappers and alignment marks carry no meaning in a sentence.
+  text = text.replace(/\\(?:begin|end)\s*\{[^{}]*\}/g, " ");
+  text = text.replace(/\\[A-Za-z]+/g, (match) => match.slice(1));
+  text = text.replace(/[{}&]/g, "");
   text = text.replace(/\s+([,.;:])/g, "$1");
   text = text.replace(/\s+/g, " ");
 
