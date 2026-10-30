@@ -16,6 +16,8 @@ import { mutation, query } from "./_generated/server";
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 const MAX_NEW_PER_BUILD = 300;
+/** Formula-sheet cards are added by hand, so `ensure` must never prune them. */
+const FORMULA_KEY_PREFIX = "formula:";
 
 const ratingValidator = v.union(
   v.literal("again"),
@@ -266,10 +268,78 @@ export const ensure = mutation({
     }
 
     for (const card of existing) {
-      if (!wantedKeys.has(card.key)) await ctx.db.delete(card._id);
+      // A formula card has no generated source to rebuild from; it exists
+      // because the student asked for it, so it survives every rebuild.
+      if (!wantedKeys.has(card.key) && !card.key.startsWith(FORMULA_KEY_PREFIX)) {
+        await ctx.db.delete(card._id);
+      }
     }
 
     return { created };
+  },
+});
+
+/**
+ * Add formula-sheet entries to the review queue.
+ *
+ * These cards are the one kind the student creates directly, so they carry a
+ * `formula:` key and are left alone by `ensure`'s cleanup. Duplicates are
+ * skipped by key, which makes the button safe to press twice: the same formula
+ * keeps one schedule instead of restarting its interval.
+ */
+export const addFormulas = mutation({
+  args: {
+    cards: v.array(
+      v.object({
+        key: v.string(),
+        prompt: v.string(),
+        answer: v.string(),
+        source: v.optional(v.string()),
+      }),
+    ),
+  },
+  handler: async (ctx, { cards }) => {
+    const userId = await requireAuthUserId(ctx);
+    const now = Date.now();
+    let created = 0;
+    let skipped = 0;
+
+    for (const card of cards.slice(0, 80)) {
+      const prompt = text(card.prompt, 300);
+      const answer = text(card.answer, 600);
+      if (!prompt || !answer) continue;
+
+      const key = `${FORMULA_KEY_PREFIX}${text(card.key, 90)}`.slice(0, 140);
+      const existing = await ctx.db
+        .query("reviewCards")
+        .withIndex("by_owner_key", (q) => q.eq("ownerId", userId).eq("key", key))
+        .first();
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+
+      await ctx.db.insert("reviewCards", {
+        ownerId: userId,
+        key,
+        kind: "flashcard",
+        prompt,
+        answer,
+        explanation:
+          "From the Math Lab formula sheet. Recall the relation first, then check what each symbol stands for.",
+        source: text(card.source ?? "", 120) || "Math Lab formula sheet",
+        dueAt: now,
+        intervalDays: 0,
+        ease: 2.5,
+        reps: 0,
+        lapses: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      created += 1;
+    }
+
+    return { created, skipped };
   },
 });
 

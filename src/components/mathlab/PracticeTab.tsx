@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { GRADES, type GradeSpec } from "@/components/mathlab/mathlab";
 import { PracticePanel } from "@/components/mathlab/PracticePanel";
+import { ErrorHunt } from "@/components/mathlab/ErrorHunt";
+import { MarkSteps } from "@/components/mathlab/MarkSteps";
 import type { EngineProblem } from "@/components/mathlab/solution";
 import {
   Select,
@@ -28,6 +31,15 @@ import {
  */
 const TRACKS = ["CBSE", "ICSE", "IB", "IGCSE"] as const;
 
+/** The three ways to practise: fresh questions, error-spotting, marking. */
+type PracticeMode = "set" | "error" | "marks";
+
+const MODES: Array<{ id: PracticeMode; label: string; hint: string }> = [
+  { id: "set", label: "Question set", hint: "Fresh questions, checked answers" },
+  { id: "error", label: "Find the error", hint: "One corrupted line per solution" },
+  { id: "marks", label: "Step marking", hint: "Your own working, marked per step" },
+];
+
 export function PracticeTab({
   track,
   onTrack,
@@ -49,20 +61,42 @@ export function PracticeTab({
   /* Board papers exist for Class 10 in this lab. Class 8 and 9 have school
      exams, not a board, so the option is not shown rather than explained. */
   const boardYear = grade.id === "10";
+  const [mode, setMode] = useState<PracticeMode>("set");
 
   return (
     <section className="mathlab-card mathlab-viewcard mathlab-practice-tab">
       <header className="mathlab-practice-tab__head">
         <div>
-          <h2 className="mathlab-card__title">Practice set</h2>
+          <h2 className="mathlab-card__title">
+            {mode === "set" ? "Practice set" : mode === "error" ? "Find the error" : "Step marking"}
+          </h2>
           <p className="mathlab-practice-tab__sub">
-            {boardYear
-              ? "Choose the chapter, how many questions you want and how hard they should be — or generate a board-paper set tagged with the year it follows."
-              : "Choose the chapter, how many questions you want and how hard they should be."}
+            {mode === "set"
+              ? boardYear
+                ? "Choose the chapter, how many questions you want and how hard they should be — or generate a board-paper set tagged with the year it follows."
+                : "Choose the chapter, how many questions you want and how hard they should be."
+              : mode === "error"
+                ? "A worked solution with one line corrupted. Every other line is sound — find the one that isn't."
+                : "Write a solution the way you would on paper and have each line marked against a scheme."}
           </p>
         </div>
 
       </header>
+
+      <div className="mathlab-detail mathlab-practice-modes" role="group" aria-label="Practice mode">
+        {MODES.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            data-active={mode === entry.id}
+            aria-pressed={mode === entry.id}
+            title={entry.hint}
+            onClick={() => setMode(entry.id)}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
 
       <div className="mathlab-practice-tab__selectors">
         <div className="mathlab-picker">
@@ -121,17 +155,33 @@ export function PracticeTab({
         <strong>{chapter.name}</strong> · {chapter.focus}
       </p>
 
-      <PracticePanel
-        key={`${grade.id}-${chapterIndex}-${seed?.problem ?? "chapter"}`}
-        problem={seed?.problem ?? chapter.example}
-        steps={seed?.steps ?? []}
-        finalAnswer={seed?.finalAnswer ?? ""}
-        track={track}
-        gradeId={grade.id}
-        chapterName={chapter.name}
-        chapterFormulas={chapter.formulas}
-        autoStart={Boolean(seed)}
-      />
+      {mode === "set" ? (
+        <PracticePanel
+          key={`${grade.id}-${chapterIndex}-${seed?.problem ?? "chapter"}`}
+          problem={seed?.problem ?? chapter.example}
+          steps={seed?.steps ?? []}
+          finalAnswer={seed?.finalAnswer ?? ""}
+          track={track}
+          gradeId={grade.id}
+          chapterName={chapter.name}
+          chapterFormulas={chapter.formulas}
+          autoStart={Boolean(seed)}
+        />
+      ) : mode === "error" ? (
+        <ErrorHunt
+          key={grade.id}
+          gradeId={grade.id}
+          chapterName={chapter.name}
+        />
+      ) : (
+        <MarkSteps
+          key={`${grade.id}-${chapterIndex}`}
+          gradeId={grade.id}
+          track={track}
+          chapterName={chapter.name}
+          defaultQuestion={seed?.problem ?? chapter.example}
+        />
+      )}
     </section>
   );
 }

@@ -654,97 +654,105 @@
    Three mechanisms, no JavaScript beyond the one `data-comfort` attribute
    `applySettings` writes on <html>:
 
-     1. Warm surfaces. In the day theme every white surface becomes warm
-        off-white (#fbf7ee) and `--text-main` relaxes from near-black to
-        #322e27, so the page reads like paper rather than like a lamp.
-     2. Softer luminous steps in the night theme. #000 lifts to #0b0a09 and
-        the white type and primary fill drop to warm off-white, which removes
-        the hard edge a white glyph has against a black field.
-     3. A 11% amber veil (multiply) over the whole viewport. Tokens reach
-        every styled surface but not the pixels a <canvas> draws, so the veil
-        is what makes the 3D lab, the charts and the code blocks sit in the
-        same warm light as the chrome around them. It is pointer-transparent
-        and above everything, so nothing becomes unclickable.
+     1. Warm surfaces. In the day theme white becomes warm paper (#f6efdd)
+        and `--text-main` relaxes from near-black to #2b251c. Not a tint — the
+        page stops being white, which is the single biggest reduction in
+        glare a screen can make.
+     2. Candlelight surfaces in the night theme. #000 lifts to warm charcoal
+        (#131009) and the white type drops to #f0e6d3, removing the hard edge
+        a white glyph has against a black field.
+     3. A warm veil (multiply) over the whole viewport. Tokens reach every
+        styled surface but not the pixels a <canvas> draws, so the veil is
+        what makes the 3D lab, the charts and the code blocks sit in the same
+        candlelight as the chrome around them. It is pointer-transparent and
+        above everything, so nothing becomes unclickable.
+
+   The veil is deliberately deep enough to be obvious: reading mode should be
+   a change you can see across the room, not a 2% tint you have to hunt for.
    ------------------------------------------------ */
 html[data-comfort="on"]:not(.dark) {
-  --ink: #f3eee2;
-  --panel: #fbf7ee;
-  --card: #fbf7ee;
-  --popover: #fbf7ee;
-  --menu-bg: #fbf7ee;
-  --menu-ink: #322e27;
-  --text-main: #322e27;
-  --text-dim: #5c564b;
-  --card-border: rgba(72, 58, 30, 0.14);
-  --panel-line: rgba(72, 58, 30, 0.12);
-  --panel-line-strong: rgba(72, 58, 30, 0.22);
-  --border: rgba(72, 58, 30, 0.14);
-  --input: rgba(72, 58, 30, 0.16);
-  --secondary: #efe7d7;
-  --secondary-foreground: #322e27;
-  --muted: #efe9dc;
-  --muted-foreground: #6b655a;
-  --accent: #efe9dc;
-  --accent-foreground: #322e27;
-  --sidebar: #f3eee2;
-  --sidebar-foreground: #322e27;
-  --sidebar-accent: #efe9dc;
-  --sidebar-accent-foreground: #322e27;
-  --sidebar-border: rgba(72, 58, 30, 0.12);
-  --bg-canvas-a: #ece5d6;
-  --bg-canvas-b: #f1ebde;
-  --bg-canvas-c: #f6f1e6;
-  --halo-near: rgba(255, 249, 234, 0.92);
+  --comfort-veil: 0.17;
+  --ink: #efe6d2;
+  --panel: #f6efdd;
+  --card: #f8f2e3;
+  --popover: #f8f2e3;
+  --menu-bg: #f8f2e3;
+  --menu-ink: #2b251c;
+  --text-main: #2b251c;
+  --text-dim: #5d5445;
+  --card-border: rgba(76, 58, 26, 0.17);
+  --panel-line: rgba(76, 58, 26, 0.15);
+  --panel-line-strong: rgba(76, 58, 26, 0.26);
+  --border: rgba(76, 58, 26, 0.17);
+  --input: rgba(76, 58, 26, 0.18);
+  --secondary: #ece2cf;
+  --secondary-foreground: #2b251c;
+  --muted: #efe7d8;
+  --muted-foreground: #665d4e;
+  --accent: #eadfc9;
+  --accent-foreground: #2b251c;
+  --sidebar: #f1e8d5;
+  --sidebar-foreground: #2b251c;
+  --sidebar-accent: #eadfc9;
+  --sidebar-accent-foreground: #2b251c;
+  --sidebar-border: rgba(76, 58, 26, 0.13);
+  --bg-canvas-a: #e9dfca;
+  --bg-canvas-b: #efe6d4;
+  --bg-canvas-c: #f4ecdd;
+  --halo-near: rgba(255, 246, 224, 0.85);
   --halo-far: rgba(90, 70, 30, 0.04);
-  --glass-fill-strong: rgba(60, 45, 20, 0.04);
+  --glass-fill-strong: rgba(60, 45, 20, 0.05);
   /* The accent loses a touch of glare too: same amber, a shade deeper, so it
      stays the single brand colour without being the one bright thing left. */
-  --signal-strong: #de9c0d;
-  --brand: #de9c0d;
-  --brand-soft: rgba(222, 156, 13, 0.18);
-  --brand-line: rgba(222, 156, 13, 0.55);
+  --signal-strong: #b97c06;
+  --brand: #b97c06;
+  --brand-soft: rgba(185, 124, 6, 0.18);
+  --brand-line: rgba(185, 124, 6, 0.55);
   --brand-mark: var(--brand);
+  color-scheme: light;
 }
 
 html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
-  --ink: #0b0a09;
-  --panel: #141210;
-  --card: #121110;
-  --popover: #171512;
-  --menu-bg: #171512;
-  --menu-ink: rgba(255, 255, 255, 0.88);
-  --text-main: #ece5d8;
-  --text-dim: rgba(255, 250, 240, 0.82);
-  --card-border: rgba(255, 245, 230, 0.1);
-  --panel-line: rgba(255, 245, 230, 0.12);
-  --panel-line-strong: rgba(255, 245, 230, 0.22);
-  --border: rgba(255, 245, 230, 0.1);
-  --input: rgba(255, 245, 230, 0.12);
-  --secondary: #1a1815;
-  --secondary-foreground: #ece5d8;
-  --muted: #181613;
-  --muted-foreground: rgba(255, 250, 240, 0.78);
-  --accent: #211e1a;
-  --accent-foreground: #ece5d8;
-  --sidebar: #121110;
-  --sidebar-accent: #1a1815;
-  --sidebar-border: rgba(255, 245, 230, 0.09);
-  --bg-canvas-a: #0b0a09;
-  --bg-canvas-b: #070605;
-  --bg-canvas-c: #030202;
+  --comfort-veil: 0.14;
+  --ink: #131009;
+  --panel: #1a1611;
+  --card: #17130e;
+  --popover: #1d1913;
+  --menu-bg: #1d1913;
+  --menu-ink: rgba(255, 246, 232, 0.9);
+  --text-main: #f0e6d3;
+  --text-dim: rgba(255, 246, 232, 0.76);
+  --card-border: rgba(255, 236, 205, 0.13);
+  --panel-line: rgba(255, 236, 205, 0.14);
+  --panel-line-strong: rgba(255, 236, 205, 0.26);
+  --border: rgba(255, 236, 205, 0.13);
+  --input: rgba(255, 236, 205, 0.14);
+  --secondary: #211c15;
+  --secondary-foreground: #f0e6d3;
+  --muted: #1e1913;
+  --muted-foreground: rgba(255, 246, 232, 0.72);
+  --accent: #272117;
+  --accent-foreground: #f0e6d3;
+  --sidebar: #17130e;
+  --sidebar-accent: #211c15;
+  --sidebar-border: rgba(255, 236, 205, 0.1);
+  --bg-canvas-a: #131009;
+  --bg-canvas-b: #0e0b07;
+  --bg-canvas-c: #090704;
   /* Warm light instead of white light: the halo and the filled action are
      the brightest pixels in this theme, so they are the ones worth dialling
      back rather than the greys. */
-  --signal: #ded7c9;
-  --signal-strong: #f2ece1;
-  --primary-foreground: #12100e;
-  --halo-near: rgba(255, 236, 205, 0.22);
-  --halo-mid: rgba(255, 236, 205, 0.07);
-  --halo-far: rgba(255, 236, 205, 0.05);
-  --brand: #fbbf24;
-  --brand-soft: rgba(251, 191, 36, 0.14);
-  --brand-line: rgba(251, 191, 36, 0.3);
-  --brand-ink: #fbbf24;
+  --signal: #e8dcc8;
+  --signal-strong: #f6eddd;
+  --primary-foreground: #17130e;
+  --halo-near: rgba(255, 224, 178, 0.18);
+  --halo-mid: rgba(255, 224, 178, 0.06);
+  --halo-far: rgba(255, 224, 178, 0.045);
+  --brand: #e8b04a;
+  --brand-soft: rgba(232, 176, 74, 0.14);
+  --brand-line: rgba(232, 176, 74, 0.32);
+  --brand-ink: #e8b04a;
+  color-scheme: dark;
 }
 
 /* The veil: one pointer-transparent amber wash above every layer, including
@@ -757,8 +765,8 @@ html[data-comfort="on"]::after {
   inset: 0;
   z-index: 2147483000;
   pointer-events: none;
-  background: rgb(255, 176, 92);
-  opacity: 0.11;
+  background: rgb(255, 173, 88);
+  opacity: var(--comfort-veil, 0.17);
   mix-blend-mode: multiply;
 }
 
@@ -766,19 +774,19 @@ html[data-comfort="on"]::after {
    case allowed to quiet it, so the aurora cannot out-shine the softened
    surfaces it sits behind. */
 html[data-comfort="on"] {
-  --bg-glow-opacity: 0.55 !important;
+  --bg-glow-opacity: 0.34 !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   html[data-comfort="on"]::after {
-    animation: comfort-in 0.35s ease-out both;
+    animation: comfort-in 0.28s ease-out both;
   }
   @keyframes comfort-in {
     from {
       opacity: 0;
     }
     to {
-      opacity: 0.11;
+      opacity: var(--comfort-veil, 0.17);
     }
   }
 }

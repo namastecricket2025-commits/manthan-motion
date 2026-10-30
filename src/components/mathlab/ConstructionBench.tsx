@@ -1,6 +1,7 @@
 import { useSpringTransition } from "@/lib/motion";
 import { motion } from "motion/react";
 import { RotateCcw } from "lucide-react";
+import { ConstructionWorkbench } from "@/components/mathlab/ConstructionWorkbench";
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 /**
@@ -33,7 +34,7 @@ const H = 420;
 const MARGIN = 64;
 
 type Pt = { x: number; y: number };
-type Scene = "midpoint" | "semicircle" | "cyclic";
+type Scene = "midpoint" | "semicircle" | "cyclic" | "construct";
 type DragTarget =
   | { kind: "vertex"; index: 0 | 1 | 2 }
   | { kind: "arc" }
@@ -69,6 +70,14 @@ const SCENES: Array<{
     hint: "Drag any vertex along its arc",
     invariant:
       "Opposite angles of a cyclic quadrilateral add to 180°. It holds for any four points on one circle, in any order.",
+  },
+  {
+    id: "construct",
+    label: "Construct",
+    title: "Compass and straightedge",
+    hint: "Build the figure, then justify it",
+    invariant:
+      "A construction is marked on the figure and on the reason. Draw the arcs, join the points they create, and check the result against the givens.",
   },
 ];
 
@@ -312,6 +321,9 @@ export function ConstructionBench() {
         </div>
       </header>
 
+      {scene === "construct" ? (
+        <ConstructionWorkbench />
+      ) : (
       <div className="cbench-body">
         <div className="cbench-stage">
           <svg
@@ -363,10 +375,12 @@ export function ConstructionBench() {
             {active.hint}
           </motion.div>
 
-          <button type="button" className="cbench-reset" onClick={reset}>
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset</span>
-          </button>
+          {scene !== "construct" ? (
+            <button type="button" className="cbench-reset" onClick={reset}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset</span>
+            </button>
+          ) : null}
         </div>
 
         <aside className="cbench-panel">
@@ -388,6 +402,7 @@ export function ConstructionBench() {
           <p className="cbench-invariant">{active.invariant}</p>
         </aside>
       </div>
+      )}
     </div>
   );
 }

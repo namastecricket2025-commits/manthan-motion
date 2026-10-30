@@ -8,7 +8,7 @@ import { Link, useLocation } from "react-router";
 import { Logo } from "./Logo";
 import { MobileMenu } from "./MobileMenu";
 import { MovingBorderButton } from "./MovingBorderButton";
-import { ThemeToggle } from "./ThemeToggle";
+import { DisplayToggles } from "./DisplayToggles";
 
 /**
  * The site header.
@@ -180,7 +180,7 @@ export default function Navbar() {
               header starts wrapping. The theme control still lives on every
               wider screen and in Settings (light / dark / system). */}
           <div className="hidden sm:block">
-            <ThemeToggle />
+            <DisplayToggles />
           </div>
           {!isAuthenticated && (
             <TransitionLink

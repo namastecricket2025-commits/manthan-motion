@@ -632,3 +632,150 @@ export const gradeAnswer = action({
     };
   },
 });
+
+/* ------------------------------------------------------------------ */
+/* Mark a written solution, step by step                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Step marking.
+ *
+ * Unlike `checkWork`, which compares the student's working with a solution the
+ * app already has, this marks a solution written from scratch: the model first
+ * fixes a marking scheme, then awards each line against it. The marks a
+ * student sees always add up to the marks the scheme allocates — the totals are
+ * recomputed here rather than trusted from the reply — so a page can never
+ * show "7 of 5".
+ */
+const MARK_STEPS_SYSTEM = [
+  "You are an examiner marking a student's written solution in Manthan's Math Lab.",
+  "First decide the marking scheme a board examiner would use for THIS question: each step that earns credit, and the marks it carries. Then mark the student's own lines against that scheme.",
+  "Award marks only for work the student actually wrote. Never give credit for a step they omitted or only implied, and never mark what they probably meant rather than what the page says.",
+  "Every scheme step must carry a whole-number mark value, and the awarded value must be between zero and that value. Partial credit is allowed where the method is right but the arithmetic is not.",
+  "The sum of the scheme marks is the question's total. Keep the scheme to at most ten steps and the total to at most twenty marks unless the prompt states a total.",
+  "Note is one or two plain sentences on that step: what earned the marks, or exactly what was missing. Mathematics inside a note must be wrapped in dollars, like $\\\\frac{2}{3}$. Everything outside the dollars is ordinary text.",
+  "summary is one short line a teacher writes at the top: the score and the single most important thing to fix.",
+  "correctedWorking is the full correct solution in plain text, one step per line, with mathematics in dollars. Keep it to the same steps as the scheme.",
+  "No emoji, no markdown, no asterisks, no bullet symbols.",
+  'Reply with a single JSON object and nothing else: {"steps":[{"title":string,"marks":number,"awarded":number,"note":string}],"summary":string,"correctedWorking":string}.',
+].join(" ");
+
+const markStepsSchema = z.object({
+  steps: z
+    .array(
+      z.object({
+        title: z.string().catch(""),
+        marks: z.number().catch(0),
+        awarded: z.number().catch(0),
+        note: z.string().catch(""),
+      }),
+    )
+    .catch([]),
+  summary: z.string().catch(""),
+  correctedWorking: z.string().catch(""),
+});
+
+export type MarkedStep = {
+  title: string;
+  marks: number;
+  awarded: number;
+  note: string;
+};
+
+const clampMarks = (value: number, low: number, high: number) =>
+  Math.max(low, Math.min(high, Math.round(Number.isFinite(value) ? value : low)));
+
+export const markSteps = action({
+  args: {
+    problem: v.string(),
+    working: v.string(),
+    gradeLabel: v.optional(v.string()),
+    track: v.optional(v.string()),
+    chapterName: v.optional(v.string()),
+    /** A paper's stated total, when the student is practising one. */
+    totalMarks: v.optional(v.number()),
+  },
+  handler: async (
+    ctx,
+    { problem, working, gradeLabel, track, chapterName, totalMarks },
+  ): Promise<{
+    steps: MarkedStep[];
+    total: number;
+    awarded: number;
+    summary: string;
+    correctedWorking: string;
+    model: string;
+  }> => {
+    const typed = working.trim();
+    if (!problem.trim()) throw new Error("Write the question you are answering first.");
+    if (typed.length < 3) throw new Error("Write your working first, then ask for marks.");
+
+    const language = detectLanguage([typed, problem]);
+    const prompt = [
+      `THE QUESTION: ${problem}`,
+      gradeLabel ? `The student is in Class ${gradeLabel}.` : "",
+      track ? `Syllabus: ${track}${chapterName ? `, chapter ${chapterName}` : ""}.` : "",
+      typeof totalMarks === "number" && totalMarks > 0
+        ? `This question is worth exactly ${Math.round(totalMarks)} marks — build the scheme so the marks add to that total.`
+        : "Choose the total the question is worth in a school paper.",
+      `THE STUDENT'S WORKING, exactly as they wrote it:\n${typed}`,
+      "Mark the working line by line against your scheme. If the student wrote only an answer, say so in the step notes instead of inventing the method.",
+      ...languageDirective(language),
+      "Reply with the JSON object only.",
+      languageLock(language),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const candidates = await resolveCandidates();
+    const first = await callModel(candidates, MARK_STEPS_SYSTEM, prompt, undefined, 0.15);
+    let parsed: z.infer<typeof markStepsSchema>;
+    let model = first.model;
+    try {
+      parsed = markStepsSchema.parse(parseJsonLoose(first.text));
+    } catch {
+      const retry = await callModel(
+        candidates,
+        MARK_STEPS_SYSTEM,
+        [prompt, "CORRECTION: the last reply was not a valid JSON object. Reply with the JSON object only — no prose, no Markdown fence."].join("\n\n"),
+        undefined,
+        0.1,
+      );
+      parsed = markStepsSchema.parse(parseJsonLoose(retry.text));
+      model = retry.model;
+    }
+
+    /* The scheme owns the total, and the awarded total is the sum of the parts.
+       A model that rounds its own totals differently cannot make the page
+       disagree with itself. */
+    const steps: MarkedStep[] = parsed.steps
+      .slice(0, 12)
+      .map((step) => {
+        const marks = clampMarks(step.marks, 1, 20);
+        return {
+          title: cleanProse(step.title) || "Working",
+          marks,
+          awarded: clampMarks(step.awarded, 0, marks),
+          note: cleanProse(step.note),
+        };
+      });
+
+    if (!steps.length) {
+      throw new Error("The marker could not build a scheme for this question. Try rephrasing it.");
+    }
+
+    const total = steps.reduce((sum, step) => sum + step.marks, 0);
+    const awarded = steps.reduce((sum, step) => sum + step.awarded, 0);
+
+    return {
+      steps,
+      total,
+      awarded,
+      summary:
+        cleanProse(parsed.summary) ||
+        `${awarded} out of ${total}. Check the notes against each line.`,
+      correctedWorking: cleanProse(parsed.correctedWorking),
+      model,
+    };
+  },
+});

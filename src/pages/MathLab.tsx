@@ -5,7 +5,7 @@ import {
 } from "@/components/dashboard/DashboardNav";
 import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar";
 import { Logo } from "@/components/landing/Logo";
-import { ThemeToggle } from "@/components/landing/ThemeToggle";
+import { DisplayToggles } from "@/components/landing/DisplayToggles";
 import { MathLab } from "@/components/mathlab/MathLab";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,7 +97,7 @@ export default function MathLabPage() {
                 : "flex items-center justify-between pt-6"
             }
           >
-            <ThemeToggle />
+            <DisplayToggles stacked={collapsed} />
             {collapsed ? (
               <button
                 type="button"
@@ -126,7 +126,7 @@ export default function MathLabPage() {
         <header className="app-mobile-bar sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
           <Logo />
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <DisplayToggles />
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
                 <button

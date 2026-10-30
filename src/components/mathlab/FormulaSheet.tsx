@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Copy, Search } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Check, ChevronDown, Copy, ListPlus, Loader2, Search } from "lucide-react";
 import { GRADES, type CheatEntry, type GradeId } from "@/components/mathlab/mathlab";
 import { cheatWithBank } from "@/components/mathlab/formula-bank";
+import { formulaAnswer } from "@/components/mathlab/formula-text";
 import { MathTex } from "@/components/mathlab/latex";
 
 /**
@@ -44,6 +47,9 @@ export function FormulaSheet() {
   const [query, setQuery] = useState("");
   const [openChapter, setOpenChapter] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const addFormulas = useMutation(api.review.addFormulas);
+  const [queueing, setQueueing] = useState<string | null>(null);
+  const [queueNote, setQueueNote] = useState<Record<string, string>>({});
 
   const track = TRACKS.find((entry) => entry.id === trackId) ?? TRACKS[0];
 
@@ -77,6 +83,53 @@ export function FormulaSheet() {
         (entry) => entry.hits.length > 0 || entry.chapter.name.toLowerCase().includes(needle),
       );
   }, [chapters, needle]);
+
+  const queueChapter = async (
+    key: string,
+    gradeId: GradeId,
+    chapterName: string,
+    entries: CheatEntry[],
+  ) => {
+    if (queueing) return;
+    setQueueing(key);
+    setQueueNote((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    try {
+      const reply = await addFormulas({
+        cards: entries.map((entry) => ({
+          key: `${gradeId}:${chapterName}:${entry.title}`,
+          prompt:
+            entry.kind === "definition"
+              ? `Define: ${entry.title}`
+              : entry.kind === "theorem"
+                ? `State the theorem: ${entry.title}`
+                : `State the formula: ${entry.title}`,
+          answer: formulaAnswer(entry.latex, entry.note),
+          source: `Formula sheet · Class ${gradeId} · ${chapterName}`,
+        })),
+      });
+      setQueueNote((current) => ({
+        ...current,
+        [key]:
+          reply.created === 0
+            ? "Already in your review queue."
+            : `${reply.created} added to review${reply.skipped ? ` · ${reply.skipped} already queued` : ""}.`,
+      }));
+    } catch (err) {
+      setQueueNote((current) => ({
+        ...current,
+        [key]:
+          err instanceof Error && /sign|auth/i.test(err.message)
+            ? "Sign in to send formulas to your review queue."
+            : "The queue could not be reached just now. Try again.",
+      }));
+    } finally {
+      setQueueing(null);
+    }
+  };
 
   const copy = (key: string, text: string) => {
     void navigator.clipboard?.writeText(text).then(() => {
@@ -184,6 +237,32 @@ export function FormulaSheet() {
                 {open ? (
                   <div className="mathlab-sheet__chapterbody">
                     <p className="mathlab-sheet__focus">{chapter.focus}</p>
+                    <div className="mathlab-sheet__queue">
+                      <button
+                        type="button"
+                        className="mathlab-chip"
+                        disabled={queueing === key || entries.length === 0}
+                        onClick={() => void queueChapter(key, grade.id, chapter.name, entries)}
+                      >
+                        {queueing === key ? (
+                          <Loader2 className="spin-micro h-3.5 w-3.5" />
+                        ) : (
+                          <ListPlus className="h-3.5 w-3.5" />
+                        )}
+                        {queueing === key
+                          ? "Adding…"
+                          : `Send ${entries.length} to review`}
+                      </button>
+                      {queueNote[key] ? (
+                        <span className="mathlab-sheet__queuenote" role="status">
+                          {queueNote[key]}
+                        </span>
+                      ) : (
+                        <span className="mathlab-sheet__queuenote">
+                          They join the daily queue on this account.
+                        </span>
+                      )}
+                    </div>
                     {KIND_ORDER.map((kind) => {
                       const group = shown.filter((item) => item.kind === kind);
                       if (!group.length) return null;
