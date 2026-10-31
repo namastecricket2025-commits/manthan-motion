@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /math-lab
+Disallow: /lab
+Disallow: /settings
+
+Sitemap: https://manthan.freebuff.app/sitemap.xml

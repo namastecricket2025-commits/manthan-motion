@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The Manthan mark, with no tile behind it: one large circle, one small
+       circle, and the bar that joins them. Transparent so the tab's own colour
+       shows through. A light browser chrome would erase a pure-white mark, so
+       the ink flips to near-black there; the artwork is identical. -->
+  <style>
+    .ink { fill: #ffffff; }
+    @media (prefers-color-scheme: light) {
+      .ink { fill: #0a0a0b; }
+    }
+  </style>
+  <g class="ink">
+    <circle cx="25.5" cy="32" r="19" />
+    <rect x="41" y="29.8" width="7" height="4.4" rx="1.6" />
+    <circle cx="51" cy="32" r="6.2" />
+  </g>
+</svg>
