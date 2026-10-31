@@ -993,17 +993,14 @@ function clamp(value: number, min: number, max: number) {
 /**
  * How many questions a given clock should carry.
  *
- * Pacing follows what schools and testing bodies actually use: about a minute
- * per multiple-choice question (the common 1-minute-per-item benchmark), and
- * the fixed shape of a CBSE board paper — 20 MCQs, 9 short answers and 7 long
- * answers across 80 marks in 180 minutes — for the mixed pattern. The mixed
- * sections scale from that paper's own rhythm: one MCQ per two minutes, one
- * short answer per twelve, one long answer per twenty, so a 15-minute paper is
- * a real short test (about ten questions) instead of six, a 60-minute one sits
- * at 28, and three hours reproduces the board paper exactly at 36.
- * Nothing is scaled below one written question per section, and the section
- * sizes are capped at the real paper's maximum so a 5-hour request does not
- * become an unmarkable monster.
+ * Pacing follows what schools and testing bodies actually use. Objective
+ * papers run one item a minute for the first hour, then slow to one every two
+ * minutes; board-style papers follow the CBSE rhythm (one-mark MCQs, short
+ * answers every fifteen minutes, long answers every half hour) scaled from
+ * the real 80-mark / 180-minute paper. Both patterns keep a floor per section
+ * and a ceiling that a five-hour request cannot turn into an unmarkable
+ * monster, but the ceiling now sits above the longest real paper instead of
+ * flattening 90, 120 and 180 minutes into the same count.
  */
 export function paperPlan(
   durationMinutes: number,
@@ -1012,15 +1009,24 @@ export function paperPlan(
   const duration = clamp(Math.round(durationMinutes), 5, 300);
 
   if (pattern === "objective") {
-    // One MCQ a minute, floor for a five-minute quiz, cap so an afternoon of
-    // paper does not turn into 300 questions.
-    const mcq = clamp(duration, 5, 60);
+    /* One question a minute up to an hour, then a slower half-a-question a
+       minute. The old `clamp(duration, 5, 60)` meant 90, 120 and 180 minutes
+       all generated exactly 60 MCQs; a three-hour objective paper now gets
+       120, which is the pace of a real competitive paper rather than a
+       one-hour quiz with a longer clock. */
+    const planned = duration <= 60 ? duration : 60 + Math.round((duration - 60) * 0.5);
+    const mcq = clamp(planned, 5, 150);
     return { mcq, short: 0, long: 0, totalMarks: mcq };
   }
 
-  const mcq = clamp(Math.round(duration / 2), 4, 20);
-  const short = clamp(Math.round(duration / 12), 1, 9);
-  const long = clamp(Math.round(duration / 20), 1, 7);
+  /* Board rhythm, scaled from the real 80-mark / 180-minute paper: a quarter
+     of the paper is one-mark objective work, then short answers every fifteen
+     minutes and long answers every half hour. The caps are generous (24 / 14 /
+     10); the old 20 / 9 / 7 ceilings flattened every paper from 90 minutes to
+     three hours into the same 36 questions. */
+  const mcq = clamp(Math.round(duration / 4), 4, 24);
+  const short = clamp(Math.round(duration / 15), 1, 14);
+  const long = clamp(Math.round(duration / 30), 1, 10);
 
   return {
     mcq,

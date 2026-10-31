@@ -13,6 +13,7 @@ import {
   studyTerms,
   type Dictation,
 } from "@/components/voice/dictation";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { CLASSES, findClass, findSubject } from "@/lib/curriculum";
 import { useAction, useQuery } from "convex/react";
 import {
@@ -569,23 +570,22 @@ export default function Viva() {
                 </div>
               ) : (
                 <div className="mt-5 flex flex-col gap-4">
-                  <label className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1.5">
                     <span className="text-[11px] font-medium text-text-dim">
                       Notebook
                     </span>
-                    <select
+                    <ChoiceSelect
                       value={notebookId}
-                      onChange={(event) => setNotebookId(event.target.value)}
-                      className="w-full rounded-xl border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-sm outline-none focus:border-[var(--signal)]"
-                    >
-                      {notebooks.map((notebook) => (
-                        <option key={notebook.id} value={notebook.id}>
-                          {notebook.name} · {notebook.sourceCount} source
-                          {notebook.sourceCount === 1 ? "" : "s"}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      onChange={setNotebookId}
+                      ariaLabel="Notebook to be examined on"
+                      placeholder="Choose a notebook"
+                      options={notebooks.map((notebook) => ({
+                        value: notebook.id,
+                        label: notebook.name,
+                        hint: `${notebook.sourceCount} source${notebook.sourceCount === 1 ? "" : "s"}`,
+                      }))}
+                    />
+                  </div>
 
                   <label className="flex flex-col gap-1.5">
                     <span className="text-[11px] font-medium text-text-dim">

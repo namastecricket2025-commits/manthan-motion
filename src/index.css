@@ -44,6 +44,7 @@
   --color-ink: var(--ink);
   --color-signal: var(--signal);
   --color-signal-2: var(--signal-2);
+  --color-verify: var(--verify);
   --color-text-main: var(--text-main);
   --color-text-dim: var(--text-dim);
   --font-sans: "Inter", "Noto Sans Devanagari", ui-sans-serif, system-ui,
@@ -291,6 +292,13 @@
   /* Error stays red now that the brand does not: `--destructive` is the only
      crimson left in the light theme. */
   --destructive: #c81f27;
+  /* Verified / correct is its own semantic colour, deliberately not the brand
+     amber. Amber on a checked line read as a warning, which is the opposite of
+     what the mark means. A deep sea-teal reads as a stamp without competing
+     with the accent. */
+  --verify: #0f6f64;
+  --verify-soft: rgba(15, 111, 100, 0.1);
+  --verify-line: rgba(15, 111, 100, 0.42);
   --border: rgba(0, 0, 0, 0.1);
   --input: rgba(0, 0, 0, 0.12);
   --ring: var(--signal);
@@ -508,6 +516,11 @@
   /* Red survives only where it carries meaning — a wrong answer, a failed
      read — never as decoration. */
   --destructive: #f87171;
+  /* Correct / verified. See the light-theme note: this is a semantic token,
+     not a second brand colour. */
+  --verify: #6fd3bd;
+  --verify-soft: rgba(111, 211, 189, 0.12);
+  --verify-line: rgba(111, 211, 189, 0.38);
   /* Neutral white hairlines. They were warm-tinted (244,236,233), which cast
      a faint brown over every edge in the theme and was half of why black
      surfaces read as "warm grey" rather than black. */
@@ -643,68 +656,67 @@
 }
 
 /* ============================================================
-   Eye comfort — a low-glare rendering of whichever theme is on
+   Eye comfort — a lower-colour-temperature rendering of the active theme
    ============================================================
-   This is not a third theme and it is not a yellow filter. It is a
-   warm-neutral, lower-glare version of whichever theme is on, modelled on
-   reading modes rather than on an amber lens: reduce the paper's white point,
-   reduce the night theme's pure-white ink, and remove the hardest contrast.
-   The layout, accent and every component stay where they are.
+   Eye comfort is the same idea as an OS night light / Eye Comfort Shield:
+   it reduces the blue end of the display's white point and takes a little
+   brightness off, so white paper stops glowing and dark surfaces stop
+   reading as blue-black. It is NOT a grey mode and NOT a sepia filter.
+
+   The previous pass desaturated every surface (`#f4f1ea`, `#f6f1e8`) which is
+   why it read as grey: removing chroma is not the same as lowering colour
+   temperature. These palettes keep a real warm hue — paper is a warm cream,
+   night is a warm charcoal — while keeping the contrast low-glare.
 
    Three mechanisms, no JavaScript beyond the one `data-comfort` attribute
    `applySettings` writes on <html>:
 
-     1. Warm-neutral surfaces. Day paper becomes a low-saturation stone
-        (#f4f1ea), not cream or yellow; ink relaxes to #25231e. Night lifts
-        #000 to a warm charcoal (#1a1815) and pulls the white type down to
-        #eee9e0.
-     2. Every surface token is redefined, including the sidebar's
-        `--panel-bg`, menus, inputs, cards and the lab's own `--lab-*` tokens.
-        Missing one surface is what used to leave the side panel cold while
-        the page turned yellow.
-     3. Canvas, image and video pixels get a small brightness/saturation trim.
-        Tokens cannot reach a WebGL canvas; a colour cast would change the
-        meaning of a stain or a spectrum, so the correction is luminance, not
-        a yellow film.
+     1. Warm white point. Day paper sits around 3,800 K (#fbf5e9) instead of
+        neutral white; night sits around 2,700 K (#1e1912) instead of #000.
+     2. Every surface token is redefined, including `--panel-bg`, menus,
+        inputs, cards and the lab's own surfaces, so the sidebar cannot stay
+        cold while the page turns warm.
+     3. Canvas/image/video pixels get the same small white-point shift with a
+        single warm filter. It is deliberately weak: stains and pH colours
+        must still mean what they mean.
 
-   There is no full-screen overlay. It would tint every diagram, cannot be
-   scoped to the blue end of the spectrum from CSS, and was the source of the
-   old "everything is yellow except the sidebar" result.
+   There is no full-screen overlay and no theme switch. It renders whichever
+   theme is on — light stays light, dark stays dark.
    ------------------------------------------------ */
 html[data-comfort="on"]:not(.dark) {
-  /* A warm-neutral reading surface, not a cream wash. Hue stays near 40deg at
-     a low saturation so white paper reads softer without reading as yellow. */
-  --ink: #e9e6de;
-  --panel: #f4f1ea;
-  --panel-bg: rgba(244, 241, 234, 0.9);
-  --card: #f8f5ef;
-  --popover: #f8f5ef;
-  --menu-bg: #f8f5ef;
-  --menu-ink: #25231e;
-  --text-main: #25231e;
-  --text-dim: #5c574e;
-  --card-border: rgba(52, 48, 40, 0.16);
-  --panel-line: rgba(52, 48, 40, 0.14);
-  --panel-line-strong: rgba(52, 48, 40, 0.26);
-  --border: rgba(52, 48, 40, 0.16);
-  --input: rgba(52, 48, 40, 0.17);
-  --secondary: #ece8df;
-  --secondary-foreground: #25231e;
-  --muted: #efebe4;
-  --muted-foreground: #625c52;
-  --accent: #e7e2d9;
-  --accent-foreground: #25231e;
-  --sidebar: #eeebe3;
-  --sidebar-foreground: #25231e;
-  --sidebar-accent: #e6e2da;
-  --sidebar-accent-foreground: #25231e;
-  --sidebar-border: rgba(52, 48, 40, 0.12);
-  --bg-canvas-a: #e4e0d8;
-  --bg-canvas-b: #ebe7df;
-  --bg-canvas-c: #f1eee8;
-  --halo-near: rgba(255, 250, 240, 0.7);
-  --halo-far: rgba(80, 72, 58, 0.035);
-  --glass-fill-strong: rgba(52, 48, 40, 0.045);
+  /* Warm cream paper, ~3,800 K. Hue is held near 38deg with enough chroma to
+     read as warm paper rather than as grey stone. */
+  --ink: #f4ecdd;
+  --panel: #fbf5e9;
+  --panel-bg: rgba(251, 245, 233, 0.92);
+  --card: #fdf8ef;
+  --popover: #fdf8ef;
+  --menu-bg: #fdf8ef;
+  --menu-ink: #241d12;
+  --text-main: #241d12;
+  --text-dim: #5f5442;
+  --card-border: rgba(70, 56, 36, 0.16);
+  --panel-line: rgba(70, 56, 36, 0.14);
+  --panel-line-strong: rgba(70, 56, 36, 0.26);
+  --border: rgba(70, 56, 36, 0.16);
+  --input: rgba(70, 56, 36, 0.17);
+  --secondary: #f2e8d6;
+  --secondary-foreground: #241d12;
+  --muted: #f5ecdc;
+  --muted-foreground: #685c48;
+  --accent: #eee2cc;
+  --accent-foreground: #241d12;
+  --sidebar: #f7f0e2;
+  --sidebar-foreground: #241d12;
+  --sidebar-accent: #efe5d2;
+  --sidebar-accent-foreground: #241d12;
+  --sidebar-border: rgba(70, 56, 36, 0.12);
+  --bg-canvas-a: #efe5d3;
+  --bg-canvas-b: #f3ecdf;
+  --bg-canvas-c: #f7f1e6;
+  --halo-near: rgba(255, 243, 219, 0.75);
+  --halo-far: rgba(92, 70, 40, 0.04);
+  --glass-fill-strong: rgba(70, 56, 36, 0.045);
   /* The brand is still the brand: a slightly deeper amber, not a second
      yellow field. */
   --signal: #9a5a0a;
@@ -713,61 +725,68 @@ html[data-comfort="on"]:not(.dark) {
   --brand-soft: rgba(201, 135, 8, 0.16);
   --brand-line: rgba(201, 135, 8, 0.5);
   --brand-mark: var(--brand);
+  --verify: #0e6b5f;
+  --verify-soft: rgba(14, 107, 95, 0.1);
+  --verify-line: rgba(14, 107, 95, 0.4);
   color-scheme: light;
 }
 
 html[data-comfort="on"]:is(.dark, [data-theme="dark"]) {
-  /* Warm charcoal, not candlelit amber. The white point is pulled down a
-     little, but the surfaces remain near-neutral so reds, greens and the
-     histology stains still mean what they mean. */
-  --ink: #12110f;
-  --panel: #1a1815;
-  --panel-bg: rgba(18, 17, 15, 0.92);
-  --card: #171512;
-  --popover: #1d1a16;
-  --menu-bg: #1d1a16;
-  --menu-ink: rgba(241, 236, 227, 0.9);
-  --text-main: #eee9e0;
-  --text-dim: rgba(238, 233, 224, 0.76);
-  --card-border: rgba(244, 238, 228, 0.14);
-  --panel-line: rgba(244, 238, 228, 0.14);
-  --panel-line-strong: rgba(244, 238, 228, 0.26);
-  --border: rgba(244, 238, 228, 0.14);
-  --input: rgba(244, 238, 228, 0.15);
-  --secondary: #211e19;
-  --secondary-foreground: #eee9e0;
-  --muted: #1e1b17;
-  --muted-foreground: rgba(238, 233, 224, 0.72);
-  --accent: #27231d;
-  --accent-foreground: #eee9e0;
-  --sidebar: #171512;
-  --sidebar-accent: #211e19;
-  --sidebar-border: rgba(244, 238, 228, 0.1);
-  --bg-canvas-a: #12110f;
-  --bg-canvas-b: #0e0d0b;
-  --bg-canvas-c: #090807;
-  --signal: #e4ddd1;
-  --signal-strong: #f2ece2;
-  --primary-foreground: #15130f;
-  --halo-near: rgba(240, 224, 200, 0.14);
-  --halo-mid: rgba(240, 224, 200, 0.05);
-  --halo-far: rgba(240, 224, 200, 0.035);
-  --brand: #dfac54;
-  --brand-soft: rgba(223, 172, 84, 0.14);
-  --brand-line: rgba(223, 172, 84, 0.3);
-  --brand-ink: #dfac54;
+  /* Warm charcoal, ~2,700 K, not brown. The page and panel keep a visible
+     step between them so cards do not dissolve into a flat mud-coloured
+     field. */
+  --ink: #14100b;
+  --panel: #201a13;
+  --panel-bg: rgba(20, 16, 11, 0.92);
+  --card: #251f17;
+  --popover: #2a2318;
+  --menu-bg: #2a2318;
+  --menu-ink: rgba(247, 238, 223, 0.92);
+  --text-main: #f3e9d8;
+  --text-dim: rgba(243, 233, 216, 0.78);
+  --card-border: rgba(243, 233, 216, 0.15);
+  --panel-line: rgba(243, 233, 216, 0.15);
+  --panel-line-strong: rgba(243, 233, 216, 0.27);
+  --border: rgba(243, 233, 216, 0.15);
+  --input: rgba(243, 233, 216, 0.16);
+  --secondary: #2a2319;
+  --secondary-foreground: #f3e9d8;
+  --muted: #241e16;
+  --muted-foreground: rgba(243, 233, 216, 0.72);
+  --accent: #322a1e;
+  --accent-foreground: #f3e9d8;
+  --sidebar: #19140e;
+  --sidebar-accent: #262018;
+  --sidebar-border: rgba(243, 233, 216, 0.1);
+  --bg-canvas-a: #14100b;
+  --bg-canvas-b: #110d09;
+  --bg-canvas-c: #0c0906;
+  --signal: #f0d9b5;
+  --signal-strong: #f6ead6;
+  --primary-foreground: #1b150e;
+  --halo-near: rgba(255, 224, 178, 0.15);
+  --halo-mid: rgba(255, 224, 178, 0.055);
+  --halo-far: rgba(255, 224, 178, 0.04);
+  --brand: #e8b96a;
+  --brand-soft: rgba(232, 185, 106, 0.15);
+  --brand-line: rgba(232, 185, 106, 0.32);
+  --brand-ink: #e8b96a;
+  --verify: #8fd8c4;
+  --verify-soft: rgba(143, 216, 196, 0.12);
+  --verify-line: rgba(143, 216, 196, 0.36);
   color-scheme: dark;
 }
 
-/* Tokens cannot reach the pixels a canvas, chart or photograph draws. A small
-   luminance/saturation trim lowers glare on those surfaces without putting a
-   yellow film over the page. This is intentionally not a sepia or hue-rotate
-   filter: the lab's stains, pH colours and spectrum diagrams must stay
-   readable. */
+/* Tokens cannot reach the pixels a canvas, chart or photograph draws. A weak
+   warm shift is the closest CSS equivalent to lowering a display's colour
+   temperature: 8% sepia is enough to take the blue edge off white, and 4%
+   extra saturation puts back some of the chroma sepia would otherwise eat.
+   It is deliberately not a heavy sepia veil — stains, pH colours and spectra
+   keep their meaning. */
 html[data-comfort="on"] canvas,
 html[data-comfort="on"] img,
 html[data-comfort="on"] video {
-  filter: brightness(0.96) saturate(0.94);
+  filter: brightness(0.97) sepia(0.08) saturate(1.04);
 }
 
 /* Static decoration is the first thing a low-glare mode should quiet. It is

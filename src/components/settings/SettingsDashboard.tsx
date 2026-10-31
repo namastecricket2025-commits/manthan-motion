@@ -501,7 +501,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
               Settings
             </h2>
             <p className="set-hero__sub">
-              Appearance, your account and your data. Every change applies the moment you make it.
+              Display, account and data. Every change applies immediately.
             </p>
           </div>
           <button type="button" className="set-btn set-btn--ghost" onClick={reset}>
@@ -521,8 +521,8 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
             <AccordionTrigger className="set-trigger">
               <PanelTitle
                 icon={SunMoon}
-                title="Appearance & Reading"
-                blurb="Theme and text comfort"
+                title="Display"
+                blurb="Theme, eye comfort and type size"
               />
             </AccordionTrigger>
             <AccordionContent className="set-content">
@@ -533,7 +533,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                       <span>Appearance</span>
                     </div>
                     <p className="set-lrow__hint">
-                      Pick a fixed theme, or let Manthan follow your device automatically.
+                      Pick a fixed theme, or follow your device.
                     </p>
                   </div>
                   <div className="set-theme-grid" role="radiogroup" aria-label="App theme">
@@ -572,10 +572,10 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     than next to the type scale. */}
                 <ListRow
                   title="Eye comfort"
-                  hint="A low-glare reading mode across the whole app: warm-neutral surfaces instead of hard white or pure black, softer menu, sidebar and input surfaces, and a slight dimming of images and 3D canvases. It is not a yellow filter — stains and data colours keep their meaning. Also available as the glasses button in every header."
+                  hint="Warm, low-glare light for late study — the same idea as a night light. It lowers the white point instead of greying the page, and it never changes your light/dark choice. Also the glasses button in every header."
                   note={
                     settings.eyeComfort
-                      ? "On. Every surface, including the sidebar and menus, uses the softened palette; canvas pixels are dimmed, not recoloured."
+                      ? "On. Warm paper in light mode, warm charcoal in dark mode. The theme itself is unchanged."
                       : undefined
                   }
                 >
@@ -589,8 +589,8 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
                 <ListRow
                   stack
-                  title="Text comfort"
-                  hint="Scales dashboard typography, and switches the whole interface to a spaced, dyslexia-friendly letterform when you need it."
+                  title="Type size"
+                  hint="Scales the interface text, or switches to a spaced, dyslexia-friendly letterform."
                 >
                   <div className="set-slider-wrap">
                     <Slider
@@ -623,7 +623,7 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
 
                 <ListRow
                   title="Motionless mode"
-                  hint="Stops every idle orbit, drifting mesh and simulation loop. Content stays complete and readable — it simply stops moving. The operating system's own reduced-motion preference is honoured as well."
+                  hint="Stops idle orbits, drifting meshes and simulation loops. Your system's reduced-motion setting is honoured too."
                 >
                   <Switch
                     className="set-switch"

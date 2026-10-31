@@ -251,7 +251,7 @@ export default function Lab() {
               </p>
             </div>
 
-            <div className="apple-lab apple-lab--embedded">
+            <div className="apple-lab apple-lab--embedded min-w-0">
               {/* The light/dark switch sits on the lab's own controls, not on
                   the shell: every bench-level daylight rule is written as
                   `.apple-lab [data-lab-theme="light"] …`, so the tab rail,

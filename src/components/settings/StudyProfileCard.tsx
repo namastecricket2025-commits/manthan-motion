@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { useMutation, useQuery } from "convex/react";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -96,36 +97,29 @@ export function StudyProfileCard() {
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-medium text-text-dim">Class</span>
-          <select
+          <ChoiceSelect
             value={grade}
-            onChange={(event) => setGrade(event.target.value)}
-            className="w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm text-foreground outline-none focus:border-[var(--signal)]"
-          >
-            <option value="">Choose a class</option>
-            {GRADES.map((entry) => (
-              <option key={entry} value={entry}>
-                Class {entry}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5">
+            onChange={setGrade}
+            ariaLabel="Class"
+            placeholder="Choose a class"
+            options={GRADES.map((entry) => ({
+              value: entry,
+              label: `Class ${entry}`,
+            }))}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-medium text-text-dim">Board</span>
-          <select
+          <ChoiceSelect
             value={board}
-            onChange={(event) => setBoard(event.target.value)}
-            className="w-full rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm text-foreground outline-none focus:border-[var(--signal)]"
-          >
-            <option value="">Choose a board</option>
-            {BOARDS.map((entry) => (
-              <option key={entry} value={entry}>
-                {entry}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={setBoard}
+            ariaLabel="Board"
+            placeholder="Choose a board"
+            options={BOARDS.map((entry) => ({ value: entry, label: entry }))}
+          />
+        </div>
       </div>
 
       <p className="mt-4 text-[11px] font-medium text-text-dim">Subjects</p>

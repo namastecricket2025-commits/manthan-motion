@@ -1,53 +1,19 @@
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useResolvedTheme } from "@/lib/app-settings";
-
-const STORAGE_KEY = "manthan-theme";
-
-function applyTheme(dark: boolean) {
-  const root = document.documentElement;
-  root.classList.toggle("dark", dark);
-  root.setAttribute("data-theme", dark ? "dark" : "light");
-  /* A direct toggle writes the class itself, so announce it: useResolvedTheme
-     (and every theme-aware chart or widget that reads the tokens) listens for
-     this event rather than polling the DOM. */
-  window.dispatchEvent(new CustomEvent("manthan:theme", { detail: { dark } }));
-}
-
-function readStored(): boolean {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return stored === "dark";
-  } catch {
-    /* private mode etc. */
-  }
-  return true; // Manthan's default theme is dark
-}
+import { useSettings } from "@/components/settings/SettingsProvider";
 
 /**
- * Theme toggle — keeps the data-theme attribute + .dark class pattern from
- * the reference files (no JS theme framework), defaulting to dark.
+ * Theme toggle — writes the same `themeMode` the Settings page writes.
+ *
+ * It used to toggle only the `.dark` class and `localStorage`, which left the
+ * settings store still saying "dark". Any later settings change (turning on
+ * eye comfort, changing text size) then re-applied the stale value and the app
+ * snapped back to dark. There is one source of truth now: the settings store.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const [dark, setDark] = useState<boolean>(() =>
-    typeof document !== "undefined" ? readStored() : true,
-  );
-  /* the settings dashboard owns theme mode too (light / dark / system), so
-     mirror whatever it resolves to instead of drifting out of sync */
+  const { update } = useSettings();
   const resolved = useResolvedTheme();
-
-  useEffect(() => {
-    setDark(resolved === "dark");
-  }, [resolved]);
-
-  useEffect(() => {
-    applyTheme(dark);
-    try {
-      localStorage.setItem(STORAGE_KEY, dark ? "dark" : "light");
-    } catch {
-      /* ignore */
-    }
-  }, [dark]);
+  const dark = resolved === "dark";
 
   return (
     <button
@@ -55,7 +21,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       role="switch"
       aria-checked={dark}
       aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-      onClick={() => setDark((d) => !d)}
+      onClick={() => update({ themeMode: dark ? "light" : "dark" })}
       className={
         "glass-chip btn-ghost inline-flex h-10 w-10 items-center justify-center text-text-dim transition-colors duration-200 hover:text-[var(--signal)] " +
         (className ?? "")

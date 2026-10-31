@@ -27,6 +27,7 @@ import {
 } from "@/lib/curriculum";
 import { boardBank, hasBoardQuestions } from "@/lib/boardBank";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import {
   ArrowLeft,
   ArrowRight,
@@ -768,23 +769,25 @@ export default function Exam() {
                 ) : (
                   <div className="mt-5 flex flex-col gap-5">
                     {source === "notebook" ? (
-                    <label className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5">
                       <span className="text-[11px] font-medium text-text-dim">
                         Notebook
                       </span>
-                      <select
+                      {/* The site's own listbox, not the OS menu: the native
+                          select opened a blue system popup that ignored the
+                          theme and clipped the source counts. */}
+                      <ChoiceSelect
                         value={notebookId}
-                        onChange={(event) => setNotebookId(event.target.value)}
-                        className="w-full rounded-xl border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-sm outline-none focus:border-[var(--signal)]"
-                      >
-                        {(notebooks ?? []).map((notebook) => (
-                          <option key={notebook.id} value={notebook.id}>
-                            {notebook.name} · {notebook.sourceCount} source
-                            {notebook.sourceCount === 1 ? "" : "s"}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        onChange={setNotebookId}
+                        ariaLabel="Notebook to examine"
+                        placeholder="Choose a notebook"
+                        options={(notebooks ?? []).map((notebook) => ({
+                          value: notebook.id,
+                          label: notebook.name,
+                          hint: `${notebook.sourceCount} source${notebook.sourceCount === 1 ? "" : "s"}`,
+                        }))}
+                      />
+                    </div>
                     ) : null}
 
                     <div>

@@ -14,8 +14,8 @@ import {
   formatINR,
   getDuration,
   planName,
+  type ComparisonPlanId,
   type DurationId,
-  type PlanId,
   type PlanTier,
 } from "@/lib/plans";
 import { useAuth } from "@/hooks/use-auth";
@@ -311,7 +311,7 @@ function PricingFaq() {
   );
 }
 
-const COLUMNS: Array<{ id: PlanId; name: string; price: string }> = [
+const COLUMNS: Array<{ id: ComparisonPlanId; name: string; price: string }> = [
   { id: "free", name: "Free", price: "₹0" },
   { id: "sprint", name: "Sprint Pass", price: "₹49 / 7 days" },
   { id: "eduvantage", name: "EduVantage", price: "from ₹199 / mo" },
@@ -329,12 +329,15 @@ export default function Pricing() {
 
   const tierDisplay = (tier: PlanTier) => {
     if (!tier.flexible) {
+      const days = tier.id === "sprint" ? 7 : 14;
       return {
         price: tier.price,
-        suffix: "/ 7 days",
-        billing: `One 7-day pass · ${tier.allowance}`,
+        suffix: `/ ${days} days`,
+        billing: `One ${days}-day pass · ${tier.allowance}`,
         hook:
-          "About ₹7 a day for one revision week — the price of a bus fare.",
+          tier.id === "sprint"
+            ? "About ₹7 a day for one revision week — the price of a bus fare."
+            : `About ₹${Math.round(tier.price / days)} a day for every workspace, for the two weeks that matter.`,
       };
     }
     const total = durationTotal(tier, term);
@@ -376,7 +379,7 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <PlanCard
               name={FREE_PLAN.name}
               summary={FREE_PLAN.summary}
@@ -426,8 +429,10 @@ export default function Pricing() {
                   Compare every plan
                 </h2>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
-                  Same engine on all four. What changes is how much it will
+                  Same engine on every plan. What changes is how much it will
                   make, how many notebooks it keeps, and which workspaces open.
+                  Final Fortnight is Prime for fourteen days, so it is not a
+                  separate column here.
                 </p>
               </div>
               <p className="text-[11px] text-text-dim sm:hidden">

@@ -836,43 +836,48 @@ html[data-motion="reduced"] .apple-lab-drop {
    ============================================================ */
 
 html[data-comfort="on"] .apple-lab {
-  --lab-canvas: #14120f;
-  --lab-ink: rgba(238, 233, 224, 0.92);
-  --lab-ink-dim: rgba(238, 233, 224, 0.72);
-  --lab-ink-micro: rgba(238, 233, 224, 0.6);
-  --lab-line: rgba(244, 238, 228, 0.1);
-  --lab-line-soft: rgba(244, 238, 228, 0.06);
-  --lab-fill: rgba(244, 238, 228, 0.032);
+  /* Warm charcoal, ~2,700 K, with a real step between page, glass and card.
+     The old values (#14120f / #100e0c / #15130f) were so close that every
+     panel melted into one brown field. */
+  --lab-canvas: #16120c;
+  --lab-ink: rgba(247, 238, 223, 0.93);
+  --lab-ink-dim: rgba(247, 238, 223, 0.74);
+  --lab-ink-micro: rgba(247, 238, 223, 0.62);
+  --lab-line: rgba(247, 238, 223, 0.12);
+  --lab-line-soft: rgba(247, 238, 223, 0.07);
+  --lab-fill: rgba(247, 238, 223, 0.038);
   --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9);
-  --lab-violet: #e9e3d8;
-  --lab-cyan: #9fc7d4;
-  --lab-diagram-ink: 238, 233, 224;
-  --lab-diagram-plate: 20, 18, 15;
-  --lab-diagram-violet: #e9e3d8;
-  --lab-diagram-lilac: #d6cfc4;
+  --lab-violet: #f0e6d4;
+  --lab-cyan: #a8cdd8;
+  --lab-diagram-ink: 247, 238, 223;
+  --lab-diagram-plate: 22, 18, 12;
+  --lab-diagram-violet: #f0e6d4;
+  --lab-diagram-lilac: #ddd3c2;
 }
 
 html[data-comfort="on"] .apple-lab-glass {
-  background: #100e0c;
+  background: #1c1710;
 }
 
 html[data-comfort="on"] .apple-lab-card {
-  background: #15130f;
+  background: #221c14;
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] {
-  --lab-canvas: #f1efea;
-  --lab-ink: rgba(38, 35, 30, 0.94);
-  --lab-ink-dim: rgba(66, 60, 52, 0.74);
-  --lab-ink-micro: rgba(80, 72, 62, 0.6);
-  --lab-line: rgba(45, 40, 34, 0.14);
-  --lab-line-soft: rgba(45, 40, 34, 0.08);
-  --lab-diagram-ink: 38, 35, 30;
-  --lab-diagram-plate: 241, 238, 231;
+  /* Warm paper, not stone: the lab's daylight bench has to feel like the same
+     display as the rest of the app. */
+  --lab-canvas: #f4ebdc;
+  --lab-ink: rgba(42, 35, 24, 0.95);
+  --lab-ink-dim: rgba(74, 63, 48, 0.76);
+  --lab-ink-micro: rgba(88, 75, 56, 0.62);
+  --lab-line: rgba(74, 56, 32, 0.15);
+  --lab-line-soft: rgba(74, 56, 32, 0.085);
+  --lab-diagram-ink: 42, 35, 24;
+  --lab-diagram-plate: 244, 235, 220;
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
-  background: #f8f6f1;
+  background: #fbf4e8;
 }
 
 /* ============================================================
@@ -1161,7 +1166,7 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .apple-lab-glass {
 }
 
 html[data-comfort="on"] .apple-lab[data-lab-theme="light"] {
-  background: #f2efe8;
+  background: #f4ebdc;
 }
 
 html[data-comfort="on"] .apple-lab[data-lab-theme="light"]::after {
@@ -1391,4 +1396,64 @@ html[data-comfort="on"] .apple-lab[data-lab-theme="light"]::after {
 .nerve-marker:focus-visible circle:nth-of-type(2) {
   stroke: var(--lab-ink);
   stroke-width: 2;
+}
+
+/* Numbered callouts on the 3D reflex loop. Small, opaque enough to sit over a
+   translucent organ, and never a tap target (the structures list is). */
+.nerve-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  height: 18px;
+  width: 18px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--lab-ink) 42%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lab-canvas) 82%, transparent);
+  color: var(--lab-ink);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+  transition: opacity 160ms linear;
+}
+
+/* Titration beads.
+
+   The fall distance is a custom property rather than three Motion keyframes,
+   so changing the flask volume actually moves the landing point: a keyframed
+   Motion loop computes its endpoints when it starts and keeps dripping to the
+   old surface. `translateY` in an SVG circle is measured in the viewBox's own
+   user units, which is exactly what `--drip-travel` carries. */
+@keyframes lab-drip-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--drip-travel, 100px));
+    opacity: 0;
+  }
+}
+
+.lab-drip {
+  animation: lab-drip-fall var(--drip-duration, 0.8s) cubic-bezier(0.45, 0, 0.9, 0.55)
+    infinite;
+  animation-delay: var(--drip-delay, 0s);
+  filter: drop-shadow(0 0 5px rgba(190, 228, 255, 0.75));
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The apparatus is still running; the beads simply stop accelerating. */
+  .lab-drip {
+    animation-timing-function: linear;
+  }
 }

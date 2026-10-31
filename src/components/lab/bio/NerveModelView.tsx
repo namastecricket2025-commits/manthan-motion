@@ -280,17 +280,23 @@ function buildReflex(root: THREE.Group, onCord?: (mesh: THREE.Mesh) => void): Bu
   const muscleMaterial = membrane("#b06f66", { roughness: 0.6 });
   const myelin: THREE.Object3D[] = [];
 
-  /* Skin, in section: three layers, cut open so the ending inside is visible. */
+  /* Skin, in section: a compact three-layer pad, cut open so the ending inside
+     is visible. It used to be three translucent slabs nearly 3 units tall and
+     2 deep, which read as a pile of glass boxes rather than tissue and made
+     the whole diagram look like a mistake. */
   const skin = new THREE.Group();
-  skin.position.set(-5.3, 0, 0);
+  skin.position.set(-5.18, 0, 0);
   const layers: Array<[number, string, number]> = [
-    [0.34, "#cdab97", 0.24],
-    [1.5, "#bb8b7c", 0.4],
-    [1.1, "#a97a70", 0.5],
+    [0.1, "#cdab97", 0.55],
+    [0.3, "#bb8b7c", 0.72],
+    [0.24, "#a97a70", 0.82],
   ];
-  let x = -0.85;
+  let x = -0.32;
   for (const [width, colour, opacity] of layers) {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(width, 2.9, 2.1), membrane(colour, { roughness: 0.75, opacity }));
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(width, 1.62, 0.92),
+      membrane(colour, { roughness: 0.78, opacity }),
+    );
     slab.position.set(x + width / 2, 0, 0);
     skin.add(slab);
     x += width;
@@ -325,7 +331,9 @@ function buildReflex(root: THREE.Group, onCord?: (mesh: THREE.Mesh) => void): Bu
     [-2.85, 0.55],
     [-1.45, 0.8],
   ] as Array<[number, number]>) {
-    const sheath = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, length, 8, 16), myelinMaterial);
+    /* A sheath only slightly wider than the fibre: the old 0.16-radius
+       capsules were twice the axon's diameter and read as beads on a string. */
+    const sheath = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, length, 8, 16), myelinMaterial);
     sheath.rotation.z = Math.PI / 2;
     sheath.position.set(centre, 0.38 + (centre + 3.5) * 0.045, 0);
     root.add(sheath);
@@ -333,8 +341,13 @@ function buildReflex(root: THREE.Group, onCord?: (mesh: THREE.Mesh) => void): Bu
   }
 
   /* The cord. A real HRA segment stands in for the whole; the grey-matter
-     butterfly is modelled inside it, because a surface scan cannot show it. */
-  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.92, 2.9, 28, 1, true), cordMaterial);
+     butterfly is modelled inside it, because a surface scan cannot show it.
+     It is a compact segment, not a trunk: the old 0.92 × 2.9 cylinder was
+     wider than every other structure in the loop and swallowed the fibres. */
+  const cord = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.64, 0.64, 2.3, 32, 1, false),
+    cordMaterial,
+  );
   root.add(cord);
   /* Grey matter: one butterfly in the cord's cross-section, the shape every
      textbook draws, held upright inside the translucent segment. */
@@ -410,19 +423,25 @@ function buildReflex(root: THREE.Group, onCord?: (mesh: THREE.Mesh) => void): Bu
   }
 
   const muscle = new THREE.Group();
-  muscle.position.set(5.5, -0.5, 0);
-  const belly = new THREE.Mesh(blob(0.95, 2.6, [1.5, 0.62, 0.62], 26), muscleMaterial);
+  muscle.position.set(4.75, -0.5, 0);
+  const belly = new THREE.Mesh(blob(0.62, 2.6, [1.55, 0.6, 0.6], 26), muscleMaterial);
   muscle.add(belly);
   for (let i = 0; i < 3; i += 1) {
-    const fibre = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 2.1, 6, 10), membrane("#c98f80", { roughness: 0.6 }));
+    const fibre = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.038, 1.45, 6, 10),
+      membrane("#c98f80", { roughness: 0.6 }),
+    );
     fibre.rotation.z = Math.PI / 2;
-    fibre.position.set(0, -0.22 + i * 0.22, 0.06 - i * 0.05);
+    fibre.position.set(0, -0.16 + i * 0.16, 0.05 - i * 0.04);
     muscle.add(fibre);
   }
   for (const sx of [-1, 1]) {
-    const tendon = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.2, 0.7, 12), membrane("#d9cbb4", { roughness: 0.7 }));
+    const tendon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.13, 0.5, 12),
+      membrane("#d9cbb4", { roughness: 0.7 }),
+    );
     tendon.rotation.z = Math.PI / 2;
-    tendon.position.set(sx * 1.62, 0, 0);
+    tendon.position.set(sx * 1.08, 0, 0);
     muscle.add(tendon);
   }
   root.add(muscle);
@@ -440,7 +459,7 @@ function buildReflex(root: THREE.Group, onCord?: (mesh: THREE.Mesh) => void): Bu
       V(1.2, -0.62, 0),
       V(3.0, -0.56, 0),
       V(4.3, -0.5, 0),
-      V(5.0, -0.5, 0),
+      V(4.55, -0.5, 0),
     ],
     false,
     "catmullrom",
@@ -520,6 +539,8 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
     renderer.toneMappingExposure = 1.05;
     el.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.inset = "0";
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.touchAction = "none";
@@ -547,6 +568,30 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
     scene.add(root);
     const built: Built = mode === "neuron" ? buildNeuron(root) : buildReflex(root);
     root.updateMatrixWorld(true);
+
+    /* Numbered pins on the reflex loop. The structures panel beside the model
+       is already numbered 1–6; without pins those numbers pointed at nothing.
+       Each pin is a plain span moved in the render loop, so the labels cost no
+       React renders. */
+    const pins: Array<{ node: HTMLSpanElement; at: THREE.Vector3 }> = [];
+    if (mode === "reflex") {
+      const anchors: Array<[string, [number, number, number]]> = [
+        ["1", [-4.92, 0.34, 0.1]],
+        ["2", [-2.05, 0.46, 0.3]],
+        ["3", [-3.18, 0.4, 0.06]],
+        ["4", [0, 0.14, 0.68]],
+        ["5", [2.35, -0.58, 0.08]],
+        ["6", [4.75, -0.5, 0]],
+      ];
+      for (const [label, at] of anchors) {
+        const node = document.createElement("span");
+        node.className = "nerve-pin";
+        node.textContent = label;
+        node.setAttribute("aria-hidden", "true");
+        el.appendChild(node);
+        pins.push({ node, at: new THREE.Vector3(...at) });
+      }
+    }
 
     const pulse = new THREE.Group();
     pulse.renderOrder = 10;
@@ -647,6 +692,17 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
 
       controls.update();
       renderer.render(scene, camera);
+
+      if (pins.length) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        for (const pin of pins) {
+          const projected = pin.at.clone().applyMatrix4(root.matrixWorld).project(camera);
+          pin.node.style.transform = `translate(-50%, -50%) translate(${(
+            (projected.x * 0.5 + 0.5) * rect.width
+          ).toFixed(1)}px, ${((-projected.y * 0.5 + 0.5) * rect.height).toFixed(1)}px)`;
+          pin.node.style.opacity = projected.z < 1 ? "1" : "0";
+        }
+      }
     };
     loop();
     setReady(true);
@@ -666,12 +722,13 @@ export default function NerveModelView({ mode, myelin, phase, fired }: Props) {
       scene.clear();
       renderer.dispose();
       if (renderer.domElement.parentNode === el) el.removeChild(renderer.domElement);
+      for (const pin of pins) pin.node.remove();
     };
   }, [mode]);
 
   return (
     <div className="apple-lab-stage relative">
-      <div ref={holder} className="w-full" style={{ aspectRatio: "1.52" }} />
+      <div ref={holder} className="relative w-full" style={{ aspectRatio: "1.52" }} />
       <span className="apple-lab-chip pointer-events-none absolute left-3 top-3 !text-[10px]">
         {mode === "neuron" ? "Neuron · impulse →" : "Reflex · skin → cord → muscle"}
       </span>

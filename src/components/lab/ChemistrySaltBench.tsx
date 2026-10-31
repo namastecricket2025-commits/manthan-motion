@@ -382,7 +382,7 @@ export function ChemistrySaltBench() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       {task ? (
         <div className="rounded-lg border border-[var(--lab-line)] px-3 py-2 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">
           <span className="apple-lab-micro">Task</span>
@@ -558,7 +558,11 @@ export function ChemistrySaltBench() {
         </aside>
       </div>
 
-      <details className="apple-lab-card px-3 py-2.5">
+      {/* `min-w-0` on the details and the grid is load-bearing: a details
+          element is a flex child, so its default `min-width:auto` lets the
+          two-column example grid push the whole centred page wider than the
+          viewport. Opening the library then scrolled the shell sideways. */}
+      <details className="apple-lab-card min-w-0 overflow-hidden px-3 py-2.5">
         <summary className="cursor-pointer text-[11.5px] font-semibold text-[var(--lab-ink)]">
           Salt library · {SALTS.length} examples
         </summary>
@@ -566,9 +570,9 @@ export function ChemistrySaltBench() {
           Open a sample after you have made your inference. These are the same
           salts used in the bench; the unknown above is one of them.
         </p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <div className="mt-2 grid min-w-0 gap-2 sm:grid-cols-2">
           {SALTS.map((entry, index) => (
-            <div key={entry.id} className="rounded-lg border border-[var(--lab-line-soft)] px-2.5 py-2">
+            <div key={entry.id} className="min-w-0 rounded-lg border border-[var(--lab-line-soft)] px-2.5 py-2">
               <p className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--lab-ink)]">
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-full border border-[var(--lab-line)]"

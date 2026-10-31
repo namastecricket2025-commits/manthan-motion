@@ -4298,8 +4298,10 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 }
 
 .hunt__step.is-revealed {
-  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
-  background: color-mix(in srgb, var(--signal) 9%, transparent);
+  /* Correct / verified uses the dedicated teal token, never the brand amber.
+     Amber on a checked line read as a warning. */
+  border-color: var(--verify-line);
+  background: var(--verify-soft);
 }
 
 .hunt__num {
@@ -4318,8 +4320,8 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 }
 
 .hunt__step.is-revealed .hunt__num {
-  border-color: color-mix(in srgb, var(--signal) 55%, transparent);
-  color: var(--signal);
+  border-color: var(--verify-line);
+  color: var(--verify);
 }
 
 .hunt__text {
@@ -4340,7 +4342,7 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
-  color: var(--signal);
+  color: var(--verify);
 }
 
 .hunt__flag--miss {
@@ -4366,9 +4368,9 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 }
 
 .hunt__verdict {
-  border: 1px solid color-mix(in srgb, var(--signal) 34%, transparent);
+  border: 1px solid var(--verify-line);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--signal) 6%, transparent);
+  background: var(--verify-soft);
   padding: 13px 15px;
 }
 
@@ -4382,7 +4384,7 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 }
 
 .hunt__verdicthead svg {
-  color: var(--signal);
+  color: var(--verify);
 }
 
 .hunt__reason {
@@ -4508,6 +4510,63 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 .marks__field input::placeholder,
 .marks__field textarea::placeholder {
   color: color-mix(in srgb, var(--text-main) 38%, transparent);
+}
+
+/* Camera / file attachment. Two buttons, because a phone's camera input and
+   its photo library are different sources; the hint explains which is which
+   without turning into a paragraph. */
+.marks__attach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 10px;
+}
+
+.marks__attachbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  transition:
+    border-color 180ms var(--ease-momentum),
+    background 180ms var(--ease-momentum);
+}
+
+.marks__attachbtn:hover:not(:disabled) {
+  border-color: var(--panel-line-strong);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
+.marks__attachbtn:disabled {
+  opacity: 0.5;
+}
+
+.marks__attachhint {
+  flex: 1 1 240px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.marks__removephoto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.marks__removephoto:hover {
+  color: var(--text-main);
 }
 
 .marks__actions {

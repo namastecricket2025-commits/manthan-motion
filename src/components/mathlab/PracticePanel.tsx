@@ -12,6 +12,7 @@ import {
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Expression, Explanation, ProblemStatement } from "@/components/mathlab/parts";
 import { MathTex } from "@/components/mathlab/latex";
 import type { EngineProblem, EngineStep } from "@/components/mathlab/solution";
@@ -271,21 +272,16 @@ export function PracticePanel({
             Real-world framing
           </label>
           {boardAllowed ? (
-            <select
-              className="mathlab-practice__select"
+            <ChoiceSelect
+              className="min-w-[150px]"
               value={boardYear}
-              onChange={(event) => {
-                setBoardYear(event.target.value);
+              onChange={(next) => {
+                setBoardYear(next);
                 setLevel("board");
               }}
-              aria-label="Board paper year"
-            >
-              {BOARDS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
+              ariaLabel="Board paper year"
+              options={BOARDS.map((entry) => ({ value: entry, label: entry }))}
+            />
           ) : null}
         </div>
 

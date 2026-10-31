@@ -1,8 +1,19 @@
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
-import { Check, Loader2, PenLine, RotateCcw, TriangleAlert } from "lucide-react";
+import type { Id } from "@/convex/_generated/dataModel";
+import { useCallback, useRef, useState } from "react";
+import {
+  Camera,
+  Check,
+  ImageUp,
+  Loader2,
+  PenLine,
+  RotateCcw,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { InlineMath } from "@/components/mathlab/parts";
+import { enhancePhotoToFile } from "@/lib/enhance-photo";
 
 /**
  * Step marking.
@@ -40,17 +51,54 @@ export function MarkSteps({
   defaultQuestion: string;
 }) {
   const mark = useAction(api.mathTutor.markSteps);
+  const generateUploadUrl = useMutation(api.sources.generateUploadUrl);
 
   const [question, setQuestion] = useState(defaultQuestion);
   const [working, setWorking] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MarkResult | null>(null);
+  const [photo, setPhoto] = useState<{
+    storageId: Id<"_storage">;
+    name: string;
+    mime: string;
+  } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  /** Two inputs, on purpose: `capture` opens the camera on a phone but can
+   *  hide the photo library, so the gallery/file route is a separate control.
+   *  On a desktop the camera button falls back to the file picker. */
+  const attach = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      setError(null);
+      setUploading(true);
+      try {
+        const upload = await enhancePhotoToFile(file);
+        const url = await generateUploadUrl();
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": upload.type || "application/octet-stream" },
+          body: upload,
+        });
+        if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
+        const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
+        setPhoto({ storageId, name: upload.name, mime: upload.type });
+      } catch {
+        setError("That page did not upload. Try a smaller photo, or type the working below.");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [generateUploadUrl],
+  );
 
   const submit = async () => {
-    if (busy) return;
-    if (working.trim().length < 3) {
-      setError("Write your working first — one step per line is easiest to mark.");
+    if (busy || uploading) return;
+    if (working.trim().length < 3 && !photo) {
+      setError("Write or photograph your working first — one step per line is easiest to mark.");
       return;
     }
     setBusy(true);
@@ -63,8 +111,12 @@ export function MarkSteps({
         gradeLabel: gradeId,
         track,
         chapterName,
+        storageId: photo?.storageId,
+        name: photo?.name,
+        mime: photo?.mime,
       });
       setResult(reply);
+      setPhoto(null);
     } catch (err) {
       setError(
         err instanceof Error && err.message
@@ -115,6 +167,57 @@ export function MarkSteps({
             rows={7}
             aria-label="Your written working"
           />
+          <div className="marks__attach">
+            <button
+              type="button"
+              className="marks__attachbtn"
+              onClick={() => cameraRef.current?.click()}
+              disabled={uploading || busy}
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {uploading ? "Uploading…" : "Take a photo"}
+            </button>
+            <button
+              type="button"
+              className="marks__attachbtn"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || busy}
+            >
+              <ImageUp className="h-3.5 w-3.5" />
+              Upload a page
+            </button>
+            <span className="marks__attachhint">
+              {photo
+                ? "One page attached — the examiner will mark what is written on it."
+                : "On a phone the first button opens the camera; either button accepts JPG, PNG or HEIC."}
+            </span>
+            {photo ? (
+              <button
+                type="button"
+                className="marks__removephoto"
+                onClick={() => setPhoto(null)}
+                aria-label={`Remove ${photo.name}`}
+              >
+                <X className="h-3 w-3" />
+                Remove
+              </button>
+            ) : null}
+          </div>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(event) => void attach(event.target.files?.[0] ?? undefined)}
+          />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,.heic,.heif"
+            className="hidden"
+            onChange={(event) => void attach(event.target.files?.[0] ?? undefined)}
+          />
         </label>
       </div>
 
@@ -129,7 +232,7 @@ export function MarkSteps({
           type="button"
           className="mathlab-solve marks__submit"
           onClick={() => void submit()}
-          disabled={busy || working.trim().length < 3}
+          disabled={busy || uploading || (working.trim().length < 3 && !photo)}
         >
           {busy ? <Loader2 className="spin-micro h-4 w-4" /> : <PenLine className="h-4 w-4" />}
           {busy ? "Marking…" : "Mark my working"}
@@ -209,6 +312,7 @@ export function MarkSteps({
               className="mathlab-chip"
               onClick={() => {
                 setWorking("");
+                setPhoto(null);
                 setResult(null);
                 setError(null);
               }}
@@ -222,6 +326,7 @@ export function MarkSteps({
               onClick={() => {
                 setResult(null);
                 setWorking("");
+                setPhoto(null);
                 setQuestion("");
                 setError(null);
               }}

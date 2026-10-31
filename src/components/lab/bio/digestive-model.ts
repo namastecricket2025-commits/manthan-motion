@@ -226,38 +226,6 @@ const RECTUM: Pt3[] = [
   [0.0016, -0.0109, -0.0634],
 ];
 
-/**
- * The gut from the pylorus to the anus. The small intestine, colon and rectum
- * are sections of one centre-line, so there is no cut face where one scan
- * ended and another began. The old plate stitched three NIH meshes together
- * and the seams were exactly what the eye found first.
- */
-const GUT: Pt3[] = [...SI_ROUTE, ...COLON.slice(1), ...RECTUM.slice(1)];
-
-const SI_SHARE = (SI_ROUTE.length - 1) / (GUT.length - 1);
-const COLON_SHARE = (SI_ROUTE.length + COLON.length - 2) / (GUT.length - 1);
-
-function smoothstep(value: number) {
-  const x = Math.max(0, Math.min(1, value));
-  return x * x * (3 - 2 * x);
-}
-
-/**
- * The calibre changes are the anatomy: narrow duodenum, wider ileum, a broad
- * colon, then a short taper into the anal canal. Both transitions are blended
- * over a few millimetres instead of stepping at a boundary, because a step in
- * radius is a visible ring no matter how well the centres line up.
- */
-function gutRadius(t: number) {
-  const small = 0.0105 + 0.0035 * Math.min(1, t / 0.035) + 0.0007 * Math.sin(t * 42);
-  const colon = 0.0245 + 0.0032 * Math.sin(t * 19.5) + 0.0014 * Math.sin(t * 61);
-  const intoColon = smoothstep((t - SI_SHARE + 0.012) / 0.0265);
-  const intoRectum = smoothstep((t - COLON_SHARE + 0.008) / 0.018);
-  const large = small * (1 - intoColon) + colon * intoColon;
-  const rectum = 0.018 - (0.018 - 0.0105) * Math.min(1, Math.max(0, (t - COLON_SHARE) / (1 - COLON_SHARE)));
-  return large * (1 - intoRectum) + rectum * intoRectum;
-}
-
 /* ------------------------------------------------------------------ */
 /* geometry                                                            */
 /* ------------------------------------------------------------------ */
@@ -532,12 +500,20 @@ const ORGAN_FADE: Record<string, number[]> = {
 
 const ORGAN_LOOK: Record<string, { color: string; roughness: number; clearcoat: number }> = {
   liver: { color: "#6b3a34", roughness: 0.5, clearcoat: 0.45 },
+  "small-intestine": { color: "#b97c63", roughness: 0.56, clearcoat: 0.34 },
+  "large-intestine": { color: "#ad7860", roughness: 0.58, clearcoat: 0.3 },
 };
 
-/* The liver is a real HRA scan. The gut is modelled as one tube instead of
-   three scans: the scans are cut surfaces, and a cut surface cannot be joined
-   to another cut surface without a seam. */
-const ORGANS = [{ id: "liver", url: "/models/digestive-liver.glb" }];
+/* All three HRA scans are back. An earlier pass replaced the small and large
+   intestine with one modelled tube: it removed the seams, but it also removed
+   the real coiling and the parts a student is asked to name. The scans are the
+   anatomy; the seams are closed with sleeves instead (see the caecal and
+   pyloric rings below), and the food still follows one continuous route. */
+const ORGANS = [
+  { id: "liver", url: "/models/digestive-liver.glb" },
+  { id: "small-intestine", url: "/models/digestive-small-intestine.glb" },
+  { id: "large-intestine", url: "/models/digestive-large-intestine.glb" },
+];
 
 export function buildTract(): Tract {
   const group = new THREE.Group();
@@ -572,17 +548,20 @@ export function buildTract(): Tract {
      short pharynx that overlaps the oesophagus. Modelled in the plate's own
      frame rather than drawn in a corner of the screen. */
   const mouth = new THREE.Group();
+  mouth.position.z = 0.004;
   /* The old mouth was an extruded oval with a hole: at some angles the rim
      read as a short pipe. A cavity has to be a cavity. The dark oral mucosa is
      a shaped ellipsoid set behind the lips, with the palate above it and the
      cheeks closing the sides; the teeth and tongue then sit in a real opening
      rather than on the rim of a ring. */
   const cavity = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 28, 20),
-    organMaterial("#3d2022", 0.88, 0.02),
+    new THREE.SphereGeometry(1, 32, 22),
+    organMaterial("#3a1e20", 0.9, 0.02),
   );
-  cavity.scale.set(0.033, 0.024, 0.024);
-  cavity.position.set(0, 0.651, 0.073);
+  /* A wider, shallower cavity: the old one was a ball behind a ring, which
+     read as a pipe end from the side. */
+  cavity.scale.set(0.036, 0.021, 0.026);
+  cavity.position.set(0, 0.652, 0.074);
   mouth.add(cavity);
 
   const palate = new THREE.Mesh(
@@ -634,11 +613,11 @@ export function buildTract(): Tract {
   mouth.add(throatBack);
 
   const gums = new THREE.Mesh(
-    new THREE.TorusGeometry(0.0262, 0.0022, 8, 36),
+    new THREE.TorusGeometry(0.0242, 0.0018, 8, 36),
     organMaterial("#9b5a56", 0.6, 0.18),
   );
-  gums.position.set(0, 0.6555, 0.0955);
-  gums.scale.set(1.2, 0.88, 1);
+  gums.position.set(0, 0.6555, 0.0942);
+  gums.scale.set(1.3, 0.72, 1);
   mouth.add(gums);
 
   const tongue = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), organMaterial("#b0716b", 0.5, 0.3));
@@ -651,12 +630,14 @@ export function buildTract(): Tract {
   uvula.position.set(0, 0.6645, 0.0635);
   mouth.add(uvula);
 
+  /* Lips are an oval opening, not a doughnut: a lower radius with a stronger
+     horizontal squash reads as a mouth in profile and frontal views alike. */
   const lips = new THREE.Mesh(
-    new THREE.TorusGeometry(0.030, 0.0038, 10, 40),
+    new THREE.TorusGeometry(0.0255, 0.0041, 12, 44),
     organMaterial("#8f5b4e", 0.5, 0.32),
   );
-  lips.position.set(0, 0.6555, 0.1035);
-  lips.scale.set(1.2, 0.88, 1);
+  lips.position.set(0, 0.6555, 0.1015);
+  lips.scale.set(1.32, 0.66, 1);
   mouth.add(lips);
 
   body.add(mouth);
@@ -708,31 +689,33 @@ export function buildTract(): Tract {
   orient(cardia, OESO[OESO.length - 2], OESO[OESO.length - 1]);
   add(cardia, [1, 2]);
 
-  /* One continuous gut: duodenum → jejunum → ileum → caecum → colon →
-     rectum. Every section shares the same centre-line, so there is no seam for
-     the food to cross and no cut pipe for the eye to find. */
-  const gut = new THREE.Mesh(
-    sweep(GUT, gutRadius, {
-      tubular: 340,
-      radial: 26,
-      wobble: (t, angle) => {
-        const haustra = smoothstep((t - SI_SHARE + 0.012) / 0.03);
-        return 1 + 0.03 * Math.sin(angle * 9 + t * 58) * haustra;
-      },
-    }),
-    organMaterial("#b97c63", 0.54, 0.36),
-  );
-  add(gut, [3, 4, 5]);
+  /* The small and large intestine are the HRA scans, streamed in below. The
+     modelled gut tube is deliberately not drawn any more: it duplicated the
+     scans' silhouette and hid their detail. The food route still uses the
+     centre-line measured from those same scans. */
 
   /* Pyloric ring at the exact point where the stomach hands over to the
-     duodenum, turned along the gut's own tangent. */
+     duodenum, turned along the gut's own tangent. It is a sleeve over the
+     scan's cut face and the stomach's open end at once, so the join reads as
+     a sphincter instead of a seam. */
   const pylorus = new THREE.Mesh(
-    new THREE.TorusGeometry(0.0125, 0.005, 10, 30),
+    new THREE.TorusGeometry(0.0142, 0.0054, 12, 36),
     organMaterial("#a06b58", 0.6, 0.3),
   );
   pylorus.position.set(...SI_START);
   orient(pylorus, SI_ROUTE[0], SI_ROUTE[1]);
   add(pylorus, [2]);
+
+  /* Ileocaecal valve: the second scanned join, where the ileum meets the
+     caecum. Without a sleeve the two cut faces sit inside one another and the
+     lighting finds the step. */
+  const ileocaecal = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0195, 0.0058, 12, 36),
+    organMaterial("#a8735c", 0.6, 0.3),
+  );
+  ileocaecal.position.set(...COLON[0]);
+  orient(ileocaecal, COLON[0], COLON[1]);
+  add(ileocaecal, [4]);
 
   add(
     new THREE.Mesh(

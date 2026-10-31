@@ -13,6 +13,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { MathTex } from "@/components/mathlab/latex";
 import { ProblemStatement } from "@/components/mathlab/parts";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
@@ -209,18 +210,17 @@ function HistoryRow({
                   </p>
                 ) : (
                   <>
-                    <select
+                    <ChoiceSelect
+                      className="min-w-[190px] flex-1"
                       value={picked}
-                      onChange={(event) => setPicked(event.target.value)}
-                      aria-label="Notebook to save this solution into"
-                    >
-                      <option value="">Choose a notebook…</option>
-                      {notebooks.map((notebook) => (
-                        <option key={notebook.id} value={notebook.id}>
-                          {notebook.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setPicked}
+                      ariaLabel="Notebook to save this solution into"
+                      placeholder="Choose a notebook…"
+                      options={notebooks.map((notebook) => ({
+                        value: notebook.id,
+                        label: notebook.name,
+                      }))}
+                    />
                     <button
                       type="button"
                       className="mathlab-tab-action"

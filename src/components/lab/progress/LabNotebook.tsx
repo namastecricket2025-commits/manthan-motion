@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
@@ -637,22 +638,21 @@ export function LabNotebook({ open, onOpenChange }: { open: boolean; onOpenChang
           {tab === "worksheet" ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="flex min-w-[220px] flex-1 flex-col gap-1">
+                <div className="flex min-w-[220px] flex-1 flex-col gap-1">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-dim">
                     Practical
                   </span>
-                  <select
+                  <ChoiceSelect
                     value={selectedKey}
-                    onChange={(event) => setSelectedKey(event.target.value)}
-                    className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--panel)] px-3 py-2 text-[12px] text-foreground outline-none focus:border-[var(--signal)]"
-                  >
-                    {EXPERIMENTS.map((entry) => (
-                      <option key={entry.key} value={entry.key}>
-                        {entry.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={setSelectedKey}
+                    ariaLabel="Practical"
+                    placeholder="Choose a practical"
+                    options={EXPERIMENTS.map((entry) => ({
+                      value: entry.key,
+                      label: entry.title,
+                    }))}
+                  />
+                </div>
                 <StatusChip status={completed ? "completed" : worksheet ? "in_progress" : "todo"} />
               </div>
 
@@ -830,22 +830,21 @@ export function LabNotebook({ open, onOpenChange }: { open: boolean; onOpenChang
 
           {tab === "journal" ? (
             <div className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-dim">
                   Experiment
                 </span>
-                <select
+                <ChoiceSelect
                   value={selectedKey}
-                  onChange={(event) => setSelectedKey(event.target.value)}
-                  className="rounded-lg border border-[var(--card-border)] bg-[var(--panel)] px-3 py-2 text-[12px] text-foreground outline-none focus:border-[var(--signal)]"
-                >
-                  {EXPERIMENTS.map((entry) => (
-                    <option key={entry.key} value={entry.key}>
-                      {entry.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setSelectedKey}
+                  ariaLabel="Experiment"
+                  placeholder="Choose an experiment"
+                  options={EXPERIMENTS.map((entry) => ({
+                    value: entry.key,
+                    label: entry.title,
+                  }))}
+                />
+              </div>
 
               <div className="rounded-xl border border-[var(--card-border)] p-3.5">
                 <p className="text-[12px] font-semibold">What did you observe?</p>

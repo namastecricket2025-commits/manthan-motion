@@ -208,8 +208,20 @@ export function ChemistryInstruments() {
 
   const instrument = INSTRUMENTS.find((entry) => entry.id === selected) ?? INSTRUMENTS[0];
   const fraction = Math.min(1, Math.max(0, volume / Math.max(1, capacity)));
-  const parallax = eye === "above" ? 1.8 : eye === "below" ? -1.8 : 0;
-  const cylinderReading = Math.max(0, Math.min(capacity, volume + parallax));
+  /* Parallax is a real offset in millilitres, not a one-decimal nudge: looking
+     down on a 100 mL cylinder over-reads by roughly 2–3 mL, which is enough to
+     change the answer. It scales with the cylinder's bore, so a 250 mL one is
+     worse than a 50 mL one — that is why you choose the smallest cylinder that
+     holds the volume. */
+  const parallaxMl =
+    eye === "level" ? 0 : (eye === "above" ? 1 : -1) * Math.max(1.5, capacity * 0.03);
+  const cylinderReading = Math.max(0, Math.min(capacity, volume + parallaxMl));
+  /* Screen positions of the true meniscus and the level the eye *thinks* it is
+     reading. The liquid never moves with the eye; only the apparent line does. */
+  const trueLevel = 242 - fraction * 190;
+  const apparentFraction = Math.min(1, Math.max(0, (volume + parallaxMl) / Math.max(1, capacity)));
+  const apparentLevel = 242 - apparentFraction * 190;
+  const eyeY = trueLevel + (eye === "above" ? -52 : eye === "below" ? 52 : 0);
 
   const pick = (id: InstrumentId) => {
     setSelected(id);
@@ -264,16 +276,77 @@ export function ChemistryInstruments() {
 
               {selected === "cylinder" ? (
                 <g>
+                  {/* The sight line is drawn first, behind the glass, so the
+                      cylinder still reads as an object. An eye above the
+                      meniscus looks down and crosses the scale higher than
+                      the true level; an eye below crosses it lower. */}
+                  <line
+                    x1="56"
+                    y1={eyeY}
+                    x2="150"
+                    y2={apparentLevel}
+                    stroke={eye === "level" ? ink(0.35) : "var(--lab-diagram-amber)"}
+                    strokeWidth="1.2"
+                    strokeDasharray="4 4"
+                    opacity={eye === "level" ? 0.7 : 0.9}
+                  />
+                  <g transform={`translate(44 ${eyeY})`}>
+                    <path
+                      d="M-9 0 C-5 -7 5 -7 9 0 C5 7 -5 7 -9 0 Z"
+                      fill="none"
+                      stroke={eye === "level" ? ink(0.6) : "var(--lab-diagram-amber)"}
+                      strokeWidth="1.3"
+                    />
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="2.4"
+                      fill={eye === "level" ? ink(0.6) : "var(--lab-diagram-amber)"}
+                    />
+                    <text
+                      x="0"
+                      y={eye === "above" ? -14 : 19}
+                      textAnchor="middle"
+                      fontSize="7"
+                      fill={ink(0.55)}
+                    >
+                      eye
+                    </text>
+                  </g>
+
                   <rect x="90" y="34" width="60" height="208" rx="7" fill={ink(0.025)} stroke={ink(0.52)} strokeWidth="1.6" />
                   <g clipPath="url(#chem-cylinder-clip)">
-                    <rect x="90" y={242 - fraction * 190} width="60" height={fraction * 190} fill={liquid} />
+                    <rect x="90" y={trueLevel} width="60" height={242 - trueLevel} fill={liquid} />
                     <path
-                      d={`M90 ${242 - fraction * 190} Q120 ${236 - fraction * 190} 150 ${242 - fraction * 190}`}
+                      d={`M90 ${trueLevel} Q120 ${trueLevel - 6} 150 ${trueLevel}`}
                       fill="none"
                       stroke={ink(0.3)}
                       strokeWidth="1"
                     />
                   </g>
+                  {/* The apparent meniscus: only shown when the eye is off
+                      level, so the error has a visible line to point at. */}
+                  {eye !== "level" ? (
+                    <>
+                      <line
+                        x1="90"
+                        y1={apparentLevel}
+                        x2="150"
+                        y2={apparentLevel}
+                        stroke="var(--lab-diagram-amber)"
+                        strokeWidth="1.4"
+                        strokeDasharray="3 3"
+                      />
+                      <text
+                        x="154"
+                        y={apparentLevel + 3}
+                        fontSize="7"
+                        fill="var(--lab-diagram-amber)"
+                      >
+                        {cylinderReading.toFixed(1)}
+                      </text>
+                    </>
+                  ) : null}
                   {Array.from({ length: 11 }).map((_, index) => {
                     const y = 232 - (index / 10) * 190;
                     return (
@@ -457,7 +530,11 @@ export function ChemistryInstruments() {
             <span className="apple-lab-chip">{instrument.accuracy}</span>
             {selected === "cylinder" ? (
               <span className="apple-lab-chip">
-                {eye === "level" ? "eye level · true reading" : `eye ${eye} · parallax error`}
+                {eye === "level"
+                  ? "eye level · true reading"
+                  : eye === "above"
+                    ? `eye above · reads ${parallaxMl.toFixed(1)} mL high`
+                    : `eye below · reads ${Math.abs(parallaxMl).toFixed(1)} mL low`}
               </span>
             ) : null}
           </div>
@@ -537,7 +614,9 @@ export function ChemistryInstruments() {
                   <p className="mt-1 text-[10px] leading-relaxed text-[var(--lab-ink-dim)]">
                     {eye === "level"
                       ? "Your eye is level with the meniscus, so the reading is the true volume."
-                      : "The meniscus appears above or below its true level; that offset is the parallax error."}
+                      : eye === "above"
+                        ? `Looking down makes the meniscus appear higher on the scale, so you read ${parallaxMl.toFixed(1)} mL too much.`
+                        : `Looking up makes the meniscus appear lower on the scale, so you read ${Math.abs(parallaxMl).toFixed(1)} mL too little.`}
                   </p>
                 </div>
               </div>

@@ -688,16 +688,21 @@ const clampMarks = (value: number, low: number, high: number) =>
 export const markSteps = action({
   args: {
     problem: v.string(),
+    /** Typed working. May be empty when a page is photographed instead. */
     working: v.string(),
     gradeLabel: v.optional(v.string()),
     track: v.optional(v.string()),
     chapterName: v.optional(v.string()),
     /** A paper's stated total, when the student is practising one. */
     totalMarks: v.optional(v.number()),
+    /** A photograph of the working, uploaded from the camera or a file. */
+    storageId: v.optional(v.id("_storage")),
+    name: v.optional(v.string()),
+    mime: v.optional(v.string()),
   },
   handler: async (
     ctx,
-    { problem, working, gradeLabel, track, chapterName, totalMarks },
+    { problem, working, gradeLabel, track, chapterName, totalMarks, storageId, name, mime },
   ): Promise<{
     steps: MarkedStep[];
     total: number;
@@ -708,7 +713,30 @@ export const markSteps = action({
   }> => {
     const typed = working.trim();
     if (!problem.trim()) throw new Error("Write the question you are answering first.");
-    if (typed.length < 3) throw new Error("Write your working first, then ask for marks.");
+    if (typed.length < 3 && !storageId) {
+      throw new Error("Write or photograph your working first, then ask for marks.");
+    }
+
+    /* The photograph is handed to the model as an image, not OCR'd here: the
+       examiner has to see layout, crossed-out lines and superscripts to mark
+       the way a teacher marks a page. The upload is deleted as soon as it has
+       been read. */
+    let image: { mimeType: string; data: string } | undefined;
+    if (storageId) {
+      const blob = await ctx.storage.get(storageId);
+      if (!blob) throw new Error("The upload did not reach storage. Try again.");
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      await ctx.storage.delete(storageId);
+      const mimeType = mime || blob.type || "image/jpeg";
+      if (!mimeType.startsWith("image/")) {
+        throw new Error("Attach a photograph of the page (JPG, PNG or HEIC).");
+      }
+      const data = buffer.toString("base64");
+      if (data.length > MAX_MATH_IMAGE) {
+        throw new Error("That image is too large to read. Crop it to your working and try again.");
+      }
+      image = { mimeType, data };
+    }
 
     const language = detectLanguage([typed, problem]);
     const prompt = [
@@ -718,7 +746,10 @@ export const markSteps = action({
       typeof totalMarks === "number" && totalMarks > 0
         ? `This question is worth exactly ${Math.round(totalMarks)} marks — build the scheme so the marks add to that total.`
         : "Choose the total the question is worth in a school paper.",
-      `THE STUDENT'S WORKING, exactly as they wrote it:\n${typed}`,
+      typed ? `THE STUDENT'S WORKING, exactly as they wrote it:\n${typed}` : "",
+      image
+        ? `The photograph attached${name ? ` (${name})` : ""} is the student's own working. Read what is actually written on it — including crossed-out work — and mark that.`
+        : "",
       "Mark the working line by line against your scheme. If the student wrote only an answer, say so in the step notes instead of inventing the method.",
       ...languageDirective(language),
       "Reply with the JSON object only.",
@@ -728,7 +759,7 @@ export const markSteps = action({
       .join("\n\n");
 
     const candidates = await resolveCandidates();
-    const first = await callModel(candidates, MARK_STEPS_SYSTEM, prompt, undefined, 0.15);
+    const first = await callModel(candidates, MARK_STEPS_SYSTEM, prompt, image, 0.15);
     let parsed: z.infer<typeof markStepsSchema>;
     let model = first.model;
     try {

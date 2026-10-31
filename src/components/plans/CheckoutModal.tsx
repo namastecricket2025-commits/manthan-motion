@@ -65,8 +65,10 @@ export function CheckoutModal({
     [],
   );
 
-  const total = tier ? durationTotal(tier, duration) : 0;
-  const savings = tier ? durationSavings(tier, duration) : 0;
+  /* A pass is sold in its own unit (7 or 14 days); the billing-term switch
+     above the cards must not multiply it by six months or discount it. */
+  const total = tier ? (tier.flexible ? durationTotal(tier, duration) : tier.price) : 0;
+  const savings = tier && tier.flexible ? durationSavings(tier, duration) : 0;
 
   function simulate() {
     if (!tier || paying) return;

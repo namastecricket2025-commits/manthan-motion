@@ -21,7 +21,7 @@ import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, X } from "lucide-react";
 
@@ -1562,6 +1562,13 @@ function TitrationTab() {
     : `The equivalence pH (${eqPH.toFixed(2)}) sits inside the ${indicator.label} window (${indicator.range}) — the colour change marks the end point.`;
 
   const dropDuration = Math.max(0.32, 0.9 / rate);
+  /* The beads have to land on the liquid that is actually in the flask. A
+     Motion keyframe array is computed when the loop starts and keeps its old
+     endpoints while the flask volume changes, which is why every flask size
+     used to drip to the same fixed point. A CSS animation reading a custom
+     property re-resolves its end point on the next frame, so 10, 25 and
+     50 mL all get their own fall distance. */
+  const dropTravel = Math.max(12, surface - 268);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
@@ -1725,27 +1732,20 @@ function TitrationTab() {
                 transition={{ duration: dropDuration, repeat: Infinity, ease: "easeInOut" }}
               />
               {[0, 1, 2].map((drop) => (
-                <motion.circle
+                <circle
                   key={drop}
                   cx="186"
+                  cy="268"
+                  r="4"
                   fill="url(#titration-drop)"
-                  initial={{ cy: 268, opacity: 0, r: 3 }}
-                  animate={{
-                    // Four keyframes for every channel: `times` below has four
-                    // entries and Motion requires them to line up.
-                    cy: [268, 276, Math.max(280, surface - 8), surface - 2],
-                    opacity: [0, 1, 1, 0],
-                    r: [3, 4.6, 4.6, 3.2],
-                  }}
-                  transition={{
-                    duration: Math.max(0.55, dropDuration),
-                    repeat: Infinity,
-                    repeatDelay: 0,
-                    delay: (drop * Math.max(0.55, dropDuration)) / 3,
-                    ease: [0.45, 0, 0.9, 0.55],
-                    times: [0, 0.12, 0.86, 1],
-                  }}
-                  style={{ filter: "drop-shadow(0 0 5px rgba(190, 228, 255, 0.75))" }}
+                  className="lab-drip"
+                  style={
+                    {
+                      "--drip-travel": `${dropTravel}px`,
+                      "--drip-delay": `${(drop * Math.max(0.55, dropDuration)) / 3}s`,
+                      "--drip-duration": `${Math.max(0.55, dropDuration)}s`,
+                    } as CSSProperties
+                  }
                 />
               ))}
               {[0, 1, 2].map((ring) => (

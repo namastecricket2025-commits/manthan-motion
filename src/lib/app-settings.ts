@@ -104,12 +104,25 @@ export function loadSettings(): AppSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
     const raw = window.localStorage.getItem(STORE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
+    /* The header toggle used to write only this legacy key. If a browser has
+       a theme there and no settings object yet, adopt it — otherwise the
+       pre-paint script would open in light and SettingsProvider would snap
+       straight back to the default dark on the first paint. */
+    const legacy = window.localStorage.getItem(LEGACY_THEME_KEY);
+    if (!raw) {
+      return legacy === "light" || legacy === "dark"
+        ? { ...DEFAULT_SETTINGS, themeMode: legacy }
+        : DEFAULT_SETTINGS;
+    }
     const parsed = JSON.parse(raw) as Partial<AppSettings>;
     /* Fields from before the background field was removed (`ambient`,
        `cursorField`) are simply ignored: they are not part of AppSettings any
        more, so a stored object carrying them still loads cleanly. */
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    const merged = { ...DEFAULT_SETTINGS, ...parsed };
+    if (!parsed.themeMode && (legacy === "light" || legacy === "dark")) {
+      merged.themeMode = legacy;
+    }
+    return merged;
   } catch {
     return DEFAULT_SETTINGS;
   }
