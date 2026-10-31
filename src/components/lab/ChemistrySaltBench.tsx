@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Check, FlaskConical, RotateCcw, TriangleAlert } from "lucide-react";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Picker, Questions } from "@/components/lab/bench-atoms";
 import { ShareSetup, useBenchPreset } from "@/components/lab/practical/preset";
 import { useRecorder } from "@/components/lab/practical/useRecorder";
@@ -469,42 +470,34 @@ export function ChemistrySaltBench() {
         <aside className="flex flex-col gap-3">
           <div className="apple-lab-card flex flex-col gap-3 p-3.5">
             <p className="apple-lab-micro">Inference</p>
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-[10.5px] text-[var(--lab-ink-dim)]">Cation</span>
-              <select
+              <ChoiceSelect
+                variant="lab"
                 value={cation}
-                onChange={(event) => {
-                  setCation(event.target.value);
+                onChange={(next) => {
+                  setCation(next);
                   setVerdict("idle");
                 }}
-                className="salt-select rounded-lg border border-[var(--lab-line)] bg-transparent px-2 py-1.5 text-[12px] text-[var(--lab-ink)] outline-none"
-              >
-                <option value="">Choose the cation</option>
-                {CATIONS.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {entry}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
+                ariaLabel="Cation"
+                placeholder="Choose the cation"
+                options={CATIONS.map((entry) => ({ value: entry, label: entry }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
               <span className="text-[10.5px] text-[var(--lab-ink-dim)]">Anion</span>
-              <select
+              <ChoiceSelect
+                variant="lab"
                 value={anion}
-                onChange={(event) => {
-                  setAnion(event.target.value);
+                onChange={(next) => {
+                  setAnion(next);
                   setVerdict("idle");
                 }}
-                className="salt-select rounded-lg border border-[var(--lab-line)] bg-transparent px-2 py-1.5 text-[12px] text-[var(--lab-ink)] outline-none"
-              >
-                <option value="">Choose the anion</option>
-                {ANIONS.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {entry}
-                  </option>
-                ))}
-              </select>
-            </label>
+                ariaLabel="Anion"
+                placeholder="Choose the anion"
+                options={ANIONS.map((entry) => ({ value: entry, label: entry }))}
+              />
+            </div>
             <button type="button" className="apple-lab-btn !px-3 !py-1.5 !text-[11.5px]" onClick={check}>
               <Check className="h-3.5 w-3.5" />
               Check inference

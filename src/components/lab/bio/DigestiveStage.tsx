@@ -610,13 +610,14 @@ export default function DigestiveStage({ label, blurb }: { label: string; blurb:
           </div>
 
           <p className="mt-2 px-1 text-[10.5px] leading-relaxed text-[var(--lab-ink-micro)]">
-            The liver is a NIH Human Reference Atlas mesh; the mouth, throat,
-            oesophagus, stomach, gut and ducts are modelled as one continuous
-            lumen, so the food never crosses a cut edge. The mouth is cut open
-            above the oesophagus and the bolus starts between its teeth. The
-            route through the gut follows the same centre-line the tube is
-            built on; it does not trace every metre of the small intestine.
-            Times on the panel are the body's, not the animation's.
+            The liver, small intestine and large intestine are NIH Human
+            Reference Atlas meshes; the mouth, throat, oesophagus and stomach
+            are modelled as one continuous lumen. Pyloric and ileocaecal sleeves
+            cover the joins, so the bolus never crosses a cut edge. The mouth is
+            cut open above the oesophagus and the bolus starts between its
+            teeth. The route follows the same centre-line the tube is built on;
+            it does not trace every metre of the small intestine. Times on the
+            panel are the body's, not the animation's.
           </p>
         </div>
 

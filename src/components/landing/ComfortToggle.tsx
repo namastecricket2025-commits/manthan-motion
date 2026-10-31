@@ -8,9 +8,10 @@ import { useSettings } from "@/components/settings/SettingsProvider";
  * Appearance), but a reading mode buried three clicks deep is a reading mode
  * nobody turns on. This sits beside the theme toggle in every header and
  * writes the same `eyeComfort` flag, so the whole display — tokens, charts and
- * the 3D canvases — re-lights on the same paint. It is a warm-neutral reading
- * mode, not a yellow filter: the surfaces lose their hard white point and the
- * canvases are dimmed slightly, while stains and data colours stay readable.
+ * the 3D canvases — re-lights on the same paint. It is a warm reading mode,
+ * not a grey filter: the white point drops (warm paper in light, warm charcoal
+ * in dark), the theme stays light or dark as chosen, and stains and data
+ * colours keep their meaning.
  */
 export function ComfortToggle({ className }: { className?: string }) {
   const { settings, update } = useSettings();
@@ -22,7 +23,7 @@ export function ComfortToggle({ className }: { className?: string }) {
       role="switch"
       aria-checked={on}
       aria-label={on ? "Turn off eye comfort" : "Turn on eye comfort"}
-      title={on ? "Eye comfort is on — warm neutral display" : "Eye comfort — warm neutral display"}
+      title={on ? "Eye comfort is on — warm display" : "Eye comfort — warm display"}
       onClick={() => update({ eyeComfort: !on })}
       className={
         "glass-chip btn-ghost inline-flex h-10 w-10 items-center justify-center transition-colors duration-200 " +

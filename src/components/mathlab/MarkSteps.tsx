@@ -1,7 +1,7 @@
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   Check,
@@ -64,12 +64,26 @@ export function MarkSteps({
     mime: string;
   } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [touchCamera, setTouchCamera] = useState(false);
   const cameraRef = useRef<HTMLInputElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  /* `capture` on a file input is how a phone opens the rear camera. On a
+     desktop the attribute is ignored and the same input becomes a second,
+     identical file picker — a button that promises a camera and opens a
+     folder. So the camera button is only rendered on a coarse pointer; the
+     upload button is always there, because a tablet with a camera still needs
+     the photo library. */
+  useEffect(() => {
+    const media = window.matchMedia("(pointer: coarse)");
+    const sync = () => setTouchCamera(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
   /** Two inputs, on purpose: `capture` opens the camera on a phone but can
-   *  hide the photo library, so the gallery/file route is a separate control.
-   *  On a desktop the camera button falls back to the file picker. */
+   *  hide the photo library, so the gallery/file route is a separate control. */
   const attach = useCallback(
     async (file: File | undefined) => {
       if (!file) return;
@@ -158,7 +172,7 @@ export function MarkSteps({
           />
         </label>
 
-        <label className="marks__field marks__field--working">
+        <div className="marks__field marks__field--working">
           <span>Your working</span>
           <textarea
             value={working}
@@ -168,15 +182,17 @@ export function MarkSteps({
             aria-label="Your written working"
           />
           <div className="marks__attach">
-            <button
-              type="button"
-              className="marks__attachbtn"
-              onClick={() => cameraRef.current?.click()}
-              disabled={uploading || busy}
-            >
-              <Camera className="h-3.5 w-3.5" />
-              {uploading ? "Uploading…" : "Take a photo"}
-            </button>
+            {touchCamera ? (
+              <button
+                type="button"
+                className="marks__attachbtn"
+                onClick={() => cameraRef.current?.click()}
+                disabled={uploading || busy}
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {uploading ? "Uploading…" : "Take a photo"}
+              </button>
+            ) : null}
             <button
               type="button"
               className="marks__attachbtn"
@@ -184,12 +200,14 @@ export function MarkSteps({
               disabled={uploading || busy}
             >
               <ImageUp className="h-3.5 w-3.5" />
-              Upload a page
+              {uploading ? "Uploading…" : touchCamera ? "Upload a page" : "Upload a photo or scan"}
             </button>
             <span className="marks__attachhint">
               {photo
                 ? "One page attached — the examiner will mark what is written on it."
-                : "On a phone the first button opens the camera; either button accepts JPG, PNG or HEIC."}
+                : touchCamera
+                  ? "The first button opens the camera; either accepts JPG, PNG or HEIC."
+                  : "A photo, scan or screenshot works — JPG, PNG or HEIC."}
             </span>
             {photo ? (
               <button
@@ -209,16 +227,22 @@ export function MarkSteps({
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(event) => void attach(event.target.files?.[0] ?? undefined)}
+            onChange={(event) => {
+              void attach(event.target.files?.[0] ?? undefined);
+              event.target.value = "";
+            }}
           />
           <input
             ref={fileRef}
             type="file"
             accept="image/*,.heic,.heif"
             className="hidden"
-            onChange={(event) => void attach(event.target.files?.[0] ?? undefined)}
+            onChange={(event) => {
+              void attach(event.target.files?.[0] ?? undefined);
+              event.target.value = "";
+            }}
           />
-        </label>
+        </div>
       </div>
 
       {error ? (

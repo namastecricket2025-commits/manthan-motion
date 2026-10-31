@@ -77,6 +77,30 @@
   initial-value: 0deg;
 }
 
+/* A one-off pass is not a subscription, so it should not borrow the
+   subscription cards' chrome. A warm inner wash and a solid left rule mark it
+   as a different kind of purchase without a second highlighted border. */
+.premium-card--pass {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--signal) 5%, transparent),
+      transparent 120px
+    ),
+    var(--panel);
+  border-color: color-mix(in srgb, var(--signal) 26%, var(--panel-line));
+}
+
+.premium-card--pass::after {
+  content: "";
+  position: absolute;
+  inset: 22px auto 22px 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: color-mix(in srgb, var(--signal) 55%, transparent);
+  pointer-events: none;
+}
+
 .premium-card--featured {
   overflow: visible;
   border-color: transparent;

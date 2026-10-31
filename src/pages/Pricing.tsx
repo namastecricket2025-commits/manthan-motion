@@ -99,6 +99,7 @@ function PlanCard({
   features,
   includedLabel,
   featured,
+  pass,
   current,
   onChoose,
   ctaLabel,
@@ -112,6 +113,7 @@ function PlanCard({
   features: string[];
   includedLabel: string;
   featured?: boolean;
+  pass?: boolean;
   current: boolean;
   onChoose?: () => void;
   ctaLabel: string;
@@ -122,6 +124,7 @@ function PlanCard({
       className={cn(
         "premium-card relative overflow-hidden",
         featured && "premium-card--featured",
+        pass && "premium-card--pass",
       )}
     >
       {/* The featured card's lit edge is the revolving rim in premium.css —
@@ -142,6 +145,8 @@ function PlanCard({
           </span>
         ) : current ? (
           <span className="premium-chip shrink-0">Current</span>
+        ) : pass ? (
+          <span className="premium-chip shrink-0">One-off</span>
         ) : null}
       </div>
 
@@ -407,6 +412,7 @@ export default function Pricing() {
                   features={tier.features}
                   includedLabel="Everything in Free, plus"
                   featured={tier.featured}
+                  pass={!tier.flexible}
                   current={plan === tier.id}
                   ctaLabel={`Choose ${tier.name}`}
                   onChoose={() => setCheckout(tier)}

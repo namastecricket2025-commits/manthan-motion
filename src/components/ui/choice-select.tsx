@@ -35,6 +35,7 @@ export function ChoiceSelect({
   ariaLabel,
   className,
   disabled = false,
+  variant = "app",
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -43,8 +44,14 @@ export function ChoiceSelect({
   ariaLabel?: string;
   className?: string;
   disabled?: boolean;
+  /** `lab` swaps the app's panel/ink tokens for the bench's own `--lab-*`
+   *  tokens. The lab is its own dark (or daylit) room even when the app shell
+   *  is light, so an app-coloured menu opened over a bench would be a white
+   *  slab in a black room. */
+  variant?: "app" | "lab";
 }) {
   const reduce = useReducedMotion();
+  const lab = variant === "lab";
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -100,10 +107,17 @@ export function ChoiceSelect({
           }
         }}
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--text-main)_38%,transparent)]",
-          open
-            ? "border-[color-mix(in_srgb,var(--text-main)_42%,transparent)] text-foreground"
-            : "border-[var(--card-border)] text-foreground hover:border-[color-mix(in_srgb,var(--text-main)_30%,transparent)]",
+          "flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm transition-colors outline-none focus-visible:ring-2",
+          lab
+            ? "text-[var(--lab-ink)] focus-visible:ring-[color-mix(in_srgb,var(--lab-ink)_38%,transparent)]"
+            : "focus-visible:ring-[color-mix(in_srgb,var(--text-main)_38%,transparent)]",
+          lab
+            ? open
+              ? "border-[color-mix(in_srgb,var(--lab-ink)_48%,transparent)]"
+              : "border-[var(--lab-line)] hover:border-[color-mix(in_srgb,var(--lab-ink)_38%,transparent)]"
+            : open
+              ? "border-[color-mix(in_srgb,var(--text-main)_42%,transparent)] text-foreground"
+              : "border-[var(--card-border)] text-foreground hover:border-[color-mix(in_srgb,var(--text-main)_30%,transparent)]",
           disabled && "cursor-not-allowed opacity-50",
         )}
       >
@@ -155,7 +169,12 @@ export function ChoiceSelect({
                   }
                 }
               }}
-              className="mt-1.5 max-h-[46vh] overflow-y-auto overscroll-contain rounded-xl border border-[var(--card-border)] bg-[var(--panel)] p-1 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.55)]"
+              className={cn(
+                "mt-1.5 max-h-[46vh] overflow-y-auto overscroll-contain rounded-xl border p-1",
+                lab
+                  ? "border-[var(--lab-line)] bg-[var(--lab-canvas)] shadow-[0_24px_60px_-30px_rgba(0,0,0,0.8)]"
+                  : "border-[var(--card-border)] bg-[var(--panel)] shadow-[0_24px_60px_-30px_rgba(0,0,0,0.55)]",
+              )}
             >
               {options.map((option) => {
                 const isSelected = option.value === value;
@@ -171,22 +190,38 @@ export function ChoiceSelect({
                       close();
                     }}
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-[13px] leading-snug transition-colors outline-none focus-visible:bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)]",
-                      isSelected
-                        ? "bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)] font-medium text-foreground"
-                        : "text-text-dim hover:bg-[color-mix(in_srgb,var(--text-main)_7%,transparent)] hover:text-foreground",
+                      "flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-[13px] leading-snug transition-colors outline-none",
+                      lab
+                        ? isSelected
+                          ? "bg-[color-mix(in_srgb,var(--lab-ink)_12%,transparent)] font-medium text-[var(--lab-ink)] focus-visible:bg-[color-mix(in_srgb,var(--lab-ink)_16%,transparent)]"
+                          : "text-[var(--lab-ink-dim)] hover:bg-[color-mix(in_srgb,var(--lab-ink)_7%,transparent)] hover:text-[var(--lab-ink)] focus-visible:bg-[color-mix(in_srgb,var(--lab-ink)_12%,transparent)]"
+                        : isSelected
+                          ? "bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)] font-medium text-foreground focus-visible:bg-[color-mix(in_srgb,var(--text-main)_16%,transparent)]"
+                          : "text-text-dim hover:bg-[color-mix(in_srgb,var(--text-main)_7%,transparent)] hover:text-foreground focus-visible:bg-[color-mix(in_srgb,var(--text-main)_12%,transparent)]",
                     )}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block">{option.label}</span>
                       {option.hint ? (
-                        <span className="mt-0.5 block text-[11px] text-text-dim">
+                        <span
+                          className={
+                            lab
+                              ? "mt-0.5 block text-[11px] text-[var(--lab-ink-dim)]"
+                              : "mt-0.5 block text-[11px] text-text-dim"
+                          }
+                        >
                           {option.hint}
                         </span>
                       ) : null}
                     </span>
                     {isSelected ? (
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-main)]" />
+                      <Check
+                        className={
+                          lab
+                            ? "mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--lab-ink)]"
+                            : "mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-main)]"
+                        }
+                      />
                     ) : null}
                   </button>
                 );

@@ -191,7 +191,8 @@
   margin-bottom: 8px;
 }
 
-.pnb-axes label {
+.pnb-axes label,
+.pnb-axes .pnb-axis {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -212,6 +213,12 @@
   padding: 4px 8px;
   font-size: 11.5px;
   color: var(--text-main);
+}
+
+.pnb-choice > button {
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11.5px;
 }
 
 .pnb-graph {

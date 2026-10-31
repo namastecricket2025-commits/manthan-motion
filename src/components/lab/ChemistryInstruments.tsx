@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, Eye, RotateCcw, Thermometer, Waves } from "lucide-react";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import { Questions, Range } from "@/components/lab/bench-atoms";
 
 /**
@@ -565,24 +566,23 @@ export function ChemistryInstruments() {
             <p className="apple-lab-micro">Control</p>
             {selected === "cylinder" ? (
               <div className="mt-2 flex flex-col gap-3">
-                <label className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   <span className="text-[10.5px] text-[var(--lab-ink-dim)]">Cylinder capacity</span>
-                  <select
-                    value={capacity}
-                    onChange={(event) => {
-                      const next = Number(event.target.value);
-                      setCapacity(next);
-                      setVolume((current) => Math.min(current, next));
+                  <ChoiceSelect
+                    variant="lab"
+                    value={String(capacity)}
+                    onChange={(next) => {
+                      const value = Number(next);
+                      setCapacity(value);
+                      setVolume((current) => Math.min(current, value));
                     }}
-                    className="salt-select rounded-lg border border-[var(--lab-line)] bg-transparent px-2 py-1.5 text-[12px] text-[var(--lab-ink)] outline-none"
-                  >
-                    {[50, 100, 250].map((value) => (
-                      <option key={value} value={value}>
-                        {value} mL
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    ariaLabel="Cylinder capacity"
+                    options={[50, 100, 250].map((value) => ({
+                      value: String(value),
+                      label: `${value} mL`,
+                    }))}
+                  />
+                </div>
                 <Range
                   label="Volume"
                   value={volume}
@@ -665,23 +665,22 @@ export function ChemistryInstruments() {
 
             {selected === "pipette" ? (
               <div className="mt-2 flex flex-col gap-3">
-                <label className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   <span className="text-[10.5px] text-[var(--lab-ink-dim)]">Pipette size</span>
-                  <select
-                    value={pipetteSize}
-                    onChange={(event) => {
-                      setPipetteSize(Number(event.target.value));
+                  <ChoiceSelect
+                    variant="lab"
+                    value={String(pipetteSize)}
+                    onChange={(next) => {
+                      setPipetteSize(Number(next));
                       setPipetteFilled(false);
                     }}
-                    className="salt-select rounded-lg border border-[var(--lab-line)] bg-transparent px-2 py-1.5 text-[12px] text-[var(--lab-ink)] outline-none"
-                  >
-                    {[10, 20, 25, 50].map((value) => (
-                      <option key={value} value={value}>
-                        {value} mL
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    ariaLabel="Pipette size"
+                    options={[10, 20, 25, 50].map((value) => ({
+                      value: String(value),
+                      label: `${value} mL`,
+                    }))}
+                  />
+                </div>
                 <button
                   type="button"
                   className="apple-lab-btn !px-3 !py-1.5 !text-[11px]"

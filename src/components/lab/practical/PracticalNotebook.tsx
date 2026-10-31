@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
+import { ChoiceSelect } from "@/components/ui/choice-select";
 import {
   ChartLine,
   ChevronDown,
@@ -300,26 +301,32 @@ function RecordCard({ record, defaultOpen }: { record: RecordRow; defaultOpen: b
           {columns.length >= 2 ? (
             <div className="pnb-plot">
               <div className="pnb-axes">
-                <label>
+                <div className="pnb-axis">
                   <span>X axis</span>
-                  <select value={xLabel} onChange={(event) => setXLabel(event.target.value)}>
-                    {columns.map((column) => (
-                      <option key={column.label} value={column.label}>
-                        {column.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
+                  <ChoiceSelect
+                    className="pnb-choice min-w-[150px]"
+                    value={xLabel}
+                    onChange={setXLabel}
+                    ariaLabel="X axis"
+                    options={columns.map((column) => ({
+                      value: column.label,
+                      label: column.label,
+                    }))}
+                  />
+                </div>
+                <div className="pnb-axis">
                   <span>Y axis</span>
-                  <select value={yLabel} onChange={(event) => setYLabel(event.target.value)}>
-                    {columns.map((column) => (
-                      <option key={column.label} value={column.label}>
-                        {column.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <ChoiceSelect
+                    className="pnb-choice min-w-[150px]"
+                    value={yLabel}
+                    onChange={setYLabel}
+                    ariaLabel="Y axis"
+                    options={columns.map((column) => ({
+                      value: column.label,
+                      label: column.label,
+                    }))}
+                  />
+                </div>
               </div>
               {fit ? (
                 <>
