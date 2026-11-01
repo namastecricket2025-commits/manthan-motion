@@ -36,9 +36,10 @@ import { useSearchParams } from "react-router";
  *   Waves     two streams with their own shape, amplitude, frequency and phase,
  *             plus the sum they make. Where they agree the sum doubles, where
  *             they disagree it flattens — the envelope beats at 1/|f₂ − f₁|.
- *   Optics    the thin-lens practical: object distance and focal length are
- *             sliders, and the three construction rays, the image position,
- *             its size and its nature are computed from 1/v − 1/u = 1/f.
+ *   Optics    two practicals behind one door: the thin lens (1/v − 1/u = 1/f)
+ *             and the spherical mirror (1/v + 1/u = 1/f). Both draw their three
+ *             construction rays and derive the image from the formula, so the
+ *             student switches mirror for lens, not chapter for tab.
  *   Magnetism a bar magnet whose field lines are traced from the two-pole
  *             vector field, and a long straight wire whose field circles carry
  *             B = μ₀I/2πr in real microtesla. A compass rides both plates and
@@ -54,7 +55,7 @@ import { useSearchParams } from "react-router";
 /* Accents, ink and the shared bench atoms come from `bench-atoms` so the
    Dynamics bench (its own file) draws with exactly the same vocabulary. */
 
-type ClassBench = "pressure" | "echo" | "projectile" | "pv" | "rayoptics" | "electrostatics";
+type ClassBench = "pressure" | "echo" | "projectile" | "pv" | "electrostatics";
 
 type Bench =
   | "circuits"
@@ -68,17 +69,17 @@ type Bench =
   | ClassBench;
 
 /**
- * The class-specific benches live behind one rail entry rather than adding six
- * more pills to a row that already scrolls sideways. A student looking for
- * "my class" finds one labelled door; the bench inside then carries its own
- * class line.
+ * The class-specific benches live behind one rail entry rather than adding
+ * five more pills to a row that already scrolls sideways. A student looking
+ * for "my class" finds one labelled door; the bench inside then carries its
+ * own class line. Ray optics is deliberately not here — it is a mirror
+ * practical, and it belongs in the Optics tab with the lens.
  */
 const CLASS_BENCHES: Array<{ id: ClassBench; label: string }> = [
   { id: "pressure", label: "Pressure · 8" },
   { id: "echo", label: "Echo & SONAR · 9" },
   { id: "projectile", label: "Projectile · 11" },
   { id: "pv", label: "p–V diagram · 11" },
-  { id: "rayoptics", label: "Ray optics · 12" },
   { id: "electrostatics", label: "Electrostatics · 12" },
 ];
 
@@ -1935,6 +1936,9 @@ export function PhysicsVectorLab() {
   const [params] = useSearchParams();
   const [bench, setBench] = useState<Bench>(() => {
     const wanted = params.get("bench");
+    /* Old "Ray optics" links now land inside the Optics tab, where the mirror
+       practical belongs; it was never a separate chapter. */
+    if (wanted === "rayoptics") return "optics";
     if (CLASS_BENCHES.some((entry) => entry.id === wanted)) return "classlabs";
     return BENCHES.find((entry) => entry.id === wanted)?.id ?? "circuits";
   });
@@ -1986,7 +1990,7 @@ export function PhysicsVectorLab() {
           {bench === "motion" && <MotionSandbox />}
           {bench === "dynamics" && <DynamicsBench />}
           {bench === "waves" && <WaveBench />}
-          {bench === "optics" && <OpticsPractical />}
+          {bench === "optics" && <OpticsTab />}
           {bench === "magnet" && <MagnetismBench />}
           {bench === "instruments" && <InstrumentsBench />}
           {(bench === "classlabs" || CLASS_BENCHES.some((entry) => entry.id === bench)) && (
@@ -2001,12 +2005,41 @@ export function PhysicsVectorLab() {
               {classBench === "echo" && <EchoSonarBench />}
               {classBench === "projectile" && <ProjectileBench />}
               {classBench === "pv" && <PVProcessBench />}
-              {classBench === "rayoptics" && <RayOpticsBench />}
               {classBench === "electrostatics" && <ElectrostaticsBench />}
             </div>
           )}
         </motion.div>
       </AnimatePresence>
+    </div>
+  );
+}
+
+/**
+ * The Optics tab is one door with two instruments behind it: the thin-lens
+ * practical that was already here and the spherical-mirror practical that used
+ * to sit in the class rail. They are the same chapter drawn on two surfaces,
+ * so a separate rail entry made the student choose a tab instead of a mirror.
+ */
+function OpticsTab() {
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState<"lens" | "mirror">(() =>
+    params.get("optics") === "mirror" || params.get("bench") === "rayoptics"
+      ? "mirror"
+      : "lens",
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Picker
+        label="Optics bench"
+        value={mode}
+        options={[
+          { id: "lens", label: "Thin lens · 10" },
+          { id: "mirror", label: "Spherical mirrors · 12" },
+        ]}
+        onChange={setMode}
+      />
+      {mode === "lens" ? <OpticsPractical /> : <RayOpticsBench />}
     </div>
   );
 }

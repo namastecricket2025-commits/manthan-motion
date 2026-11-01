@@ -134,16 +134,18 @@ export function PressureBench() {
             <>
               {/* Ramp: fixed geometry, angle slider. */}
               {(() => {
-                const groundY = 292;
+                const groundY = 270;
                 const baseX = 120;
-                /* 340 px of run keeps the ramp inside the plate even at 45°. */
+                /* 340 px of run keeps the ramp inside the plate at 45°, and
+                   lifts the block far enough that the weight label never
+                   falls below the plate at 0°. */
                 const run = 340;
                 const rad = (angle * Math.PI) / 180;
                 const topX = baseX + run * Math.cos(rad);
                 const topY = groundY - run * Math.sin(rad);
-                const size = 46;
-                /* Block sits on the slope, offset a third of the way down. */
-                const frac = 0.36;
+                const size = 54;
+                /* Block sits on the slope, a little above the middle. */
+                const frac = 0.42;
                 const px = baseX + run * (1 - frac) * Math.cos(rad);
                 const py = groundY - run * (1 - frac) * Math.sin(rad);
                 /* The block's centre sits half a block along the outward normal
@@ -152,44 +154,66 @@ export function PressureBench() {
                 const ny = -Math.cos(rad);
                 const bx = px + nx * size * 0.5;
                 const by = py + ny * size * 0.5;
+                const cos = Math.cos(rad);
+                const sin = Math.sin(rad);
                 return (
                   <>
-                    <line x1={baseX} y1={groundY} x2={topX} y2={topY} stroke={ink(0.55)} strokeWidth={2.4} strokeLinecap="round" />
-                    <line x1={baseX} y1={groundY} x2={PLATE_W - 60} y2={groundY} stroke={ink(0.18)} strokeWidth={1.4} />
-                    {/* Angle arc */}
-                    <path d={`M ${baseX + 74} ${groundY} A 74 74 0 0 0 ${baseX + 74 * Math.cos(rad)} ${groundY - 74 * Math.sin(rad)}`} fill="none" stroke={AMBER} strokeWidth={1.4} />
-                    <text x={baseX + 84} y={groundY - 26} fontSize={12} fill={AMBER} fontWeight={700}>
+                    {/* The solid wedge under the slope, so 45° reads as a ramp
+                        rather than a line floating in the plate. */}
+                    <path
+                      d={`M ${baseX} ${groundY} L ${topX} ${topY} L ${topX} ${groundY} Z`}
+                      fill={plate(0.28)}
+                      stroke="none"
+                    />
+                    <line x1={baseX} y1={groundY} x2={topX} y2={topY} stroke={ink(0.6)} strokeWidth={2.6} strokeLinecap="round" />
+                    <line x1={baseX} y1={groundY} x2={PLATE_W - 40} y2={groundY} stroke={ink(0.2)} strokeWidth={1.4} />
+
+                    {/* Angle arc, radius 62, labelled outside it. */}
+                    <path d={`M ${baseX + 62} ${groundY} A 62 62 0 0 0 ${baseX + 62 * cos} ${groundY - 62 * sin}`} fill="none" stroke={AMBER} strokeWidth={1.5} />
+                    <text x={baseX + 74} y={groundY - 20} fontSize={12} fill={AMBER} fontWeight={700}>
                       θ = {angle}°
                     </text>
-                    {/* Block */}
+
+                    {/* Free-body vectors, all from the block's centre. */}
+                    <line x1={bx} y1={by} x2={bx} y2={by + 56} stroke={ink(0.55)} strokeWidth={2} />
+                    <line x1={bx} y1={by} x2={bx + 62 * nx} y2={by + 62 * ny} stroke={CYAN} strokeWidth={2.2} />
+                    <line x1={bx} y1={by} x2={bx + 60 * cos} y2={by - 60 * sin} stroke={MINT} strokeWidth={2.2} strokeDasharray={slides ? "5 4" : undefined} />
+                    <line x1={bx} y1={by} x2={bx - 70 * cos} y2={by + 70 * sin} stroke={AMBER} strokeWidth={2.2} />
+
+                    {/* The block itself, drawn after the lines so its face is
+                        clean; the vectors read as if pinned to it. */}
                     <g transform={`translate(${bx} ${by}) rotate(${-angle})`}>
-                      <rect x={-size / 2} y={-size / 2} width={size} height={size} rx={2.5} fill={plate(0.92)} stroke={ink(0.55)} strokeWidth={1.6} />
+                      <rect x={-size / 2} y={-size / 2} width={size} height={size} rx={3} fill={plate(0.94)} stroke={ink(0.55)} strokeWidth={1.6} />
                     </g>
-                    {/* Gravity, normal, friction, and the component down the slope. */}
-                    <line x1={bx} y1={by} x2={bx} y2={by + 70} stroke={ink(0.5)} strokeWidth={2} />
-                    <text x={bx + 6} y={by + 84} fontSize={10.5} fill={ink(0.6)}>mg</text>
-                    <line x1={bx} y1={by} x2={bx + 58 * nx} y2={by + 58 * ny} stroke={CYAN} strokeWidth={2.2} />
-                    <text x={bx + 64 * nx} y={by + 64 * ny} fontSize={10.5} fill={CYAN}>N</text>
-                    {/* Friction points up the slope — against the impending motion. */}
-                    <line x1={bx} y1={by} x2={bx + 56 * Math.cos(rad)} y2={by - 56 * Math.sin(rad)} stroke={MINT} strokeWidth={2.2} strokeDasharray={slides ? "5 4" : undefined} />
-                    <text x={bx + 62 * Math.cos(rad)} y={by - 62 * Math.sin(rad)} fontSize={10.5} fill={MINT}>
-                      {slides ? `f = ${maxGrip.toFixed(1)} N` : `f ≤ ${maxGrip.toFixed(1)} N`}
-                    </text>
-                    {/* The pull down the slope */}
-                    <line x1={bx} y1={by} x2={bx - 66 * Math.cos(rad)} y2={by + 66 * Math.sin(rad)} stroke={AMBER} strokeWidth={2.2} />
-                    <text x={bx - 70 * Math.cos(rad)} y={by + 70 * Math.sin(rad)} fontSize={10.5} fill={AMBER}>mg sin θ</text>
-                    {/* Critical angle marker on the ground */}
-                    <line x1={baseX + 120} y1={groundY} x2={baseX + 120 + 90 * Math.cos((criticalAngle * Math.PI) / 180)} y2={groundY - 90 * Math.sin((criticalAngle * Math.PI) / 180)} stroke={ink(0.25)} strokeWidth={1.2} strokeDasharray="4 5" />
-                    <text x={baseX + 128 + 90 * Math.cos((criticalAngle * Math.PI) / 180)} y={groundY - 92 * Math.sin((criticalAngle * Math.PI) / 180)} fontSize={10} fill={ink(0.5)}>
-                      slips at {criticalAngle.toFixed(1)}°
-                    </text>
+
+                    <ForceLabel x={bx + 8} y={by + 68} text="mg" color={ink(0.62)} />
+                    <ForceLabel
+                      x={bx + 72 * nx}
+                      y={by + 72 * ny + 4}
+                      text="N"
+                      color={CYAN}
+                      anchor={nx < 0 ? "end" : "start"}
+                    />
+                    <ForceLabel
+                      x={bx + 70 * cos}
+                      y={by - 70 * sin + 4}
+                      text={slides ? `f = ${maxGrip.toFixed(1)} N` : `f ≤ ${maxGrip.toFixed(1)} N`}
+                      color={MINT}
+                    />
+                    <ForceLabel
+                      x={bx - 80 * cos}
+                      y={by + 80 * sin + 4}
+                      text="mg sin θ"
+                      color={AMBER}
+                      anchor="end"
+                    />
                   </>
                 );
               })()}
-              <text x={26} y={30} fontSize={11} fill={ink(0.55)}>
-                tan θ = µ is the angle where gravity down the slope exactly matches maximum grip
+              <text x={24} y={28} fontSize={11} fill={ink(0.55)}>
+                Free-body diagram · θ = {angle}° · µ = {mu.toFixed(2)}
               </text>
-              <text x={PLATE_W - 26} y={30} textAnchor="end" fontSize={11.5} fill={slides ? AMBER : MINT}>
+              <text x={PLATE_W - 24} y={28} textAnchor="end" fontSize={11.5} fill={slides ? AMBER : MINT}>
                 {slides ? `sliding · a = ${accel.toFixed(2)} m/s²` : "holding still"}
               </text>
             </>
@@ -242,7 +266,8 @@ export function PressureBench() {
               <Range label="Mass" value={mass} min={1} max={12} step={0.5} unit="kg" onChange={setMass} />
               <p className="apple-lab-note">
                 Maximum grip is µ mg cos θ; the pull down the slope is mg sin θ. They meet exactly at
-                tan θ = µ, which is why a rougher ramp needs a steeper angle before anything slips.
+                tan θ = µ — here {criticalAngle.toFixed(1)}° — which is why a rougher ramp needs a
+                steeper angle before anything slips.
               </p>
             </>
           )}
@@ -283,6 +308,36 @@ export function PressureBench() {
         />
       </div>
     </div>
+  );
+}
+
+function ForceLabel({
+  x,
+  y,
+  text,
+  color,
+  anchor = "start",
+}: {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  anchor?: "start" | "middle" | "end";
+}) {
+  return (
+    <text
+      x={x}
+      y={y}
+      fontSize={10.5}
+      fill={color}
+      textAnchor={anchor}
+      paintOrder="stroke"
+      stroke={plate(0.92)}
+      strokeWidth={3.5}
+      strokeLinejoin="round"
+    >
+      {text}
+    </text>
   );
 }
 

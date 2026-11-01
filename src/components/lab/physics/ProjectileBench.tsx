@@ -53,6 +53,10 @@ export function ProjectileBench() {
   const vxNow = vx;
   const vyNow = vy0 - g * t;
   const speedNow = Math.hypot(vxNow, vyNow);
+  const directionNow = (Math.atan2(vyNow, vxNow) * 180) / Math.PI;
+  /* The arrow lengths are a fixed drawing scale: the launch vector is 86 px,
+     so the components stay in proportion to it at every speed. */
+  const arrowScale = 86 / Math.max(u, 1);
 
   /* One scale for both axes, so the path keeps its true shape. */
   const xMax = Math.max(range, otherRange, 1);
@@ -111,27 +115,61 @@ export function ProjectileBench() {
             <circle key={i} cx={d.x} cy={d.y} r={2.2} fill={ink(0.4)} />
           ))}
 
-          {/* Launch arrow */}
-          <line x1={originX} y1={Y(height)} x2={originX + u * Math.cos(rad) * 2.2} y2={Y(height) - u * Math.sin(rad) * 2.2} stroke={AMBER} strokeWidth={2.4} strokeLinecap="round" />
-          <text x={originX + 8} y={Y(height) - 12} fontSize={11.5} fill={AMBER} fontWeight={700}>
-            u = {u} m/s at {theta}°
-          </text>
+          {/* Launch arrow. The speed and angle are printed in the panel;
+              putting them here too was what collided with the components. */}
+          <line
+            x1={originX}
+            y1={Y(height)}
+            x2={originX + u * Math.cos(rad) * arrowScale}
+            y2={Y(height) - u * Math.sin(rad) * arrowScale}
+            stroke={AMBER}
+            strokeWidth={2.4}
+            strokeLinecap="round"
+          />
 
           {/* Inspection point and its two components */}
           <circle cx={X(px)} cy={Y(py)} r={6} fill={plate(1)} stroke={ink(0.7)} strokeWidth={2} />
-          <line x1={X(px)} y1={Y(py)} x2={X(px) + vxNow * 2.2} y2={Y(py)} stroke={CYAN} strokeWidth={2} />
-          <line x1={X(px)} y1={Y(py)} x2={X(px)} y2={Y(py) - vyNow * 2.2} stroke={AMBER} strokeWidth={2} />
-          <line x1={X(px)} y1={Y(py)} x2={X(px) + vxNow * 2.2} y2={Y(py) - vyNow * 2.2} stroke={ink(0.55)} strokeWidth={1.6} strokeDasharray="4 4" />
-          <text x={X(px) + vxNow * 2.2 + 4} y={Y(py) + 4} fontSize={10.5} fill={CYAN}>vx {vxNow.toFixed(1)}</text>
-          <text x={X(px) - 8} y={Y(py) - vyNow * 2.2 - 6} fontSize={10.5} fill={AMBER} textAnchor="end">vy {vyNow.toFixed(1)}</text>
-
-          {/* Range bracket */}
-          <line x1={X(range)} y1={originY + 14} x2={X(range)} y2={originY + 30} stroke={ink(0.4)} strokeWidth={1.4} />
-          <text x={X(range)} y={originY + 44} textAnchor="middle" fontSize={11} fill={ink(0.6)}>
-            R = {range.toFixed(1)} m
+          <line x1={X(px)} y1={Y(py)} x2={X(px) + vxNow * arrowScale} y2={Y(py)} stroke={CYAN} strokeWidth={2} />
+          <line x1={X(px)} y1={Y(py)} x2={X(px)} y2={Y(py) - vyNow * arrowScale} stroke={AMBER} strokeWidth={2} />
+          <line
+            x1={X(px)}
+            y1={Y(py)}
+            x2={X(px) + vxNow * arrowScale}
+            y2={Y(py) - vyNow * arrowScale}
+            stroke={ink(0.55)}
+            strokeWidth={1.6}
+            strokeDasharray="4 4"
+          />
+          <text
+            x={X(px) + vxNow * arrowScale + 6}
+            y={Y(py) + 4}
+            fontSize={10.5}
+            fill={CYAN}
+            paintOrder="stroke"
+            stroke={plate(0.92)}
+            strokeWidth={3.5}
+          >
+            vx
           </text>
-          <text x={X(px)} y={originY + 44} textAnchor="middle" fontSize={10.5} fill={ink(0.45)}>
-            t = {t.toFixed(2)} s
+          <text
+            x={X(px) - 8}
+            y={Y(py) - vyNow * arrowScale - 6}
+            fontSize={10.5}
+            fill={AMBER}
+            textAnchor="end"
+            paintOrder="stroke"
+            stroke={plate(0.92)}
+            strokeWidth={3.5}
+          >
+            vy
+          </text>
+
+          {/* Range bracket, measured from the launch point to the landing. */}
+          <line x1={originX} y1={originY + 18} x2={X(range)} y2={originY + 18} stroke={ink(0.35)} strokeWidth={1.2} />
+          <line x1={originX} y1={originY + 12} x2={originX} y2={originY + 24} stroke={ink(0.35)} strokeWidth={1.2} />
+          <line x1={X(range)} y1={originY + 12} x2={X(range)} y2={originY + 24} stroke={ink(0.35)} strokeWidth={1.2} />
+          <text x={(originX + X(range)) / 2} y={originY + 38} textAnchor="middle" fontSize={11} fill={ink(0.6)}>
+            R = {range.toFixed(1)} m
           </text>
 
           <text x={24} y={24} fontSize={11} fill={ink(0.5)}>
@@ -172,7 +210,9 @@ export function ProjectileBench() {
           <Readout label="Time of flight" value={`${flight.toFixed(2)} s`} />
           <Readout label="Range" value={`${range.toFixed(1)} m`} />
           <Readout label="Maximum height" value={`${peak.toFixed(1)} m`} />
+          <Readout label="Time at the point" value={`${t.toFixed(2)} s`} />
           <Readout label="Speed at the point" value={`${speedNow.toFixed(1)} m/s`} />
+          <Readout label="Direction at the point" value={`${directionNow.toFixed(0)}°`} />
           <Readout label="Horizontal vx" value={`${vxNow.toFixed(1)} m/s`} />
           <Readout label="Vertical vy" value={`${vyNow.toFixed(1)} m/s`} />
         </div>

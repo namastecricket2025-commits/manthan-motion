@@ -127,27 +127,28 @@ function PlanCard({
         pass && "premium-card--pass",
       )}
     >
-      {/* The featured card's lit edge is the revolving rim in premium.css —
-          the straight hairline that used to sit across its top would now cut
-          through that rim, so it is gone. */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-[15px] font-semibold tracking-tight">
-            {name}
-          </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-text-dim">
-            {summary}
-          </p>
-        </div>
+      {/* The badge owns a full row above the name. Sitting beside it, the
+          badge stole most of a 230px card and the name had to break inside
+          the word — "EduVanta / ge". The reserved row keeps every card's name
+          and price on the same baseline whether it has a badge or not. */}
+      <div className="mb-3 flex min-h-[24px] items-center">
         {featured ? (
-          <span className="premium-chip premium-chip--featured shrink-0">
+          <span className="premium-chip premium-chip--featured">
             Most popular
           </span>
         ) : current ? (
-          <span className="premium-chip shrink-0">Current</span>
+          <span className="premium-chip">Current</span>
         ) : pass ? (
-          <span className="premium-chip shrink-0">One-off</span>
+          <span className="premium-chip">One-off</span>
         ) : null}
+      </div>
+      <div className="min-w-0">
+        <h2 className="font-display text-[17px] font-semibold tracking-tight">
+          {name}
+        </h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-text-dim">
+          {summary}
+        </p>
       </div>
 
       {/* The number glides when the term changes — one animated figure per
@@ -384,7 +385,11 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {/* Three plans per row at desktop, two on a tablet, one on a phone.
+              Five columns turned each card into a narrow strip with a price
+              list that had to wrap every other word; the rows are allowed to
+              finish ragged rather than squeeze the reading column. */}
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <PlanCard
               name={FREE_PLAN.name}
               summary={FREE_PLAN.summary}

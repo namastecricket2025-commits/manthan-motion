@@ -494,8 +494,14 @@ export type Tract = {
   anchors: Record<string, THREE.Vector3>;
 };
 
+/* Every stop on the journey must be able to open up. The scanned gut used to
+   be missing from this map, so the food travelled through opaque small and
+   large intestine while the stomach x-rayed itself — the one moment the plate
+   exists to show was the one moment it went dark. */
 const ORGAN_FADE: Record<string, number[]> = {
   liver: [2],
+  "small-intestine": [3],
+  "large-intestine": [4],
 };
 
 const ORGAN_LOOK: Record<string, { color: string; roughness: number; clearcoat: number }> = {
@@ -716,6 +722,23 @@ export function buildTract(): Tract {
   ileocaecal.position.set(...COLON[0]);
   orient(ileocaecal, COLON[0], COLON[1]);
   add(ileocaecal, [4]);
+
+  /* Rectum and anal canal. The colon scan ends at the sigmoid, so without
+     this sleeve the last stop was food travelling through empty space — there
+     was no organ to open up, and the final stage looked broken. The tube
+     follows the same centre-line the food uses, joins the colon under its own
+     cut, and tapers to the anal canal. */
+  add(
+    new THREE.Mesh(
+      sweep(
+        [[0.003, 0.081, 0.023], ...RECTUM],
+        radii([0.022, 0.022, 0.017, 0.0105]),
+        { tubular: 64, radial: 24 },
+      ),
+      organMaterial("#a8735c", 0.58, 0.3),
+    ),
+    [5],
+  );
 
   add(
     new THREE.Mesh(

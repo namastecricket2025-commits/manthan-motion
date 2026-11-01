@@ -164,7 +164,16 @@ export function ElectrostaticsBench() {
                 <text x={x} y={y + 5} textAnchor="middle" fontSize={15} fontWeight={700} fill={positive ? AMBER : CYAN}>
                   {positive ? "+" : "−"}
                 </text>
-                <text x={x} y={y + r + 16} textAnchor="middle" fontSize={11} fill={ink(0.6)}>
+                <text
+                  x={x}
+                  y={y + r + 16}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill={ink(0.6)}
+                  paintOrder="stroke"
+                  stroke={plate(0.95)}
+                  strokeWidth={3}
+                >
                   {c.q.toFixed(0)} µC
                 </text>
               </g>
@@ -175,7 +184,16 @@ export function ElectrostaticsBench() {
           {neutral !== null && (
             <g>
               <circle cx={toPlate(neutral, 0)[0]} cy={toPlate(neutral, 0)[1]} r={4} fill={plate(1)} stroke={ink(0.5)} strokeWidth={1.4} strokeDasharray="3 3" />
-              <text x={toPlate(neutral, 0)[0]} y={CY - 14} textAnchor="middle" fontSize={10} fill={ink(0.55)}>
+              <text
+                x={toPlate(neutral, 0)[0]}
+                y={CY - 14}
+                textAnchor="middle"
+                fontSize={10}
+                fill={ink(0.55)}
+                paintOrder="stroke"
+                stroke={plate(0.95)}
+                strokeWidth={3}
+              >
                 E = 0
               </text>
             </g>
@@ -194,7 +212,15 @@ export function ElectrostaticsBench() {
               strokeWidth={2.4}
               strokeLinecap="round"
             />
-            <text x={probePx + 12} y={probePy - 12} fontSize={10.5} fill={AMBER}>
+            <text
+              x={probePx + 12}
+              y={probePy - 12}
+              fontSize={10.5}
+              fill={AMBER}
+              paintOrder="stroke"
+              stroke={plate(0.95)}
+              strokeWidth={3}
+            >
               probe
             </text>
           </g>

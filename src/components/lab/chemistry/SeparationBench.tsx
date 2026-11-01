@@ -1,4 +1,4 @@
-import { Picker, Questions, Readout, ink, plate, AMBER, CYAN, MINT, VIOLET } from "@/components/lab/bench-atoms";
+import { Picker, Questions, ink, plate, AMBER, CYAN, VIOLET } from "@/components/lab/bench-atoms";
 import { useMemo, useState } from "react";
 
 /**
@@ -111,7 +111,7 @@ const FAIL_REASON: Record<TechniqueId, string> = {
 };
 
 const W = 720;
-const H = 350;
+const H = 380;
 
 export function SeparationBench() {
   const [mixture, setMixture] = useState<MixtureId>("sand");
@@ -139,23 +139,28 @@ export function SeparationBench() {
   }, [works, tech, mix, technique]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+    <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr]">
       <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Apparatus for ${tech.label.toLowerCase()}`}>
-          {technique === "filtration" && <Filtration t={t} />}
-          {technique === "evaporation" && <Evaporation t={t} />}
-          {technique === "distillation" && <Distillation t={t} />}
-          {technique === "chromatography" && <Chromatography t={t} />}
-          {technique === "funnel" && <SeparatingFunnel t={t} />}
-          {technique === "sublimation" && <Sublimation t={t} />}
-          {technique === "magnetic" && <Magnetic t={t} />}
+        <div className="flex items-center justify-between gap-3">
+          <p className="apple-lab-micro">
+            Apparatus · {tech.label}
+          </p>
+          <span className="apple-lab-chip">{mix.label}</span>
+        </div>
 
-          <text x={20} y={24} fontSize={11} fill={ink(0.5)}>
-            {tech.label} · {mix.label}
-          </text>
-          <text x={W - 20} y={24} textAnchor="end" fontSize={11} fill={works ? MINT : AMBER}>
-            {works ? "the property this uses is present" : "the property this needs is missing"}
-          </text>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Apparatus for ${tech.label.toLowerCase()}`}>
+          {/* One shared enlargement around the apparatus' own centre. The
+              drawings were authored small in a 720-wide plate, which left a
+              third of the card empty on a laptop. */}
+          <g transform="translate(360 190) scale(1.1) translate(-360 -190)">
+            {technique === "filtration" && <Filtration t={t} />}
+            {technique === "evaporation" && <Evaporation t={t} />}
+            {technique === "distillation" && <Distillation t={t} />}
+            {technique === "chromatography" && <Chromatography t={t} />}
+            {technique === "funnel" && <SeparatingFunnel t={t} />}
+            {technique === "sublimation" && <Sublimation t={t} />}
+            {technique === "magnetic" && <Magnetic t={t} />}
+          </g>
         </svg>
 
         <label className="flex flex-col gap-1.5">
@@ -173,13 +178,6 @@ export function SeparationBench() {
             onChange={(event) => setProgress([Number(event.target.value)])}
           />
         </label>
-
-        <div className={`rounded-lg border px-3 py-2.5 ${works ? "border-[var(--lab-line)]" : "border-[var(--lab-line-soft)]"}`}>
-          <p className="text-[12px] font-semibold" style={{ color: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }}>
-            {verdict.title}
-          </p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">{verdict.body}</p>
-        </div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -193,11 +191,16 @@ export function SeparationBench() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Readout label="Mixture" value={mix.label} />
-          <Readout label="Technique" value={tech.label} />
-          <Readout label="Property used" value={tech.principle.split(".")[0]} />
-          <Readout label="What you collect" value={works ? tech.gives : "nothing separated"} />
+        {/* The verdict belongs beside the choice, not on top of the drawing. */}
+        <div
+          className={`rounded-xl border px-3.5 py-3 ${works ? "border-[color-mix(in_srgb,var(--lab-diagram-mint)_45%,transparent)]" : "border-[color-mix(in_srgb,var(--lab-diagram-amber)_45%,transparent)]"}`}
+        >
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }}>
+            <i className="h-1.5 w-1.5 rounded-full" style={{ background: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }} />
+            {works ? "This one works" : "This one cannot work"}
+          </p>
+          <p className="mt-1.5 text-[12.5px] font-semibold leading-snug">{verdict.title}</p>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">{verdict.body}</p>
         </div>
 
         <div className="apple-lab-card px-3 py-2.5">

@@ -108,10 +108,32 @@ export function VectorsPlanes() {
     return <polygon points={`${x},${y} ${p1[0]},${p1[1]} ${p2[0]},${p2[1]}`} fill={color} />;
   };
 
-  const vecLabel = (v: Vec, text: string, color: string, dx = 8, dy = -8) => {
+  /* Push the label out along the vector's own screen direction, then anchor
+     it away from the arrow. A fixed (8, −8) offset put b's coordinates on top
+     of a's arrow as soon as the view turned. */
+  const vecLabel = (v: Vec, text: string, color: string) => {
     const [x, y] = P(v);
+    const [ox, oy] = P([0, 0, 0]);
+    const dx = x - ox;
+    const dy = y - oy;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const lx = x + ux * 16;
+    const ly = y + uy * 16 + 4;
     return (
-      <text x={x + dx} y={y + dy} fontSize={12.5} fontWeight={700} fill={color}>
+      <text
+        x={lx}
+        y={ly}
+        fontSize={12.5}
+        fontWeight={700}
+        fill={color}
+        textAnchor={ux < -0.15 ? "end" : ux > 0.15 ? "start" : "middle"}
+        paintOrder="stroke"
+        stroke="var(--panel)"
+        strokeWidth={3.5}
+        strokeLinejoin="round"
+      >
         {text}
       </text>
     );
@@ -182,7 +204,9 @@ export function VectorsPlanes() {
               </>
             )}
             <text x={14} y={22} fontSize={11} fill="var(--text-dim)">
-              {model.coplanar ? "a × b = 0 — the vectors are parallel: no plane, no normal." : "green = normal (a × b) · amber = the plane a and b span"}
+              {model.coplanar
+                ? "a × b = 0 — the vectors are parallel: no plane, no normal."
+                : "green = normal (a × b) and the plane it defines · gold = parallelogram"}
             </text>
           </svg>
         </div>

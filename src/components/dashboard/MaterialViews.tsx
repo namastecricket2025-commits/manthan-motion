@@ -2,12 +2,10 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Lightbulb,
   RotateCcw,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
 
 /**
@@ -265,18 +263,24 @@ export function QuizView({
     const percent = Math.round((score / total) * 100);
     const message =
       percent >= 80
-        ? "Excellent — that's exam-ready recall."
+        ? "Exam-ready recall. Keep this deck for the night before."
         : percent >= 50
-          ? "Solid — another pass will lock it in."
-          : "Good start — run it again and watch the score climb.";
+          ? "Close. One more pass will lock the gaps."
+          : "The explanations are worth rereading before you retry.";
     return (
-      <div className="flex flex-col items-center gap-3 py-10 text-center">
-        <p className="font-display text-4xl font-bold tracking-tight">
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <p className="font-display text-[52px] font-semibold leading-none tracking-[-0.03em]">
           {score}
-          <span className="text-text-dim">/{total}</span>
+          <span className="text-[26px] font-normal text-text-dim">/{total}</span>
         </p>
-        <p className="text-[15px] text-text-dim sm:text-sm">
-          {percent}% correct — {message}
+        <div className="h-1.5 w-full max-w-[280px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-main)_9%,transparent)]">
+          <div
+            className="h-full rounded-full bg-[#57c99a] transition-[width] duration-500"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <p className="max-w-[38ch] text-[13.5px] leading-relaxed text-text-dim">
+          {percent}% correct. {message}
         </p>
         <button
           type="button"
@@ -286,7 +290,7 @@ export function QuizView({
             setScore(0);
             setDone(false);
           }}
-          className="glass-chip mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
+          className="mt-1 inline-flex items-center gap-2 rounded-full bg-[var(--text-main)] px-4 py-2 text-[13px] font-semibold text-[var(--panel)] transition-opacity hover:opacity-90"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Try again
@@ -297,23 +301,38 @@ export function QuizView({
 
   if (!question) return null;
 
-  return (      <div className="flex min-w-0 flex-col gap-4">
-      <div className="flex items-center justify-between text-xs text-text-dim">
-        <span>
-          Question {index + 1} of {total}
-        </span>
-        <span>Score {score}</span>
+  const revealed = picked !== null;
+  const correctPick = picked === question.answer;
+  const answerLetter = String.fromCharCode(65 + question.answer);
+
+  return (
+    <div className="flex min-w-0 flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-text-dim">
+            Question {index + 1} of {total}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-text-dim">
+            Score {score}
+          </span>
+        </div>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)]">
+          <div
+            className="h-full rounded-full bg-[var(--text-main)] opacity-50 transition-[width] duration-300"
+            style={{ width: `${((index + 1) / total) * 100}%` }}
+          />
+        </div>
       </div>
 
-      <p className="font-display text-base font-bold leading-snug tracking-tight">
+      <p className="max-w-[58ch] font-display text-[17px] font-semibold leading-snug tracking-tight sm:text-[18px]">
         {question.question}
       </p>
 
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2.5">
         {question.options.map((option, i) => {
           const isAnswer = i === question.answer;
           const isPicked = picked === i;
-          const revealed = picked !== null;
+          const dim = revealed && !isAnswer && !isPicked;
           return (
             <li key={i}>
               <button
@@ -325,70 +344,125 @@ export function QuizView({
                   else onWrongAnswer?.({ question, pickedIndex: i });
                 }}
                 className={
-                  "flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-[15px] transition-colors sm:text-sm " +
+                  "group flex w-full items-start gap-3 rounded-xl border px-3.5 py-3.5 text-left text-[14px] leading-relaxed transition-colors sm:text-[14.5px] " +
                   (revealed && isAnswer
-                    ? "border-[var(--signal)] bg-[color-mix(in_srgb,var(--signal)_10%,transparent)]"
+                    ? "border-[color-mix(in_srgb,#57c99a_60%,transparent)] bg-[color-mix(in_srgb,#57c99a_7%,transparent)] text-foreground"
                     : revealed && isPicked
-                      ? "border-[var(--card-border)] opacity-70"
-                      : "border-[var(--card-border)] hover:border-[var(--signal)]")
+                      ? "border-[color-mix(in_srgb,var(--destructive)_55%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_6%,transparent)] text-foreground"
+                      : dim
+                        ? "border-[var(--card-border)] text-text-dim opacity-55"
+                        : "border-[var(--card-border)] text-foreground hover:border-[color-mix(in_srgb,var(--text-main)_38%,transparent)] hover:bg-[color-mix(in_srgb,var(--text-main)_3%,transparent)]")
                 }
               >
                 <span
                   className={
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] " +
+                    "mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10.5px] font-semibold tabular-nums " +
                     (revealed && isAnswer
-                      ? "border-[var(--signal)] text-[var(--signal)]"
-                      : "border-[var(--card-border)] text-text-dim")
+                      ? "border-[color-mix(in_srgb,#57c99a_60%,transparent)] bg-[color-mix(in_srgb,#57c99a_15%,transparent)] text-[#6fdcae]"
+                      : revealed && isPicked
+                        ? "border-[color-mix(in_srgb,var(--destructive)_55%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_12%,transparent)] text-[var(--destructive)]"
+                        : "border-[var(--card-border)] text-text-dim")
                   }
                 >
                   {revealed && isAnswer ? (
-                    <Check className="h-3 w-3" />
+                    <Check className="h-3.5 w-3.5" />
                   ) : revealed && isPicked ? (
-                    <X className="h-3 w-3" />
+                    <X className="h-3.5 w-3.5" />
                   ) : (
                     String.fromCharCode(65 + i)
                   )}
                 </span>
-                <span>{option}</span>
+                <span className="min-w-0 flex-1">{option}</span>
+                {revealed && isAnswer ? (
+                  <span className="mt-0.5 hidden shrink-0 rounded-full bg-[color-mix(in_srgb,#57c99a_12%,transparent)] px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-[#6fdcae] sm:inline">
+                    Answer
+                  </span>
+                ) : revealed && isPicked ? (
+                  <span className="mt-0.5 hidden shrink-0 rounded-full bg-[color-mix(in_srgb,var(--destructive)_10%,transparent)] px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-[var(--destructive)] sm:inline">
+                    Your pick
+                  </span>
+                ) : null}
               </button>
             </li>
           );
         })}
       </ul>
 
-      {picked !== null && (
-        <div className="rounded-2xl border border-[var(--card-border)] p-4">
-          {question.explanation && (
-            <p className="flex gap-2 text-[15px] leading-relaxed text-text-dim sm:text-sm">
-              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[var(--signal)]" />
-              {question.explanation}
-            </p>
-          )}
-          {question.source && onSourcePeek ? (
-            <button
-              type="button"
-              onClick={() => onSourcePeek(question.source as string, question.question)}
-              title="See the exact passage this question came from"
-              className="mt-2 inline-flex max-w-full items-center gap-1 truncate rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-medium text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
-            >
-              {question.source}
-              <span className="text-[9px] text-[var(--signal)]">peek</span>
-            </button>
-          ) : null}
-          <MovingBorderButton
-            onClick={() => {
-              if (index + 1 >= total) setDone(true);
-              else {
-                setIndex(index + 1);
-                setPicked(null);
+      {revealed && (
+        <div
+          aria-live="polite"
+          className="overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--text-main)_2.5%,transparent)]"
+        >
+          <div className="flex items-center gap-2.5 border-b border-[var(--card-border)] px-4 py-3">
+            <span
+              className={
+                "flex h-5 w-5 items-center justify-center rounded-full " +
+                (correctPick
+                  ? "bg-[color-mix(in_srgb,#57c99a_15%,transparent)] text-[#6fdcae]"
+                  : "bg-[color-mix(in_srgb,var(--destructive)_12%,transparent)] text-[var(--destructive)]")
               }
-            }}
-            className="mt-3"
-            innerClassName="px-4 py-2 text-[13px] font-semibold"
-          >
-            {index + 1 >= total ? "See result" : "Next question"}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </MovingBorderButton>
+            >
+              {correctPick ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+            </span>
+            <span
+              className={
+                "text-[12px] font-semibold " +
+                (correctPick ? "text-[#6fdcae]" : "text-[var(--destructive)]")
+              }
+            >
+              {correctPick ? "Correct" : "Not quite"}
+            </span>
+            {!correctPick ? (
+              <span className="text-[11.5px] text-text-dim">
+                The answer is {answerLetter}.
+              </span>
+            ) : null}
+            <span className="ml-auto hidden text-[10px] uppercase tracking-[0.14em] text-text-dim sm:inline">
+              Why
+            </span>
+          </div>
+
+          <div className="px-4 py-3.5">
+            {question.explanation ? (
+              <p className="max-w-[62ch] text-[14px] leading-relaxed text-text-dim sm:text-[13.5px]">
+                {question.explanation}
+              </p>
+            ) : (
+              <p className="text-[13px] leading-relaxed text-text-dim">
+                The source that settled this question is one tap away.
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--card-border)] pt-3">
+              {question.source && onSourcePeek ? (
+                <button
+                  type="button"
+                  onClick={() => onSourcePeek(question.source as string, question.question)}
+                  title="See the exact passage this question came from"
+                  className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10.5px] font-medium text-text-dim transition-colors hover:border-[var(--text-dim)] hover:text-foreground"
+                >
+                  {question.source}
+                  <span className="text-[9px] uppercase tracking-[0.1em] text-text-dim">peek</span>
+                </button>
+              ) : (
+                <span />
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (index + 1 >= total) setDone(true);
+                  else {
+                    setIndex(index + 1);
+                    setPicked(null);
+                  }
+                }}
+                className="ml-auto inline-flex items-center gap-2 rounded-full bg-[var(--text-main)] px-4 py-2 text-[12.5px] font-semibold text-[var(--panel)] transition-opacity hover:opacity-90"
+              >
+                {index + 1 >= total ? "See result" : "Next question"}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
