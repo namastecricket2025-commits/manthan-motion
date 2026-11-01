@@ -145,10 +145,12 @@ export function PressureBench() {
                 const frac = 0.36;
                 const px = baseX + run * (1 - frac) * Math.cos(rad);
                 const py = groundY - run * (1 - frac) * Math.sin(rad);
-                const nx = Math.sin(rad);
-                const ny = Math.cos(rad);
-                const bx = px - size * 0.5 * ny;
-                const by = py - size * 0.5 * ny;
+                /* The block's centre sits half a block along the outward normal
+                   of the slope: (−sinθ, −cosθ) in screen coordinates. */
+                const nx = -Math.sin(rad);
+                const ny = -Math.cos(rad);
+                const bx = px + nx * size * 0.5;
+                const by = py + ny * size * 0.5;
                 return (
                   <>
                     <line x1={baseX} y1={groundY} x2={topX} y2={topY} stroke={ink(0.55)} strokeWidth={2.4} strokeLinecap="round" />
@@ -165,15 +167,16 @@ export function PressureBench() {
                     {/* Gravity, normal, friction, and the component down the slope. */}
                     <line x1={bx} y1={by} x2={bx} y2={by + 70} stroke={ink(0.5)} strokeWidth={2} />
                     <text x={bx + 6} y={by + 84} fontSize={10.5} fill={ink(0.6)}>mg</text>
-                    <line x1={bx} y1={by} x2={bx + 58 * nx} y2={by - 58 * ny} stroke={CYAN} strokeWidth={2.2} />
-                    <text x={bx + 62 * nx} y={by - 62 * ny} fontSize={10.5} fill={CYAN}>N</text>
-                    <line x1={bx} y1={by} x2={bx - 56 * Math.cos(rad)} y2={by + 56 * Math.sin(rad)} stroke={MINT} strokeWidth={2.2} strokeDasharray={slides ? "5 4" : undefined} />
-                    <text x={bx - 64 * Math.cos(rad)} y={by + 64 * Math.sin(rad)} fontSize={10.5} fill={MINT}>
+                    <line x1={bx} y1={by} x2={bx + 58 * nx} y2={by + 58 * ny} stroke={CYAN} strokeWidth={2.2} />
+                    <text x={bx + 64 * nx} y={by + 64 * ny} fontSize={10.5} fill={CYAN}>N</text>
+                    {/* Friction points up the slope — against the impending motion. */}
+                    <line x1={bx} y1={by} x2={bx + 56 * Math.cos(rad)} y2={by - 56 * Math.sin(rad)} stroke={MINT} strokeWidth={2.2} strokeDasharray={slides ? "5 4" : undefined} />
+                    <text x={bx + 62 * Math.cos(rad)} y={by - 62 * Math.sin(rad)} fontSize={10.5} fill={MINT}>
                       {slides ? `f = ${maxGrip.toFixed(1)} N` : `f ≤ ${maxGrip.toFixed(1)} N`}
                     </text>
                     {/* The pull down the slope */}
-                    <line x1={bx} y1={by} x2={bx + 66 * Math.cos(rad)} y2={by + 66 * Math.sin(rad)} stroke={AMBER} strokeWidth={2.2} />
-                    <text x={bx + 70 * Math.cos(rad)} y={by + 70 * Math.sin(rad)} fontSize={10.5} fill={AMBER}>mg sin θ</text>
+                    <line x1={bx} y1={by} x2={bx - 66 * Math.cos(rad)} y2={by + 66 * Math.sin(rad)} stroke={AMBER} strokeWidth={2.2} />
+                    <text x={bx - 70 * Math.cos(rad)} y={by + 70 * Math.sin(rad)} fontSize={10.5} fill={AMBER}>mg sin θ</text>
                     {/* Critical angle marker on the ground */}
                     <line x1={baseX + 120} y1={groundY} x2={baseX + 120 + 90 * Math.cos((criticalAngle * Math.PI) / 180)} y2={groundY - 90 * Math.sin((criticalAngle * Math.PI) / 180)} stroke={ink(0.25)} strokeWidth={1.2} strokeDasharray="4 5" />
                     <text x={baseX + 128 + 90 * Math.cos((criticalAngle * Math.PI) / 180)} y={groundY - 92 * Math.sin((criticalAngle * Math.PI) / 180)} fontSize={10} fill={ink(0.5)}>

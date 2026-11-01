@@ -52,14 +52,9 @@ export function EchoSonarBench() {
     if (last.current === null) last.current = time;
     const dt = Math.min(64, time - last.current);
     last.current = time;
-    setPhase((p) => {
-      const next = p + dt / 2200;
-      if (next >= 1) {
-        setRunning(false);
-        return 1;
-      }
-      return next;
-    });
+    const next = Math.min(1, phase + dt / 2200);
+    setPhase(next);
+    if (next >= 1) setRunning(false);
   });
 
   const speed = mode === "cliff" ? airSpeed(temp) : WATER;
@@ -77,8 +72,6 @@ export function EchoSonarBench() {
     setPhase(0);
     setRunning(true);
   };
-
-  const slowed = Math.max(1, Math.round((echoTime * 1000) / 2200));
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
@@ -142,7 +135,7 @@ export function EchoSonarBench() {
             amber = going out · green = coming home
           </text>
           <text x={PLATE_W - 20} y={PLATE_H - 12} textAnchor="end" fontSize={11} fill={ink(0.55)}>
-            {running ? `pulse slowed ×${slowed} so you can watch it` : "press Send pulse"}
+            {running ? `stretched to watch · real round trip ${echoTime.toFixed(2)} s` : "press Send pulse"}
           </text>
         </svg>
 

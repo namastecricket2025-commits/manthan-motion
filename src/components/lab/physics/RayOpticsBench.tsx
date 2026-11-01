@@ -42,7 +42,11 @@ export function RayOpticsBench() {
 
   /* One scale for the whole plate: the object, the image and the mirror radius
      all have to fit. */
-  const extent = Math.max(u, Number.isFinite(v) ? Math.abs(v) : 0, Math.abs(f) * 2, 10);
+  /* A near-focus object throws its image hundreds of centimetres out. Keep the
+     plate readable and say that the image has left it, instead of shrinking the
+     whole drawing until the object is a dot. */
+  const imageOnPlate = Number.isFinite(v) && Math.abs(v) <= 120;
+  const extent = Math.max(u, Math.min(Number.isFinite(v) ? Math.abs(v) : 0, 120), Math.abs(f) * 2, 10);
   const scale = Math.min(4.2, 300 / extent);
   const px = (dist: number, side: "front" | "back") =>
     side === "front" ? MIRROR_X - dist * scale : MIRROR_X + dist * scale;
@@ -100,9 +104,7 @@ export function RayOpticsBench() {
 
   const nature = degenerate
     ? "Rays leave parallel — no image forms."
-    : real
-      ? `Real, inverted${Math.abs(m) > 1.02 ? ", magnified" : Math.abs(m) < 0.98 ? ", diminished" : ""} · ${v.toFixed(1)} cm in front`
-      : `Virtual, erect${Math.abs(m) > 1.02 ? ", magnified" : ", diminished"} · ${Math.abs(v).toFixed(1)} cm behind`;
+    : `${real ? "Real, inverted" : "Virtual, erect"}${Math.abs(m) > 1.02 ? ", magnified" : Math.abs(m) < 0.98 ? ", diminished" : ""} · ${Math.abs(v).toFixed(1)} cm ${real ? "in front" : "behind"}${imageOnPlate ? "" : " — beyond this plate"}`;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
@@ -167,19 +169,23 @@ export function RayOpticsBench() {
               )}
 
               {/* Image arrow */}
-              <line
-                x1={imgX}
-                y1={AXIS_Y}
-                x2={imgX}
-                y2={AXIS_Y - imageH * scale}
-                stroke={real ? "var(--lab-diagram-ink)" : AMBER}
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeDasharray={real ? undefined : "6 4"}
-              />
-              <text x={imgX} y={AXIS_Y - imageH * scale - 8} textAnchor="middle" fontSize={10.5} fill={real ? ink(0.7) : AMBER}>
-                image
-              </text>
+              {imageOnPlate && (
+                <>
+                  <line
+                    x1={imgX}
+                    y1={AXIS_Y}
+                    x2={imgX}
+                    y2={AXIS_Y - imageH * scale}
+                    stroke={real ? "var(--lab-diagram-ink)" : AMBER}
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeDasharray={real ? undefined : "6 4"}
+                  />
+                  <text x={imgX} y={AXIS_Y - imageH * scale - 8} textAnchor="middle" fontSize={10.5} fill={real ? ink(0.7) : AMBER}>
+                    image
+                  </text>
+                </>
+              )}
             </>
           ) : (
             <text x={MIRROR_X - 60} y={AXIS_Y - 60} textAnchor="end" fontSize={11.5} fill={AMBER}>

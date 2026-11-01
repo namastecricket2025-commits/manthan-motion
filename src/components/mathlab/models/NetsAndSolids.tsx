@@ -15,9 +15,9 @@ import { useMemo, useState } from "react";
  * (F + V − E = 2) is counted from the folded solid, so a student can check the
  * formula against a fact they can tally by hand.
  *
- * Cube, cuboid, cylinder and cone all use one vertex-lerp renderer: each face
- * carries a flat polygon and its folded polygon with the same number of
- * points, so the fold is a straight interpolation of every vertex.
+ * One scale per solid is shared by the net and the isometric projection, which
+ * is what keeps a face the same size at both ends of the fold. Without that,
+ * the solid would shrink into the net's middle instead of closing.
  */
 
 type SolidId = "cube" | "cuboid" | "cylinder" | "cone";
@@ -29,195 +29,190 @@ const SOLIDS: Array<{ id: SolidId; label: string; grade: string }> = [
   { id: "cone", label: "Cone", grade: "πr(r + l)" },
 ];
 
+type Pt = [number, number];
+
 type Face = {
   /** Vertex count stays constant between the two states. */
-  flat: [number, number][];
-  folded: [number, number][];
+  flat: Pt[];
+  folded: Pt[];
   fill: string;
   label: string;
   /** The face's true area in model units — readouts are measured, not typed. */
   area: number;
 };
 
-const iso = (x: number, y: number, z: number): [number, number] => [
-  320 + (x - z) * 0.86,
-  190 - y * 0.8 + (x + z) * 0.5,
+/** Isometric projection at the same pixels-per-unit as the flat net. */
+const iso = (x: number, y: number, z: number, S: number): Pt => [
+  320 + (x - z) * S * 0.86,
+  198 - y * S * 0.92 + (x + z) * S * 0.48,
 ];
+
+const tint = (alpha: number) => `color-mix(in srgb, var(--text-main) ${alpha}%, transparent)`;
 
 /* ---- Cube / cuboid: a cross net folding into a box -------------------- */
 
 function boxFaces(l: number, b: number, h: number): Face[] {
-  const t = (alpha: number) => `color-mix(in srgb, var(--text-main) ${alpha}%, transparent)`;
-  /* Net layout (flat, SVG units): the classic cross. Base sits at the centre;
-     the four walls radiate from its edges; the lid caps the north wall. */
-  const netL = l * 44;
-  const netB = b * 44;
-  const netH = h * 44;
+  const S = Math.min(30, 560 / (l + 2 * h), 300 / (2 * (b + h)));
+  const netL = l * S;
+  const netB = b * S;
+  const netH = h * S;
+
+  /* Four stacked rows: back wall, base, front wall, lid. Side walls hinge on
+     the base's left and right edges, each `netH` wide once unfolded. */
+  const totalH = 2 * netB + 2 * netH;
+  const topY = 198 - totalH / 2;
   const x0 = 320 - netL / 2;
-  const y0 = 150 - netB / 2;
-  const rect = (x: number, y: number, w: number, h: number): [number, number][] => [
+  const baseY = topY + netH;
+
+  const rect = (x: number, y: number, w: number, hh: number): Pt[] => [
     [x, y],
     [x + w, y],
-    [x + w, y + h],
-    [x, y + h],
+    [x + w, y + hh],
+    [x, y + hh],
   ];
 
-  const walls = [
-    { name: "front", dim: [netL, netH] as [number, number], off: [0, netB] as [number, number] },
-    { name: "back", dim: [netL, netH] as [number, number], off: [0, -netH] as [number, number] },
-    { name: "left", dim: [netB, netH] as [number, number], off: [-netB, 0] as [number, number] },
-    { name: "right", dim: [netB, netH] as [number, number], off: [netL, 0] as [number, number] },
-  ];
-
-  const faces: Face[] = [
+  return [
     {
-      label: "Base",
+      label: "base",
       area: l * b,
-      fill: t(9),
-      flat: rect(x0, y0, netL, netB),
-      /* The base lies in the xy-plane of the isometric view. */
-      folded: [
-        iso(0, 0, 0),
-        iso(l, 0, 0),
-        iso(l, 0, b),
-        iso(0, 0, b),
-      ],
+      fill: tint(9),
+      flat: rect(x0, baseY, netL, netB),
+      folded: [iso(0, 0, 0, S), iso(l, 0, 0, S), iso(l, 0, b, S), iso(0, 0, b, S)],
+    },
+    {
+      label: "back",
+      area: l * h,
+      fill: tint(6),
+      flat: rect(x0, topY, netL, netH),
+      folded: [iso(0, h, 0, S), iso(l, h, 0, S), iso(l, 0, 0, S), iso(0, 0, 0, S)],
+    },
+    {
+      label: "front",
+      area: l * h,
+      fill: tint(6),
+      flat: rect(x0, baseY + netB, netL, netH),
+      folded: [iso(0, 0, b, S), iso(l, 0, b, S), iso(l, h, b, S), iso(0, h, b, S)],
+    },
+    {
+      label: "left",
+      area: b * h,
+      fill: tint(4),
+      flat: rect(x0 - netH, baseY, netH, netB),
+      folded: [iso(0, 0, 0, S), iso(0, 0, b, S), iso(0, h, b, S), iso(0, h, 0, S)],
+    },
+    {
+      label: "right",
+      area: b * h,
+      fill: tint(4),
+      flat: rect(x0 + netL, baseY, netH, netB),
+      folded: [iso(l, 0, b, S), iso(l, 0, 0, S), iso(l, h, 0, S), iso(l, h, b, S)],
+    },
+    {
+      label: "lid",
+      area: l * b,
+      fill: tint(7),
+      flat: rect(x0, baseY + netB + netH, netL, netB),
+      folded: [iso(0, h, b, S), iso(l, h, b, S), iso(l, h, 0, S), iso(0, h, 0, S)],
     },
   ];
-
-  /* Folded positions: each wall stands on its own base edge. The four corners
-     of the wall are the two base corners plus their lift by h — the shared
-     edge keeps its two vertices, which is what makes the fold hinge-like. */
-  const wallFold: Record<string, [number, number][]> = {
-    front: [iso(0, 0, b), iso(l, 0, b), iso(l, h, b), iso(0, h, b)],
-    back: [iso(0, h, 0), iso(l, h, 0), iso(l, 0, 0), iso(0, 0, 0)],
-    left: [iso(0, 0, 0), iso(0, 0, b), iso(0, h, b), iso(0, h, 0)],
-    right: [iso(l, 0, b), iso(l, 0, 0), iso(l, h, 0), iso(l, h, b)],
-  };
-  const wallArea: Record<string, number> = {
-    front: l * h,
-    back: l * h,
-    left: b * h,
-    right: b * h,
-  };
-
-  for (const wall of walls) {
-    faces.push({
-      label: wall.name,
-      area: wallArea[wall.name],
-      fill: t(wall.name === "front" || wall.name === "back" ? 6 : 4),
-      flat: rect(x0 + wall.off[0], y0 + wall.off[1], wall.dim[0], wall.dim[1]),
-      folded: wallFold[wall.name],
-    });
-  }
-
-  /* The lid folds over the front wall in the net, and caps the box when shut. */
-  faces.push({
-    label: "Lid",
-    area: l * b,
-    fill: t(7),
-    flat: rect(x0, y0 + netB + netH, netL, netB),
-    folded: [iso(0, h, b), iso(l, h, b), iso(l, h, 0), iso(0, h, 0)],
-  });
-
-  return faces;
 }
 
 /* ---- Cylinder: rectangle + two discs ---------------------------------- */
 
 function cylinderFaces(r: number, h: number): Face[] {
-  const t = (alpha: number) => `color-mix(in srgb, var(--text-main) ${alpha}%, transparent)`;
-  const netR = r * 44;
-  const circ = 2 * Math.PI * netR;
-  const netH = h * 44;
+  const S = Math.min(26, 560 / (2 * Math.PI * r + 4 * r), 250 / (h + 4 * r));
+  const R = r * S;
+  const netH = h * S;
+  const circ = 2 * Math.PI * R;
   const cx = 320;
-  const cy = 170;
-
-  /* The tube's net is a rectangle; when folded it becomes the cylinder's
-     front outline — a rectangle capped by two ellipse halves. Both states
-     carry the same 41 points so the fold interpolates cleanly. */
+  const cy = 190;
   const N = 20;
-  const flatRect: [number, number][] = [[cx - circ / 2, cy - netH / 2]];
+
+  /* Flat: a rectangle. Folded: the cylinder's silhouette, a rectangle capped by
+     two ellipse halves. Both carry the same 42 points. */
+  const flatRect: Pt[] = [[cx - circ / 2, cy - netH / 2]];
   for (let i = 0; i <= N; i += 1) flatRect.push([cx - circ / 2 + (circ * i) / N, cy - netH / 2]);
   flatRect.push([cx + circ / 2, cy + netH / 2]);
   for (let i = N; i >= 0; i -= 1) flatRect.push([cx - circ / 2 + (circ * i) / N, cy + netH / 2]);
 
-  const R = netR;
-  const foldedRect: [number, number][] = [];
+  const foldedRect: Pt[] = [];
   const topY = cy - netH / 2;
   const botY = cy + netH / 2;
   foldedRect.push([cx - R, topY]);
   for (let i = 0; i <= N; i += 1) {
-    const a = Math.PI + (Math.PI * i) / N; /* top ellipse, left to right */
+    const a = Math.PI + (Math.PI * i) / N;
     foldedRect.push([cx + R * Math.cos(a), topY + R * 0.28 * Math.sin(a)]);
   }
   foldedRect.push([cx + R, botY]);
   for (let i = N; i >= 0; i -= 1) {
-    const a = (Math.PI * i) / N; /* bottom ellipse, right to left */
+    const a = (Math.PI * i) / N;
     foldedRect.push([cx + R * Math.cos(a), botY + R * 0.28 * Math.sin(a)]);
   }
 
-  const disc = (x: number, y: number, squash: number): [number, number][] =>
+  const disc = (x: number, y: number, squash: number): Pt[] =>
     Array.from({ length: 24 }, (_, i) => {
       const a = (i / 24) * Math.PI * 2;
-      return [x + netR * Math.cos(a), y + squash * netR * Math.sin(a)] as [number, number];
+      return [x + R * Math.cos(a), y + squash * R * Math.sin(a)] as Pt;
     });
 
-  /* Top disc: rides up with the rectangle, flattens from a side-on sliver into
-     the perspective ellipse of the folded cylinder. Bottom disc stays put. */
-  const topFlat = disc(cx - circ / 2 - netR - 14, cy, 1);
-  const topFolded = disc(cx, topY, 0.28);
-  const botFlat = disc(cx + circ / 2 + netR + 14, cy, 1);
-  const botFolded = disc(cx, botY, 0.28);
-
   return [
-    { label: "tube", area: 2 * Math.PI * r * h, fill: t(6), flat: flatRect, folded: foldedRect },
-    { label: "top", area: Math.PI * r * r, fill: t(9), flat: topFlat, folded: topFolded },
-    { label: "base", area: Math.PI * r * r, fill: t(9), flat: botFlat, folded: botFolded },
+    { label: "tube", area: 2 * Math.PI * r * h, fill: tint(6), flat: flatRect, folded: foldedRect },
+    {
+      label: "lid",
+      area: Math.PI * r * r,
+      fill: tint(9),
+      flat: disc(cx, topY - R - 10, 1),
+      folded: disc(cx, topY, 0.28),
+    },
+    {
+      label: "base",
+      area: Math.PI * r * r,
+      fill: tint(9),
+      flat: disc(cx, botY + R + 10, 1),
+      folded: disc(cx, botY, 0.28),
+    },
   ];
 }
 
 /* ---- Cone: a sector + a disc ------------------------------------------ */
 
 function coneFaces(r: number, l: number): Face[] {
-  const t = (alpha: number) => `color-mix(in srgb, var(--text-main) ${alpha}%, transparent)`;
-  const netR = l * 44;
-  const netR2 = r * 44;
-  const arc = (2 * Math.PI * netR2) / (2 * Math.PI) * 2 * Math.PI; /* circumference */
-  const sectorAngle = arc / netR; /* radians of the sector */
+  const S = Math.min(24, 180 / l, 520 / (l + 2 * r + 1));
+  const bigR = l * S;
+  const smallR = r * S;
+  const sectorAngle = (2 * Math.PI * r) / l; /* radians, always < 2π */
   const cx = 300;
-  const cy = 120;
+  const cy = 118;
   const N = 26;
 
-  /* Flat sector: apex at (cx, cy), sweeping downward. */
   const start = Math.PI / 2 - sectorAngle / 2;
-  const flat: [number, number][] = [[cx, cy]];
+  const flat: Pt[] = [[cx, cy]];
   for (let i = 0; i <= N; i += 1) {
     const a = start + (sectorAngle * i) / N;
-    flat.push([cx + netR * Math.cos(a), cy + netR * Math.sin(a)]);
+    flat.push([cx + bigR * Math.cos(a), cy + bigR * Math.sin(a)]);
   }
 
-  /* Folded: the cone's silhouette — apex above, elliptical base below. */
-  const apexY = cy - 30;
-  const baseY = cy + netR * 0.86;
-  const folded: [number, number][] = [[cx, apexY]];
+  /* Folded silhouette: apex, then the elliptical base. */
+  const apexY = cy - 18;
+  const baseY = cy + Math.max(96, bigR * 0.7);
+  const folded: Pt[] = [[cx, apexY]];
   for (let i = 0; i <= N; i += 1) {
     const a = Math.PI + (Math.PI * i) / N;
-    folded.push([cx + netR2 * Math.cos(a), baseY + netR2 * 0.3 * Math.sin(a)]);
+    folded.push([cx + smallR * Math.cos(a), baseY + smallR * 0.3 * Math.sin(a)]);
   }
 
   const discFlat = Array.from({ length: 24 }, (_, i) => {
     const a = (i / 24) * Math.PI * 2;
-    return [cx + netR + netR2 + 20 + netR2 * Math.cos(a), cy + netR * 0.6 + netR2 * Math.sin(a)] as [number, number];
+    return [cx + bigR + smallR + 24 + smallR * Math.cos(a), cy + bigR * 0.55 + smallR * Math.sin(a)] as Pt;
   });
   const discFolded = Array.from({ length: 24 }, (_, i) => {
     const a = (i / 24) * Math.PI * 2;
-    return [cx + netR2 * Math.cos(a), baseY + netR2 * 0.3 * Math.sin(a)] as [number, number];
+    return [cx + smallR * Math.cos(a), baseY + smallR * 0.3 * Math.sin(a)] as Pt;
   });
 
   return [
-    { label: "lateral", area: Math.PI * r * l, fill: t(6), flat, folded },
-    { label: "base", area: Math.PI * r * r, fill: t(9), flat: discFlat, folded: discFolded },
+    { label: "lateral", area: Math.PI * r * l, fill: tint(6), flat, folded },
+    { label: "base", area: Math.PI * r * r, fill: tint(9), flat: discFlat, folded: discFolded },
   ];
 }
 
@@ -239,12 +234,14 @@ export function NetsAndSolids() {
   const [slant, setSlant] = useState(3.2);
   const [fold, setFold] = useState(0);
 
+  const liveSlant = Math.max(r + 0.2, slant);
+
   const faces = useMemo(() => {
     if (solidId === "cube") return boxFaces(l, l, l);
     if (solidId === "cuboid") return boxFaces(l, b, h);
     if (solidId === "cylinder") return cylinderFaces(r, ch);
-    return coneFaces(r, Math.max(r + 0.2, slant));
-  }, [solidId, l, b, h, r, ch, slant]);
+    return coneFaces(r, liveSlant);
+  }, [solidId, l, b, h, r, ch, liveSlant]);
 
   const surfaceArea = faces.reduce((sum, f) => sum + f.area, 0);
   const volume =
@@ -254,7 +251,7 @@ export function NetsAndSolids() {
         ? l * b * h
         : solidId === "cylinder"
           ? Math.PI * r * r * ch
-          : (1 / 3) * Math.PI * r * r * Math.sqrt(Math.max(0.01, slant ** 2 - r ** 2));
+          : (1 / 3) * Math.PI * r * r * Math.sqrt(Math.max(0.01, liveSlant ** 2 - r ** 2));
 
   /* Euler's F + V − E, tallied from the solid the net closes into. */
   const euler =
@@ -264,16 +261,14 @@ export function NetsAndSolids() {
         ? { F: 3, V: 0, E: 2 }
         : { F: 2, V: 1, E: 1 };
 
-  const folded = fold > 0.985;
-
-  const rows =
+  const rows: Array<[string, string]> =
     solidId === "cube"
       ? [["Side a", `${l.toFixed(2)} u`], ["Surface area", `${(6 * l * l).toFixed(2)} u²`], ["Volume", `${(l ** 3).toFixed(2)} u³`]]
       : solidId === "cuboid"
         ? [["l, b, h", `${l.toFixed(1)}, ${b.toFixed(1)}, ${h.toFixed(1)} u`], ["Surface area", `${surfaceArea.toFixed(2)} u²`], ["Volume", `${volume.toFixed(2)} u³`]]
         : solidId === "cylinder"
           ? [["r, h", `${r.toFixed(1)}, ${ch.toFixed(1)} u`], ["Surface area", `${surfaceArea.toFixed(2)} u²`], ["Volume", `${volume.toFixed(2)} u³`]]
-          : [["r, slant l", `${r.toFixed(1)}, ${slant.toFixed(1)} u`], ["Surface area", `${surfaceArea.toFixed(2)} u²`], ["Volume", `${volume.toFixed(2)} u³`]];
+          : [["r, slant l", `${r.toFixed(1)}, ${liveSlant.toFixed(1)} u`], ["Surface area", `${surfaceArea.toFixed(2)} u²`], ["Volume", `${volume.toFixed(2)} u³`]];
 
   return (
     <div className="mm-root">
@@ -288,19 +283,13 @@ export function NetsAndSolids() {
 
       <div className="mm-grid">
         <div className="mm-stage">
-          <svg viewBox="0 0 640 380" role="img" aria-label={`Net of a ${solidId}, folding into the solid`}>
+          <svg viewBox="0 0 640 396" role="img" aria-label={`Net of a ${solidId}, folding into the solid`}>
             {faces.map((face) => (
               <path key={face.label} d={lerpFace(face, fold)} fill={face.fill} stroke="var(--text-main)" strokeWidth={1.6} strokeLinejoin="round" />
             ))}
-            {!folded ? (
-              <text x={14} y={22} fontSize={11} fill="var(--text-dim)">
-                flat net — drag Fold to close it
-              </text>
-            ) : (
-              <text x={14} y={22} fontSize={11} fill="var(--text-dim)">
-                folded solid — every face is the same face, moved
-              </text>
-            )}
+            <text x={14} y={22} fontSize={11} fill="var(--text-dim)">
+              {fold > 0.985 ? "folded solid — every face is the same face, moved" : "flat net — drag Fold to close it"}
+            </text>
           </svg>
         </div>
 
@@ -321,7 +310,7 @@ export function NetsAndSolids() {
               <>
                 {solidId === "cuboid" && <DimRow label="Length l" value={l} set={setL} />}
                 {solidId === "cuboid" && <DimRow label="Breadth b" value={b} set={setB} />}
-                {solidId !== "cube" && <DimRow label="Height h" value={h} set={setH} />}
+                {solidId === "cuboid" && <DimRow label="Height h" value={h} set={setH} />}
                 {solidId === "cube" && <DimRow label="Side a" value={l} set={setL} />}
               </>
             )}
@@ -333,7 +322,7 @@ export function NetsAndSolids() {
             )}
             {solidId === "cone" && (
               <>
-                <DimRow label="Radius r" value={r} set={setR} min={0.4} max={3} />
+                <DimRow label="Radius r" value={r} set={setR} min={0.4} max={2.4} />
                 <DimRow label="Slant l" value={slant} set={setSlant} min={1.2} max={6} />
               </>
             )}

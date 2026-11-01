@@ -63,12 +63,12 @@ export function VectorsPlanes() {
   const parallelogram = useMemo(() => {
     const pts: string[] = [];
     const N = 12;
-    for (let i = 0; i <= N; i += 1) pts.push(`L${P([a[0] * (i / N), a[1] * (i / N), a[2] * (i / N)]).join(" ")}`);
+    for (let i = 0; i <= N; i += 1) pts.push(P([a[0] * (i / N), a[1] * (i / N), a[2] * (i / N)]).join(" "));
     for (let i = 1; i <= N; i += 1)
-      pts.push(`L${P([a[0] + (b[0] * i) / N, a[1] + (b[1] * i) / N, a[2] + (b[2] * i) / N]).join(" ")}`);
-    for (let i = N - 1; i >= 0; i -= 1) pts.push(`L${P([(a[0] * i) / N + b[0], (a[1] * i) / N + b[1], (a[2] * i) / N + b[2]]).join(" ")}`);
-    for (let i = N - 1; i >= 1; i -= 1) pts.push(`L${P([(b[0] * i) / N, (b[1] * i) / N, (b[2] * i) / N]).join(" ")}`);
-    return `M${pts.join(" ")} Z`;
+      pts.push(P([a[0] + (b[0] * i) / N, a[1] + (b[1] * i) / N, a[2] + (b[2] * i) / N]).join(" "));
+    for (let i = N - 1; i >= 0; i -= 1) pts.push(P([(a[0] * i) / N + b[0], (a[1] * i) / N + b[1], (a[2] * i) / N + b[2]]).join(" "));
+    for (let i = N - 1; i >= 1; i -= 1) pts.push(P([(b[0] * i) / N, (b[1] * i) / N, (b[2] * i) / N]).join(" "));
+    return `M${pts.join(" L")} Z`;
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [a, b, view]);
 

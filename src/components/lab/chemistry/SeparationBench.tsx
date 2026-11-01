@@ -434,8 +434,11 @@ function Magnetic({ t }: { t: number }) {
         const startX = 280 + ((i * 53) % 156);
         const startY = 274 + ((i * 7) % 18);
         const frac = Math.min(1, Math.max(0, t * 1.2 - (i % 5) * 0.06));
-        const x = startX + (liftX + 56 - startX) * frac;
-        const y = startY + (liftY + 10 - startY) * frac;
+        /* Filings cluster under the two pole faces, not at the magnet's corner. */
+        const endX = liftX + (i % 2 === 0 ? 11 : 45) + ((i * 13) % 7) - 3;
+        const endY = liftY + 52 + ((i * 5) % 6);
+        const x = startX + (endX - startX) * frac;
+        const y = startY + (endY - startY) * frac;
         return <line key={i} x1={x} y1={y} x2={x + 4} y2={y - 4} stroke={ink(0.65)} strokeWidth={1.5} strokeLinecap="round" />;
       })}
       {/* Magnet */}

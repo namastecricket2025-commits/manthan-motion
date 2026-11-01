@@ -224,7 +224,7 @@ export function ElectrostaticsBench() {
               setQ2(next === "dipole" ? -4 : 4);
             }}
           />
-          <Range label="Charge 1" value={q1} min={-6} max={6} step={1} unit="µC" format={(v) => v.toFixed(0)} onChange={setQ1} />
+          <Range label="Charge 1" value={q1} min={1} max={6} step={1} unit="µC" format={(v) => v.toFixed(0)} onChange={setQ1} />
           {pair === "like" && <Range label="Charge 2" value={q2} min={1} max={6} step={1} unit="µC" format={(v) => v.toFixed(0)} onChange={setQ2} />}
           <Range label="Separation" value={sep} min={6} max={34} step={1} unit="cm" format={(v) => v.toFixed(0)} onChange={setSep} />
           <Range label="Probe · across" value={probeX} min={-26} max={26} step={1} unit="cm" format={(v) => v.toFixed(0)} onChange={setProbeX} />

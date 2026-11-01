@@ -137,9 +137,9 @@ function scanAxes(verts: Pt[]): { axes: number; sample: number[] } {
     if (hit && !inRun) sample.push(d);
     inRun = hit;
   }
-  // A wrap-around run (axis at 0° counted twice) is merged by the scan order.
-  const wrapped = sample.length > 1 && sample[0] === 0 && isAxis(verts, Math.PI - 0.001) ? sample.length - 1 : sample.length;
-  return { axes: wrapped, sample };
+  /* θ and θ + 180° are the same line, so scanning [0°, 180°) already counts
+     each axis exactly once — no wrap adjustment is needed. */
+  return { axes: sample.length, sample };
 }
 
 /** Rotational order: the smallest positive angle that maps the shape to itself. */
@@ -172,8 +172,11 @@ export function SymmetryStudio() {
   const aligned = isAxis(shape.verts, theta);
   const error = mismatch(shape.verts, (p) => reflect(p, theta));
 
-  const [ax, ay] = px(reflect([-2.6, 0], theta));
-  const [bx, by] = px(reflect([2.6, 0], theta));
+  /* The candidate line runs along (cos θ, sin θ) through the centre. Reflect
+     points across it, not along it — reflecting the x-axis would draw a line
+     at 2θ instead. */
+  const [ax, ay] = px([-2.6 * Math.cos(theta), -2.6 * Math.sin(theta)]);
+  const [bx, by] = px([2.6 * Math.cos(theta), 2.6 * Math.sin(theta)]);
 
   const verdict = isCircle
     ? "Every line through the centre of a circle is an axis of symmetry — the reflected half always lands on the other."
@@ -208,8 +211,8 @@ export function SymmetryStudio() {
             {!isCircle &&
               sample.map((d) => {
                 const t = (d * Math.PI) / 180;
-                const [x1, y1] = px(reflect([-2.4, 0], t));
-                const [x2, y2] = px(reflect([2.4, 0], t));
+                const [x1, y1] = px([-2.4 * Math.cos(t), -2.4 * Math.sin(t)]);
+                const [x2, y2] = px([2.4 * Math.cos(t), 2.4 * Math.sin(t)]);
                 return (
                   <line
                     key={d}
