@@ -135,8 +135,9 @@ export function PressureBench() {
               {/* Ramp: fixed geometry, angle slider. */}
               {(() => {
                 const groundY = 292;
-                const baseX = 84;
-                const run = 470;
+                const baseX = 120;
+                /* 340 px of run keeps the ramp inside the plate even at 45°. */
+                const run = 340;
                 const rad = (angle * Math.PI) / 180;
                 const topX = baseX + run * Math.cos(rad);
                 const topY = groundY - run * Math.sin(rad);

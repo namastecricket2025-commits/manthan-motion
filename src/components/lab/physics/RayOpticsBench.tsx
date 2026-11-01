@@ -33,7 +33,9 @@ export function RayOpticsBench() {
 
   const f = mirror === "concave" ? focal : -focal;
   /* Mirror formula. u = f is the parallel-ray limit, handled separately. */
-  const atFocus = Math.abs(u - Math.abs(f)) < 0.35;
+  /* Only a concave mirror has the u = f degeneracy; a convex mirror's focal
+     point is behind it and never sends the reflected rays parallel. */
+  const atFocus = f > 0 && Math.abs(u - f) < 0.35;
   const v = atFocus ? Infinity : (u * f) / (u - f);
   const m = atFocus ? Infinity : -v / u;
   const imageH = atFocus ? Infinity : m * objH;

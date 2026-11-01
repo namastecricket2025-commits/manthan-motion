@@ -72,8 +72,12 @@ export function PVProcessBench() {
     return { t1, t2, p2, v2: vv2, work, deltaU, heat };
   }, [process, p1, v1, v2, p2Manual]);
 
+  /* An adiabatic squeeze can push p₂ far above the starting range; scale the
+     pressure axis to whatever the process actually reaches. */
+  const pMax = Math.max(P_MAX, Math.ceil(state.p2 / 100) * 100);
+
   const X = (v: number) => PAD_L + (v / V_MAX) * (W_PLATE - PAD_L - 26);
-  const Y = (p: number) => H_PLATE - PAD_B - (p / P_MAX) * (H_PLATE - PAD_B - 26);
+  const Y = (p: number) => H_PLATE - PAD_B - (p / pMax) * (H_PLATE - PAD_B - 26);
 
   const curve = useMemo(() => {
     const pts: string[] = [];
@@ -121,16 +125,16 @@ export function PVProcessBench() {
         <svg viewBox={`0 0 ${W_PLATE} ${H_PLATE}`} className="w-full" role="img" aria-label={`p–V diagram of an ${process} process`}>
           {/* Grid */}
           {Array.from({ length: 7 }, (_, i) => (
-            <line key={`v${i}`} x1={X((i * V_MAX) / 6)} y1={Y(0)} x2={X((i * V_MAX) / 6)} y2={Y(P_MAX)} stroke={ink(0.06)} strokeWidth={1} />
+            <line key={`v${i}`} x1={X((i * V_MAX) / 6)} y1={Y(0)} x2={X((i * V_MAX) / 6)} y2={Y(pMax)} stroke={ink(0.06)} strokeWidth={1} />
           ))}
           {Array.from({ length: 7 }, (_, i) => (
-            <line key={`p${i}`} x1={X(0)} y1={Y((i * P_MAX) / 6)} x2={X(V_MAX)} y2={Y((i * P_MAX) / 6)} stroke={ink(0.06)} strokeWidth={1} />
+            <line key={`p${i}`} x1={X(0)} y1={Y((i * pMax) / 6)} x2={X(V_MAX)} y2={Y((i * pMax) / 6)} stroke={ink(0.06)} strokeWidth={1} />
           ))}
           {/* Axes */}
           <line x1={X(0)} y1={Y(0)} x2={X(V_MAX)} y2={Y(0)} stroke={ink(0.45)} strokeWidth={1.6} />
-          <line x1={X(0)} y1={Y(0)} x2={X(0)} y2={Y(P_MAX)} stroke={ink(0.45)} strokeWidth={1.6} />
+          <line x1={X(0)} y1={Y(0)} x2={X(0)} y2={Y(pMax)} stroke={ink(0.45)} strokeWidth={1.6} />
           <text x={X(V_MAX)} y={H_PLATE - 22} textAnchor="end" fontSize={11} fill={ink(0.55)}>V (litres) →</text>
-          <text x={16} y={Y(P_MAX) + 12} fontSize={11} fill={ink(0.55)}>p (kPa)</text>
+          <text x={16} y={Y(pMax) + 12} fontSize={11} fill={ink(0.55)}>p (kPa)</text>
 
           {/* The isotherm through A, for reference */}
           {process !== "isothermal" &&
@@ -139,7 +143,7 @@ export function PVProcessBench() {
               for (let i = 1; i <= 60; i += 1) {
                 const v = 2 + (i / 60) * (V_MAX - 4);
                 const p = (p1 * v1) / v;
-                if (p <= P_MAX) pts.push(`${X(v).toFixed(1)} ${Y(p).toFixed(1)}`);
+                if (p <= pMax) pts.push(`${X(v).toFixed(1)} ${Y(p).toFixed(1)}`);
               }
               return <path d={`M${pts.join(" L")}`} fill="none" stroke={ink(0.16)} strokeWidth={1.2} strokeDasharray="5 6" />;
             })()}

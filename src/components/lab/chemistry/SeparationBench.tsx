@@ -261,24 +261,24 @@ function Evaporation({ t }: { t: number }) {
   const level = 0.75 - 0.65 * t;
   return (
     <g>
-      {/* Burner */}
-      <path d="M 330 320 L 390 320 L 378 300 L 342 300 Z" fill={plate(0.6)} stroke={ink(0.35)} strokeWidth={1.4} />
-      <path d={`M 360 300 Q ${352} ${288} 360 ${276} Q ${368} ${264} 360 ${252}`} fill="none" stroke={AMBER} strokeWidth={2.2} opacity={0.65} />
-      {/* Dish */}
-      <path d="M 280 268 L 440 268 L 420 300 Q 360 316 300 300 Z" fill={plate(0.55)} stroke={ink(0.45)} strokeWidth={1.8} />
-      <path d={`M 296 ${300 - level * 22} L 424 ${300 - level * 22} L 412 ${300 - level * 10} Q 360 ${310 - level * 8} 308 ${300 - level * 10} Z`} fill={CYAN} opacity={0.35} />
+      {/* Burner, under the dish */}
+      <path d="M 330 330 L 390 330 L 378 310 L 342 310 Z" fill={plate(0.6)} stroke={ink(0.35)} strokeWidth={1.4} />
+      <path d="M 360 310 Q 352 298 360 288 Q 368 278 360 268" fill="none" stroke={AMBER} strokeWidth={2.2} opacity={0.65} />
+      {/* Shallow evaporating dish */}
+      <path d="M 280 240 L 440 240 L 420 268 Q 360 284 300 268 Z" fill={plate(0.55)} stroke={ink(0.45)} strokeWidth={1.8} />
+      <path d={`M 296 ${268 - level * 18} L 424 ${268 - level * 18} L 412 ${268 - level * 8} Q 360 ${278 - level * 6} 308 ${268 - level * 8} Z`} fill={CYAN} opacity={0.35} />
       {/* Salt crystals appear as the water leaves */}
       {Array.from({ length: 18 }, (_, i) => {
         const appear = t * 18 > i + 2;
         const x = 318 + ((i * 37) % 84);
-        const y = 292 + ((i * 13) % 12);
+        const y = 266 + ((i * 13) % 10);
         return appear ? <rect key={i} x={x} y={y} width={4} height={4} fill={ink(0.6)} transform={`rotate(35 ${x} ${y})`} /> : null;
       })}
       {/* Steam */}
       {[0, 1, 2, 3].map((i) => (
         <path
           key={i}
-          d={`M ${330 + i * 18} 262 Q ${322 + i * 18} 240 ${334 + i * 18} 222 Q ${344 + i * 18} 206 ${336 + i * 18} 190`}
+          d={`M ${330 + i * 18} 236 Q ${322 + i * 18} 214 ${334 + i * 18} 196 Q ${344 + i * 18} 180 ${336 + i * 18} 164`}
           fill="none"
           stroke={ink(0.22)}
           strokeWidth={1.6}
@@ -286,8 +286,8 @@ function Evaporation({ t }: { t: number }) {
           opacity={Math.max(0.15, t)}
         />
       ))}
-      <text x={470} y={250} fontSize={10.5} fill={ink(0.55)}>water leaves as vapour</text>
-      <text x={470} y={300} fontSize={10.5} fill={ink(0.55)}>salt stays in the dish</text>
+      <text x={466} y={206} fontSize={10.5} fill={ink(0.55)}>water leaves as vapour</text>
+      <text x={466} y={256} fontSize={10.5} fill={ink(0.55)}>salt stays in the dish</text>
     </g>
   );
 }
@@ -326,7 +326,9 @@ function Chromatography({ t }: { t: number }) {
   const paperW = 120;
   const paperTop = 60;
   const paperBottom = 300;
-  const solventTop = paperBottom - 10 - t * 190;
+  /* The pool in the beaker never rises above its rim; it is the solvent front
+     on the paper that climbs, which is what the bands mark. */
+  const solventTop = Math.max(202, paperBottom - 10 - t * 90);
   const originY = 250;
   return (
     <g>
@@ -386,9 +388,9 @@ function SeparatingFunnel({ t }: { t: number }) {
 function Sublimation({ t }: { t: number }) {
   return (
     <g>
-      {/* Burner */}
-      <path d="M 320 320 L 380 320 L 368 302 L 332 302 Z" fill={plate(0.6)} stroke={ink(0.35)} strokeWidth={1.4} />
-      <path d="M 350 302 Q 342 288 350 276 Q 358 264 350 250" fill="none" stroke={AMBER} strokeWidth={2} opacity={0.6} />
+      {/* Burner, clear of the dish */}
+      <path d="M 320 344 L 380 344 L 368 326 L 332 326 Z" fill={plate(0.6)} stroke={ink(0.35)} strokeWidth={1.4} />
+      <path d="M 350 326 Q 342 320 350 314 Q 358 308 350 302" fill="none" stroke={AMBER} strokeWidth={2} opacity={0.6} />
       {/* Dish */}
       <path d="M 270 286 L 430 286 L 414 306 Q 350 316 286 306 Z" fill={plate(0.55)} stroke={ink(0.45)} strokeWidth={1.8} />
       {/* Mixture: salt stays grey, ammonium chloride disappears */}

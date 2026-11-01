@@ -169,7 +169,9 @@ export function SymmetryStudio() {
   const order = useMemo(() => rotationOrder(shape.verts), [shape]);
 
   const theta = (thetaDeg * Math.PI) / 180;
-  const aligned = isAxis(shape.verts, theta);
+  /* The circle is the one shape with an answer the scan cannot sample: every
+     line through its centre is an axis, so it is true analytically. */
+  const aligned = isCircle || isAxis(shape.verts, theta);
   const error = mismatch(shape.verts, (p) => reflect(p, theta));
 
   /* The candidate line runs along (cos θ, sin θ) through the centre. Reflect

@@ -54,6 +54,8 @@ import { useSearchParams } from "react-router";
 /* Accents, ink and the shared bench atoms come from `bench-atoms` so the
    Dynamics bench (its own file) draws with exactly the same vocabulary. */
 
+type ClassBench = "pressure" | "echo" | "projectile" | "pv" | "rayoptics" | "electrostatics";
+
 type Bench =
   | "circuits"
   | "motion"
@@ -62,12 +64,23 @@ type Bench =
   | "optics"
   | "magnet"
   | "instruments"
-  | "pressure"
-  | "echo"
-  | "projectile"
-  | "pv"
-  | "rayoptics"
-  | "electrostatics";
+  | "classlabs"
+  | ClassBench;
+
+/**
+ * The class-specific benches live behind one rail entry rather than adding six
+ * more pills to a row that already scrolls sideways. A student looking for
+ * "my class" finds one labelled door; the bench inside then carries its own
+ * class line.
+ */
+const CLASS_BENCHES: Array<{ id: ClassBench; label: string }> = [
+  { id: "pressure", label: "Pressure · 8" },
+  { id: "echo", label: "Echo & SONAR · 9" },
+  { id: "projectile", label: "Projectile · 11" },
+  { id: "pv", label: "p–V diagram · 11" },
+  { id: "rayoptics", label: "Ray optics · 12" },
+  { id: "electrostatics", label: "Electrostatics · 12" },
+];
 
 const BENCHES: { id: Bench; label: string }[] = [
   { id: "circuits", label: "Circuits" },
@@ -77,12 +90,7 @@ const BENCHES: { id: Bench; label: string }[] = [
   { id: "optics", label: "Optics" },
   { id: "magnet", label: "Magnetism" },
   { id: "instruments", label: "Instruments" },
-  { id: "pressure", label: "Pressure" },
-  { id: "echo", label: "Echo & SONAR" },
-  { id: "projectile", label: "Projectile" },
-  { id: "pv", label: "p–V diagram" },
-  { id: "rayoptics", label: "Ray optics" },
-  { id: "electrostatics", label: "Electrostatics" },
+  { id: "classlabs", label: "Class 8–12" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -1927,7 +1935,12 @@ export function PhysicsVectorLab() {
   const [params] = useSearchParams();
   const [bench, setBench] = useState<Bench>(() => {
     const wanted = params.get("bench");
+    if (CLASS_BENCHES.some((entry) => entry.id === wanted)) return "classlabs";
     return BENCHES.find((entry) => entry.id === wanted)?.id ?? "circuits";
+  });
+  const [classBench, setClassBench] = useState<ClassBench>(() => {
+    const wanted = params.get("bench");
+    return CLASS_BENCHES.find((entry) => entry.id === wanted)?.id ?? "pressure";
   });
   const transition = useSpringTransition();
   const theme = useLabTheme();
@@ -1976,12 +1989,22 @@ export function PhysicsVectorLab() {
           {bench === "optics" && <OpticsPractical />}
           {bench === "magnet" && <MagnetismBench />}
           {bench === "instruments" && <InstrumentsBench />}
-          {bench === "pressure" && <PressureBench />}
-          {bench === "echo" && <EchoSonarBench />}
-          {bench === "projectile" && <ProjectileBench />}
-          {bench === "pv" && <PVProcessBench />}
-          {bench === "rayoptics" && <RayOpticsBench />}
-          {bench === "electrostatics" && <ElectrostaticsBench />}
+          {(bench === "classlabs" || CLASS_BENCHES.some((entry) => entry.id === bench)) && (
+            <div className="flex flex-col gap-4">
+              <Picker
+                label="Class bench"
+                value={classBench}
+                options={CLASS_BENCHES.map((entry) => ({ id: entry.id, label: entry.label }))}
+                onChange={(next) => setClassBench(next)}
+              />
+              {classBench === "pressure" && <PressureBench />}
+              {classBench === "echo" && <EchoSonarBench />}
+              {classBench === "projectile" && <ProjectileBench />}
+              {classBench === "pv" && <PVProcessBench />}
+              {classBench === "rayoptics" && <RayOpticsBench />}
+              {classBench === "electrostatics" && <ElectrostaticsBench />}
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
