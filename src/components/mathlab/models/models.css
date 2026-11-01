@@ -1,0 +1,205 @@
+/* ================================================================== */
+/* Class models — the interactive figures for Classes 8, 9, 11 and 12 */
+/* ==================================================================
+   One surface language for every model: the page's own card, hairline
+   borders, tabular readouts. The figures are SVG on the same ink the
+   construction bench uses, so a model reads as another plate of the
+   same notebook rather than a widget from a different product. */
+
+.mm-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mm-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    color 200ms var(--ease-momentum),
+    background 200ms var(--ease-momentum),
+    border-color 200ms var(--ease-momentum);
+}
+
+.mm-chip:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
+.mm-chip[aria-pressed="true"] {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 28%, transparent);
+}
+
+.mm-chip__grade {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.mm-blurb {
+  max-width: 64ch;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+.mm-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 268px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .mm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mm-stage {
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--text-main) 2.5%, transparent);
+  padding: 10px;
+}
+
+.mm-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mm-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mm-panel {
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.mm-panel__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mm-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-main) 7%, transparent);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.mm-row:last-child {
+  border-bottom: 0;
+}
+
+.mm-row b {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-main);
+}
+
+.mm-note {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* The one slider style every model uses: a 3px track in the page's ink at
+   low alpha, with a solid thumb. Matches the Math Lab's other controls. */
+.mm-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mm-range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 18%, transparent);
+}
+
+.mm-range::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 18%, transparent);
+}
+
+.mm-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  height: 15px;
+  width: 15px;
+  border-radius: 999px;
+  background: var(--text-main);
+  border: 2px solid var(--card);
+}
+
+.mm-range::-moz-range-thumb {
+  height: 15px;
+  width: 15px;
+  border-radius: 999px;
+  background: var(--text-main);
+  border: 2px solid var(--card);
+}
+
+.mm-range:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--signal) 70%, transparent);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* A state line that lights up when a condition holds — the model's verdict,
+   e.g. "this IS a line of symmetry". Colour never carries the message alone;
+   the words change with it. */
+.mm-verdict {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 9px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.mm-verdict[data-on="true"] {
+  border-color: color-mix(in srgb, var(--verify) 46%, transparent);
+  background: color-mix(in srgb, var(--verify) 9%, transparent);
+  color: var(--verify);
+}
