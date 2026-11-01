@@ -40,7 +40,8 @@
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
 }
 
-.mm-chip[aria-pressed="true"] {
+.mm-chip[aria-pressed="true"],
+.mm-chip[aria-selected="true"] {
   color: var(--text-main);
   background: color-mix(in srgb, var(--text-main) 12%, transparent);
   border-color: color-mix(in srgb, var(--text-main) 28%, transparent);

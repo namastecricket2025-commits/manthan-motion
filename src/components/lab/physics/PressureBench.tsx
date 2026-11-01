@@ -201,6 +201,7 @@ export function PressureBench() {
 
       <div className="flex flex-col gap-3">
         <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
+          <p className="apple-lab-micro">Class 8 · Force, pressure and friction</p>
           <Picker
             label="Bench"
             value={mode}

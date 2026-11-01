@@ -160,6 +160,7 @@ export function EchoSonarBench() {
 
       <div className="flex flex-col gap-3">
         <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
+          <p className="apple-lab-micro">Class 9 · Sound — reflection and echo</p>
           <Picker
             label="Experiment"
             value={mode}

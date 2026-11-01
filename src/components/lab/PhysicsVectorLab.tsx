@@ -3,6 +3,12 @@ import DynamicsBench from "@/components/lab/DynamicsBench";
 import MagnetismBench from "@/components/lab/physics/MagnetismBench";
 import OpticsPractical from "@/components/lab/physics/OpticsPractical";
 import InstrumentsBench from "@/components/lab/physics/InstrumentsBench";
+import PressureBench from "@/components/lab/physics/PressureBench";
+import EchoSonarBench from "@/components/lab/physics/EchoSonarBench";
+import ProjectileBench from "@/components/lab/physics/ProjectileBench";
+import PVProcessBench from "@/components/lab/physics/PVProcessBench";
+import RayOpticsBench from "@/components/lab/physics/RayOpticsBench";
+import ElectrostaticsBench from "@/components/lab/physics/ElectrostaticsBench";
 import { CircuitsBench } from "@/components/lab/CircuitDiagram";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
@@ -48,7 +54,20 @@ import { useSearchParams } from "react-router";
 /* Accents, ink and the shared bench atoms come from `bench-atoms` so the
    Dynamics bench (its own file) draws with exactly the same vocabulary. */
 
-type Bench = "circuits" | "motion" | "dynamics" | "waves" | "optics" | "magnet" | "instruments";
+type Bench =
+  | "circuits"
+  | "motion"
+  | "dynamics"
+  | "waves"
+  | "optics"
+  | "magnet"
+  | "instruments"
+  | "pressure"
+  | "echo"
+  | "projectile"
+  | "pv"
+  | "rayoptics"
+  | "electrostatics";
 
 const BENCHES: { id: Bench; label: string }[] = [
   { id: "circuits", label: "Circuits" },
@@ -58,6 +77,12 @@ const BENCHES: { id: Bench; label: string }[] = [
   { id: "optics", label: "Optics" },
   { id: "magnet", label: "Magnetism" },
   { id: "instruments", label: "Instruments" },
+  { id: "pressure", label: "Pressure" },
+  { id: "echo", label: "Echo & SONAR" },
+  { id: "projectile", label: "Projectile" },
+  { id: "pv", label: "p–V diagram" },
+  { id: "rayoptics", label: "Ray optics" },
+  { id: "electrostatics", label: "Electrostatics" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -1951,6 +1976,12 @@ export function PhysicsVectorLab() {
           {bench === "optics" && <OpticsPractical />}
           {bench === "magnet" && <MagnetismBench />}
           {bench === "instruments" && <InstrumentsBench />}
+          {bench === "pressure" && <PressureBench />}
+          {bench === "echo" && <EchoSonarBench />}
+          {bench === "projectile" && <ProjectileBench />}
+          {bench === "pv" && <PVProcessBench />}
+          {bench === "rayoptics" && <RayOpticsBench />}
+          {bench === "electrostatics" && <ElectrostaticsBench />}
         </motion.div>
       </AnimatePresence>
     </div>

@@ -151,6 +151,7 @@ export function ProjectileBench() {
 
       <div className="flex flex-col gap-3">
         <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
+          <p className="apple-lab-micro">Class 11 · Motion in a plane</p>
           <Range label="Launch speed u" value={u} min={5} max={45} step={1} unit="m/s" onChange={setU} />
           <Range label="Launch angle θ" value={theta} min={5} max={85} step={1} unit="°" onChange={setAngle} />
           <Range label="Launch height" value={height} min={0} max={10} step={0.5} unit="m" format={(v) => v.toFixed(1)} onChange={setHeight} />

@@ -13,6 +13,7 @@ import {
 import Atom3D from "@/components/lab/Atom3D";
 import { ChemistrySaltBench } from "@/components/lab/ChemistrySaltBench";
 import { ChemistryInstruments } from "@/components/lab/ChemistryInstruments";
+import { SeparationBench } from "@/components/lab/chemistry/SeparationBench";
 import { useRecorder } from "@/components/lab/practical/useRecorder";
 import MoleBench from "@/components/lab/MoleBench";
 import { Questions, type BenchQuestion } from "@/components/lab/bench-atoms";
@@ -48,6 +49,7 @@ type SubTab =
   | "titration"
   | "salts"
   | "instruments"
+  | "separation"
   | "reactions"
   | "balance";
 
@@ -57,6 +59,7 @@ const SUBTABS: Array<{ id: SubTab; label: string }> = [
   { id: "titration", label: "Titration" },
   { id: "salts", label: "Salt Analysis" },
   { id: "instruments", label: "Instruments" },
+  { id: "separation", label: "Separation" },
   { id: "reactions", label: "Reactions" },
   { id: "balance", label: "Balancing" },
 ];
@@ -2562,6 +2565,7 @@ export function ChemistryGlassLab() {
           {tab === "balance" && <MoleBench />}
           {tab === "salts" && <ChemistrySaltBench />}
           {tab === "instruments" && <ChemistryInstruments />}
+          {tab === "separation" && <SeparationBench />}
         </motion.div>
       </AnimatePresence>
     </div>

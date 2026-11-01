@@ -1,4 +1,4 @@
-import { Picker, Questions, Range, Readout, ink, plate, AMBER, CYAN, MINT } from "@/components/lab/bench-atoms";
+import { Picker, Questions, Range, Readout, ink, plate, AMBER, MINT } from "@/components/lab/bench-atoms";
 import { useMemo, useState } from "react";
 
 /**
@@ -24,7 +24,6 @@ type Process = "isothermal" | "adiabatic" | "isobaric" | "isochoric";
 
 const GAMMA = 1.4;
 const CV = 2.5 * 8.314; /* J/mol·K */
-const CP = 3.5 * 8.314;
 const R = 8.314;
 const N = 1;
 
@@ -170,6 +169,7 @@ export function PVProcessBench() {
 
       <div className="flex flex-col gap-3">
         <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
+          <p className="apple-lab-micro">Class 11 · Thermodynamics — p–V processes</p>
           <Picker label="Process" value={process} options={PROCESSES} onChange={(next) => setProcess(next)} />
           <Range label="State A pressure p₁" value={p1} min={40} max={340} step={5} unit="kPa" format={(v) => v.toFixed(0)} onChange={setP1} />
           <Range label="State A volume V₁" value={v1} min={4} max={20} step={0.5} unit="L" format={(v) => v.toFixed(1)} onChange={setV1} />
