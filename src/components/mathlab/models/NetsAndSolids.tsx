@@ -62,11 +62,11 @@ function boxFaces(l: number, b: number, h: number): Face[] {
     [x, y + h],
   ];
 
-  const walls: Face[] = [
-    { name: "front", dim: [netL, netH], off: [0, netB] },
-    { name: "back", dim: [netL, netH], off: [0, -netH] },
-    { name: "left", dim: [netB, netH], off: [-netB, 0] },
-    { name: "right", dim: [netB, netH], off: [netL, 0] },
+  const walls = [
+    { name: "front", dim: [netL, netH] as [number, number], off: [0, netB] as [number, number] },
+    { name: "back", dim: [netL, netH] as [number, number], off: [0, -netH] as [number, number] },
+    { name: "left", dim: [netB, netH] as [number, number], off: [-netB, 0] as [number, number] },
+    { name: "right", dim: [netB, netH] as [number, number], off: [netL, 0] as [number, number] },
   ];
 
   const faces: Face[] = [

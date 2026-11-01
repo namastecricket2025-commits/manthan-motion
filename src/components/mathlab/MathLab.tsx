@@ -16,6 +16,7 @@ import { useNarration, type NarrationLine } from "@/components/mathlab/useNarrat
 import { GraphingCalculator } from "@/components/mathlab/GraphingCalculator";
 import { ScientificCalculator } from "@/components/mathlab/ScientificCalculator";
 import { ConstructionBench } from "@/components/mathlab/ConstructionBench";
+import { ModelsLab } from "@/components/mathlab/models/ModelsLab";
 import { FormulaSheet } from "@/components/mathlab/FormulaSheet";
 import { MathHistory } from "@/components/mathlab/MathHistory";
 import { PrintSheet } from "@/components/mathlab/PrintSheet";
@@ -39,6 +40,7 @@ import { stopSpeaking } from "@/components/voice/avia";
 import { createDictation, type Dictation } from "@/components/voice/dictation";
 import {
   ArrowRight,
+  Box,
   Calculator,
   Camera,
   Check,
@@ -82,6 +84,7 @@ const VIEW_TABS = [
   { id: "solve", label: "Solve", icon: PenLine },
   { id: "graph", label: "Graph", icon: LineChart },
   { id: "construct", label: "Geometry", icon: Compass },
+  { id: "models", label: "Models", icon: Box },
   { id: "tools", label: "Formulas", icon: Calculator },
   { id: "history", label: "History", icon: History },
   { id: "practice", label: "Practice", icon: Sparkles },
@@ -1115,6 +1118,10 @@ export function MathLab() {
         ) : view === "construct" ? (
           <section className="mathlab-card mathlab-viewcard">
             <ConstructionBench />
+          </section>
+        ) : view === "models" ? (
+          <section className="mathlab-card mathlab-viewcard">
+            <ModelsLab gradeId={grade.id} />
           </section>
         ) : view === "tools" ? (
           <section className="mathlab-card mathlab-viewcard">
