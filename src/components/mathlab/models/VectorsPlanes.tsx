@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 
 /**
  * Vectors & planes in 3D — Class 12.
@@ -118,7 +118,7 @@ export function VectorsPlanes() {
   };
 
   /* Unit grid on the floor (z = 0 plane) for depth cues. */
-  const grid: Array<{ key: string; x1: number; y1: number; x2: number; y2: number }> = [];
+  const grid: ReactElement[] = [];
   for (let i = -4; i <= 4; i += 1) {
     grid.push(<line key={`gx${i}`} {...xy(P([i, 0, -4]), P([i, 0, 4]))} stroke="var(--text-main)" strokeWidth={0.8} opacity={0.08} />);
     grid.push(<line key={`gz${i}`} {...xy(P([-4, 0, i]), P([4, 0, i]))} stroke="var(--text-main)" strokeWidth={0.8} opacity={0.08} />);
