@@ -1176,6 +1176,153 @@ html[data-comfort="on"] .apple-lab[data-lab-theme="light"]::after {
 }
 
 /* ============================================================
+   The instrument shell — stage, transport rail, reading strip
+
+   The class benches used to be a drawing panel beside a tall column of
+   sliders. Grid stretch then pulled the drawing panel to the sliders' height,
+   so the figure floated inside a mostly empty box: a 280px diagram in a 520px
+   card. These three rules are the replacement shell.
+
+     .lab-stage-canvas   the plate the figure is drawn on — one neutral
+                         vignette, no second card around it, so the drawing
+                         owns the whole panel width instead of sitting in a
+                         bordered box inside a bordered box
+     .lab-stage-rail     the transport band: run/pause, scrubber and clock
+     .lab-stage-stats    the reading strip: the numbers the drawing produces,
+                         in a hairline grid that fills the panel's width
+   ============================================================ */
+
+.lab-stage-canvas {
+  background: radial-gradient(ellipse at 50% 32%, #101010 0%, #060606 74%);
+}
+
+.lab-stage-canvas > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lab-stage-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--lab-line-soft);
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--lab-ink) 2.5%, transparent);
+}
+
+/* The scrubber band the rail stretches: it is the bench's own timeline, so a
+   bench without an animation simply does not render one. */
+.lab-stage-track {
+  position: relative;
+  flex: 1 1 9rem;
+  min-width: 6.5rem;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lab-ink) 16%, transparent);
+  overflow: hidden;
+}
+
+.lab-stage-track > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: inherit;
+  background: var(--lab-ink);
+  transition: width 90ms linear;
+}
+
+.lab-stage-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--lab-line-soft);
+  border-top: 1px solid var(--lab-line-soft);
+}
+
+.lab-stage-stat {
+  min-width: 0;
+  padding: 0.7rem 1rem;
+  background: var(--lab-canvas);
+}
+
+@media (min-width: 700px) {
+  .lab-stage-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.lab-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lab-ink-micro);
+  white-space: nowrap;
+}
+
+.lab-live > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.lab-live[data-live="true"] {
+  color: var(--lab-diagram-mint);
+}
+
+.lab-live[data-live="true"] > i {
+  box-shadow: 0 0 8px currentColor;
+  animation: lab-live-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lab-live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+html[data-motion="reduced"] .lab-live > i {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-live > i {
+    animation: none;
+  }
+}
+
+/* Theme sweeps: the light bench draws ink on paper, so the plate follows. */
+.apple-lab [data-lab-theme="light"] .lab-stage-canvas {
+  background: radial-gradient(ellipse at 50% 32%, #ffffff 0%, #f1f1f1 78%);
+}
+
+.apple-lab [data-lab-theme="light"] .lab-stage-stat {
+  background: #ffffff;
+}
+
+html[data-comfort="on"] .lab-stage-canvas {
+  background: radial-gradient(ellipse at 50% 32%, #16120c 0%, #0d0b07 78%);
+}
+
+html[data-comfort="on"] .lab-stage-stat {
+  background: #16120c;
+}
+
+html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-canvas {
+  background: radial-gradient(ellipse at 50% 32%, #fdf8ee 0%, #f4ebdc 78%);
+}
+
+html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
+  background: #fbf4e8;
+}
+
+/* ============================================================
    The lab inside the app shell
 
    /lab now shares the dashboard's shell: sidebar, page canvas, dot field and

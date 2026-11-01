@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 /**
@@ -141,6 +141,139 @@ export function Questions({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The instrument shell every class bench is built inside.
+ *
+ * A bench used to be a drawing on the left and a tall stack of sliders on the
+ * right; the drawing panel then stretched to the slider stack's height and the
+ * diagram floated in a mostly empty box. The shell fixes that by giving the
+ * panel four real bands — a labelled header, the drawing, a transport rail for
+ * the bench's live action, and the readings the drawing produces — so the
+ * panel's height is spent on the experiment instead of on air.
+ */
+export function BenchStage({
+  kicker,
+  title,
+  meta,
+  toolbar,
+  rail,
+  stats,
+  note,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  /** Chips on the header's right: the state the drawing is currently in. */
+  meta?: ReactNode;
+  /** Pickers and switches that change what is drawn. */
+  toolbar?: ReactNode;
+  /** Buttons, scrubbers and the clock: the bench's transport. */
+  rail?: ReactNode;
+  /** `StageStat` cells: the numbers the drawing produces. */
+  stats?: ReactNode;
+  /** One line of explanation under the stats. */
+  note?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="apple-lab-glass min-w-0 overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--lab-line-soft)] px-4 py-3.5">
+        <div className="min-w-0">
+          <p className="apple-lab-micro">{kicker}</p>
+          <h3 className="apple-lab-title mt-1 text-[15px] leading-tight">{title}</h3>
+        </div>
+        {meta ? <div className="flex flex-wrap items-center gap-2">{meta}</div> : null}
+      </div>
+
+      {toolbar ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-[var(--lab-line-soft)] px-4 py-3">
+          {toolbar}
+        </div>
+      ) : null}
+
+      <div className="lab-stage-canvas px-2 py-2 sm:px-3 sm:py-3">{children}</div>
+
+      {rail ? <div className="lab-stage-rail">{rail}</div> : null}
+
+      {stats ? <div className="lab-stage-stats">{stats}</div> : null}
+
+      {note ? (
+        <p className="border-t border-[var(--lab-line-soft)] px-4 py-3 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+          {note}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/** One cell of the reading strip under a stage. */
+export function StageStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "mint" | "cyan" | "amber" | "violet";
+}) {
+  const color =
+    tone === "mint"
+      ? "var(--lab-diagram-mint)"
+      : tone === "cyan"
+        ? "var(--lab-diagram-cyan)"
+        : tone === "amber"
+          ? "var(--lab-diagram-amber)"
+          : tone === "violet"
+            ? "var(--lab-diagram-violet)"
+            : undefined;
+  return (
+    <div className="lab-stage-stat">
+      <p className="apple-lab-micro">{label}</p>
+      <p className="apple-lab-value mt-1 text-[13.5px] font-semibold" style={color ? { color } : undefined}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/** A live-state dot for a stage header. */
+export function LiveDot({ on, label }: { on: boolean; label: string }) {
+  return (
+    <span className="lab-live" data-live={on ? "true" : "false"}>
+      <i />
+      {label}
+    </span>
+  );
+}
+
+/** A quiet on/off switch drawn as a chip — for what a stage shows. */
+export function StageToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+      data-active={checked}
+    >
+      <i
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: checked ? "var(--lab-diagram-mint)" : "var(--lab-ink-micro)" }}
+      />
+      {label}
+    </button>
   );
 }
 

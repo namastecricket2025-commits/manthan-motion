@@ -1,5 +1,18 @@
-import { Picker, Questions, ink, plate, AMBER, CYAN, VIOLET } from "@/components/lab/bench-atoms";
-import { useMemo, useState } from "react";
+import {
+  BenchStage,
+  LiveDot,
+  Picker,
+  Questions,
+  StageStat,
+  StageToggle,
+  ink,
+  plate,
+  AMBER,
+  CYAN,
+  VIOLET,
+} from "@/components/lab/bench-atoms";
+import { useAnimationFrame } from "motion/react";
+import { useMemo, useRef, useState } from "react";
 
 /**
  * Separation techniques — Class 9.
@@ -110,18 +123,46 @@ const FAIL_REASON: Record<TechniqueId, string> = {
   magnetic: "nothing magnetic",
 };
 
-const W = 720;
-const H = 380;
+const W = 860;
+const H = 440;
+
+/** Seconds one full apparatus run takes. */
+const RUN_SECONDS = 9;
 
 export function SeparationBench() {
   const [mixture, setMixture] = useState<MixtureId>("sand");
   const [technique, setTechnique] = useState<TechniqueId>("filtration");
-  const [progress, setProgress] = useState([0.35]);
-  const t = progress[0];
+  const [t, setT] = useState(0.35);
+  const [running, setRunning] = useState(false);
 
   const mix = MIXTURES.find((m) => m.id === mixture)!;
   const tech = TECHNIQUES.find((x) => x.id === technique)!;
   const works = tech.valid.includes(mixture);
+
+  /* ---- the clock ------------------------------------------------------ */
+  const last = useRef<number | null>(null);
+  useAnimationFrame((now) => {
+    if (!running) {
+      last.current = now;
+      return;
+    }
+    if (last.current === null) last.current = now;
+    const dt = Math.min(64, now - last.current);
+    last.current = now;
+    const next = t + dt / 1000 / RUN_SECONDS;
+    if (next >= 1) {
+      setT(1);
+      setRunning(false);
+    } else {
+      setT(next);
+    }
+  });
+
+  const toggleRun = () => {
+    if (!running && t >= 0.999) setT(0);
+    last.current = null;
+    setRunning((value) => !value);
+  };
 
   const verdict = useMemo(() => {
     if (works) {
@@ -139,20 +180,67 @@ export function SeparationBench() {
   }, [works, tech, mix, technique]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr]">
-      <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="apple-lab-micro">
-            Apparatus · {tech.label}
-          </p>
-          <span className="apple-lab-chip">{mix.label}</span>
-        </div>
-
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.22fr)_minmax(0,0.9fr)] lg:items-start">
+      <BenchStage
+        kicker="Class 9 · Separation of substances"
+        title={`Run the ${tech.label.toLowerCase()} and watch what separates`}
+        meta={
+          <>
+            <span className="apple-lab-chip">{mix.label}</span>
+            <LiveDot on={running} label={running ? "running" : t >= 1 ? "finished" : works ? "works here" : "wrong pairing"} />
+          </>
+        }
+        toolbar={
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+            <div className="sm:max-w-[260px]">
+              <Picker label="Mixture on the bench" value={mixture} options={MIXTURES.map((m) => ({ id: m.id, label: m.label }))} onChange={(next) => { setMixture(next); setRunning(false); setT(0.35); }} />
+            </div>
+            <div className="sm:max-w-[300px]">
+              <Picker label="Technique" value={technique} options={TECHNIQUES.map((x) => ({ id: x.id, label: x.label }))} onChange={(next) => { setTechnique(next); setRunning(false); setT(0.35); }} />
+            </div>
+          </div>
+        }
+        rail={
+          <>
+            <button
+              type="button"
+              className={`apple-lab-btn ${running ? "apple-lab-btn--stop" : "apple-lab-btn--run"}`}
+              onClick={toggleRun}
+            >
+              {running ? "Pause" : t >= 1 ? "Run it again" : t > 0 ? "Resume" : "Run the apparatus"}
+            </button>
+            <button type="button" className="apple-lab-btn" onClick={() => { setRunning(false); setT(0); }} disabled={t === 0}>
+              Reset
+            </button>
+            <span className="lab-stage-track" aria-hidden="true">
+              <i style={{ width: `${(t * 100).toFixed(0)}%` }} />
+            </span>
+            <span className="apple-lab-value text-[12px] font-semibold tabular-nums">
+              {Math.round(t * 100)}% · {tech.label.toLowerCase()}
+            </span>
+          </>
+        }
+        stats={
+          <>
+            <StageStat label="Mixture" value={mix.label} />
+            <StageStat label="It is" value={mix.make} tone="cyan" />
+            <StageStat label="Technique" value={tech.label} tone={works ? "mint" : "amber"} />
+            <StageStat label="You get" value={works ? tech.gives : "— nothing — wrong property"} tone={works ? "mint" : "amber"} />
+          </>
+        }
+        note={
+          works
+            ? `${tech.principle} Watch the run: ${tech.gives.toLowerCase()}.`
+            : `${mix.label} is ${mix.make}. ${tech.fail}`
+        }
+      >
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Apparatus for ${tech.label.toLowerCase()}`}>
           {/* One shared enlargement around the apparatus' own centre. The
               drawings were authored small in a 720-wide plate, which left a
-              third of the card empty on a laptop. */}
-          <g transform="translate(360 190) scale(1.1) translate(-360 -190)">
+              third of the card empty on a laptop; the new plate is wider and
+              taller, so the same group is centred on its middle and grown a
+              little further. */}
+          <g transform="translate(430 222) scale(1.16) translate(-360 -196)">
             {technique === "filtration" && <Filtration t={t} />}
             {technique === "evaporation" && <Evaporation t={t} />}
             {technique === "distillation" && <Distillation t={t} />}
@@ -162,35 +250,9 @@ export function SeparationBench() {
             {technique === "magnetic" && <Magnetic t={t} />}
           </g>
         </svg>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="flex items-baseline justify-between">
-            <span className="apple-lab-micro">Run the apparatus</span>
-            <span className="apple-lab-value text-[12.5px] font-semibold">{Math.round(t * 100)}%</span>
-          </span>
-          <input
-            type="range"
-            className="apple-lab-range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={t}
-            onChange={(event) => setProgress([Number(event.target.value)])}
-          />
-        </label>
-      </div>
+      </BenchStage>
 
       <div className="flex flex-col gap-3">
-        <div className="apple-lab-panel apple-lab-glass flex flex-col gap-3 p-4">
-          <p className="apple-lab-micro">Class 9 · Separation of substances</p>
-          <Picker label="Mixture on the bench" value={mixture} options={MIXTURES.map((m) => ({ id: m.id, label: m.label }))} onChange={setMixture} />
-          <Picker label="Technique" value={technique} options={TECHNIQUES.map((x) => ({ id: x.id, label: x.label }))} onChange={setTechnique} />
-          <p className="apple-lab-note">
-            {mix.label} is {mix.make}. Choose the technique that uses that property — not the one
-            that looks most like the picture in the book.
-          </p>
-        </div>
-
         {/* The verdict belongs beside the choice, not on top of the drawing. */}
         <div
           className={`rounded-xl border px-3.5 py-3 ${works ? "border-[color-mix(in_srgb,var(--lab-diagram-mint)_45%,transparent)]" : "border-[color-mix(in_srgb,var(--lab-diagram-amber)_45%,transparent)]"}`}
@@ -213,6 +275,7 @@ export function SeparationBench() {
         </div>
 
         <Questions
+          columns={1}
           items={[
             { q: "Why can't filtration separate salt from water?", a: "Salt is dissolved, so it passes through the filter paper with the water. Filtration only holds back particles big enough to be trapped — it separates by size, not by dissolving." },
             { q: "Why is distillation better than evaporation for sea water?", a: "Evaporation gives you the salt but loses the water. Distillation condenses the vapour and keeps the water too, which is what a coastal or arid region actually needs." },
