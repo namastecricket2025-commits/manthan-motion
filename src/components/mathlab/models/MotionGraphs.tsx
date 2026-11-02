@@ -57,8 +57,11 @@ function axisTicks(lo: number, hi: number, count = 4) {
   return ticks;
 }
 
-const tickText = (value: number, step: number) =>
-  step < 1 ? value.toFixed(1) : `${Math.round(value)}`;
+const tickText = (value: number, step: number) => {
+  /* Decimals follow the step: a 0.02 axis must not print everything as "0.0". */
+  const decimals = step >= 1 ? 0 : Math.min(2, Math.ceil(-Math.log10(step)));
+  return value.toFixed(decimals);
+};
 
 export function MotionGraphs() {
   const [presetId, setPresetId] = useState("school");
@@ -93,12 +96,10 @@ export function MotionGraphs() {
       dHi: dMaxData + dPad,
       vLo: vMinData < 0 ? vMinData - vPad : 0,
       vHi: vMaxData + vPad,
-      dStep: niceStep(dMaxData - dMinData || 1, 4),
-      vStep: niceStep(vMaxData - vMinData || 1, 4),
     };
   }, [legs]);
 
-  const { totalMin, points, dLo, dHi, vLo, vHi, dStep, vStep } = model;
+  const { totalMin, points, dLo, dHi, vLo, vHi } = model;
 
   const sx = (t: number) => LEFT + (t / totalMin) * (RIGHT - LEFT);
   const distY = (d: number) =>
@@ -120,6 +121,9 @@ export function MotionGraphs() {
 
   const dTicks = axisTicks(dLo, dHi, 4);
   const vTicks = axisTicks(vLo, vHi, 3);
+  /* Label precision follows the spacing actually drawn, not a second guess. */
+  const dStep = dTicks.length > 1 ? Math.abs(dTicks[1] - dTicks[0]) : 1;
+  const vStep = vTicks.length > 1 ? Math.abs(vTicks[1] - vTicks[0]) : 1;
 
   const legLabel = (leg: Leg) =>
     leg.kind === "rest"
@@ -204,7 +208,7 @@ export function MotionGraphs() {
                 textAnchor="end"
                 fontSize={9.5}
                 fill="var(--text-dim)"
-                fontVariantNumeric="tabular-nums"
+                style={{ fontVariantNumeric: "tabular-nums" }}
               >
                 {tickText(value, dStep)}
               </text>
@@ -330,7 +334,7 @@ export function MotionGraphs() {
                 textAnchor="end"
                 fontSize={9.5}
                 fill="var(--text-dim)"
-                fontVariantNumeric="tabular-nums"
+                style={{ fontVariantNumeric: "tabular-nums" }}
               >
                 {tickText(value, vStep)}
               </text>
@@ -427,7 +431,7 @@ export function MotionGraphs() {
             {timeTicks.map((tick) => (
               <g key={`tlabel-${tick}`}>
                 <line x1={sx(tick)} y1={V_BOTTOM} x2={sx(tick)} y2={V_BOTTOM + 4} stroke="var(--text-main)" strokeWidth={1} opacity={0.3} />
-                <text x={sx(tick)} y={V_BOTTOM + 17} textAnchor="middle" fontSize={9.5} fill="var(--text-dim)" fontVariantNumeric="tabular-nums">
+                <text x={sx(tick)} y={V_BOTTOM + 17} textAnchor="middle" fontSize={9.5} fill="var(--text-dim)" style={{ fontVariantNumeric: "tabular-nums" }}>
                   {tick}
                 </text>
               </g>

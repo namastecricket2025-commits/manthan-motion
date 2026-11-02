@@ -27,11 +27,11 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * Three doors, then the short passes. Free, EduVantage and Prime are three
+ * Three doors, then the short pass. Free, EduVantage and Prime are three
  * cards with different surfaces rather than one table divided into columns,
  * because a price page should feel like choosing a room, not reading a grid.
- * The recommended plan is the only lit card; the passes below are one quiet
- * strip of two fixed-length offers.
+ * The recommended plan is the only lit card; the pass below is one quiet
+ * strip with a fixed length and one price.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
@@ -193,7 +193,7 @@ function PlanColumn({
 /**
  * A one-off pass: a length, what it opens, one price.
  *
- * A pass is a different purchase from a term plan, so it is not a fifth card.
+ * A pass is a different purchase from a term plan, so it is not a fourth card.
  * It reads as a line on a schedule: the number of days is the big mark on the
  * left, the offer and its one price run across the row, and nothing renews.
  */
@@ -371,8 +371,8 @@ export default function Pricing() {
   const term = getDuration(duration);
   const checkoutDuration = getDuration(duration);
 
-  /* The sheet holds the three subscriptions; the passes get their own shelf.
-     `plan-tiers.ts` still owns the order and every number. */
+  /* The three subscriptions get the cards; the one-off pass gets its own
+     line below. `plan-tiers.ts` still owns the order and every number. */
   const featuredTier =
     PLAN_TIERS.find((tier) => tier.featured) ?? PLAN_TIERS[0];
   const primeTier =
@@ -380,18 +380,6 @@ export default function Pricing() {
   const passTiers = PLAN_TIERS.filter((tier) => !tier.flexible);
 
   const tierDisplay = (tier: PlanTier) => {
-    if (!tier.flexible) {
-      const days = tier.id === "sprint" ? 7 : 14;
-      return {
-        price: tier.price,
-        suffix: `/ ${days} days`,
-        billing: `One ${days}-day pass · ${tier.allowance}`,
-        hook:
-          tier.id === "sprint"
-            ? "About ₹7 a day for one revision week — the price of a bus fare."
-            : `About ₹${Math.round(tier.price / days)} a day for every workspace, for the two weeks that matter.`,
-      };
-    }
     const total = durationTotal(tier, term);
     const perMonth = Math.round(total / term.months);
     return {
@@ -483,16 +471,15 @@ export default function Pricing() {
             <section className="plan-passes" aria-labelledby="one-off-passes">
               <div className="plan-passes__heading">
                 <p id="one-off-passes" className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-text-dim">
-                  One-off passes
+                  One-off pass
                 </p>
                 <p className="mt-2 text-[12px] leading-relaxed text-text-dim">
-                  For the week before a paper or the fortnight after it. Paid
-                  once, and nothing renews.
+                  For the week before a paper. Paid once, and nothing renews.
                 </p>
               </div>
               <div className="plan-passes__grid">
                 {passTiers.map((tier) => {
-                  const days = tier.id === "sprint" ? 7 : 14;
+                  const days = 7;
                   return (
                     <PassTicket
                       key={tier.id}
@@ -528,8 +515,6 @@ export default function Pricing() {
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
                   Same engine on every plan. What changes is how much it will
                   make, how many notebooks it keeps, and which workspaces open.
-                  Final Fortnight is Prime for fourteen days, so it is not a
-                  separate column here.
                 </p>
               </div>
               <p className="text-[11px] text-text-dim sm:hidden">

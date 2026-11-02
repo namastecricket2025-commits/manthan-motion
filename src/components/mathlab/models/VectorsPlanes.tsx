@@ -9,6 +9,14 @@ import { useMemo, useState, type ReactElement } from "react";
  * the plane's normal by construction), the dot product, the angle between the
  * vectors, and the plane's own equation.
  *
+ * The drawing measures everything it is about to draw at unit scale and then
+ * scales and centres the whole scene to the plate, so a three-unit vector
+ * uses the same amount of paper as an eight-unit one, and the sheet never
+ * runs off the edge while the vectors shrink to the middle of a large canvas.
+ * Labels ride out along their own arrow and are then pulled apart if any two
+ * would collide — a fixed offset stacked a's coordinates on b's arrow as soon
+ * as the view turned.
+ *
  * The one thing worth discovering here: when the cross product collapses to
  * the zero vector the parallelogram has no area, the vectors are parallel,
  * and *there is no plane* — the model reports that instead of drawing a
@@ -20,7 +28,40 @@ type Vec = [number, number, number];
 
 const W = 640;
 const H = 400;
-const SCALE = 30;
+const PITCH = (30 * Math.PI) / 180;
+
+/** Screen offset of a point from the origin at unit scale, before fitting. */
+function unitOffset(v: Vec, yaw: number): [number, number] {
+  const x1 = v[0] * Math.cos(yaw) - v[2] * Math.sin(yaw);
+  const z1 = v[0] * Math.sin(yaw) + v[2] * Math.cos(yaw);
+  return [x1, -v[1] * Math.cos(PITCH) + z1 * Math.sin(PITCH) * 0.5];
+}
+
+/** Two in-plane directions and the sheet's corners: a and (a × n). */
+function planeCorners(a: Vec, n: Vec): Vec[] {
+  const d2: Vec = [
+    n[1] * a[2] - n[2] * a[1],
+    n[2] * a[0] - n[0] * a[2],
+    n[0] * a[1] - n[1] * a[0],
+  ];
+  const m1 = Math.hypot(...a) || 1;
+  const m2 = Math.hypot(...d2) || 1;
+  const R = 3.4;
+  return (
+    [
+      [-R, -R],
+      [R, -R],
+      [R, R],
+      [-R, R],
+    ] as Array<[number, number]>
+  ).map(([s, t]): Vec => [
+    (a[0] / m1) * s + (d2[0] / m2) * t,
+    (a[1] / m1) * s + (d2[1] / m2) * t,
+    (a[2] / m1) * s + (d2[2] / m2) * t,
+  ]);
+}
+
+type Spot = { key: string; x: number; y: number; ux: number };
 
 export function VectorsPlanes() {
   const [a, setA] = useState<Vec>([3, 2, 1]);
@@ -42,14 +83,54 @@ export function VectorsPlanes() {
     return { dot, cross, magA, magB, magC, angle, parallelogram, coplanar, equation };
   }, [a, b]);
 
-  /* Isometric-ish projection: yaw by `view`, fixed 30° pitch, y up. */
-  const project = (v: Vec): [number, number] => {
+  /* The normal drawn at a fixed 3.2 units, so the arrow always reads as one
+     whatever the size of the cross product actually is. */
+  const nTip = useMemo<Vec | null>(() => {
+    if (model.coplanar || model.magC < 1e-6) return null;
+    const k = 3.2 / model.magC;
+    return [model.cross[0] * k, model.cross[1] * k, model.cross[2] * k];
+  }, [model]);
+
+  /* Measure the whole scene at unit scale, then scale and centre it: this is
+     what stops the drawing floating in the middle of the plate. */
+  const fit = useMemo(() => {
     const yaw = (view * Math.PI) / 180;
-    const pitch = (30 * Math.PI) / 180;
-    const x1 = v[0] * Math.cos(yaw) - v[2] * Math.sin(yaw);
-    const z1 = v[0] * Math.sin(yaw) + v[2] * Math.cos(yaw);
-    const y1 = v[1];
-    return [W / 2 + x1 * SCALE, H / 2 - y1 * SCALE * Math.cos(pitch) + z1 * SCALE * Math.sin(pitch) * 0.5];
+    const points: Vec[] = [
+      [4.6, 0, 0],
+      [0, 4.6, 0],
+      [0, 0, 4.6],
+      a,
+      b,
+      [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+    ];
+    if (nTip) points.push(nTip);
+    if (!model.coplanar) points.push(...planeCorners(a, model.cross));
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const p of points) {
+      const [x, y] = unitOffset(p, yaw);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+    const spanX = Math.max(0.001, maxX - minX);
+    const spanY = Math.max(0.001, maxY - minY);
+    /* 104 / 96 px is the room the labels need outside the geometry. */
+    const scale = Math.max(16, Math.min((W - 104) / spanX, (H - 96) / spanY, 56));
+    return {
+      yaw,
+      scale,
+      cx: W / 2 - ((minX + maxX) / 2) * scale,
+      cy: H / 2 - ((minY + maxY) / 2) * scale,
+    };
+  }, [a, b, view, nTip, model.coplanar, model.cross]);
+
+  const project = (v: Vec): [number, number] => {
+    const [ox, oy] = unitOffset(v, fit.yaw);
+    return [fit.cx + ox * fit.scale, fit.cy + oy * fit.scale];
   };
 
   const P = (v: Vec, k = 1): [number, number] => project([v[0] * k, v[1] * k, v[2] * k]);
@@ -72,31 +153,56 @@ export function VectorsPlanes() {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [a, b, view]);
 
-  /* The plane through the origin with the same normal, drawn as a large
-     translucent disc — it exists exactly when a × b does. */
+  /* The plane through the origin with the same normal, drawn as a hatched
+     sheet — it exists exactly when a × b does. */
   const planeQuad = useMemo(() => {
     if (model.coplanar) return null;
-    const n = model.cross;
-    /* Two in-plane directions: a and (a × n), both perpendicular-checked. */
-    const d1: Vec = a;
-    const d2: Vec = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]];
-    const m1 = Math.hypot(...d1) || 1;
-    const m2 = Math.hypot(...d2) || 1;
-    const R = 4.4;
-    const corner = (s: number, t: number): Vec => [
-      (d1[0] / m1) * s + (d2[0] / m2) * t,
-      (d1[1] / m1) * s + (d2[1] / m2) * t,
-      (d1[2] / m1) * s + (d2[2] / m2) * t,
-    ];
-    const pts = [
-      corner(-R, -R),
-      corner(R, -R),
-      corner(R, R),
-      corner(-R, R),
-    ].map((p) => P(p).join(" "));
+    const pts = planeCorners(a, model.cross).map((p) => P(p).join(" "));
     return `M${pts.join(" L")} Z`;
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [a, b, view, model.coplanar]);
+
+  /* Labels: pushed out along each arrow's own screen direction, then pulled
+     apart so no two of them can sit on top of each other. */
+  const spots = useMemo<Spot[]>(() => {
+    const place = (key: string, v: Vec): Spot => {
+      const [x, y] = P(v);
+      const [ox, oy] = P([0, 0, 0]);
+      const dx = x - ox;
+      const dy = y - oy;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      return { key, x: x + ux * 15, y: y + (dy / len) * 15 + 5, ux };
+    };
+    const list: Spot[] = [
+      place("a", a),
+      place("b", b),
+      place("sum", [a[0] + b[0], a[1] + b[1], a[2] + b[2]]),
+    ];
+    if (nTip) list.push(place("n", nTip));
+    const minGap = 58;
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) {
+        const dx = list[j].x - list[i].x;
+        const dy = list[j].y - list[i].y;
+        const d = Math.hypot(dx, dy);
+        if (d < 1e-3 || d >= minGap) continue;
+        const push = (minGap - d) / 2;
+        list[i].x -= (dx / d) * push;
+        list[i].y -= (dy / d) * push;
+        list[j].x += (dx / d) * push;
+        list[j].y += (dy / d) * push;
+      }
+    }
+    for (const spot of list) {
+      spot.x = Math.max(14, Math.min(W - 14, spot.x));
+      spot.y = Math.max(18, Math.min(H - 10, spot.y));
+    }
+    return list;
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [a, b, view, nTip]);
+
+  const spot = (key: string): Spot | undefined => spots.find((s) => s.key === key);
 
   const arrowHead = (v: Vec, color: string) => {
     const [x, y] = P(v);
@@ -108,27 +214,17 @@ export function VectorsPlanes() {
     return <polygon points={`${x},${y} ${p1[0]},${p1[1]} ${p2[0]},${p2[1]}`} fill={color} />;
   };
 
-  /* Push the label out along the vector's own screen direction, then anchor
-     it away from the arrow. A fixed (8, −8) offset put b's coordinates on top
-     of a's arrow as soon as the view turned. */
-  const vecLabel = (v: Vec, text: string, color: string) => {
-    const [x, y] = P(v);
-    const [ox, oy] = P([0, 0, 0]);
-    const dx = x - ox;
-    const dy = y - oy;
-    const len = Math.hypot(dx, dy) || 1;
-    const ux = dx / len;
-    const uy = dy / len;
-    const lx = x + ux * 16;
-    const ly = y + uy * 16 + 4;
+  const label = (key: string, text: string, color: string) => {
+    const s = spot(key);
+    if (!s) return null;
     return (
       <text
-        x={lx}
-        y={ly}
+        x={s.x}
+        y={s.y}
         fontSize={12.5}
         fontWeight={700}
         fill={color}
-        textAnchor={ux < -0.15 ? "end" : ux > 0.15 ? "start" : "middle"}
+        textAnchor={s.ux < -0.15 ? "end" : s.ux > 0.15 ? "start" : "middle"}
         paintOrder="stroke"
         stroke="var(--panel)"
         strokeWidth={3.5}
@@ -142,8 +238,8 @@ export function VectorsPlanes() {
   /* Unit grid on the floor (z = 0 plane) for depth cues. */
   const grid: ReactElement[] = [];
   for (let i = -4; i <= 4; i += 1) {
-    grid.push(<line key={`gx${i}`} {...xy(P([i, 0, -4]), P([i, 0, 4]))} stroke="var(--text-main)" strokeWidth={0.8} opacity={0.08} />);
-    grid.push(<line key={`gz${i}`} {...xy(P([-4, 0, i]), P([4, 0, i]))} stroke="var(--text-main)" strokeWidth={0.8} opacity={0.08} />);
+    grid.push(<line key={`gx${i}`} {...xy(P([i, 0, -4]), P([i, 0, 4]))} stroke="var(--text-main)" strokeWidth={0.9} opacity={0.13} />);
+    grid.push(<line key={`gz${i}`} {...xy(P([-4, 0, i]), P([4, 0, i]))} stroke="var(--text-main)" strokeWidth={0.9} opacity={0.13} />);
   }
 
   const setComponent = (which: "a" | "b", index: 0 | 1 | 2, value: number) => {
@@ -159,20 +255,40 @@ export function VectorsPlanes() {
       <div className="mm-grid">
         <div className="mm-stage">
           <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Two vectors in 3D with their parallelogram and cross product">
+            <defs>
+              <pattern id="vp-plane" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                <line x1="0" y1="0" x2="0" y2="9" stroke="var(--verify)" strokeWidth="1.2" opacity="0.55" />
+              </pattern>
+            </defs>
+
             {grid}
-            {/* The plane they span — translucent, gone when the vectors align. */}
-            {planeQuad && <path d={planeQuad} fill="var(--verify)" opacity={0.08} stroke="var(--verify)" strokeWidth={1} strokeDasharray="6 6" />}
+            {/* The plane they span — a hatched sheet, gone when the vectors align. */}
+            {planeQuad && (
+              <>
+                <path d={planeQuad} fill="var(--verify)" opacity={0.1} />
+                <path
+                  d={planeQuad}
+                  fill="url(#vp-plane)"
+                  opacity={0.55}
+                  stroke="var(--verify)"
+                  strokeWidth={1.3}
+                  strokeDasharray="7 6"
+                  strokeLinejoin="round"
+                />
+              </>
+            )}
             {/* Parallelogram outline */}
-            <path d={parallelogram} fill="var(--signal)" opacity={0.1} stroke="var(--signal)" strokeWidth={1.6} strokeLinejoin="round" />
+            <path d={parallelogram} fill="var(--signal)" opacity={0.13} stroke="var(--signal)" strokeWidth={1.6} strokeLinejoin="round" />
             {/* Axes */}
             {(["x", "y", "z"] as const).map((axis, i) => {
               const tip: Vec = [0, 0, 0];
               tip[i] = 4.6;
               return (
                 <g key={axis}>
-                  {line([0, 0, 0], tip, "var(--text-main)", 1.2)}
+                  {line([0, 0, 0], tip, "var(--text-main)", 1.3)}
                   {arrowHead(tip, "var(--text-main)")}
-                  <text {...labelPos(P(tip))} fontSize={11} fill="var(--text-dim)">
+                  <text {...labelPos(P(tip))} fontSize={11} fontWeight={600} fill="var(--text-dim)"
+                    paintOrder="stroke" stroke="var(--panel)" strokeWidth={3} strokeLinejoin="round">
                     {axis}
                   </text>
                 </g>
@@ -181,32 +297,26 @@ export function VectorsPlanes() {
             {/* Vectors */}
             {line([0, 0, 0], a, "var(--text-main)", 2.6)}
             {arrowHead(a, "var(--text-main)")}
-            {vecLabel(a, `a = (${a[0]}, ${a[1]}, ${a[2]})`, "var(--text-main)")}
+            {label("a", `a = (${a[0]}, ${a[1]}, ${a[2]})`, "var(--text-main)")}
             {line([0, 0, 0], b, "var(--signal)", 2.6)}
             {arrowHead(b, "var(--signal)")}
-            {vecLabel(b, `b = (${b[0]}, ${b[1]}, ${b[2]})`, "var(--signal)")}
+            {label("b", `b = (${b[0]}, ${b[1]}, ${b[2]})`, "var(--signal)")}
             {/* a + b diagonal */}
             {line([0, 0, 0], [a[0] + b[0], a[1] + b[1], a[2] + b[2]], "var(--text-dim)", 1.4, "5 5")}
+            {label("sum", "a + b", "var(--text-dim)")}
             {/* The normal — the plane's own vector, scaled to fit. */}
-            {!model.coplanar && (
+            {nTip && (
               <>
-                {(() => {
-                  const scale = 3.2 / (model.magC || 1);
-                  const nTip: Vec = [model.cross[0] * scale, model.cross[1] * scale, model.cross[2] * scale];
-                  return (
-                    <g>
-                      {line([0, 0, 0], nTip, "var(--verify)", 2.6)}
-                      {arrowHead(nTip, "var(--verify)")}
-                      {vecLabel(nTip, `a × b`, "var(--verify)")}
-                    </g>
-                  );
-                })()}
+                {line([0, 0, 0], nTip, "var(--verify)", 2.6)}
+                {arrowHead(nTip, "var(--verify)")}
+                {label("n", "a × b", "var(--verify)")}
               </>
             )}
-            <text x={14} y={22} fontSize={11} fill="var(--text-dim)">
+            <text x={16} y={24} fontSize={11} fill="var(--text-dim)"
+              paintOrder="stroke" stroke="var(--panel)" strokeWidth={4} strokeLinejoin="round">
               {model.coplanar
                 ? "a × b = 0 — the vectors are parallel: no plane, no normal."
-                : "green = normal (a × b) and the plane it defines · gold = parallelogram"}
+                : "hatched sheet = the plane · green arrow = a × b, its normal · gold = parallelogram · grid = 1 unit"}
             </text>
           </svg>
         </div>

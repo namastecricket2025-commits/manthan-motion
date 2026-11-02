@@ -274,9 +274,13 @@ export function ConicSections() {
                 <circle cx={sx + focusC} cy={sy} r={3.2} fill="var(--verify)" />
                 <text x={sx + focusC + 7} y={sy - 7} fontSize={9.5} fill="var(--verify)">F</text>
                 <text x={sx - focusC - 7} y={sy - 7} fontSize={9.5} textAnchor="end" fill="var(--verify)">F′</text>
-                <line x1={sx + directrixD} y1={plotTop} x2={sx + directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.7} />
-                <line x1={sx - directrixD} y1={plotTop} x2={sx - directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.35} />
-                <text x={sx + directrixD - 6} y={plotTop + 12} textAnchor="end" fontSize={9.5} fill="var(--verify)">d</text>
+                {directrixD < 150 ? (
+                  <>
+                    <line x1={sx + directrixD} y1={plotTop} x2={sx + directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.7} />
+                    <line x1={sx - directrixD} y1={plotTop} x2={sx - directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.35} />
+                    <text x={sx + directrixD - 6} y={plotTop + 12} textAnchor="end" fontSize={9.5} fill="var(--verify)">d</text>
+                  </>
+                ) : null}
                 <text x={sx + aLen} y={sy - 18} textAnchor="middle" fontSize={9.5} fill="var(--text-dim)">a</text>
               </>
             )}
@@ -330,9 +334,6 @@ export function ConicSections() {
 
             <text x={366} y={366} fontSize={11} fill="var(--text-dim)">
               {KIND_EQN[kind]}
-            </text>
-            <text x={628} y={366} textAnchor="end" fontSize={10} fill="var(--text-dim)">
-              {KIND_NOTE[kind].split(":")[0]}
             </text>
           </svg>
         </div>

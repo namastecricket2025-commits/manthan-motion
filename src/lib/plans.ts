@@ -8,11 +8,9 @@
  * is the real thing.
  */
 
-export type PlanId = "free" | "sprint" | "eduvantage" | "prime" | "fortnight";
+export type PlanId = "free" | "sprint" | "eduvantage" | "prime";
 
-/** The four plans the comparison table has a column for. The fortnight pass is
- *  deliberately absent from the table: it is a time-boxed copy of Prime, so a
- *  fifth column of identical ticks would only make the page longer. */
+/** The plans the comparison table has a column for — every one of them. */
 export type ComparisonPlanId = "free" | "sprint" | "eduvantage" | "prime";
 
 export type DurationId = "1m" | "6m" | "12m";
@@ -109,26 +107,6 @@ export const PLAN_TIERS: PlanTier[] = [
     featured: false,
     flexible: true,
   },
-  {
-    /* The surprise tier: not another monthly subscription, but a two-week
-       full-power pass sized to the run-up to one paper. Same capabilities as
-       Prime, including the voice tutor, at a price a student can find once. */
-    id: "fortnight",
-    name: "Final Fortnight",
-    summary: "Fourteen days of everything, for the run-up to one paper.",
-    price: 129,
-    unit: "14 days",
-    allowance: "400,000 tokens in the pass",
-    features: [
-      "Every workspace open for 14 days",
-      "AI voice tutor, 60 minutes a day",
-      "Unlimited mock exams and lab reports",
-      "400,000 tokens in the pass",
-      "Nothing renews — the pass simply ends",
-    ],
-    featured: false,
-    flexible: false,
-  },
 ];
 
 export function getTier(id: PlanId): PlanTier | null {
@@ -150,7 +128,6 @@ export const PLAN_ALLOWANCES: Record<PlanId, number> = {
   sprint: 60_000,
   eduvantage: 250_000,
   prime: 500_000,
-  fortnight: 400_000,
 };
 
 /** Whether a plan's allowance resets each day (free) or each UTC month. */
@@ -177,7 +154,6 @@ export const PLAN_CAPABILITIES: Record<PlanId, FeatureKey[]> = {
   sprint: ["cramMode"],
   eduvantage: ["canvasSolver", "mathLabBasic"],
   prime: ["cramMode", "voiceTutor", "canvasSolver", "mathLabBasic", "mathLabFull"],
-  fortnight: ["cramMode", "voiceTutor", "canvasSolver", "mathLabBasic", "mathLabFull"],
 };
 
 export interface FeatureMeta {
@@ -275,15 +251,6 @@ export const PLAN_CAPS: Record<PlanId, PlanCaps> = {
     mockExams: Infinity,
     notebooks: Infinity,
     sourcesPerNotebook: Infinity,
-    voiceMinutesPerDay: 60,
-  },
-  /* Full capability, but capped like a pass rather than a subscription: no
-     study-kit ceiling and unlimited papers, with finite notebook storage. */
-  fortnight: {
-    studyKits: Infinity,
-    mockExams: Infinity,
-    notebooks: 15,
-    sourcesPerNotebook: 40,
     voiceMinutesPerDay: 60,
   },
 };
@@ -559,12 +526,7 @@ export function loadPlan(): PlanId {
   if (typeof window === "undefined") return "free";
   try {
     const raw = window.localStorage.getItem(PLAN_STORE_KEY);
-    if (
-      raw === "sprint" ||
-      raw === "eduvantage" ||
-      raw === "prime" ||
-      raw === "fortnight"
-    ) {
+    if (raw === "sprint" || raw === "eduvantage" || raw === "prime") {
       return raw;
     }
     return "free";

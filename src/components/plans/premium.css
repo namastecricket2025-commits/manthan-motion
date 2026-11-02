@@ -334,6 +334,11 @@
   }
 }
 
+/* A single pass spans the whole schedule instead of half-emptying it. */
+.plan-passes__grid > .plan-pass:only-child {
+  grid-column: 1 / -1;
+}
+
 .plan-pass {
   display: grid;
   grid-template-columns: 74px minmax(0, 1fr);
