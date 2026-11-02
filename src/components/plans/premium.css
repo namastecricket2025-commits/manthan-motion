@@ -90,16 +90,72 @@
       transparent 62%
     ),
     var(--panel);
-  box-shadow: 0 34px 90px -52px color-mix(in srgb, #4cc9f0 50%, transparent);
+  box-shadow:
+    0 34px 90px -52px color-mix(in srgb, #4cc9f0 50%, transparent),
+    0 0 26px -8px color-mix(in srgb, #4cc9f0 42%, transparent);
 }
 
-.plan-card--featured::before {
+/* The revolving glow around the most popular plan. A light band travels the
+   whole rim of the card, driven by `--border-angle`, the property index.css
+   registers for `border-rotate` — the animation this card was built around
+   and that sat unused once the static top hairline replaced it. Two masked
+   rings share the loop: a wide, faint one for the bloom and a 1.5px line on
+   top of it for the edge itself. `mask-composite: exclude` (with the WebKit
+   spelling beside it) is what turns a filled box into a ring; `.about-quote`
+   in about.css uses the same trick. */
+.plan-card--featured::before,
+.plan-card--featured::after {
   content: "";
   position: absolute;
-  inset: 0 26px auto;
-  height: 2px;
-  background: linear-gradient(90deg, #4cc9f0, #ff5a66 62%, #ff9ac8);
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    transparent 0deg 195deg,
+    color-mix(in srgb, #4cc9f0 18%, transparent) 240deg,
+    color-mix(in srgb, #4cc9f0 60%, transparent) 275deg,
+    #4cc9f0 305deg,
+    #ff5a66 330deg,
+    #ff9ac8 346deg,
+    #ffffff 355deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: border-rotate 3.8s linear infinite;
   pointer-events: none;
+}
+
+/* The bloom: a wider band of the same travelling light, held back in
+   opacity so the crisp rim on top of it reads as the lit edge. */
+.plan-card--featured::before {
+  padding: 6px;
+  opacity: 0.34;
+}
+
+.plan-card--featured::after {
+  padding: 1.5px;
+}
+
+/* Motionless Mode and the system's reduced-motion setting park the loop;
+   the rim then holds a steady gradient instead of a frozen comet. */
+@media (prefers-reduced-motion: reduce) {
+  .plan-card--featured::before,
+  .plan-card--featured::after {
+    animation: none;
+    background: linear-gradient(150deg, #4cc9f0, #ff5a66 55%, #ff9ac8);
+  }
+}
+
+html[data-motion="reduced"] .plan-card--featured::before,
+html[data-motion="reduced"] .plan-card--featured::after {
+  background: linear-gradient(150deg, #4cc9f0, #ff5a66 55%, #ff9ac8);
 }
 
 @media (min-width: 1024px) {
