@@ -117,18 +117,15 @@ export function ElectrostaticsBench() {
       return pts;
     };
 
+    /* Seed from the positive charges, so each line is drawn once, from its
+       source. If a pair had no positive charge, seed backwards from the
+       negative one instead. */
+    const seedFromNegative = !charges.some((c) => c.q > 0);
     for (const c of charges) {
-      if (c.q <= 0) continue;
+      if (seedFromNegative ? c.q >= 0 : c.q <= 0) continue;
       for (let i = 0; i < 14; i += 1) {
         const a = (i / 14) * Math.PI * 2;
-        traced.push(walk(c.x + Math.cos(a) * 1.6, c.y + Math.sin(a) * 1.6, 1));
-      }
-    }
-    for (const c of charges) {
-      if (c.q >= 0) continue;
-      for (let i = 0; i < 14; i += 1) {
-        const a = (i / 14) * Math.PI * 2;
-        traced.push(walk(c.x + Math.cos(a) * 1.6, c.y + Math.sin(a) * 1.6, -1));
+        traced.push(walk(c.x + Math.cos(a) * 1.6, c.y + Math.sin(a) * 1.6, seedFromNegative ? -1 : 1));
       }
     }
     return traced;
@@ -172,8 +169,8 @@ export function ElectrostaticsBench() {
               Two charges, their field, one probe
             </h3>
             <p className="mt-1 max-w-xl text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">
-              Move the pointer over the map: the probe reads E where you point,
-              and the arrow is the field a +1 µC test charge would feel.
+              Move the pointer over the map: the probe reads E where you point.
+              The force on a +1 µC test charge here points the same way as the arrow.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-start gap-3">
@@ -240,8 +237,12 @@ export function ElectrostaticsBench() {
                 if (line.length < 8) return null;
                 const at = Math.floor(line.length * 0.5);
                 const [x1, y1] = toPlate(...line[at]);
-                const [x2, y2] = toPlate(...line[Math.min(line.length - 1, at + 2)]);
-                const a = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+                /* Take the arrow from E itself, not from the order the
+                   polyline was traced: a line seeded backwards still gets a
+                   tick that points the way the field actually runs. */
+                const e = fieldAt(line[at][0], line[at][1], charges);
+                const mag = Math.hypot(e.x, e.y) || 1;
+                const a = (Math.atan2(-e.y / mag, e.x / mag) * 180) / Math.PI;
                 return (
                   <polygon
                     key={`arrow${i}`}

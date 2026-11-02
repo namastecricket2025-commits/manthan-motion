@@ -201,9 +201,9 @@
   color: var(--text-dim);
 }
 
-/* The featured badge is a plain label again. The card's rim carries the
-   motion now, and two revolving accents on one card fight each other for the
-   eye that should be on the price. */
+/* The featured badge is a plain label. The sheet's top edge carries the accent
+   now; two competing highlights on one column fight for the eye that should be
+   on the price. */
 .premium-chip--featured {
   border-color: color-mix(in srgb, #4cc9f0 38%, transparent);
   padding: 4px 11px;

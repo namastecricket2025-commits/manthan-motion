@@ -99,8 +99,11 @@ export function PressureBench() {
   const travelled = slides ? Math.min(RAMP_M, 0.5 * accel * slideT * slideT) : 0;
   const arrived = travelled >= RAMP_M - 1e-6;
 
-  const blockW = face === "largest" ? 168 : face === "edge" ? 126 : 86;
-  const blockH = face === "largest" ? 62 : face === "edge" ? 66 : 70;
+  /* The same block turned onto each face. Widths keep the 20 cm or 10 cm
+     footprint; heights follow the edge that is now vertical, so the silhouette
+     changes with the face instead of staying one generic slab. */
+  const blockW = face === "largest" ? 168 : face === "edge" ? 168 : 84;
+  const blockH = face === "largest" ? 46 : face === "edge" ? 70 : 96;
 
   /* ---- the clocks ------------------------------------------------------ */
   const last = useRef<number | null>(null);
@@ -211,6 +214,8 @@ export function PressureBench() {
                 slides={slides}
                 accel={accel}
                 maxGrip={maxGrip}
+                along={along}
+                weight={weight}
                 travelled={travelled}
               />
             )}
@@ -446,7 +451,10 @@ function PressureScene({
   const gaugeBottom = 300;
   const gaugeH = gaugeBottom - gaugeTop;
   const yOf = (kpa: number) => gaugeBottom - (Math.min(kpa, GAUGE_MAX) / GAUGE_MAX) * gaugeH;
-  const blockTop = sandTop - blockH - 60 * (1 - press);
+  /* The block sits *in* the pit, not on the unbroken sand: its base drops by
+     the depth drawn, so the sand line meets the bottom edge of the block. */
+  const sink = shown * 1.4;
+  const blockTop = sandTop - blockH + sink;
 
   return (
     <>
@@ -454,7 +462,7 @@ function PressureScene({
         {face} down · {totalMass.toFixed(0)} kg
       </text>
       <text x={24} y={50} fontSize={11.5} fill={ink(0.4)}>
-        the pit depth is the pressure, drawn to scale
+        same force · smaller area · deeper pit
       </text>
 
       {/* Sand bed */}
@@ -464,21 +472,13 @@ function PressureScene({
         <circle key={i} cx={70 + i * 40} cy={sandTop + 30 + (i % 3) * 11} r={1.6} fill={AMBER} opacity={0.3} />
       ))}
 
-      {/* The dent: a smooth depression whose depth is the pressure. */}
+      {/* The pit: the sand slopes down to the block's base, deepest under it. */}
       <path
-        d={`M ${centerX - 156} ${sandTop} Q ${centerX - 74} ${sandTop + shown * 2} ${centerX - blockW / 2} ${sandTop} L ${centerX + blockW / 2} ${sandTop} Q ${centerX + 74} ${sandTop + shown * 2} ${centerX + 156} ${sandTop}`}
+        d={`M ${centerX - 170} ${sandTop} Q ${centerX - 118} ${sandTop + shown * 1.6} ${centerX - blockW / 2} ${sandTop + sink} L ${centerX + blockW / 2} ${sandTop + sink} Q ${centerX + 118} ${sandTop + shown * 1.6} ${centerX + 170} ${sandTop}`}
         fill={plate(0.55)}
-        stroke={ink(0.18)}
-        strokeWidth={1}
+        stroke={ink(0.22)}
+        strokeWidth={1.2}
       />
-
-      {/* Depth gauge beside the dent. */}
-      <line x1={centerX + 176} y1={sandTop} x2={centerX + 176} y2={sandTop + Math.max(6, shown)} stroke={AMBER} strokeWidth={1.2} />
-      <line x1={centerX + 170} y1={sandTop} x2={centerX + 182} y2={sandTop} stroke={AMBER} strokeWidth={1.2} />
-      <line x1={centerX + 170} y1={sandTop + shown} x2={centerX + 182} y2={sandTop + shown} stroke={AMBER} strokeWidth={1.2} />
-      <text x={centerX + 188} y={sandTop + shown + 4} fontSize={10.5} fill={AMBER}>
-        {(depth * 0.8).toFixed(1)} mm dent
-      </text>
 
       {/* Load stacked on top. */}
       {extraMass > 0 &&
@@ -510,12 +510,13 @@ function PressureScene({
         {totalMass.toFixed(0)} kg
       </text>
 
-      {/* The load: one arrow, fixed length, because the force is fixed. */}
+      {/* The load: one arrow, because the force is fixed. It ends on the top
+          book when there is a load, not in the air above it. */}
       <line
         x1={centerX}
         y1={58}
         x2={centerX}
-        y2={blockTop - 18 - extraMass * 11}
+        y2={(extraMass > 0 ? blockTop - 16 - (extraMass - 1) * 11 : blockTop - 18) - 4}
         stroke={ink(0.55)}
         strokeWidth={2}
         markerEnd="url(#pb-arrow)"
@@ -524,11 +525,11 @@ function PressureScene({
         F = {force.toFixed(0)} N
       </text>
 
-      {/* Contact bracket */}
-      <line x1={centerX - blockW / 2} y1={344} x2={centerX + blockW / 2} y2={344} stroke={MINT} strokeWidth={2} />
-      <line x1={centerX - blockW / 2} y1={338} x2={centerX - blockW / 2} y2={350} stroke={MINT} strokeWidth={1.4} />
-      <line x1={centerX + blockW / 2} y1={338} x2={centerX + blockW / 2} y2={350} stroke={MINT} strokeWidth={1.4} />
-      <text x={centerX} y={366} textAnchor="middle" fontSize={12} fill={MINT}>
+      {/* Contact bracket, below the deepest pit. */}
+      <line x1={centerX - blockW / 2} y1={366} x2={centerX + blockW / 2} y2={366} stroke={MINT} strokeWidth={2} />
+      <line x1={centerX - blockW / 2} y1={360} x2={centerX - blockW / 2} y2={372} stroke={MINT} strokeWidth={1.4} />
+      <line x1={centerX + blockW / 2} y1={360} x2={centerX + blockW / 2} y2={372} stroke={MINT} strokeWidth={1.4} />
+      <text x={centerX} y={388} textAnchor="middle" fontSize={12} fill={MINT}>
         A = {area} cm²
       </text>
 
@@ -601,6 +602,8 @@ function FrictionScene({
   slides,
   accel,
   maxGrip,
+  along,
+  weight,
   travelled,
 }: {
   angle: number;
@@ -608,6 +611,8 @@ function FrictionScene({
   slides: boolean;
   accel: number;
   maxGrip: number;
+  along: number;
+  weight: number;
   travelled: number;
 }) {
   const groundY = 330;
@@ -627,6 +632,16 @@ function FrictionScene({
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
 
+  /* Static friction is only as big as it needs to be to hold the block — not
+     the µN limit. The arrow shortens with the slope until it reaches the
+     limit, then stays pinned at µN while the block slides. */
+  const friction = slides ? maxGrip : along;
+  /* One scale for every arrow: 58 px is the weight mg. */
+  const forceScale = 58 / Math.max(weight, 0.001);
+  const frictionLen = friction * forceScale;
+  const normalLen = weight * cos * forceScale;
+  const alongLen = weight * sin * forceScale;
+
   return (
     <>
       <path d={`M ${baseX} ${groundY} L ${topX} ${topY} L ${topX} ${groundY} Z`} fill={plate(0.28)} stroke="none" />
@@ -639,18 +654,26 @@ function FrictionScene({
       </text>
 
       <line x1={bx} y1={by} x2={bx} y2={by + 58} stroke={ink(0.55)} strokeWidth={2} />
-      <line x1={bx} y1={by} x2={bx + 64 * nx} y2={by + 64 * ny} stroke={CYAN} strokeWidth={2.2} />
-      <line x1={bx} y1={by} x2={bx + 62 * cos} y2={by - 62 * sin} stroke={MINT} strokeWidth={2.2} strokeDasharray={slides ? "5 4" : undefined} />
-      <line x1={bx} y1={by} x2={bx - 72 * cos} y2={by + 72 * sin} stroke={AMBER} strokeWidth={2.2} />
+      <line x1={bx} y1={by} x2={bx + normalLen * nx} y2={by + normalLen * ny} stroke={CYAN} strokeWidth={2.2} />
+      {friction > 0.05 && (
+        <line x1={bx} y1={by} x2={bx + frictionLen * cos} y2={by - frictionLen * sin} stroke={MINT} strokeWidth={2.2} />
+      )}
+      {along > 0.05 && (
+        <line x1={bx} y1={by} x2={bx - alongLen * cos} y2={by + alongLen * sin} stroke={AMBER} strokeWidth={2.2} />
+      )}
 
       <g transform={`translate(${bx} ${by}) rotate(${-angle})`}>
         <rect x={-size / 2} y={-size / 2} width={size} height={size} rx={3} fill={plate(0.94)} stroke={ink(0.55)} strokeWidth={1.6} />
       </g>
 
       <ForceLabel x={bx + 8} y={by + 70} text="mg" color={ink(0.62)} />
-      <ForceLabel x={bx + 74 * nx} y={by + 74 * ny + 4} text="N" color={CYAN} anchor={nx < 0 ? "end" : "start"} />
-      <ForceLabel x={bx + 72 * cos} y={by - 72 * sin + 4} text={slides ? `f = ${maxGrip.toFixed(1)} N` : `f ≤ ${maxGrip.toFixed(1)} N`} color={MINT} />
-      <ForceLabel x={bx - 82 * cos} y={by + 82 * sin + 4} text="mg sin θ" color={AMBER} anchor="end" />
+      <ForceLabel x={bx + (normalLen + 8) * nx} y={by + (normalLen + 8) * ny + 4} text={`N = ${(weight * cos).toFixed(0)} N`} color={CYAN} anchor={nx < 0 ? "end" : "start"} />
+      {friction > 0.05 && (
+        <ForceLabel x={bx + (frictionLen + 10) * cos} y={by - (frictionLen + 10) * sin + 4} text={`f = ${friction.toFixed(1)} N`} color={MINT} />
+      )}
+      {along > 0.05 && (
+        <ForceLabel x={bx - (alongLen + 10) * cos} y={by + (alongLen + 10) * sin + 4} text="mg sin θ" color={AMBER} anchor="end" />
+      )}
 
       <text x={24} y={28} fontSize={12} fill={ink(0.55)}>
         Free-body diagram · θ = {angle}° · µ = {mu.toFixed(2)}

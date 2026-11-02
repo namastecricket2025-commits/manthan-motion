@@ -26,10 +26,10 @@ import { useMemo, useRef, useState } from "react";
  *   ammonium chloride   sublimes on heating  → sublimation
  *   iron + sulphur      one part is magnetic → magnetic separation
  *
- * The apparatus changes with the technique, and the progress slider runs it:
+ * The apparatus changes with the technique, and the run button moves it:
  * filtrate drips, the solvent front climbs the paper, the lower layer taps off.
- * A wrong pairing is not just marked wrong — it says which property is missing,
- * which is the actual lesson.
+ * A wrong pairing cannot be run — it is marked wrong and says which property
+ * is missing, which is the actual lesson.
  */
 
 type MixtureId = "sand" | "salt" | "ink" | "oil" | "ammonium" | "iron";
@@ -58,7 +58,7 @@ const TECHNIQUES: Array<{
     principle: "A filter paper passes the liquid but holds back an insoluble solid.",
     valid: ["sand"],
     gives: "Residue on the paper · clear filtrate below",
-    fail: "Filtration needs a solid that does not dissolve. Here the solid is either dissolved or there is no solid at all, so the paper lets everything through.",
+    fail: "Filtration needs a liquid carrying an insoluble solid. This mixture is not that suspension, so the paper has nothing to hold back.",
   },
   {
     id: "evaporation",
@@ -66,7 +66,7 @@ const TECHNIQUES: Array<{
     principle: "The solvent is driven off as vapour, leaving the dissolved solid behind.",
     valid: ["salt"],
     gives: "Solid crystals in the dish · water lost as vapour",
-    fail: "Evaporation leaves whatever was dissolved. With no dissolved solid in the mixture, there is nothing left in the dish once the liquid is gone.",
+    fail: "Evaporation recovers a dissolved solid and loses the liquid. It cannot separate several dissolved components, and it does not give the liquid back.",
   },
   {
     id: "distillation",
@@ -74,7 +74,7 @@ const TECHNIQUES: Array<{
     principle: "The liquid is boiled off and condensed back — the solvent is recovered, not lost.",
     valid: ["salt", "sand"],
     gives: "Pure condensed liquid · solid left in the flask",
-    fail: "Distillation recovers a liquid from a solid or from a less volatile liquid. This mixture is either two liquids that distil together or a solid that is not in solution.",
+    fail: "Distillation recovers a liquid, or separates liquids with different boiling points. Here the liquid is not the product you are after.",
   },
   {
     id: "chromatography",
@@ -82,7 +82,7 @@ const TECHNIQUES: Array<{
     principle: "Components move up the paper at different speeds because they are differently soluble.",
     valid: ["ink"],
     gives: "Separate coloured bands along the paper",
-    fail: "Chromatography separates things that are all dissolved and travel at different speeds. A single dissolved solid, or an undissolved one, gives no bands.",
+    fail: "Chromatography needs several dissolved components that travel up the paper at different speeds. This mixture does not have them.",
   },
   {
     id: "funnel",
@@ -111,10 +111,10 @@ const TECHNIQUES: Array<{
 ];
 
 const FAIL_REASON: Record<TechniqueId, string> = {
-  filtration: "no insoluble solid to catch",
-  evaporation: "nothing dissolved to leave behind",
-  distillation: "no liquid to recover from a solid or a single liquid",
-  chromatography: "nothing that travels at different speeds",
+  filtration: "no liquid with a suspended solid",
+  evaporation: "no dissolved solid to recover as the product",
+  distillation: "no liquid whose recovery is the point",
+  chromatography: "no dissolved components that travel at different speeds",
   funnel: "no two immiscible layers",
   sublimation: "no solid that sublimes",
   magnetic: "nothing magnetic",
@@ -201,7 +201,7 @@ export function SeparationBench() {
             onChange={(next) => {
               setMixture(next);
               setRunning(false);
-              setT(0.35);
+              setT(0);
             }}
           />
         </div>
@@ -254,7 +254,7 @@ export function SeparationBench() {
                 onClick={() => {
                   setTechnique(entry.id);
                   setRunning(false);
-                  setT(0.35);
+                  setT(0);
                 }}
                 className="apple-lab-btn !h-auto !justify-center !rounded-lg !px-2 !py-2 !text-[11px]"
               >
@@ -272,8 +272,17 @@ export function SeparationBench() {
               type="button"
               className={`apple-lab-btn ${running ? "apple-lab-btn--stop" : "apple-lab-btn--run"}`}
               onClick={toggleRun}
+              disabled={!works}
             >
-              {running ? "Pause" : t >= 1 ? "Run it again" : t > 0 ? "Resume" : "Run the apparatus"}
+              {running
+                ? "Pause"
+                : !works
+                  ? "This pairing cannot run"
+                  : t >= 1
+                    ? "Run it again"
+                    : t > 0
+                      ? "Resume"
+                      : "Run the apparatus"}
             </button>
             <button
               type="button"
@@ -328,7 +337,7 @@ export function SeparationBench() {
           { q: "Why can't filtration separate salt from water?", a: "Salt is dissolved, so it passes through the filter paper with the water. Filtration only holds back particles big enough to be trapped — it separates by size, not by dissolving." },
           { q: "Why is distillation better than evaporation for sea water?", a: "Evaporation gives you the salt but loses the water. Distillation condenses the vapour and keeps the water too, which is what a coastal or arid region actually needs." },
           { q: "Why do the ink bands separate?", a: "Each dye has a different solubility and sticks to the paper differently, so the solvent carries them up at different speeds. The most soluble, least sticky dye travels furthest." },
-          { q: "Why must the ammonium chloride be heated gently?", a: "It sublimes below the temperature at which the salt would melt or react. Strong heating chars the mixture and the white crystals on the cold surface stop being ammonium chloride." },
+          { q: "Why must the ammonium chloride be heated gently?", a: "Gentle heating sublimes it cleanly. Strong heating decomposes it into ammonia and hydrogen chloride instead of giving a pure sublimate, and it can crack the glass." },
           { q: "What is the one rule behind all seven?", a: "Every technique exploits one difference in properties: particle size, solubility, boiling point, adsorption, density, the ability to sublime, or magnetism. Name the difference first and the technique follows." },
         ]}
       />

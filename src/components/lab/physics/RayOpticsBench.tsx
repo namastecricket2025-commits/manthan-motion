@@ -171,7 +171,7 @@ export function RayOpticsBench() {
             {/* A centimetre ruler along the axis, so distances are countable. */}
             {(() => {
               const step = scale * 10 >= 40 ? 10 : scale * 20 >= 40 ? 20 : 50;
-              const from = Math.ceil((40 - MIRROR_X) / scale / step) * step;
+              const from = 0;
               const to = Math.floor((MIRROR_X - 30) / scale / step) * step;
               const ticks: number[] = [];
               for (let cm = from; cm <= to; cm += step) ticks.push(cm);
@@ -199,10 +199,11 @@ export function RayOpticsBench() {
                     strokeWidth={3.4}
                     strokeLinecap="round"
                   />
-                  {/* Hatched back — the non-reflecting side. */}
+                  {/* Hatched back — always the right-hand side, whichever way
+                      the reflecting face bulges. */}
                   {Array.from({ length: 14 }, (_, i) => {
                     const y = top + 12 + i * ((bottom - top - 24) / 13);
-                    const x = MIRROR_X - bulge + (mirror === "concave" ? 11 : -11);
+                    const x = MIRROR_X + 22;
                     return <line key={i} x1={x} y1={y} x2={x + 10} y2={y + 7} stroke={ink(0.22)} strokeWidth={1.4} />;
                   })}
                 </>
@@ -212,8 +213,12 @@ export function RayOpticsBench() {
             {/* Focus and centre */}
             <circle cx={MIRROR_X - f * scale} cy={AXIS_Y} r={3.6} fill={AMBER} />
             <text x={MIRROR_X - f * scale} y={AXIS_Y + 19} textAnchor="middle" fontSize={11.5} fill={AMBER}>F</text>
-            <circle cx={MIRROR_X - 2 * f * scale} cy={AXIS_Y} r={3.4} fill={ink(0.5)} />
-            <text x={MIRROR_X - 2 * f * scale} y={AXIS_Y + 19} textAnchor="middle" fontSize={11.5} fill={ink(0.55)}>C</text>
+            {MIRROR_X - 2 * f * scale < W - 26 ? (
+              <>
+                <circle cx={MIRROR_X - 2 * f * scale} cy={AXIS_Y} r={3.4} fill={ink(0.5)} />
+                <text x={MIRROR_X - 2 * f * scale} y={AXIS_Y + 19} textAnchor="middle" fontSize={11.5} fill={ink(0.55)}>C</text>
+              </>
+            ) : null}
 
             {/* Object */}
             <line x1={objX} y1={AXIS_Y} x2={objX} y2={AXIS_Y - objH * scale} stroke={CYAN} strokeWidth={3.4} strokeLinecap="round" />

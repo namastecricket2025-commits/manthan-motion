@@ -157,6 +157,10 @@ export function PVProcessBench() {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [process, p1, v1, state.p2, state.v2, run]);
 
+  /* Heat is followed alongside the work, so the arrow beside the cylinder
+     agrees with the piston instead of showing the end-of-process total. */
+  const heatSoFar = workSoFar + N * CV * (runT - state.t1);
+
   const energyWord = (value: number, positive: string, negative: string) =>
     Math.abs(value) < 0.5 ? "zero" : value > 0 ? positive : negative;
 
@@ -328,13 +332,15 @@ export function PVProcessBench() {
                 }
                 fill={AMBER}
               />
+              {/* Short here: the full "by / on the gas" sentence sits on the
+                  graph, and a long label would run into its axis. */}
               <text x={CYL_R + 52} y={pistonY - 22} fontSize={10.5} fill={AMBER}>
                 W = {workSoFar.toFixed(0)} J
               </text>
             </g>
 
             {/* Heat arrow at the base. */}
-            <g opacity={Math.abs(state.heat) < 0.5 ? 0.25 : 1}>
+            <g opacity={Math.abs(heatSoFar) < 0.5 ? 0.25 : 1}>
               <path
                 d={`M ${(CYL_L + CYL_R) / 2} ${CYL_BOTTOM + 34} q -10 -8 0 -16 q 10 -8 0 -16`}
                 fill="none"
@@ -343,7 +349,7 @@ export function PVProcessBench() {
               />
               <path
                 d={
-                  state.heat > 0
+                  heatSoFar > 0
                     ? `M${(CYL_L + CYL_R) / 2} ${CYL_BOTTOM + 2} l-5 9 l10 0 z`
                     : `M${(CYL_L + CYL_R) / 2} ${CYL_BOTTOM + 34} l-5 -9 l10 0 z`
                 }
@@ -351,10 +357,10 @@ export function PVProcessBench() {
               />
             </g>
             <text x={CYL_R + 16} y={CYL_BOTTOM + 8} fontSize={10.5} fill={CYAN}>
-              Q = {state.heat.toFixed(0)} J
+              Q = {heatSoFar.toFixed(0)} J
             </text>
             <text x={CYL_L} y={CYL_BOTTOM + 54} fontSize={10.5} fill={ink(0.45)}>
-              {state.heat > 0 ? "heat in" : state.heat < 0 ? "heat out" : "no heat"}
+              {heatSoFar > 0 ? "heat in" : heatSoFar < 0 ? "heat out" : "no heat"}
               {" · "}T = {runT.toFixed(0)} K
             </text>
 
@@ -396,7 +402,9 @@ export function PVProcessBench() {
             <line x1={gX(0)} y1={gY(runP)} x2={gX(runV)} y2={gY(runP)} stroke={MINT} strokeWidth={1} strokeDasharray="4 4" opacity={0.5} />
 
             <text x={GL + 10} y={GB - 10} fontSize={11} fill={MINT}>
-              {process === "isochoric" ? "W = 0 — the path has no width" : `W = ${state.work.toFixed(0)} J by the gas`}
+              {process === "isochoric"
+                ? "W = 0 — the path has no width"
+                : `W = ${Math.abs(state.work).toFixed(0)} J ${state.work >= 0 ? "by" : "on"} the gas`}
             </text>
           </svg>
         </div>

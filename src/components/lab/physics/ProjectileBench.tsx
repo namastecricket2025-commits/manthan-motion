@@ -86,11 +86,14 @@ export function ProjectileBench() {
      the top speed, so the components keep their true proportion to it. */
   const arrowScale = 86 / 45;
 
-  /* The 45° shot at this speed is the furthest reach, so the frame is held
-     still against it: every angle is read against the same envelope instead
-     of the plate rescaling under the sliders. */
-  const envVx = u * Math.cos(Math.PI / 4);
-  const envVy = u * Math.sin(Math.PI / 4);
+  /* The furthest shot at this speed holds the frame still, so every angle is
+     read against the same envelope instead of the plate rescaling under the
+     sliders. From level ground that angle is 45°; from a height it is a
+     little lower, tan θ = u / √(u² + 2gh), and the plate says so. */
+  const bestAngle = (Math.atan(u / Math.sqrt(u * u + 2 * g * height)) * 180) / Math.PI;
+  const bestRad = (bestAngle * Math.PI) / 180;
+  const envVx = u * Math.cos(bestRad);
+  const envVy = u * Math.sin(bestRad);
   const envFlight = (envVy + Math.sqrt(envVy * envVy + 2 * g * height)) / g;
   const envRange = envVx * envFlight;
   const envPeak = height + (envVy * envVy) / (2 * g);
@@ -130,9 +133,9 @@ export function ProjectileBench() {
   );
 
   const envelope = useMemo(
-    () => (Math.abs(theta - 45) < 0.6 ? "" : buildPath(70, envVx, envVy, envFlight)),
+    () => (Math.abs(theta - bestAngle) < 0.6 ? "" : buildPath(70, envVx, envVy, envFlight)),
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-    [u, theta, height, g, envFlight, scale, target],
+    [u, theta, height, g, bestAngle, envFlight, scale, target],
   );
 
   /* The part of the path already flown, drawn solid and bright behind the
@@ -298,7 +301,7 @@ export function ProjectileBench() {
               </text>
             </g>
 
-            {/* The 45° envelope: the furthest this speed can reach. */}
+            {/* The best-angle envelope: the furthest this speed can reach. */}
             {envelope ? (
               <>
                 <path d={envelope} fill="none" stroke={ink(0.18)} strokeWidth={1.3} strokeDasharray="2 7" />
@@ -309,7 +312,7 @@ export function ProjectileBench() {
                   fontSize={10.5}
                   fill={ink(0.38)}
                 >
-                  45° reaches furthest
+                  {bestAngle.toFixed(0)}° reaches furthest
                 </text>
               </>
             ) : null}
