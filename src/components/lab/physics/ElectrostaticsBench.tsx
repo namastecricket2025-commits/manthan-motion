@@ -426,7 +426,7 @@ export function ElectrostaticsBench() {
             ) : null}
             <p className="text-[11px] leading-snug text-[var(--lab-ink-micro)]">
               {pair === "dipole"
-                ? "Outside the dipole on the axis both fields point the same way; between the charges they oppose, so E dips but never reaches zero."
+                ? "Between the charges both fields point the same way, + to −, so E is strong there. Outside the pair they oppose, but the nearer charge always wins, so E never reaches zero."
                 : neutral !== null
                   ? `Between two positive charges the fields cancel at ${neutral.toFixed(1)} cm — nearer the smaller charge — and no line passes through that point.`
                   : ""}
@@ -450,8 +450,8 @@ export function ElectrostaticsBench() {
             a: "Potential is a scalar sum; at the neutral point between two positive charges the two potentials add rather than cancel, so V is large while E is zero.",
           },
           {
-            q: "Why does the arrow flip direction across the midpoint of a dipole?",
-            a: "On the far side the negative charge is nearer, so the net field points toward it; on the near side the positive charge dominates and the field points away. E is a vector, and it reverses.",
+            q: "Why does the field point + to − between the charges, but away from the pair outside?",
+            a: "Between them both contributions point the same way, so they add. Outside, they oppose, and the nearer charge wins: beyond the positive charge its push dominates and E points away; beyond the negative its pull dominates and E points toward it.",
           },
         ]}
       />

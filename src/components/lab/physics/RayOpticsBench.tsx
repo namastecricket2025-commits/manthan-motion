@@ -175,14 +175,19 @@ export function RayOpticsBench() {
               const to = Math.floor((MIRROR_X - 30) / scale / step) * step;
               const ticks: number[] = [];
               for (let cm = from; cm <= to; cm += step) ticks.push(cm);
-              return ticks.map((cm) => (
+              return ticks.map((cm) => {
+                /* The mirror owns the zero mark; a tick drawn on the glass
+                   would read as part of the mirror. */
+                if (MIRROR_X - cm * scale > MIRROR_X - 18) return null;
+                return (
                 <g key={cm}>
                   <line x1={MIRROR_X - cm * scale} y1={AXIS_Y + 30} x2={MIRROR_X - cm * scale} y2={AXIS_Y + 36} stroke={ink(0.22)} strokeWidth={1} />
                   <text x={MIRROR_X - cm * scale} y={AXIS_Y + 50} textAnchor="middle" fontSize={9.5} fill={ink(0.35)}>
                     {cm}
                   </text>
                 </g>
-              ));
+                );
+              });
             })()}
 
             {/* Spherical mirror: an arc of a circle seen edge-on. */}

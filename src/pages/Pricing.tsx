@@ -138,7 +138,7 @@ function PlanColumn({
         <h2 className="font-display text-[17px] font-semibold tracking-tight">
           {name}
         </h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-text-dim">
+        <p className="mt-1 min-h-[38px] text-[12.5px] leading-relaxed text-text-dim">
           {summary}
         </p>
       </div>
@@ -164,9 +164,11 @@ function PlanColumn({
       <p className="mt-2.5 min-h-[18px] text-[11.5px] leading-relaxed text-text-dim">
         {billingLine}
       </p>
-      {hook ? (
-        <p className="mt-1 text-[11.5px] leading-relaxed text-text-dim">{hook}</p>
-      ) : null}
+      {/* Reserved, so a column without a hook still puts its button on the
+          same line as the others. */}
+      <p className="mt-1 min-h-[17px] text-[11.5px] leading-relaxed text-text-dim">
+        {hook ?? ""}
+      </p>
 
       <div className="mt-6">
         {current ? (

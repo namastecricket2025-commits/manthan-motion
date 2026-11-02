@@ -122,8 +122,9 @@ export function EchoSonarBench() {
             </h3>
             <p className="mt-1 max-w-xl text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">
               Send one pulse. The cliff returns it; the trace below times it.
-              The shaded window is how long the ear keeps a sound — anything
-              arriving inside it merges instead of echoing.
+              The drawing is slowed down — the clock reads the real time. The
+              shaded window is how long the ear keeps a sound: anything arriving
+              inside it merges instead of echoing.
             </p>
           </div>
           <Picker
