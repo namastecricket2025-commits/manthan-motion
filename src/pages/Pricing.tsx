@@ -27,11 +27,11 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * Three doors, then the short pass. Free, EduVantage and Prime are three
- * cards with different surfaces rather than one table divided into columns,
- * because a price page should feel like choosing a room, not reading a grid.
- * The recommended plan is the only lit card; the pass below is one quiet
- * strip with a fixed length and one price.
+ * Four cards in one panel. Free, EduVantage, Prime and the one-week Sprint
+ * Pass are four cards with different surfaces rather than one table divided
+ * into columns, because a price page should feel like choosing a room, not
+ * reading a grid. The recommended plan is the only lit card; the pass sits
+ * beside them as a card too — a fixed length and one price, no strip.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
@@ -92,7 +92,6 @@ function BillingSwitch({
 
 /** One subscription card. */
 function PlanColumn({
-  index,
   name,
   summary,
   price,
@@ -118,12 +117,10 @@ function PlanColumn({
   current: boolean;
   onChoose?: () => void;
   ctaLabel: string;
-  index: string;
 }) {
   return (
     <article className={cn("plan-card", featured && "plan-card--featured")}>
       <div className="plan-card__top">
-        <span className="plan-card__index">{index}</span>
         <span className="plan-card__tags">
           {featured ? (
             <span className="plan-card__badge">Most popular</span>
@@ -186,75 +183,6 @@ function PlanColumn({
           </li>
         ))}
       </ul>
-    </article>
-  );
-}
-
-/**
- * A one-off pass: a length, what it opens, one price.
- *
- * A pass is a different purchase from a term plan, so it is not a fourth card.
- * It reads as a line on a schedule: the number of days is the big mark on the
- * left, the offer and its one price run across the row, and nothing renews.
- */
-function PassTicket({
-  name,
-  summary,
-  price,
-  days,
-  allowance,
-  hook,
-  features,
-  current,
-  onChoose,
-}: {
-  name: string;
-  summary: string;
-  price: number;
-  days: number;
-  allowance: string;
-  hook?: string;
-  features: string[];
-  current: boolean;
-  onChoose?: () => void;
-}) {
-  return (
-    <article className="plan-pass">
-      <div className="plan-pass__length">
-        <span className="plan-pass__days">{days}</span>
-        <span className="plan-pass__unit">days</span>
-      </div>
-      <div className="plan-pass__body">
-        <div className="plan-pass__head">
-          <div className="min-w-0">
-            <h3>{name}</h3>
-            <p className="plan-pass__summary">{summary}</p>
-          </div>
-          <p className="plan-pass__price">{formatINR(price)}</p>
-        </div>
-
-        <ul className="plan-pass__features">
-          {features.slice(0, 3).map((feature) => (
-            <li key={feature}>
-              <Check aria-hidden="true" />
-              {feature}
-            </li>
-          ))}
-        </ul>
-
-        <div className="plan-pass__foot">
-          {current ? (
-            <span className="plan-pass__current">Your current plan</span>
-          ) : (
-            <button type="button" onClick={onChoose} className="plan-pass__cta">
-              Take the {days}-day pass
-            </button>
-          )}
-          <span className="plan-pass__note">
-            {allowance} · {hook ?? "nothing renews"}
-          </span>
-        </div>
-      </div>
     </article>
   );
 }
@@ -371,8 +299,8 @@ export default function Pricing() {
   const term = getDuration(duration);
   const checkoutDuration = getDuration(duration);
 
-  /* The three subscriptions get the cards; the one-off pass gets its own
-     line below. `plan-tiers.ts` still owns the order and every number. */
+  /* The three subscriptions get the first three cards; the one-off pass is
+     the fourth. `plans.ts` still owns the order and every number. */
   const featuredTier =
     PLAN_TIERS.find((tier) => tier.featured) ?? PLAN_TIERS[0];
   const primeTier =
@@ -419,11 +347,10 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* Three cards, then the passes on their own strip. */}
+          {/* Four cards in one panel: the three term plans, then the pass. */}
           <div data-reveal className="mt-12">
             <div className="plan-grid">
               <PlanColumn
-                index="01"
                 name={FREE_PLAN.name}
                 summary={FREE_PLAN.summary}
                 price={0}
@@ -437,7 +364,6 @@ export default function Pricing() {
               />
 
               <PlanColumn
-                index="02"
                 name={featuredTier.name}
                 summary={featuredTier.summary}
                 price={tierDisplay(featuredTier).price}
@@ -453,7 +379,6 @@ export default function Pricing() {
               />
 
               <PlanColumn
-                index="03"
                 name={primeTier.name}
                 summary={primeTier.summary}
                 price={tierDisplay(primeTier).price}
@@ -466,37 +391,29 @@ export default function Pricing() {
                 ctaLabel={`Choose ${primeTier.name}`}
                 onChoose={() => setCheckout(primeTier)}
               />
-            </div>
 
-            <section className="plan-passes" aria-labelledby="one-off-passes">
-              <div className="plan-passes__heading">
-                <p id="one-off-passes" className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-text-dim">
-                  One-off pass
-                </p>
-                <p className="mt-2 text-[12px] leading-relaxed text-text-dim">
-                  For the week before a paper. Paid once, and nothing renews.
-                </p>
-              </div>
-              <div className="plan-passes__grid">
-                {passTiers.map((tier) => {
-                  const days = 7;
-                  return (
-                    <PassTicket
-                      key={tier.id}
-                      name={tier.name}
-                      summary={tier.summary}
-                      price={tier.price}
-                      days={days}
-                      allowance={tier.allowance}
-                      hook={`about ₹${Math.round(tier.price / days)} a day`}
-                      features={tier.features}
-                      current={plan === tier.id}
-                      onChoose={() => setCheckout(tier)}
-                    />
-                  );
-                })}
-              </div>
-            </section>
+              {/* The one-off pass lives in this same panel, as the fourth
+                  card: a fixed 7 days, one price, nothing renews. */}
+              {passTiers.map((tier) => {
+                const days = 7;
+                return (
+                  <PlanColumn
+                    key={tier.id}
+                    name={tier.name}
+                    summary={tier.summary}
+                    price={tier.price}
+                    priceSuffix={`/ ${tier.unit}`}
+                    billingLine="One payment, nothing renews."
+                    hook={`${tier.allowance} · about ₹${Math.round(tier.price / days)} a day`}
+                    features={tier.features}
+                    includedLabel="What the pass opens"
+                    current={plan === tier.id}
+                    ctaLabel="Take the pass"
+                    onChoose={() => setCheckout(tier)}
+                  />
+                );
+              })}
+            </div>
           </div>
 
           <p className="mt-8 text-center text-xs text-text-dim">

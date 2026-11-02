@@ -38,22 +38,29 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Plans — three cards, then the short passes                          */
+/* Plans — four cards in one panel                                     */
 /* ------------------------------------------------------------------ */
 
-/* Three independent cards, not one sheet divided into columns. Each card can
+/* Four independent cards, not one sheet divided into columns. Each card can
    then have its own surface and its own silhouette: Free is the open page,
-   EduVantage is the lit card, Prime is the quiet complete one. The passes are
-   a separate schedule below — a pass is a length of time, not a fifth tier. */
+   EduVantage is the lit card, Prime is the quiet complete one, and the
+   Sprint Pass is the short one-off — a card in this same panel, because it
+   is bought alongside the term plans, not on a schedule of its own. */
 
 .plan-grid {
   display: grid;
   gap: 14px;
 }
 
+@media (min-width: 700px) {
+  .plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1024px) {
   .plan-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
   }
 }
@@ -76,23 +83,11 @@
   hyphens: none;
 }
 
+/* No wash, no bloom: the surface stays the same panel as its neighbours.
+   The only light on this card is the thin travelling rim below. */
 .plan-card--featured {
   border-color: color-mix(in srgb, #4cc9f0 32%, var(--panel-line));
-  background:
-    radial-gradient(
-      120% 85% at 50% 0%,
-      color-mix(in srgb, #4cc9f0 14%, transparent),
-      transparent 58%
-    ),
-    radial-gradient(
-      95% 70% at 100% 108%,
-      color-mix(in srgb, #ff5a66 9%, transparent),
-      transparent 62%
-    ),
-    var(--panel);
-  box-shadow:
-    0 34px 90px -52px color-mix(in srgb, #4cc9f0 50%, transparent),
-    0 0 26px -8px color-mix(in srgb, #4cc9f0 42%, transparent);
+  background: var(--panel);
 }
 
 /* The revolving glow around the most popular plan. A light band travels the
@@ -166,21 +161,15 @@ html[data-motion="reduced"] .plan-card--featured::after {
   }
 }
 
+/* The badge row: kept on every card so the names and prices below line up
+   across the panel, even where there is no badge to show. Badges sit on the
+   right — the old editorial 01/02/03 indices are gone. */
 .plan-card__top {
   display: flex;
   min-height: 24px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
-}
-
-.plan-card__index {
-  font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
 }
 
 .plan-card__tags {
@@ -356,199 +345,6 @@ html[data-motion="reduced"] .plan-card--featured::after {
 
 .plan-card--featured .plan-card__features svg {
   color: #4cc9f0;
-}
-
-/* ---- the pass schedule ---- */
-
-.plan-passes {
-  display: grid;
-  gap: 14px;
-  margin-top: 28px;
-  border-top: 1px solid var(--panel-line);
-  padding-top: 22px;
-}
-
-@media (min-width: 1024px) {
-  .plan-passes {
-    grid-template-columns: 210px minmax(0, 1fr);
-    align-items: start;
-    gap: 24px;
-  }
-}
-
-.plan-passes__grid {
-  display: grid;
-  overflow: hidden;
-  border: 1px solid var(--panel-line);
-  border-radius: 18px;
-  background: var(--panel);
-}
-
-@media (min-width: 760px) {
-  .plan-passes__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* A single pass spans the whole schedule instead of half-emptying it. */
-.plan-passes__grid > .plan-pass:only-child {
-  grid-column: 1 / -1;
-}
-
-.plan-pass {
-  display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  min-width: 0;
-  transition: background 200ms ease;
-}
-
-.plan-pass + .plan-pass {
-  border-top: 1px solid var(--panel-line);
-}
-
-@media (min-width: 760px) {
-  .plan-pass + .plan-pass {
-    border-top: 0;
-    border-left: 1px solid var(--panel-line);
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .plan-pass:hover {
-    background: color-mix(in srgb, var(--text-main) 3%, transparent);
-  }
-}
-
-.plan-pass__length {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 3px;
-  border-right: 1px dashed var(--panel-line);
-  background: color-mix(in srgb, var(--text-main) 3%, transparent);
-  padding: 20px 8px;
-}
-
-.plan-pass__days {
-  font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.plan-pass__unit {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.plan-pass__body {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 10px;
-  padding: 18px 20px;
-}
-
-.plan-pass__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.plan-pass__head h3 {
-  font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: 15.5px;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-}
-
-.plan-pass__summary {
-  margin-top: 4px;
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--text-dim);
-}
-
-.plan-pass__price {
-  flex: none;
-  font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: 23px;
-  font-weight: 650;
-  letter-spacing: -0.035em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.plan-pass__features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-}
-
-.plan-pass__features li {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--text-dim);
-}
-
-.plan-pass__features svg {
-  width: 12px;
-  height: 12px;
-  flex: none;
-  margin-top: 1px;
-  opacity: 0.65;
-}
-
-.plan-pass__foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-top: auto;
-}
-
-.plan-pass__cta {
-  cursor: pointer;
-  border: 1px solid var(--panel-line-strong);
-  border-radius: 999px;
-  background: transparent;
-  padding: 7px 13px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-main);
-  transition:
-    background 200ms ease,
-    border-color 200ms ease;
-}
-
-.plan-pass__cta:hover {
-  background: color-mix(in srgb, var(--text-main) 7%, transparent);
-  border-color: color-mix(in srgb, var(--text-main) 30%, transparent);
-}
-
-.plan-pass__current {
-  border: 1px dashed var(--panel-line);
-  border-radius: 999px;
-  padding: 7px 13px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-dim);
-}
-
-.plan-pass__note {
-  font-size: 10.5px;
-  line-height: 1.4;
-  color: var(--text-dim);
 }
 
 /* Neutral badge: a state label, not a decoration. */
@@ -1935,26 +1731,6 @@ html:not(.dark) .lock-veil {
 
   .plan-card__amount {
     font-size: 2.3rem;
-  }
-
-  .plan-pass {
-    grid-template-columns: 64px minmax(0, 1fr);
-  }
-
-  .plan-pass__length {
-    padding: 16px 6px;
-  }
-
-  .plan-pass__days {
-    font-size: 26px;
-  }
-
-  .plan-pass__body {
-    padding: 15px 14px;
-  }
-
-  .plan-pass__price {
-    font-size: 20px;
   }
 
   .premium-select select {
