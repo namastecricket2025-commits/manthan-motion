@@ -28,18 +28,21 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * Four columns, priced the way the workspaces actually differ: Free keeps the
- * notebook studio whole, the Sprint Pass buys a week of it with Cram Mode,
- * EduVantage opens the lab graphs and the photo solver, and Prime opens the
- * rest. One billing switch sits above the cards and moves every plan that has
- * a term at once, because three separate switches on three cards made the
- * reader compare four prices in three different units.
+ * One sheet, three columns, then the passes. Free, EduVantage and Prime are
+ * priced side by side inside a single bordered sheet so the reader compares
+ * what each plan opens instead of counting five identical boxes; the two
+ * one-off passes sit on a shelf below, shaped like tickets with the number of
+ * days in the stub, because a pass is a different purchase from a term plan.
  *
- * Below the cards: one comparison table, read from `PLAN_MATRIX` in
- * `src/lib/plans.ts` — the same module that names the capability each lock
- * checks, so the table cannot promise a workspace the app will refuse. Above
- * the footnote: the questions a student asks before paying, answered with the
- * numbers on this page.
+ * One billing switch sits above the sheet and moves every term plan at once,
+ * because three separate switches on three cards made the reader compare four
+ * prices in three different units.
+ *
+ * Below: one comparison table, read from `PLAN_MATRIX` in `src/lib/plans.ts` —
+ * the same module that names the capability each lock checks, so the table
+ * cannot promise a workspace the app will refuse. Above the footnote: the
+ * questions a student asks before paying, answered with the numbers on this
+ * page.
  *
  * Checkout is still an explicit sandbox simulation. Nothing here contacts a
  * payment network.
@@ -88,8 +91,8 @@ function BillingSwitch({
   );
 }
 
-/** A plan card. Free and the paid tiers share every rule by construction. */
-function PlanCard({
+/** A subscription column inside the shared plan sheet. */
+function PlanColumn({
   name,
   summary,
   price,
@@ -99,7 +102,6 @@ function PlanCard({
   features,
   includedLabel,
   featured,
-  pass,
   current,
   onChoose,
   ctaLabel,
@@ -113,24 +115,16 @@ function PlanCard({
   features: string[];
   includedLabel: string;
   featured?: boolean;
-  pass?: boolean;
   current: boolean;
   onChoose?: () => void;
   ctaLabel: string;
 }) {
   return (
-    <section
-      data-reveal
-      className={cn(
-        "premium-card relative overflow-hidden",
-        featured && "premium-card--featured",
-        pass && "premium-card--pass",
-      )}
-    >
+    <section className={cn("plan-col", featured && "plan-col--featured")}>
       {/* The badge owns a full row above the name. Sitting beside it, the
           badge stole most of a 230px card and the name had to break inside
-          the word — "EduVanta / ge". The reserved row keeps every card's name
-          and price on the same baseline whether it has a badge or not. */}
+          the word — "EduVanta / ge". The reserved row keeps every column's
+          name and price on the same baseline whether it has a badge or not. */}
       <div className="mb-3 flex min-h-[24px] items-center">
         {featured ? (
           <span className="premium-chip premium-chip--featured">
@@ -138,8 +132,6 @@ function PlanCard({
           </span>
         ) : current ? (
           <span className="premium-chip">Current</span>
-        ) : pass ? (
-          <span className="premium-chip">One-off</span>
         ) : null}
       </div>
       <div className="min-w-0">
@@ -218,6 +210,91 @@ function PlanCard({
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * A one-off pass.
+ *
+ * The length of the pass is the whole offer, so it is the ticket's stub — a
+ * 7 or a 14 you can read across the room — and the dashed tear is the only
+ * decoration. It used to be a fifth subscription card wearing an amber wash,
+ * which read as a discounted tier and matched nothing else on the page.
+ */
+function PassTicket({
+  name,
+  summary,
+  price,
+  days,
+  allowance,
+  hook,
+  features,
+  current,
+  onChoose,
+}: {
+  name: string;
+  summary: string;
+  price: number;
+  days: number;
+  allowance: string;
+  hook?: string;
+  features: string[];
+  current: boolean;
+  onChoose?: () => void;
+}) {
+  return (
+    <article className="plan-pass">
+      <div className="plan-pass__stub">
+        <span className="plan-pass__days">{days}</span>
+        <span className="plan-pass__unit">days</span>
+      </div>
+      <div className="plan-pass__body">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+          <div className="min-w-0">
+            <h3 className="font-display text-[15.5px] font-semibold tracking-tight">
+              {name}
+            </h3>
+            <p className="mt-0.5 text-[12px] leading-snug text-text-dim">
+              {summary}
+            </p>
+          </div>
+          <p className="shrink-0 font-display text-[24px] font-semibold leading-none tabular-nums">
+            {formatINR(price)}
+          </p>
+        </div>
+
+        <ul className="flex flex-wrap gap-x-4 gap-y-1">
+          {features.slice(0, 3).map((feature) => (
+            <li
+              key={feature}
+              className="flex items-center gap-1.5 text-[11.5px] leading-snug text-text-dim"
+            >
+              <Check className="h-3 w-3 shrink-0 text-text-dim" aria-hidden="true" />
+              {feature}
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2">
+          {current ? (
+            <span className="rounded-full border border-[var(--panel-line)] px-3.5 py-1.5 text-[11.5px] font-medium text-text-dim">
+              Your current plan
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onChoose}
+              className="rounded-full border border-[var(--panel-line)] px-3.5 py-1.5 text-[11.5px] font-medium transition-colors hover:border-[var(--panel-line-strong)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
+            >
+              Take the {days}-day pass
+            </button>
+          )}
+          <span className="text-[11px] leading-snug text-text-dim">
+            {allowance} · {hook ?? "nothing renews"}
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -333,6 +410,14 @@ export default function Pricing() {
   const term = getDuration(duration);
   const checkoutDuration = getDuration(duration);
 
+  /* The sheet holds the three subscriptions; the passes get their own shelf.
+     `plan-tiers.ts` still owns the order and every number. */
+  const featuredTier =
+    PLAN_TIERS.find((tier) => tier.featured) ?? PLAN_TIERS[0];
+  const primeTier =
+    PLAN_TIERS.find((tier) => tier.id === "prime") ?? PLAN_TIERS[0];
+  const passTiers = PLAN_TIERS.filter((tier) => !tier.flexible);
+
   const tierDisplay = (tier: PlanTier) => {
     if (!tier.flexible) {
       const days = tier.id === "sprint" ? 7 : 14;
@@ -385,45 +470,84 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* Three plans per row at desktop, two on a tablet, one on a phone.
-              Five columns turned each card into a narrow strip with a price
-              list that had to wrap every other word; the rows are allowed to
-              finish ragged rather than squeeze the reading column. */}
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <PlanCard
-              name={FREE_PLAN.name}
-              summary={FREE_PLAN.summary}
-              price={0}
-              priceSuffix="/ forever"
-              billingLine="No card, no trial clock."
-              features={FREE_PLAN.features}
-              includedLabel="What you get"
-              current={plan === "free"}
-              ctaLabel="Switch to Free"
-              onChoose={() => setPlan("free")}
-            />
+          {/* One sheet, three columns, then the passes on their own shelf.
+              The old grid dropped five same-sized boxes into a row, which made
+              a seven-day pass look like a discounted subscription and squeezed
+              every feature list into a narrow strip. */}
+          <div data-reveal className="plan-sheet mt-10">
+            <div className="plan-sheet__grid">
+              <PlanColumn
+                name={FREE_PLAN.name}
+                summary={FREE_PLAN.summary}
+                price={0}
+                priceSuffix="/ forever"
+                billingLine="No card, no trial clock."
+                features={FREE_PLAN.features}
+                includedLabel="What you get"
+                current={plan === "free"}
+                ctaLabel="Switch to Free"
+                onChoose={() => setPlan("free")}
+              />
 
-            {PLAN_TIERS.map((tier) => {
-              const display = tierDisplay(tier);
-              return (
-                <PlanCard
-                  key={tier.id}
-                  name={tier.name}
-                  summary={tier.summary}
-                  price={display.price}
-                  priceSuffix={display.suffix}
-                  billingLine={display.billing}
-                  hook={display.hook}
-                  features={tier.features}
-                  includedLabel="Everything in Free, plus"
-                  featured={tier.featured}
-                  pass={!tier.flexible}
-                  current={plan === tier.id}
-                  ctaLabel={`Choose ${tier.name}`}
-                  onChoose={() => setCheckout(tier)}
-                />
-              );
-            })}
+              <PlanColumn
+                name={featuredTier.name}
+                summary={featuredTier.summary}
+                price={tierDisplay(featuredTier).price}
+                priceSuffix={tierDisplay(featuredTier).suffix}
+                billingLine={tierDisplay(featuredTier).billing}
+                hook={tierDisplay(featuredTier).hook}
+                features={featuredTier.features}
+                includedLabel="Everything in Free, plus"
+                featured
+                current={plan === featuredTier.id}
+                ctaLabel={`Choose ${featuredTier.name}`}
+                onChoose={() => setCheckout(featuredTier)}
+              />
+
+              <PlanColumn
+                name={primeTier.name}
+                summary={primeTier.summary}
+                price={tierDisplay(primeTier).price}
+                priceSuffix={tierDisplay(primeTier).suffix}
+                billingLine={tierDisplay(primeTier).billing}
+                hook={tierDisplay(primeTier).hook}
+                features={primeTier.features}
+                includedLabel="Everything in Free, plus"
+                current={plan === primeTier.id}
+                ctaLabel={`Choose ${primeTier.name}`}
+                onChoose={() => setCheckout(primeTier)}
+              />
+            </div>
+
+            <div className="plan-sheet__passes">
+              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+                  One-off passes
+                </p>
+                <p className="text-[11.5px] text-text-dim">
+                  A fixed number of days, paid once — nothing renews.
+                </p>
+              </div>
+              <div className="plan-pass-grid">
+                {passTiers.map((tier) => {
+                  const days = tier.id === "sprint" ? 7 : 14;
+                  return (
+                    <PassTicket
+                      key={tier.id}
+                      name={tier.name}
+                      summary={tier.summary}
+                      price={tier.price}
+                      days={days}
+                      allowance={tier.allowance}
+                      hook={`about ₹${Math.round(tier.price / days)} a day`}
+                      features={tier.features}
+                      current={plan === tier.id}
+                      onChoose={() => setCheckout(tier)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <p className="mt-8 text-center text-xs text-text-dim">
@@ -512,7 +636,7 @@ export default function Pricing() {
                                 className={cn(
                                   "px-3 py-3 text-center align-middle",
                                   column.id === "eduvantage" &&
-                                    "bg-[color-mix(in_srgb,var(--signal)_4%,transparent)]",
+                                    "bg-[color-mix(in_srgb,#4cc9f0_5%,transparent)]",
                                 )}
                               >
                                 <CellValue value={row.values[column.id]} />

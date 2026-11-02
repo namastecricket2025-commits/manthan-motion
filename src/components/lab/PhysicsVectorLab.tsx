@@ -75,12 +75,12 @@ type Bench =
  * own class line. Ray optics is deliberately not here — it is a mirror
  * practical, and it belongs in the Optics tab with the lens.
  */
-const CLASS_BENCHES: Array<{ id: ClassBench; label: string }> = [
-  { id: "pressure", label: "Pressure · 8" },
-  { id: "echo", label: "Echo & SONAR · 9" },
-  { id: "projectile", label: "Projectile · 11" },
-  { id: "pv", label: "p–V diagram · 11" },
-  { id: "electrostatics", label: "Electrostatics · 12" },
+const CLASS_BENCHES: Array<{ id: ClassBench; label: string; grade: string }> = [
+  { id: "pressure", label: "Pressure & friction", grade: "8–9" },
+  { id: "echo", label: "Echo & SONAR", grade: "9" },
+  { id: "projectile", label: "Projectile motion", grade: "11" },
+  { id: "pv", label: "p–V processes", grade: "11" },
+  { id: "electrostatics", label: "Electric fields", grade: "12" },
 ];
 
 const BENCHES: { id: Bench; label: string }[] = [
@@ -1995,12 +1995,28 @@ export function PhysicsVectorLab() {
           {bench === "instruments" && <InstrumentsBench />}
           {(bench === "classlabs" || CLASS_BENCHES.some((entry) => entry.id === bench)) && (
             <div className="flex flex-col gap-4">
-              <Picker
-                label="Class bench"
-                value={classBench}
-                options={CLASS_BENCHES.map((entry) => ({ id: entry.id, label: entry.label }))}
-                onChange={(next) => setClassBench(next)}
-              />
+              {/* Chapter strip, not a second tab rail: the class is the big
+                  number, the instrument is the name. */}
+              <div className="apple-lab-glass flex flex-wrap items-center gap-1.5 px-2.5 py-2">
+                <span className="apple-lab-micro mr-1 hidden px-1 sm:block">Class benches</span>
+                {CLASS_BENCHES.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    data-active={classBench === entry.id}
+                    onClick={() => setClassBench(entry.id)}
+                    className="apple-lab-btn !gap-2 !px-2.5 !py-1.5"
+                  >
+                    <span className="font-display text-[12.5px] font-semibold tabular-nums opacity-60">
+                      {entry.grade}
+                    </span>
+                    <span className="text-[11.5px]">{entry.label}</span>
+                  </button>
+                ))}
+                <span className="ml-auto hidden text-[10.5px] text-[var(--lab-ink-micro)] lg:block">
+                  one chapter per instrument
+                </span>
+              </div>
               {classBench === "pressure" && <PressureBench />}
               {classBench === "echo" && <EchoSonarBench />}
               {classBench === "projectile" && <ProjectileBench />}

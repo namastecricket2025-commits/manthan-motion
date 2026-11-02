@@ -1,10 +1,7 @@
 import {
-  BenchStage,
   LiveDot,
   Picker,
   Questions,
-  StageStat,
-  StageToggle,
   ink,
   plate,
   AMBER,
@@ -180,67 +177,54 @@ export function SeparationBench() {
   }, [works, tech, mix, technique]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.22fr)_minmax(0,0.9fr)] lg:items-start">
-      <BenchStage
-        kicker="Class 9 · Separation of substances"
-        title={`Run the ${tech.label.toLowerCase()} and watch what separates`}
-        meta={
-          <>
-            <span className="apple-lab-chip">{mix.label}</span>
-            <LiveDot on={running} label={running ? "running" : t >= 1 ? "finished" : works ? "works here" : "wrong pairing"} />
-          </>
-        }
-        toolbar={
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
-            <div className="sm:max-w-[260px]">
-              <Picker label="Mixture on the bench" value={mixture} options={MIXTURES.map((m) => ({ id: m.id, label: m.label }))} onChange={(next) => { setMixture(next); setRunning(false); setT(0.35); }} />
-            </div>
-            <div className="sm:max-w-[300px]">
-              <Picker label="Technique" value={technique} options={TECHNIQUES.map((x) => ({ id: x.id, label: x.label }))} onChange={(next) => { setTechnique(next); setRunning(false); setT(0.35); }} />
-            </div>
+    <div className="flex flex-col gap-3">
+      <section className="apple-lab-glass min-w-0 overflow-hidden">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 border-b border-[var(--lab-line-soft)] px-4 py-3">
+          <div className="min-w-0">
+            <p className="apple-lab-micro">Class 9 · Is matter around us pure? · separation</p>
+            <h3 className="apple-lab-title mt-1 text-[15px] leading-tight">
+              Choose what the mixture is made of, then what to do with it
+            </h3>
+            <p className="mt-1 max-w-xl text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+              {mix.label} is {mix.make}. Each technique below exploits one
+              difference in properties — pick the one this mixture has.
+            </p>
           </div>
-        }
-        rail={
-          <>
-            <button
-              type="button"
-              className={`apple-lab-btn ${running ? "apple-lab-btn--stop" : "apple-lab-btn--run"}`}
-              onClick={toggleRun}
-            >
-              {running ? "Pause" : t >= 1 ? "Run it again" : t > 0 ? "Resume" : "Run the apparatus"}
-            </button>
-            <button type="button" className="apple-lab-btn" onClick={() => { setRunning(false); setT(0); }} disabled={t === 0}>
-              Reset
-            </button>
-            <span className="lab-stage-track" aria-hidden="true">
-              <i style={{ width: `${(t * 100).toFixed(0)}%` }} />
-            </span>
-            <span className="apple-lab-value text-[12px] font-semibold tabular-nums">
-              {Math.round(t * 100)}% · {tech.label.toLowerCase()}
-            </span>
-          </>
-        }
-        stats={
-          <>
-            <StageStat label="Mixture" value={mix.label} />
-            <StageStat label="It is" value={mix.make} tone="cyan" />
-            <StageStat label="Technique" value={tech.label} tone={works ? "mint" : "amber"} />
-            <StageStat label="You get" value={works ? tech.gives : "— nothing — wrong property"} tone={works ? "mint" : "amber"} />
-          </>
-        }
-        note={
-          works
-            ? `${tech.principle} Watch the run: ${tech.gives.toLowerCase()}.`
-            : `${mix.label} is ${mix.make}. ${tech.fail}`
-        }
-      >
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Apparatus for ${tech.label.toLowerCase()}`}>
+          <LiveDot on={running} label={running ? "running" : t >= 1 ? "finished" : works ? "works here" : "wrong pairing"} />
+        </div>
+
+        <div className="border-b border-[var(--lab-line-soft)] px-4 py-2.5">
+          <Picker
+            label="Mixture on the bench"
+            value={mixture}
+            options={MIXTURES.map((m) => ({ id: m.id, label: m.label }))}
+            onChange={(next) => {
+              setMixture(next);
+              setRunning(false);
+              setT(0.35);
+            }}
+          />
+        </div>
+
+        <div className="px-2 py-2 sm:px-3 sm:py-3">
+          <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="img" aria-label={`Apparatus for ${tech.label.toLowerCase()}`}>
           {/* One shared enlargement around the apparatus' own centre. The
               drawings were authored small in a 720-wide plate, which left a
               third of the card empty on a laptop; the new plate is wider and
               taller, so the same group is centred on its middle and grown a
               little further. */}
-          <g transform="translate(430 222) scale(1.16) translate(-360 -196)">
+          {/* The bench the apparatus stands on, drawn full width: the glassware
+              is tall and narrow, so without a surface under it the plate read
+              as an empty card with a small drawing in the middle. */}
+          <rect x={0} y={410} width={W} height={30} fill={plate(0.22)} />
+          <line x1={0} y1={410} x2={W} y2={410} stroke={ink(0.22)} strokeWidth={2} />
+          <text x={26} y={34} fontSize={11.5} fill={ink(0.45)}>
+            {tech.label} · {mix.label.toLowerCase()}
+          </text>
+          <text x={W - 26} y={34} textAnchor="end" fontSize={11.5} fill={works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)"}>
+            {works ? "this pairing works" : "wrong property for this mixture"}
+          </text>
+          <g transform="translate(430 222) scale(1.35) translate(-360 -196)">
             {technique === "filtration" && <Filtration t={t} />}
             {technique === "evaporation" && <Evaporation t={t} />}
             {technique === "distillation" && <Distillation t={t} />}
@@ -250,40 +234,104 @@ export function SeparationBench() {
             {technique === "magnetic" && <Magnetic t={t} />}
           </g>
         </svg>
-      </BenchStage>
-
-      <div className="flex flex-col gap-3">
-        {/* The verdict belongs beside the choice, not on top of the drawing. */}
-        <div
-          className={`rounded-xl border px-3.5 py-3 ${works ? "border-[color-mix(in_srgb,var(--lab-diagram-mint)_45%,transparent)]" : "border-[color-mix(in_srgb,var(--lab-diagram-amber)_45%,transparent)]"}`}
-        >
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }}>
-            <i className="h-1.5 w-1.5 rounded-full" style={{ background: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }} />
-            {works ? "This one works" : "This one cannot work"}
-          </p>
-          <p className="mt-1.5 text-[12.5px] font-semibold leading-snug">{verdict.title}</p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">{verdict.body}</p>
         </div>
 
-        <div className="apple-lab-card px-3 py-2.5">
-          <p className="apple-lab-micro">The rule behind all seven</p>
-          <p className="apple-lab-value mt-1 text-[12.5px] leading-relaxed">
-            Every separation technique exploits one difference: particle size, solubility, boiling
-            point, adsorption, density, the ability to sublime, or magnetism. Name the difference
-            first and the technique follows.
-          </p>
+        {/* The technique shelf: seven methods, laid out as apparatus choices
+            rather than a second chip row. */}
+        <div className="border-t border-[var(--lab-line-soft)] px-4 py-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="apple-lab-micro">Technique</p>
+            <p className="text-[10.5px] text-[var(--lab-ink-micro)]">
+              size · solubility · boiling point · adsorption · density · sublimation · magnetism
+            </p>
+          </div>
+          <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+            {TECHNIQUES.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                data-active={entry.id === technique}
+                onClick={() => {
+                  setTechnique(entry.id);
+                  setRunning(false);
+                  setT(0.35);
+                }}
+                className="apple-lab-btn !h-auto !justify-center !rounded-lg !px-2 !py-2 !text-[11px]"
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <Questions
-          columns={1}
-          items={[
-            { q: "Why can't filtration separate salt from water?", a: "Salt is dissolved, so it passes through the filter paper with the water. Filtration only holds back particles big enough to be trapped — it separates by size, not by dissolving." },
-            { q: "Why is distillation better than evaporation for sea water?", a: "Evaporation gives you the salt but loses the water. Distillation condenses the vapour and keeps the water too, which is what a coastal or arid region actually needs." },
-            { q: "Why do the ink bands separate?", a: "Each dye has a different solubility and sticks to the paper differently, so the solvent carries them up at different speeds. The most soluble, least sticky dye travels furthest." },
-            { q: "Why must the ammonium chloride be heated gently?", a: "It sublimes below the temperature at which the salt would melt or react. Strong heating chars the mixture and the white crystals on the cold surface stop being ammonium chloride." },
-          ]}
-        />
-      </div>
+        {/* The run is the one place in the lab it is genuinely the subject:
+            separation is a process, and the apparatus changes as it happens. */}
+        <div className="border-t border-[var(--lab-line-soft)] px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className={`apple-lab-btn ${running ? "apple-lab-btn--stop" : "apple-lab-btn--run"}`}
+              onClick={toggleRun}
+            >
+              {running ? "Pause" : t >= 1 ? "Run it again" : t > 0 ? "Resume" : "Run the apparatus"}
+            </button>
+            <button
+              type="button"
+              className="apple-lab-btn"
+              onClick={() => {
+                setRunning(false);
+                setT(0);
+              }}
+              disabled={t === 0}
+            >
+              Reset
+            </button>
+            <span className="lab-stage-track" aria-hidden="true">
+              <i style={{ width: `${(t * 100).toFixed(0)}%` }} />
+            </span>
+            <span className="apple-lab-value text-[11.5px] font-semibold tabular-nums">
+              {Math.round(t * 100)}% · {tech.label.toLowerCase()}
+            </span>
+          </div>
+
+          <div
+            className="mt-3 rounded-xl border px-3.5 py-3"
+            style={{
+              borderColor: works
+                ? "color-mix(in srgb, var(--lab-diagram-mint) 45%, transparent)"
+                : "color-mix(in srgb, var(--lab-diagram-amber) 45%, transparent)",
+            }}
+          >
+            <p
+              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }}
+            >
+              <i
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: works ? "var(--lab-diagram-mint)" : "var(--lab-diagram-amber)" }}
+              />
+              {works ? "This one works" : "This one cannot work"}
+            </p>
+            <p className="mt-1.5 text-[12.5px] font-semibold leading-snug">{verdict.title}</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">{verdict.body}</p>
+            {works ? (
+              <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--lab-ink-dim)]">
+                You get: {tech.gives.toLowerCase()}.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <Questions
+        items={[
+          { q: "Why can't filtration separate salt from water?", a: "Salt is dissolved, so it passes through the filter paper with the water. Filtration only holds back particles big enough to be trapped — it separates by size, not by dissolving." },
+          { q: "Why is distillation better than evaporation for sea water?", a: "Evaporation gives you the salt but loses the water. Distillation condenses the vapour and keeps the water too, which is what a coastal or arid region actually needs." },
+          { q: "Why do the ink bands separate?", a: "Each dye has a different solubility and sticks to the paper differently, so the solvent carries them up at different speeds. The most soluble, least sticky dye travels furthest." },
+          { q: "Why must the ammonium chloride be heated gently?", a: "It sublimes below the temperature at which the salt would melt or react. Strong heating chars the mixture and the white crystals on the cold surface stop being ammonium chloride." },
+          { q: "What is the one rule behind all seven?", a: "Every technique exploits one difference in properties: particle size, solubility, boiling point, adsorption, density, the ability to sublime, or magnetism. Name the difference first and the technique follows." },
+        ]}
+      />
     </div>
   );
 }

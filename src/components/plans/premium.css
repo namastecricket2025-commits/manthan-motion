@@ -37,127 +37,154 @@
   border-radius: 12px;
 }
 
-.premium-card {
+/* ------------------------------------------------------------------ */
+/* Plans — one sheet, three columns, then the passes                   */
+/* ------------------------------------------------------------------ */
+
+/* Five identical cards in a grid read as a price list, not a choice: the eye
+   counts boxes instead of comparing what each plan opens. The three
+   subscriptions now share ONE sheet divided by hairlines, so the reader scans
+   across a row; the two one-off passes sit on their own shelf below, shaped
+   like tickets because a pass is a different purchase, not a fifth card. */
+
+.plan-sheet {
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--panel-line);
+  background: var(--panel);
+}
+
+.plan-sheet__grid {
+  display: grid;
+}
+
+@media (min-width: 1024px) {
+  .plan-sheet__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.plan-col {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 26px;
+  padding: 26px 24px 28px;
   /* The global rule lets prose break anywhere so long tokens cannot overflow;
-     in a pricing card that turned "EduVantage" into "EduVanta / ge" as soon
-     as the column got tight. Keep the safety net for a genuinely long word,
-     but let the browser break between words first. */
+     in a plan column that turned "EduVantage" into "EduVanta / ge" as soon as
+     the column got tight. Keep the safety net for a genuinely long word, but
+     let the browser break between words first. */
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
-  background: var(--panel);
+}
+
+.plan-col + .plan-col {
+  border-top: 1px solid var(--panel-line);
+}
+
+@media (min-width: 1024px) {
+  .plan-col + .plan-col {
+    border-top: 0;
+    border-left: 1px solid var(--panel-line);
+  }
+}
+
+/* The recommended plan is a wash and a 2px top edge, not a second border:
+   the sheet already owns the outline, and a box inside a box is what made the
+   old grid look like five offers shouting at once. Blue → red → pink is the
+   same accent family as the site's featured surfaces; no amber enters the
+   columns at all. */
+.plan-col--featured {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #4cc9f0 10%, transparent),
+      transparent 62%
+    ),
+    color-mix(in srgb, var(--text-main) 2%, transparent);
+}
+
+.plan-col--featured::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, #4cc9f0, #ff5a66 62%, #ff9ac8);
+  pointer-events: none;
+}
+
+/* ---- the pass shelf ---- */
+
+.plan-sheet__passes {
+  border-top: 1px solid var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  padding: 18px 20px 20px;
+}
+
+.plan-pass-grid {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 760px) {
+  .plan-pass-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.plan-pass {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  overflow: hidden;
+  border-radius: 14px;
   border: 1px solid var(--panel-line);
-  border-radius: 12px;
+  background: var(--panel);
   transition:
-    transform 240ms var(--ease-momentum),
-    border-color 200ms ease;
+    border-color 200ms ease,
+    transform 240ms var(--ease-momentum);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .premium-card:hover {
+  .plan-pass:hover {
     transform: translateY(-2px);
     border-color: var(--panel-line-strong);
   }
 }
 
-/* The featured plan is told apart by a rim of travelling light — the same
-   conic sweep the badge used to wear, wrapped around the whole sheet where it
-   reads as the surface itself rather than a highlight on one word.
-
-   The ring is a pseudo-element one hairline larger than the card, carrying the
-   gradient and cut back to a 2px band by an `exclude` mask, so the card's fill,
-   radius and padding are untouched. The ring sits OUTSIDE the border box — a
-   descendant can never paint over the card's own 1px border because
-   `overflow: hidden` clips at the padding edge — which is why the featured card
-   drops that clip and keeps the rim on the outside.
-
-   `--premium-angle` is a registered <angle>, so the gradient's start angle can
-   be interpolated directly: the light turns in place instead of a huge box
-   spinning behind the card, which is what would leave the corners uncovered. */
-@property --premium-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
+/* The stub carries the length of the pass — the one number that separates a
+   pass from a subscription — and the dashed tear is the only ornament. No
+   fill tint: a pass is a ticket, not a discounted subscription. */
+.plan-pass__stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-right: 1px dashed var(--panel-line);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
 }
 
-/* A one-off pass is not a subscription, so it should not borrow the
-   subscription cards' chrome. A warm inner wash and a solid left rule mark it
-   as a different kind of purchase without a second highlighted border. */
-.premium-card--pass {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--signal) 5%, transparent),
-      transparent 120px
-    ),
-    var(--panel);
-  border-color: color-mix(in srgb, var(--signal) 26%, var(--panel-line));
+.plan-pass__days {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.premium-card--pass::after {
-  content: "";
-  position: absolute;
-  inset: 22px auto 22px 0;
-  width: 2px;
-  border-radius: 0 2px 2px 0;
-  background: color-mix(in srgb, var(--signal) 55%, transparent);
-  pointer-events: none;
+.plan-pass__unit {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
-.premium-card--featured {
-  overflow: visible;
-  border-color: transparent;
-  /* Keeps the rim's stacking inside this card — `position: relative` alone
-     leaves a z-indexed child competing in the grid's context. */
-  isolation: isolate;
-}
-
-.premium-card--featured::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  z-index: 1;
-  border-radius: inherit;
-  padding: 2px;
-  /* The featured rim is blue → red → pink, and nothing else. The site's
-     signal is amber; using it here made the "most popular" card look like a
-     warning label and fought the neutral pricing page. The three stops are
-     a cold blue, a true red and a soft pink, with the blue repeated at the
-     seam so the sweep closes without a visible join. */
-  background: conic-gradient(
-    from var(--premium-angle),
-    color-mix(in srgb, #4cc9f0 26%, transparent) 0deg 140deg,
-    #4cc9f0 208deg,
-    #ff5a66 258deg,
-    #ff9ac8 312deg,
-    color-mix(in srgb, #4cc9f0 26%, transparent) 358deg
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  animation: premium-ring-turn 7s linear infinite;
-}
-
-@keyframes premium-ring-turn {
-  to {
-    --premium-angle: 360deg;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .premium-card--featured::before {
-    animation: none;
-  }
+.plan-pass__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px 17px 16px;
 }
 
 /* Neutral badge: a state label, not a decoration. */
@@ -1528,9 +1555,28 @@ html:not(.dark) .lock-veil {
      3. reading type goes up, never down — a plan card read on a phone in
         portrait is the primary use case. */
 @media (max-width: 640px) {
-  .premium-card {
-    padding: 20px 18px;
-    border-radius: 20px;
+  .plan-sheet {
+    border-radius: 18px;
+  }
+
+  .plan-col {
+    padding: 22px 18px 24px;
+  }
+
+  .plan-sheet__passes {
+    padding: 16px 14px 14px;
+  }
+
+  .plan-pass {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+
+  .plan-pass__days {
+    font-size: 26px;
+  }
+
+  .plan-pass__body {
+    padding: 13px 14px 14px;
   }
 
   .premium-select select {
