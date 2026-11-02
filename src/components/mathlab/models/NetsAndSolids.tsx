@@ -292,30 +292,27 @@ function boxFigure(l: number, b: number, h: number, fold: number): Figure {
   };
 }
 
-/* ---- Cylinder: roll the rectangle around its own axis ------------------- */
-
-function cylinderFigure(r: number, h: number, fold: number): Figure {
-  /* Cap the scale, but keep the flat net inside the plate with 20px top and
-     bottom margins. The old 280 divisor left a folded cylinder under 100px
-     tall in a 640px plate, which read as a broken drawing rather than a
-     solid. */
-  const S = Math.min(65, 500 / (2 * Math.PI * r), 340 / (h + 4 * r));
+/* ---- Cylinder: roll the rectangle around its own axis ------------------- */function cylinderFigure(r: number, h: number, fold: number): Figure {
+  /* Fit the *flat net* to the plate: the rectangle is 2πr wide and the two
+     circles add 2r above and below it. The old 65px cap drew a cylinder whose
+     height was set by an arbitrary constant, not by the space available. */
+  const S = Math.min(70, 500 / (2 * Math.PI * r), 330 / (h + 3.4 * r));
   const R = r * S;
   const Hh = h * S;
   const netW = 2 * Math.PI * R;
   const cx = 320;
-  const cy = 190;
-  const N = 56;
+  const cy = 196;
+  const N = 72;
 
   const topMid = cy - Hh / 2;
   const botMid = cy + Hh / 2;
-  const topFlat = topMid - R - 16;
-  const botFlat = botMid + R + 16;
+  const topFlat = topMid - R - 18;
+  const botFlat = botMid + R + 18;
   const topY = topFlat + (topMid - topFlat) * fold;
   const botY = botFlat + (botMid - botFlat) * fold;
   const ry = R + (0.28 * R - R) * fold;
 
-  type Strip = { pts: P2[]; depth: number; fill: string };
+  type Strip = { pts: P2[]; depth: number; fill: string; opacity: number };
   const strips: Strip[] = [];
   for (let i = 0; i < N; i += 1) {
     const u0 = i / N;
@@ -328,16 +325,20 @@ function cylinderFigure(r: number, h: number, fold: number): Figure {
     const x1 = flat1 + (R * Math.sin(a1) - flat1) * fold;
     const z0 = fold * R * Math.cos(a0);
     const z1 = fold * R * Math.cos(a1);
-    const shade = Math.round(5 + 6 * ((z0 + z1) / (2 * R) + 1) / 2);
+    const depth = (z0 + z1) / 2;
+    const shade = 6 + (6 * (depth / Math.max(1, R) + 1)) / 2;
     strips.push({
       pts: [
-        [cx + x0, topMid + z0 * 0.28],
-        [cx + x1, topMid + z1 * 0.28],
-        [cx + x1, botMid + z1 * 0.28],
-        [cx + x0, botMid + z0 * 0.28],
+        [cx + x0, topMid + z0 * 0.3],
+        [cx + x1, topMid + z1 * 0.3],
+        [cx + x1, botMid + z1 * 0.3],
+        [cx + x0, botMid + z0 * 0.3],
       ],
-      depth: (z0 + z1) / 2,
-      fill: tint(shade),
+      depth,
+      fill: surface(shade),
+      /* The far half is a ghost, not a second sheet: it gives the curl depth
+         without 72 translucent panels crossing each other in the middle. */
+      opacity: depth < -0.5 ? 0.26 : 1,
     });
   }
   strips.sort((a, b) => a.depth - b.depth);
@@ -352,13 +353,22 @@ function cylinderFigure(r: number, h: number, fold: number): Figure {
         return [cx + R * Math.cos(a), botY + ry * Math.sin(a)] as P2;
       }),
     ),
-    fill: surface(10),
+    fill: surface(9),
     stroke: tint(45),
     width: 1.3,
   });
 
+  /* Opaque strips, far half first. Adjacent strips share an edge and carry
+     no stroke, so the front reads as one solid curved surface instead of a
+     wireframe of 72 panels. */
   for (const strip of strips) {
-    pieces.push({ d: poly(strip.pts), fill: strip.fill, stroke: "none", width: 0 });
+    pieces.push({
+      d: poly(strip.pts),
+      fill: strip.fill,
+      stroke: "none",
+      width: 0,
+      opacity: strip.opacity,
+    });
   }
 
   /* The top lid sits over the front strips, because it is the lid. */
@@ -369,9 +379,9 @@ function cylinderFigure(r: number, h: number, fold: number): Figure {
         return [cx + R * Math.cos(a), topY + ry * Math.sin(a)] as P2;
       }),
     ),
-    fill: surface(12),
-    stroke: tint(48),
-    width: 1.3,
+    fill: surface(13),
+    stroke: tint(52),
+    width: 1.4,
   });
 
   /* One continuous outline around the rolled band. At 100% this is the
@@ -383,7 +393,7 @@ function cylinderFigure(r: number, h: number, fold: number): Figure {
     const flat = (u - 0.5) * netW;
     const x = flat + (R * Math.sin(a) - flat) * fold;
     const z = fold * R * Math.cos(a);
-    outline.push([cx + x, topMid + z * 0.28]);
+    outline.push([cx + x, topMid + z * 0.3]);
   }
   for (let i = N; i >= 0; i -= 1) {
     const u = i / N;
@@ -391,25 +401,51 @@ function cylinderFigure(r: number, h: number, fold: number): Figure {
     const flat = (u - 0.5) * netW;
     const x = flat + (R * Math.sin(a) - flat) * fold;
     const z = fold * R * Math.cos(a);
-    outline.push([cx + x, botMid + z * 0.28]);
+    outline.push([cx + x, botMid + z * 0.3]);
   }
-  pieces.push({ d: poly(outline), fill: "none", stroke: tint(52), width: 1.6 });
+  pieces.push({ d: poly(outline), fill: "none", stroke: tint(55), width: 1.7 });
 
   /* The seam where the rectangle's two short edges meet. */
-  if (fold > 0.45) {
+  if (fold > 0.5) {
+    const seamOpacity = smooth((fold - 0.5) / 0.2);
     pieces.push({
-      d: `M${cx} ${topMid + 0.28 * R} L${cx} ${botMid + 0.28 * R}`,
+      d: `M${cx} ${topMid + 0.3 * R} L${cx} ${botMid + 0.3 * R}`,
       fill: "none",
-      stroke: tint(40),
+      stroke: tint(42),
       width: 1,
       dash: "3 5",
-      opacity: 0.7,
+      opacity: 0.7 * seamOpacity,
+    });
+  }
+
+  /* Only while the net is still flat: once the sheet is rolling, these names
+     would sit on a curved surface and point at nothing. */
+  const labels: FigureLabel[] = [];
+  const flatLabel = 1 - smooth(fold / 0.32);
+  if (flatLabel > 0.04) {
+    labels.push({
+      x: cx,
+      y: topFlat + R * 0.53,
+      text: "top face",
+      opacity: flatLabel,
+    });
+    labels.push({
+      x: cx,
+      y: botFlat - R * 0.42,
+      text: "base",
+      opacity: flatLabel,
+    });
+    labels.push({
+      x: cx,
+      y: (topMid + botMid) / 2 + 4,
+      text: "curved surface · 2πr × h",
+      opacity: flatLabel,
     });
   }
 
   return {
     pieces,
-    labels: [],
+    labels,
     caption:
       fold < 0.02
         ? "flat net — one rectangle and two circles"
@@ -423,96 +459,128 @@ function cylinderFigure(r: number, h: number, fold: number): Figure {
 /* ---- Cone: wrap the sector's generators around the base --------------- */
 
 function coneFigure(r: number, l: number, fold: number): Figure {
-  const S = Math.min(46, 260 / (l + 1), 300 / (l + 2 * r + 1), 520 / (l + 2 * r + 2));
+  /* Fit the flat net: the sector of radius l sits on the left, the base circle
+     of radius r beside it on the right. The old scale left a folded cone
+     under 140px tall in a 640px plate. */
+  const S = Math.min(58, 328 / (l + 2 * r), 300 / (l + 1.5 * r));
   const L = l * S;
   const smallR = r * S;
   const gamma = (2 * Math.PI * r) / l;
-  const N = 52;
+  const N = 72;
 
-  const cx = 290;
-  const flatApex: P2 = [cx, 130];
-  const foldedApex: P2 = [cx, 96];
-  const apex: P2 = [
-    cx,
-    flatApex[1] + (foldedApex[1] - flatApex[1]) * fold,
-  ];
-  const baseY = foldedApex[1] + Math.sqrt(Math.max(1, L * L - smallR * smallR));
+  const cx = 300;
+  const flatApexY = 128;
+  const foldedApexY = 96;
+  const apexY = flatApexY + (foldedApexY - flatApexY) * fold;
+  const baseY = foldedApexY + Math.sqrt(Math.max(1, L * L - smallR * smallR));
   const start = Math.PI / 2 - gamma / 2;
 
-  type BasePoint = [number, number, number];
-  const basePoints: BasePoint[] = [];
+  type Point = { x: number; y: number; front: number };
+  const base: Point[] = [];
   for (let i = 0; i <= N; i += 1) {
     const u = i / N;
     const fa = start + gamma * u;
-    const flatP: P2 = [cx + L * Math.cos(fa), flatApex[1] + L * Math.sin(fa)];
+    const flatX = cx + L * Math.cos(fa);
+    const flatY = flatApexY + L * Math.sin(fa);
     const az = -Math.PI / 2 + Math.PI * 2 * u;
-    const foldP: P2 = [
-      cx + smallR * Math.sin(az),
-      baseY + 0.3 * smallR * Math.cos(az),
-    ];
-    basePoints.push([
-      flatP[0] + (foldP[0] - flatP[0]) * fold,
-      flatP[1] + (foldP[1] - flatP[1]) * fold,
-      Math.cos(az),
-    ]);
+    const foldX = cx + smallR * Math.sin(az);
+    const foldY = baseY + 0.3 * smallR * Math.cos(az);
+    base.push({
+      x: flatX + (foldX - flatX) * fold,
+      y: flatY + (foldY - flatY) * fold,
+      front: Math.cos(az),
+    });
   }
 
   const pieces: Piece[] = [];
 
-  /* Base disc: flat beside the sector, then under the folded cone. */
-  const discFlat: P2 = [cx + L + smallR + 24, flatApex[1] + L * 0.55];
-  const discX = discFlat[0] + (cx - discFlat[0]) * fold;
-  const discY = discFlat[1] + (baseY - discFlat[1]) * fold;
+  /* Base circle: beside the sector in the net, under the cone once wrapped.
+     Drawn first, so the cone covers its back half. */
+  const discFlatX = cx + L + smallR + 12;
+  const discFlatY = flatApexY + L * 0.58;
+  const discX = discFlatX + (cx - discFlatX) * fold;
+  const discY = discFlatY + (baseY - discFlatY) * fold;
   const discRy = smallR + (0.3 * smallR - smallR) * fold;
   pieces.push({
     d: poly(
-      Array.from({ length: 48 }, (_, i) => {
-        const a = (i / 48) * Math.PI * 2;
+      Array.from({ length: 52 }, (_, i) => {
+        const a = (i / 52) * Math.PI * 2;
         return [discX + smallR * Math.cos(a), discY + discRy * Math.sin(a)] as P2;
       }),
     ),
-    fill: surface(10),
-    stroke: tint(45),
+    fill: surface(9),
+    stroke: tint(46),
     width: 1.3,
   });
 
-  /* The lateral surface, one thin triangle per pair of generators, painted
-     from the back of the axis to the front. */
-  const triangles = [];
-  for (let i = 0; i < N; i += 1) {
-    const p0 = basePoints[i];
-    const p1 = basePoints[i + 1];
-    const depth = (p0[2] + p1[2]) / 2;
-    const shade = Math.round(4 + 7 * (depth + 1) / 2);
-    triangles.push({
-      depth,
-      d: poly([apex, [p0[0], p0[1]], [p1[0], p1[1]]]),
-      fill: tint(shade),
-    });
-  }
-  triangles.sort((a, b) => a.depth - b.depth);
-  for (const triangle of triangles) {
-    pieces.push({ d: triangle.d, fill: triangle.fill, stroke: "none", width: 0 });
+  /* One sheet, not 72 translucent triangles: the sector's arc is traced once
+     and the whole lateral surface is a single opaque path. */
+  const lateral = `M${cx} ${apexY} L${base
+    .map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(" L")} Z`;
+  pieces.push({ d: lateral, fill: surface(7), stroke: tint(48), width: 1.5 });
+
+  if (fold > 0.02) {
+    /* The half of the sheet facing the viewer catches more light; the change
+       grows in as the paper leaves the page. */
+    const frontPts = base.filter((p) => p.front > 0);
+    if (frontPts.length > 2) {
+      pieces.push({
+        d: `M${cx} ${apexY} L${frontPts
+          .map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+          .join(" L")} Z`,
+        fill: surface(12),
+        stroke: "none",
+        width: 0,
+        opacity: 0.5 * smooth(fold * 1.6),
+      });
+    }
+    /* Generators: the straight slant lines that wrap into the surface. */
+    for (let i = 0; i <= N; i += 9) {
+      const p = base[i];
+      pieces.push({
+        d: `M${cx} ${apexY} L${p.x.toFixed(1)} ${p.y.toFixed(1)}`,
+        fill: "none",
+        stroke: tint(30),
+        width: 1,
+        opacity: 0.55 * smooth(fold * 1.8),
+      });
+    }
   }
 
-  /* A sector outline while it is still mostly flat, so the net reads as a net. */
-  if (fold < 0.4) {
-    const arc = basePoints.map((p) => [p[0], p[1]] as P2);
-    pieces.push({
-      d: poly([apex, ...arc]),
-      fill: "none",
-      stroke: tint(50),
-      width: 1.5,
-      opacity: 1 - fold / 0.4,
+  /* The sector's two straight edges; they meet as the seam at 100%. */
+  pieces.push({
+    d: `M${cx} ${apexY} L${base[0].x} ${base[0].y} M${cx} ${apexY} L${base[N].x} ${base[N].y}`,
+    fill: "none",
+    stroke: "var(--signal)",
+    width: 1.4,
+    dash: "5 4",
+    opacity: 0.6,
+  });
+
+  const labels: FigureLabel[] = [];
+  const flatLabel = 1 - smooth(fold / 0.35);
+  if (flatLabel > 0.04) {
+    labels.push({
+      x: cx,
+      y: apexY + L * 0.45,
+      text: "curved surface",
+      opacity: flatLabel,
+    });
+    labels.push({
+      x: discX,
+      y: discY + 4,
+      text: "base",
+      opacity: flatLabel,
     });
   }
 
   return {
     pieces,
-    labels: [],
+    labels,
     caption:
       fold < 0.02
-        ? "flat net — a sector and one base circle"
+        ? "flat net — a sector and its base circle"
         : fold > 0.985
           ? "wrapped cone — the arc has become the rim"
           : `wrapping · ${Math.round(fold * 100)}%`,

@@ -38,130 +38,335 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Plans — one sheet, three columns, then the passes                   */
+/* Plans — three cards, then the short passes                          */
 /* ------------------------------------------------------------------ */
 
-/* Five identical cards in a grid read as a price list, not a choice: the eye
-   counts boxes instead of comparing what each plan opens. The three
-   subscriptions now share ONE sheet divided by hairlines, so the reader scans
-   across a row; the two one-off passes sit on their own shelf below, shaped
-   like tickets because a pass is a different purchase, not a fifth card. */
+/* Three independent cards, not one sheet divided into columns. Each card can
+   then have its own surface and its own silhouette: Free is the open page,
+   EduVantage is the lit card, Prime is the quiet complete one. The passes are
+   a separate schedule below — a pass is a length of time, not a fifth tier. */
 
-.plan-sheet {
-  overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid var(--panel-line);
-  background: var(--panel);
-}
-
-.plan-sheet__grid {
+.plan-grid {
   display: grid;
+  gap: 14px;
 }
 
 @media (min-width: 1024px) {
-  .plan-sheet__grid {
+  .plan-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
   }
 }
 
-.plan-col {
+.plan-card {
   position: relative;
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  padding: 26px 24px 28px;
+  overflow: hidden;
+  border: 1px solid var(--panel-line);
+  border-radius: 22px;
+  background: var(--panel);
+  padding: 24px 24px 26px;
   /* The global rule lets prose break anywhere so long tokens cannot overflow;
-     in a plan column that turned "EduVantage" into "EduVanta / ge" as soon as
-     the column got tight. Keep the safety net for a genuinely long word, but
-     let the browser break between words first. */
+     in a plan card that turned "EduVantage" into "EduVanta / ge". Keep the
+     safety net for a genuinely long word, but break between words first. */
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
 }
 
-.plan-col + .plan-col {
-  border-top: 1px solid var(--panel-line);
-}
-
-@media (min-width: 1024px) {
-  .plan-col + .plan-col {
-    border-top: 0;
-    border-left: 1px solid var(--panel-line);
-  }
-}
-
-/* The recommended plan is a wash and a 2px top edge, not a second border:
-   the sheet already owns the outline, and a box inside a box is what made the
-   old grid look like five offers shouting at once. Blue → red → pink is the
-   same accent family as the site's featured surfaces; no amber enters the
-   columns at all. */
-.plan-col--featured {
+.plan-card--featured {
+  border-color: color-mix(in srgb, #4cc9f0 32%, var(--panel-line));
   background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, #4cc9f0 10%, transparent),
+    radial-gradient(
+      120% 85% at 50% 0%,
+      color-mix(in srgb, #4cc9f0 14%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      95% 70% at 100% 108%,
+      color-mix(in srgb, #ff5a66 9%, transparent),
       transparent 62%
     ),
-    color-mix(in srgb, var(--text-main) 2%, transparent);
+    var(--panel);
+  box-shadow: 0 34px 90px -52px color-mix(in srgb, #4cc9f0 50%, transparent);
 }
 
-.plan-col--featured::before {
+.plan-card--featured::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto;
+  inset: 0 26px auto;
   height: 2px;
   background: linear-gradient(90deg, #4cc9f0, #ff5a66 62%, #ff9ac8);
   pointer-events: none;
 }
 
-/* ---- the pass shelf ---- */
-
-.plan-sheet__passes {
-  border-top: 1px solid var(--panel-line);
-  background: color-mix(in srgb, var(--text-main) 3%, transparent);
-  padding: 18px 20px 20px;
+@media (min-width: 1024px) {
+  .plan-card--featured {
+    margin-top: -10px;
+    padding-top: 34px;
+    padding-bottom: 34px;
+  }
 }
 
-.plan-pass-grid {
-  display: grid;
+.plan-card__top {
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
 }
 
+.plan-card__index {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-card__tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.plan-card__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--text-main);
+  padding: 4px 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--background);
+}
+
+.plan-card__badge--ghost {
+  border: 1px solid var(--panel-line);
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.plan-card__intro {
+  margin-top: 22px;
+}
+
+.plan-card__name {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.plan-card__summary {
+  margin-top: 7px;
+  min-height: 38px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.plan-card__price {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  margin-top: 26px;
+}
+
+.plan-card__amount {
+  display: block;
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: clamp(2.45rem, 4.2vw, 3rem);
+  font-weight: 650;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-card__suffix {
+  padding-bottom: 5px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.plan-card__billing {
+  margin-top: 12px;
+  min-height: 18px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.plan-card__hook {
+  margin-top: 4px;
+  min-height: 34px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.plan-card__cta {
+  margin-top: 20px;
+  min-height: 44px;
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid var(--panel-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  padding: 11px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    opacity 200ms ease;
+}
+
+.plan-card__cta:hover {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 32%, transparent);
+}
+
+.plan-card__cta--solid {
+  border-color: transparent;
+  background: var(--text-main);
+  color: var(--background);
+}
+
+.plan-card__cta--solid:hover {
+  background: var(--text-main);
+  opacity: 0.88;
+}
+
+.plan-card__cta--current {
+  cursor: default;
+  border-style: dashed;
+  border-color: var(--panel-line);
+  color: var(--text-dim);
+}
+
+.plan-card__cta--current:hover {
+  background: transparent;
+  border-color: var(--panel-line);
+}
+
+.plan-card__rule {
+  height: 1px;
+  margin-top: 24px;
+  background: var(--panel-line);
+}
+
+.plan-card__label {
+  margin-top: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.plan-card__features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.plan-card__features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.plan-card__features svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  margin-top: 3px;
+  color: color-mix(in srgb, var(--signal) 78%, var(--text-main));
+}
+
+.plan-card--featured .plan-card__features svg {
+  color: #4cc9f0;
+}
+
+/* ---- the pass schedule ---- */
+
+.plan-passes {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+  border-top: 1px solid var(--panel-line);
+  padding-top: 22px;
+}
+
+@media (min-width: 1024px) {
+  .plan-passes {
+    grid-template-columns: 210px minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+}
+
+.plan-passes__grid {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--panel-line);
+  border-radius: 18px;
+  background: var(--panel);
+}
+
 @media (min-width: 760px) {
-  .plan-pass-grid {
+  .plan-passes__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .plan-pass {
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  overflow: hidden;
-  border-radius: 14px;
-  border: 1px solid var(--panel-line);
-  background: var(--panel);
-  transition:
-    border-color 200ms ease,
-    transform 240ms var(--ease-momentum);
+  grid-template-columns: 74px minmax(0, 1fr);
+  min-width: 0;
+  transition: background 200ms ease;
+}
+
+.plan-pass + .plan-pass {
+  border-top: 1px solid var(--panel-line);
+}
+
+@media (min-width: 760px) {
+  .plan-pass + .plan-pass {
+    border-top: 0;
+    border-left: 1px solid var(--panel-line);
+  }
 }
 
 @media (hover: hover) and (pointer: fine) {
   .plan-pass:hover {
-    transform: translateY(-2px);
-    border-color: var(--panel-line-strong);
+    background: color-mix(in srgb, var(--text-main) 3%, transparent);
   }
 }
 
-/* The stub carries the length of the pass — the one number that separates a
-   pass from a subscription — and the dashed tear is the only ornament. No
-   fill tint: a pass is a ticket, not a discounted subscription. */
-.plan-pass__stub {
+.plan-pass__length {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 3px;
   border-right: 1px dashed var(--panel-line);
-  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  padding: 20px 8px;
 }
 
 .plan-pass__days {
@@ -173,7 +378,7 @@
 }
 
 .plan-pass__unit {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -182,9 +387,107 @@
 
 .plan-pass__body {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: 8px;
-  padding: 15px 17px 16px;
+  gap: 10px;
+  padding: 18px 20px;
+}
+
+.plan-pass__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.plan-pass__head h3 {
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.plan-pass__summary {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.plan-pass__price {
+  flex: none;
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-pass__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.plan-pass__features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.plan-pass__features svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  margin-top: 1px;
+  opacity: 0.65;
+}
+
+.plan-pass__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: auto;
+}
+
+.plan-pass__cta {
+  cursor: pointer;
+  border: 1px solid var(--panel-line-strong);
+  border-radius: 999px;
+  background: transparent;
+  padding: 7px 13px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  transition:
+    background 200ms ease,
+    border-color 200ms ease;
+}
+
+.plan-pass__cta:hover {
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 30%, transparent);
+}
+
+.plan-pass__current {
+  border: 1px dashed var(--panel-line);
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.plan-pass__note {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-dim);
 }
 
 /* Neutral badge: a state label, not a decoration. */
@@ -1555,20 +1858,30 @@ html:not(.dark) .lock-veil {
      3. reading type goes up, never down — a plan card read on a phone in
         portrait is the primary use case. */
 @media (max-width: 640px) {
-  .plan-sheet {
-    border-radius: 18px;
+  .plan-card {
+    border-radius: 20px;
+    padding: 20px 18px 22px;
   }
 
-  .plan-col {
-    padding: 22px 18px 24px;
+  .plan-card--featured {
+    padding-top: 24px;
+    padding-bottom: 24px;
   }
 
-  .plan-sheet__passes {
-    padding: 16px 14px 14px;
+  .plan-card__price {
+    margin-top: 20px;
+  }
+
+  .plan-card__amount {
+    font-size: 2.3rem;
   }
 
   .plan-pass {
-    grid-template-columns: 66px minmax(0, 1fr);
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .plan-pass__length {
+    padding: 16px 6px;
   }
 
   .plan-pass__days {
@@ -1576,7 +1889,11 @@ html:not(.dark) .lock-veil {
   }
 
   .plan-pass__body {
-    padding: 13px 14px 14px;
+    padding: 15px 14px;
+  }
+
+  .plan-pass__price {
+    font-size: 20px;
   }
 
   .premium-select select {

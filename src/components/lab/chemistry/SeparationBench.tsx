@@ -126,10 +126,80 @@ const H = 440;
 /** Seconds one full apparatus run takes. */
 const RUN_SECONDS = 9;
 
+/**
+ * How much liquid has actually arrived, in drops.
+ *
+ * The raw clock is the wrong driver for a collecting vessel: it fills the cup
+ * while the first drop is still in the air. A drop spawned at `i * every`
+ * lands at `i * every + travel`, so the count is whole drops plus an eased
+ * fraction of the next one. Nothing arrives before the first drop has fallen.
+ */
+function poured(t: number, travel: number, every: number) {
+  const landed = (t - travel) / every + 1;
+  if (landed <= 0) return 0;
+  const whole = Math.floor(landed);
+  const part = landed - whole;
+  return whole + part * part * (3 - 2 * part);
+}
+
+/**
+ * Drops falling from an outlet into a vessel.
+ *
+ * Each drop is spawned at the outlet and accelerated towards the liquid
+ * surface, so it visibly crosses the rim and disappears only at the surface.
+ * `travel` and `every` are fractions of the whole apparatus run, which keeps
+ * the rhythm the same no matter how long the run is. The target is passed in
+ * fresh each frame, so the fall shortens as the receiving level rises.
+ */
+function Drips({
+  t,
+  x,
+  from,
+  to,
+  travel,
+  every,
+  size = 2.4,
+}: {
+  t: number;
+  x: number;
+  from: number;
+  to: number;
+  travel: number;
+  every: number;
+  size?: number;
+}) {
+  const drops: Array<{ key: number; y: number; p: number }> = [];
+  const newest = Math.floor(t / every);
+  for (let i = Math.max(0, newest - 6); i <= newest; i += 1) {
+    const age = t - i * every;
+    if (age < 0 || age >= travel) continue;
+    const p = age / travel;
+    drops.push({ key: i, y: from + (to - from) * p * p, p });
+  }
+  if (!drops.length) return null;
+  return (
+    <g>
+      {drops.map(({ key, y, p }) => (
+        <ellipse
+          key={key}
+          cx={x}
+          cy={y}
+          rx={size * (0.78 + 0.22 * (1 - p))}
+          ry={size * (1.15 + 0.35 * (1 - p))}
+          fill={CYAN}
+          opacity={0.92}
+        />
+      ))}
+    </g>
+  );
+}
+
 export function SeparationBench() {
   const [mixture, setMixture] = useState<MixtureId>("sand");
   const [technique, setTechnique] = useState<TechniqueId>("filtration");
-  const [t, setT] = useState(0.35);
+  /* A clean bench: no frozen mid-run drops, and no liquid before the first
+     drop has landed. The old 0.35 start showed a half-full cup on load. */
+  const [t, setT] = useState(0);
   const [running, setRunning] = useState(false);
 
   const mix = MIXTURES.find((m) => m.id === mixture)!;
@@ -350,7 +420,12 @@ export function SeparationBench() {
 /* ------------------------------------------------------------------ */
 
 function Filtration({ t }: { t: number }) {
-  const filtrate = 0.25 + 0.55 * t;
+  /* The level is advanced by drops that have landed, not by the clock. It
+     starts almost empty, so the first drop is a visible event rather than an
+     animation over an already-full beaker. */
+  const landed = poured(t, 0.085, 0.075);
+  const filtrate = Math.min(0.74, 0.03 + landed * 0.058);
+  const surface = 330 - filtrate * 58;
   const sandInPaper = Math.min(1, t * 2.2);
   return (
     <g>
@@ -362,15 +437,12 @@ function Filtration({ t }: { t: number }) {
       <path d="M 312 82 L 408 82 L 366 136 L 354 136 Z" fill={`rgba(190, 150, 90, ${0.25 + 0.5 * sandInPaper})`} />
       {/* Muddy mixture above the paper, clearing as it filters */}
       <rect x={312} y={86} width={96} height={14} fill={`rgba(150, 120, 80, ${0.55 * (1 - t)})`} />
-      {/* Drips */}
-      {[0, 1, 2].map((i) => {
-        const phase = (t * 3 + i / 3) % 1;
-        if (t <= 0.02) return null;
-        return <circle key={i} cx={360} cy={196 + phase * 60} r={2.6} fill={CYAN} opacity={1 - phase * 0.4} />;
-      })}
-      {/* Beaker */}
-      <path d="M 300 260 L 300 320 Q 300 330 312 330 L 408 330 Q 420 330 420 320 L 420 260" fill={plate(0.35)} stroke={ink(0.4)} strokeWidth={1.6} />
-      <rect x={302} y={330 - filtrate * 58} width={116} height={filtrate * 58} fill={CYAN} opacity={0.28} />
+      {/* Beaker first: the drops must cross its mouth and meet the surface,
+          instead of stopping in the air above the rim. */}
+      <path d="M 300 260 L 300 320 Q 300 330 312 330 L 408 330 Q 420 330 420 320 L 420 260" fill={plate(0.3)} stroke={ink(0.4)} strokeWidth={1.6} />
+      <rect x={302} y={surface} width={116} height={330 - surface} fill={CYAN} opacity={0.3} />
+      <line x1={302} x2={418} y1={surface} y2={surface} stroke={CYAN} strokeWidth={1.3} opacity={0.65} />
+      <Drips t={t} x={360} from={190} to={surface} travel={0.085} every={0.075} size={2.5} />
       <text x={360} y={348} textAnchor="middle" fontSize={10.5} fill={ink(0.55)}>filtrate</text>
       <text x={460} y={110} fontSize={10.5} fill={ink(0.6)}>filter paper</text>
       <line x1={430} y1={108} x2={408} y2={94} stroke={ink(0.3)} strokeWidth={1} />
@@ -417,7 +489,11 @@ function Evaporation({ t }: { t: number }) {
 
 function Distillation({ t }: { t: number }) {
   const flaskLevel = 0.55 - 0.3 * t;
-  const receive = 0.16 + 0.5 * t;
+  /* The receiver starts nearly empty and is fed by drops that have actually
+     made the fall from the condenser tip. */
+  const landed = poured(t, 0.07, 0.05);
+  const receive = Math.min(0.62, 0.03 + landed * 0.026);
+  const surface = 310 - receive * 60;
   return (
     <g>
       {/* Round-bottom flask */}
@@ -432,11 +508,12 @@ function Distillation({ t }: { t: number }) {
       ))}
       {/* Bend down into receiver */}
       <path d="M 456 139 L 500 139 L 500 196" fill="none" stroke={ink(0.45)} strokeWidth={1.8} />
-      {/* Drops */}
-      {t > 0.02 ? [0, 1].map((i) => <circle key={i} cx={500} cy={204 + ((t * 2 + i / 2) % 1) * 30} r={2.4} fill={CYAN} />) : null}
-      {/* Receiver */}
-      <path d="M 462 236 L 462 300 Q 462 310 474 310 L 526 310 Q 538 300 538 300 L 538 236" fill={plate(0.35)} stroke={ink(0.4)} strokeWidth={1.6} />
-      <rect x={464} y={310 - receive * 60} width={72} height={receive * 60} fill={CYAN} opacity={0.3} />
+      {/* Receiver before the drops, so each drop crosses the rim and lands on
+          the surface. The old drops stopped at y = 234, above a rim at 236. */}
+      <path d="M 462 236 L 462 300 Q 462 310 474 310 L 526 310 Q 538 310 538 300 L 538 236" fill={plate(0.3)} stroke={ink(0.4)} strokeWidth={1.6} />
+      <rect x={464} y={surface} width={72} height={310 - surface} fill={CYAN} opacity={0.3} />
+      <line x1={464} x2={536} y1={surface} y2={surface} stroke={CYAN} strokeWidth={1.3} opacity={0.65} />
+      <Drips t={t} x={500} from={202} to={surface} travel={0.07} every={0.05} size={2.3} />
       <text x={500} y={330} textAnchor="middle" fontSize={10.5} fill={ink(0.55)}>condensed liquid</text>
       <text x={214} y={130} textAnchor="middle" fontSize={10.5} fill={ink(0.55)}>solution</text>
       <text x={352} y={116} textAnchor="middle" fontSize={10.5} fill={ink(0.55)}>cold water around the tube</text>
@@ -485,6 +562,9 @@ function Chromatography({ t }: { t: number }) {
 
 function SeparatingFunnel({ t }: { t: number }) {
   const lower = 0.52 - 0.44 * t;
+  const landed = poured(t, 0.07, 0.06);
+  const receive = Math.min(0.46, 0.02 + landed * 0.033);
+  const surface = 330 - receive * 44;
   return (
     <g>
       {/* Funnel body */}
@@ -499,10 +579,12 @@ function SeparatingFunnel({ t }: { t: number }) {
       <path d="M 362 200 L 378 200 L 378 232 L 362 232 Z" fill={plate(0.7)} stroke={ink(0.45)} strokeWidth={1.5} />
       <circle cx={370} cy={216} r={10} fill={plate(1)} stroke={ink(0.5)} strokeWidth={2} />
       <line x1={360} y1={216} x2={380} y2={216} stroke={ink(0.55)} strokeWidth={2} />
-      {t > 0.02 && <circle cx={370} cy={246 + ((t * 3) % 1) * 20} r={2.6} fill={CYAN} />}
-      {/* Beaker */}
-      <path d="M 330 280 L 330 330 L 410 330 L 410 280" fill={plate(0.35)} stroke={ink(0.4)} strokeWidth={1.6} />
-      <rect x={332} y={330 - t * 44} width={76} height={t * 44} fill={CYAN} opacity={0.3} />
+      {/* Beaker before its drops, not after: the falling liquid now crosses the
+          mouth and lands on the surface it is filling. */}
+      <path d="M 330 280 L 330 330 L 410 330 L 410 280" fill={plate(0.3)} stroke={ink(0.4)} strokeWidth={1.6} />
+      <rect x={332} y={surface} width={76} height={330 - surface} fill={CYAN} opacity={0.3} />
+      <line x1={332} x2={408} y1={surface} y2={surface} stroke={CYAN} strokeWidth={1.3} opacity={0.65} />
+      <Drips t={t} x={370} from={234} to={surface} travel={0.07} every={0.06} size={2.2} />
       <text x={370} y={346} textAnchor="middle" fontSize={10.5} fill={ink(0.55)}>denser layer run off</text>
     </g>
   );

@@ -1,7 +1,6 @@
 import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import { TestimonialStrip } from "@/components/landing/Testimonials";
-import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { CheckoutModal } from "@/components/plans/CheckoutModal";
 import { usePlan } from "@/components/plans/PlanProvider";
 import {
@@ -28,13 +27,13 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * One sheet, three columns, then the passes. Free, EduVantage and Prime are
- * priced side by side inside a single bordered sheet so the reader compares
- * what each plan opens instead of counting five identical boxes; the two
- * one-off passes sit on a shelf below, shaped like tickets with the number of
- * days in the stub, because a pass is a different purchase from a term plan.
+ * Three doors, then the short passes. Free, EduVantage and Prime are three
+ * cards with different surfaces rather than one table divided into columns,
+ * because a price page should feel like choosing a room, not reading a grid.
+ * The recommended plan is the only lit card; the passes below are one quiet
+ * strip of two fixed-length offers.
  *
- * One billing switch sits above the sheet and moves every term plan at once,
+ * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
  * prices in three different units.
  *
@@ -91,8 +90,9 @@ function BillingSwitch({
   );
 }
 
-/** A subscription column inside the shared plan sheet. */
+/** One subscription card. */
 function PlanColumn({
+  index,
   name,
   summary,
   price,
@@ -118,34 +118,32 @@ function PlanColumn({
   current: boolean;
   onChoose?: () => void;
   ctaLabel: string;
+  index: string;
 }) {
   return (
-    <section className={cn("plan-col", featured && "plan-col--featured")}>
-      {/* The badge owns a full row above the name. Sitting beside it, the
-          badge stole most of a 230px card and the name had to break inside
-          the word — "EduVanta / ge". The reserved row keeps every column's
-          name and price on the same baseline whether it has a badge or not. */}
-      <div className="mb-3 flex min-h-[24px] items-center">
-        {featured ? (
-          <span className="premium-chip premium-chip--featured">
-            Most popular
-          </span>
-        ) : current ? (
-          <span className="premium-chip">Current</span>
-        ) : null}
+    <article className={cn("plan-card", featured && "plan-card--featured")}>
+      <div className="plan-card__top">
+        <span className="plan-card__index">{index}</span>
+        <span className="plan-card__tags">
+          {featured ? (
+            <span className="plan-card__badge">Most popular</span>
+          ) : null}
+          {current ? (
+            <span className="plan-card__badge plan-card__badge--ghost">
+              Current
+            </span>
+          ) : null}
+        </span>
       </div>
-      <div className="min-w-0">
-        <h2 className="font-display text-[17px] font-semibold tracking-tight">
-          {name}
-        </h2>
-        <p className="mt-1 min-h-[38px] text-[12.5px] leading-relaxed text-text-dim">
-          {summary}
-        </p>
+
+      <div className="plan-card__intro">
+        <h2 className="plan-card__name">{name}</h2>
+        <p className="plan-card__summary">{summary}</p>
       </div>
 
       {/* The number glides when the term changes — one animated figure per
           card, never a second price in the small print. */}
-      <div className="mt-6 flex items-end gap-1.5">
+      <div className="plan-card__price">
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={`${name}-${price}`}
@@ -153,75 +151,51 @@ function PlanColumn({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -14, opacity: 0 }}
             transition={{ duration: 0.26, ease: [0.25, 1, 0.5, 1] }}
-            className="block font-display text-[38px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
+            className="plan-card__amount"
           >
             {formatINR(price)}
           </motion.span>
         </AnimatePresence>
-        <span className="pb-1 text-[11.5px] text-text-dim">{priceSuffix}</span>
+        <span className="plan-card__suffix">{priceSuffix}</span>
       </div>
 
-      <p className="mt-2.5 min-h-[18px] text-[11.5px] leading-relaxed text-text-dim">
-        {billingLine}
-      </p>
-      {/* Reserved, so a column without a hook still puts its button on the
-          same line as the others. */}
-      <p className="mt-1 min-h-[17px] text-[11.5px] leading-relaxed text-text-dim">
-        {hook ?? ""}
-      </p>
+      <p className="plan-card__billing">{billingLine}</p>
+      <p className="plan-card__hook">{hook ?? ""}</p>
 
-      <div className="mt-6">
-        {current ? (
-          <button
-            type="button"
-            disabled
-            className="w-full cursor-default rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-text-dim"
-          >
-            Your current plan
-          </button>
-        ) : featured ? (
-          <MovingBorderButton
-            onClick={onChoose}
-            className="w-full"
-            innerClassName="w-full px-5 py-2.5 text-[13px]"
-          >
-            {ctaLabel}
-          </MovingBorderButton>
-        ) : (
-          <button
-            type="button"
-            onClick={onChoose}
-            className="w-full rounded-full border border-[var(--panel-line)] px-5 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:border-[var(--panel-line-strong)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
-          >
-            {ctaLabel}
-          </button>
+      <button
+        type="button"
+        onClick={onChoose}
+        disabled={current}
+        className={cn(
+          "plan-card__cta",
+          featured && "plan-card__cta--solid",
+          current && "plan-card__cta--current",
         )}
-      </div>
+      >
+        {current ? "Your current plan" : ctaLabel}
+      </button>
 
-      <div className="premium-divider my-6" />
+      <div className="plan-card__rule" />
 
-      <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-dim">
-        {includedLabel}
-      </p>
-      <ul className="flex-1 space-y-3">
+      <p className="plan-card__label">{includedLabel}</p>
+      <ul className="plan-card__features">
         {features.map((feature) => (
-          <li key={feature} className="flex gap-2.5 text-[13px]">
-            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--signal)]" />
-            <span className="leading-relaxed">{feature}</span>
+          <li key={feature}>
+            <Check aria-hidden="true" />
+            <span>{feature}</span>
           </li>
         ))}
       </ul>
-    </section>
+    </article>
   );
 }
 
 /**
- * A one-off pass.
+ * A one-off pass: a length, what it opens, one price.
  *
- * The length of the pass is the whole offer, so it is the ticket's stub — a
- * 7 or a 14 you can read across the room — and the dashed tear is the only
- * decoration. It used to be a fifth subscription card wearing an amber wash,
- * which read as a discounted tier and matched nothing else on the page.
+ * A pass is a different purchase from a term plan, so it is not a fifth card.
+ * It reads as a line on a schedule: the number of days is the big mark on the
+ * left, the offer and its one price run across the row, and nothing renews.
  */
 function PassTicket({
   name,
@@ -246,52 +220,37 @@ function PassTicket({
 }) {
   return (
     <article className="plan-pass">
-      <div className="plan-pass__stub">
+      <div className="plan-pass__length">
         <span className="plan-pass__days">{days}</span>
         <span className="plan-pass__unit">days</span>
       </div>
       <div className="plan-pass__body">
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+        <div className="plan-pass__head">
           <div className="min-w-0">
-            <h3 className="font-display text-[15.5px] font-semibold tracking-tight">
-              {name}
-            </h3>
-            <p className="mt-0.5 text-[12px] leading-snug text-text-dim">
-              {summary}
-            </p>
+            <h3>{name}</h3>
+            <p className="plan-pass__summary">{summary}</p>
           </div>
-          <p className="shrink-0 font-display text-[24px] font-semibold leading-none tabular-nums">
-            {formatINR(price)}
-          </p>
+          <p className="plan-pass__price">{formatINR(price)}</p>
         </div>
 
-        <ul className="flex flex-wrap gap-x-4 gap-y-1">
+        <ul className="plan-pass__features">
           {features.slice(0, 3).map((feature) => (
-            <li
-              key={feature}
-              className="flex items-center gap-1.5 text-[11.5px] leading-snug text-text-dim"
-            >
-              <Check className="h-3 w-3 shrink-0 text-text-dim" aria-hidden="true" />
+            <li key={feature}>
+              <Check aria-hidden="true" />
               {feature}
             </li>
           ))}
         </ul>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="plan-pass__foot">
           {current ? (
-            <span className="rounded-full border border-[var(--panel-line)] px-3.5 py-1.5 text-[11.5px] font-medium text-text-dim">
-              Your current plan
-            </span>
+            <span className="plan-pass__current">Your current plan</span>
           ) : (
-            <button
-              type="button"
-              onClick={onChoose}
-              className="rounded-full border border-[var(--panel-line)] px-3.5 py-1.5 text-[11.5px] font-medium transition-colors hover:border-[var(--panel-line-strong)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
-            >
+            <button type="button" onClick={onChoose} className="plan-pass__cta">
               Take the {days}-day pass
             </button>
           )}
-          <span className="text-[11px] leading-snug text-text-dim">
+          <span className="plan-pass__note">
             {allowance} · {hook ?? "nothing renews"}
           </span>
         </div>
@@ -472,13 +431,11 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* One sheet, three columns, then the passes on their own shelf.
-              The old grid dropped five same-sized boxes into a row, which made
-              a seven-day pass look like a discounted subscription and squeezed
-              every feature list into a narrow strip. */}
-          <div data-reveal className="plan-sheet mt-10">
-            <div className="plan-sheet__grid">
+          {/* Three cards, then the passes on their own strip. */}
+          <div data-reveal className="mt-12">
+            <div className="plan-grid">
               <PlanColumn
+                index="01"
                 name={FREE_PLAN.name}
                 summary={FREE_PLAN.summary}
                 price={0}
@@ -492,6 +449,7 @@ export default function Pricing() {
               />
 
               <PlanColumn
+                index="02"
                 name={featuredTier.name}
                 summary={featuredTier.summary}
                 price={tierDisplay(featuredTier).price}
@@ -507,6 +465,7 @@ export default function Pricing() {
               />
 
               <PlanColumn
+                index="03"
                 name={primeTier.name}
                 summary={primeTier.summary}
                 price={tierDisplay(primeTier).price}
@@ -521,16 +480,17 @@ export default function Pricing() {
               />
             </div>
 
-            <div className="plan-sheet__passes">
-              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+            <section className="plan-passes" aria-labelledby="one-off-passes">
+              <div className="plan-passes__heading">
+                <p id="one-off-passes" className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-text-dim">
                   One-off passes
                 </p>
-                <p className="text-[11.5px] text-text-dim">
-                  A fixed number of days, paid once — nothing renews.
+                <p className="mt-2 text-[12px] leading-relaxed text-text-dim">
+                  For the week before a paper or the fortnight after it. Paid
+                  once, and nothing renews.
                 </p>
               </div>
-              <div className="plan-pass-grid">
+              <div className="plan-passes__grid">
                 {passTiers.map((tier) => {
                   const days = tier.id === "sprint" ? 7 : 14;
                   return (
@@ -549,7 +509,7 @@ export default function Pricing() {
                   );
                 })}
               </div>
-            </div>
+            </section>
           </div>
 
           <p className="mt-8 text-center text-xs text-text-dim">

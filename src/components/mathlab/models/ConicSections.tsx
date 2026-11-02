@@ -11,8 +11,11 @@ import { useMemo, useState } from "react";
  * angles and the curve beside the cone is *that* e, drawn as a real ellipse /
  * parabola / hyperbola with its focus and directrix.
  *
- * Both halves come from the same two numbers, which is the point: the shape of
- * the section and the value of e are one fact seen twice.
+ * The cut is drawn on the cone as a shaded chord, so the section is something
+ * the student watches being made, not a shape that appears in a second box.
+ * The section itself is drawn with its own axes, foci and directrix, and the
+ * parabola uses the standard y² = 4ax orientation so the focus and directrix
+ * sit where the equation says they do.
  */
 
 type Kind = "circle" | "ellipse" | "parabola" | "hyperbola";
@@ -42,6 +45,22 @@ const KIND_EQN: Record<Kind, string> = {
   hyperbola: "x²/a² − y²/b² = 1,  b² = a²(e² − 1)",
 };
 
+type Pt = { x: number; y: number };
+
+/** Where two segments cross, or null. Used to mark the cut on the cone. */
+function crossing(a1: Pt, a2: Pt, b1: Pt, b2: Pt): Pt | null {
+  const rx = a2.x - a1.x;
+  const ry = a2.y - a1.y;
+  const sx = b2.x - b1.x;
+  const sy = b2.y - b1.y;
+  const denom = rx * sy - ry * sx;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = ((b1.x - a1.x) * sy - (b1.y - a1.y) * sx) / denom;
+  const u = ((b1.x - a1.x) * ry - (b1.y - a1.y) * rx) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: a1.x + t * rx, y: a1.y + t * ry };
+}
+
 export function ConicSections() {
   const [alpha, setAlpha] = useState(26); /* semi-vertical angle of the cone */
   const [beta, setBeta] = useState(58); /* plane's angle to the axis */
@@ -49,66 +68,83 @@ export function ConicSections() {
   const { kind, e } = useMemo(() => classify(alpha, beta), [alpha, beta]);
 
   /* ---- Left plate: the double cone in section, with the cutting plane ---- */
-  const apexX = 190;
-  const apexY = 190;
-  const arm = 168;
+  const apex: Pt = { x: 158, y: 190 };
+  const arm = 146;
   const aRad = (alpha * Math.PI) / 180;
-  /* Cone drawn sideways: axis horizontal, nappes to the right. */
-  const up = [apexX + arm * Math.cos(aRad), apexY - arm * Math.sin(aRad)];
-  const down = [apexX + arm * Math.cos(aRad), apexY + arm * Math.sin(aRad)];
+  const up: Pt = { x: apex.x + arm * Math.cos(aRad), y: apex.y - arm * Math.sin(aRad) };
+  const down: Pt = { x: apex.x + arm * Math.cos(aRad), y: apex.y + arm * Math.sin(aRad) };
+  const baseX = up.x;
 
-  /* The cutting plane: a line through a point on the axis at angle β. */
-  const cutX = apexX + 108;
+  const delta = 100; /* distance of the cut from the apex along the axis */
+  const cutX = apex.x + delta;
   const bRad = (beta * Math.PI) / 180;
-  const plane = 150;
-  const planeA: [number, number] = [cutX - plane * Math.sin(bRad), apexY - plane * Math.cos(bRad)];
-  const planeB: [number, number] = [cutX + plane * Math.sin(bRad), apexY + plane * Math.cos(bRad)];
+  const plane = 154;
+  const planeA: Pt = {
+    x: cutX - plane * Math.sin(bRad),
+    y: apex.y - plane * Math.cos(bRad),
+  };
+  const planeB: Pt = {
+    x: cutX + plane * Math.sin(bRad),
+    y: apex.y + plane * Math.cos(bRad),
+  };
+
+  const sectionPts = [
+    crossing(apex, up, planeA, planeB),
+    crossing(apex, down, planeA, planeB),
+  ].filter((point): point is Pt => point !== null);
+
+  /* One arc from the axis to the plane, so β is an angle on the drawing. */
+  const betaAngle = Math.atan2(planeA.y - apex.y, planeA.x - apex.x);
+  const betaR = 30;
+  const betaArcEnd = {
+    x: cutX + betaR * Math.cos(betaAngle),
+    y: apex.y + betaR * Math.sin(betaAngle),
+  };
+  const betaLabel = {
+    x: cutX + (betaR + 12) * Math.cos(betaAngle / 2),
+    y: apex.y + (betaR + 12) * Math.sin(betaAngle / 2),
+  };
 
   /* ---- Right plate: the section itself, drawn from e ---- */
-  const cx = 452;
-  const cy = 190;
-  const aLen = 74;
-  const curve = useMemo(() => {
-    const pts: string[] = [];
-    if (kind === "circle") {
-      for (let i = 0; i <= 72; i += 1) {
-        const t = (i / 72) * Math.PI * 2;
-        pts.push(`${(cx + aLen * Math.cos(t)).toFixed(1)} ${(cy + aLen * Math.sin(t)).toFixed(1)}`);
-      }
-      return `M${pts.join(" L")} Z`;
-    }
-    if (kind === "ellipse") {
-      const bLen = aLen * Math.sqrt(Math.max(0.02, 1 - e * e));
-      for (let i = 0; i <= 72; i += 1) {
-        const t = (i / 72) * Math.PI * 2;
-        pts.push(`${(cx + aLen * Math.cos(t)).toFixed(1)} ${(cy + bLen * Math.sin(t)).toFixed(1)}`);
-      }
-      return `M${pts.join(" L")} Z`;
-    }
-    if (kind === "parabola") {
-      for (let x = -90; x <= 90; x += 2) {
-        const y = (x * x) / (4 * (aLen / 2));
-        pts.push(`${(cx + x).toFixed(1)} ${(cy - y + 96).toFixed(1)}`);
-      }
-      return `M${pts.join(" L")}`;
-    }
-    /* Hyperbola: x²/a² − y²/b² = 1, both branches. */
-    const bLen = aLen * Math.sqrt(Math.max(0.02, e * e - 1));
-    for (const sign of [1, -1]) {
-      const branch: string[] = [];
-      for (let y = -120; y <= 120; y += 3) {
-        const x = aLen * Math.sqrt(1 + (y * y) / (bLen * bLen));
-        branch.push(`${(cx + sign * x).toFixed(1)} ${(cy + y).toFixed(1)}`);
-      }
-      pts.push(`M${branch.join(" L")}`);
-    }
-    return pts.join(" ");
-  }, [kind, e, cx, cy, aLen]);
+  const sx = 492;
+  const sy = 194;
+  const aLen = 78;
+  const plotTop = 64;
+  const plotBottom = 344;
 
-  /* Focus and directrix live at c = ae (ellipse/hyperbola) or a (parabola). */
-  const c = kind === "parabola" ? aLen / 2 : e * aLen;
-  const focusX = kind === "circle" ? cx : cx + c;
-  const directrix = kind === "circle" || kind === "parabola" ? cx + aLen : cx + aLen / Math.max(e, 0.01);
+  /* A parabola in the standard y² = 4ax orientation, opening right. */
+  const p = 30;
+  const vertexX = sx - 32;
+  const parabolaFocus = vertexX + p;
+  const parabolaDirectrix = vertexX - p;
+  const parabolaPath = useMemo(() => {
+    const points: string[] = [];
+    for (let y = -118; y <= 118; y += 3) {
+      points.push(`${(vertexX + (y * y) / (4 * p)).toFixed(1)} ${(sy + y).toFixed(1)}`);
+    }
+    return `M${points.join(" L")}`;
+  }, [sx, sy, vertexX, p]);
+
+  const bLen = e < 1 ? aLen * Math.sqrt(Math.max(0.001, 1 - e * e)) : aLen * Math.sqrt(Math.max(0.001, e * e - 1));
+  const focusC = e * aLen;
+  const directrixD = e > 0.02 ? aLen / e : Infinity;
+
+  /* The hyperbola is sampled y-first, then scaled to stay on the plate. */
+  const hyperbola = useMemo(() => {
+    if (kind !== "hyperbola") return null;
+    const yMax = 112;
+    const xAtMax = aLen * Math.sqrt(1 + (yMax / bLen) ** 2);
+    const scale = Math.min(1, 128 / xAtMax);
+    const branch = (sign: 1 | -1) => {
+      const points: string[] = [];
+      for (let y = -yMax; y <= yMax; y += 2) {
+        const x = aLen * Math.sqrt(1 + (y / bLen) ** 2);
+        points.push(`${(sx + sign * x * scale).toFixed(1)} ${(sy + y * scale).toFixed(1)}`);
+      }
+      return `M${points.join(" L")}`;
+    };
+    return { d: `${branch(-1)} ${branch(1)}`, scale };
+  }, [kind, bLen, aLen, sx, sy]);
 
   const rows: Array<[string, string]> = [
     ["Cone semi-angle α", `${alpha.toFixed(1)}°`],
@@ -144,44 +180,159 @@ export function ConicSections() {
       <div className="mm-grid">
         <div className="mm-stage">
           <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="A double cone cut by a plane, and the resulting conic">
-            {/* Axis */}
-            <line x1={apexX - 30} y1={apexY} x2={apexX + arm + 20} y2={apexY} stroke="var(--text-main)" strokeWidth={1} opacity={0.25} strokeDasharray="4 6" />
-            {/* The two nappes */}
-            <line x1={apexX} y1={apexY} x2={up[0]} y2={up[1]} stroke="var(--text-main)" strokeWidth={2} strokeLinecap="round" />
-            <line x1={apexX} y1={apexY} x2={down[0]} y2={down[1]} stroke="var(--text-main)" strokeWidth={2} strokeLinecap="round" />
-            <line x1={up[0]} y1={up[1]} x2={down[0]} y2={down[1]} stroke="var(--text-main)" strokeWidth={1.4} opacity={0.4} strokeDasharray="5 5" />
-            {/* The cutting plane */}
-            <line x1={planeA[0]} y1={planeA[1]} x2={planeB[0]} y2={planeB[1]} stroke="var(--signal)" strokeWidth={2.6} strokeLinecap="round" />
-            {/* Angle marks */}
+            <defs>
+              <clipPath id="conic-cone">
+                <path d={`M${apex.x} ${apex.y} L${up.x} ${up.y} L${down.x} ${down.y} Z`} />
+              </clipPath>
+            </defs>
+
+            {/* Plate labels */}
+            <text x={22} y={26} fontSize={10.5} fontWeight={700} letterSpacing="0.1em" fill="var(--text-dim)">
+              THE CUT
+            </text>
+            <text x={372} y={26} fontSize={10.5} fontWeight={700} letterSpacing="0.1em" fill="var(--text-dim)">
+              THE SECTION
+            </text>
+            <line x1={358} y1={38} x2={358} y2={352} stroke="var(--text-main)" strokeWidth={1} opacity={0.1} />
+
+            {/* The double cone: two shaded nappes with a base at the right. */}
             <path
-              d={`M ${apexX + 42} ${apexY} A 42 42 0 0 ${aRad > 0 ? 0 : 1} ${apexX + 42 * Math.cos(aRad)} ${apexY - 42 * Math.sin(aRad)}`}
+              d={`M${apex.x} ${apex.y} L${up.x} ${up.y} L${baseX} ${apex.y} L${down.x} ${down.y} Z`}
+              fill="color-mix(in srgb, var(--text-main) 4%, transparent)"
+              stroke="var(--text-main)"
+              strokeWidth={1.6}
+              opacity={0.9}
+            />
+            <line x1={up.x} y1={up.y} x2={down.x} y2={down.y} stroke="var(--text-main)" strokeWidth={1.4} opacity={0.45} strokeDasharray="4 5" />
+
+            {/* Axis and the α arc */}
+            <line x1={apex.x - 22} y1={apex.y} x2={baseX + 22} y2={apex.y} stroke="var(--text-main)" strokeWidth={1} opacity={0.28} strokeDasharray="4 6" />
+            <path
+              d={`M ${apex.x + 40} ${apex.y} A 40 40 0 0 ${aRad > 0 ? 0 : 1} ${apex.x + 40 * Math.cos(aRad)} ${apex.y - 40 * Math.sin(aRad)}`}
               fill="none"
               stroke="var(--text-dim)"
               strokeWidth={1}
             />
-            <text x={apexX + 52} y={apexY - 20} fontSize={10.5} fill="var(--text-dim)">α</text>
-            <text x={cutX + 14} y={apexY - 118} fontSize={10.5} fill="var(--signal)" fontWeight={700}>β</text>
-            <text x={apexX - 26} y={apexY + 18} fontSize={11} fontWeight={700} fill="var(--text-dim)">apex</text>
+            <text x={apex.x + 50} y={apex.y - 17} fontSize={10.5} fill="var(--text-dim)">α</text>
 
-            {/* The section */}
-            <path d={curve} fill="none" stroke="var(--text-main)" strokeWidth={2.4} strokeLinejoin="round" />
-            {kind !== "circle" && kind !== "parabola" && (
+            {/* The cutting plane, and the chord where it actually cuts. */}
+            <line x1={planeA.x} y1={planeA.y} x2={planeB.x} y2={planeB.y} stroke="var(--signal)" strokeWidth={1.6} opacity={0.65} strokeDasharray="6 5" />
+            <g clipPath="url(#conic-cone)">
+              <line x1={planeA.x} y1={planeA.y} x2={planeB.x} y2={planeB.y} stroke="var(--signal)" strokeWidth={9} opacity={0.2} />
+              <line x1={planeA.x} y1={planeA.y} x2={planeB.x} y2={planeB.y} stroke="var(--signal)" strokeWidth={2.2} />
+            </g>
+            {sectionPts.map((point, index) => (
+              <circle key={index} cx={point.x} cy={point.y} r={3.2} fill="var(--signal)" />
+            ))}
+
+            {/* β: the plane's angle to the axis, drawn at the cut. */}
+            <path
+              d={`M ${cutX + betaR} ${apex.y} A ${betaR} ${betaR} 0 0 ${betaAngle < 0 ? 0 : 1} ${betaArcEnd.x} ${betaArcEnd.y}`}
+              fill="none"
+              stroke="var(--signal)"
+              strokeWidth={1.1}
+            />
+            <text x={betaLabel.x} y={betaLabel.y} fontSize={10.5} fontWeight={700} fill="var(--signal)">β</text>
+            <text x={cutX + 8} y={apex.y + 20} fontSize={9.5} fill="var(--text-dim)">
+              {beta.toFixed(0)}° to the axis
+            </text>
+
+            {/* Cone annotations */}
+            <text x={apex.x - 26} y={apex.y + 18} fontSize={10.5} fill="var(--text-dim)">apex</text>
+            <text x={up.x + 8} y={up.y + 4} fontSize={9.5} fill="var(--text-dim)">generator</text>
+            <text x={baseX + 8} y={apex.y - 6} fontSize={9.5} fill="var(--text-dim)">base</text>
+            <text x={apex.x + 18} y={up.y - 6} fontSize={9.5} fill="var(--text-dim)">upper nappe</text>
+            <text x={apex.x + 18} y={down.y + 14} fontSize={9.5} fill="var(--text-dim)">lower nappe</text>
+
+            {/* ---- the section ---- */}
+            <text x={sx} y={36} textAnchor="middle" fontSize={11.5} fontWeight={700} fill="var(--text-main)">
+              {kind.toUpperCase()} · e = {kind === "circle" ? "0" : e.toFixed(2)}
+            </text>
+
+            {/* Axes for the section */}
+            <line x1={366} y1={sy} x2={628} y2={sy} stroke="var(--text-main)" strokeWidth={1} opacity={0.14} strokeDasharray="4 6" />
+            <line x1={sx} y1={plotTop} x2={sx} y2={plotBottom} stroke="var(--text-main)" strokeWidth={1} opacity={0.1} strokeDasharray="4 6" />
+
+            {kind === "circle" && (
               <>
-                <circle cx={focusX} cy={cy} r={3.4} fill="var(--verify)" />
-                <line x1={directrix} y1={cy - 120} x2={directrix} y2={cy + 120} stroke="var(--verify)" strokeWidth={1.4} strokeDasharray="5 6" />
+                <circle cx={sx} cy={sy} r={aLen} fill="var(--verify)" opacity={0.07} stroke="var(--text-main)" strokeWidth={2.4} />
+                <circle cx={sx} cy={sy} r={3} fill="var(--verify)" />
+                <line x1={sx} y1={sy} x2={sx + aLen} y2={sy} stroke="var(--verify)" strokeWidth={1.4} />
+                <text x={sx + aLen / 2} y={sy - 7} textAnchor="middle" fontSize={9.5} fill="var(--verify)">r</text>
+                <text x={sx + 7} y={sy + 16} fontSize={9.5} fill="var(--text-dim)">centre</text>
               </>
             )}
+
+            {kind === "ellipse" && (
+              <>
+                <ellipse cx={sx} cy={sy} rx={aLen} ry={bLen} fill="var(--verify)" opacity={0.06} stroke="var(--text-main)" strokeWidth={2.4} />
+                <line x1={sx - aLen} y1={sy} x2={sx + aLen} y2={sy} stroke="var(--text-main)" strokeWidth={1} opacity={0.35} />
+                <line x1={sx} y1={sy - bLen} x2={sx} y2={sy + bLen} stroke="var(--text-main)" strokeWidth={1} opacity={0.35} />
+                <line x1={sx - aLen} y1={sy - 14} x2={sx - aLen} y2={sy + 14} stroke="var(--text-dim)" strokeWidth={1} opacity={0.7} />
+                <line x1={sx + aLen} y1={sy - 14} x2={sx + aLen} y2={sy + 14} stroke="var(--text-dim)" strokeWidth={1} opacity={0.7} />
+                <circle cx={sx - focusC} cy={sy} r={3.2} fill="var(--verify)" />
+                <circle cx={sx + focusC} cy={sy} r={3.2} fill="var(--verify)" />
+                <text x={sx + focusC + 7} y={sy - 7} fontSize={9.5} fill="var(--verify)">F</text>
+                <text x={sx - focusC - 7} y={sy - 7} fontSize={9.5} textAnchor="end" fill="var(--verify)">F′</text>
+                <line x1={sx + directrixD} y1={plotTop} x2={sx + directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.7} />
+                <line x1={sx - directrixD} y1={plotTop} x2={sx - directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.35} />
+                <text x={sx + directrixD - 6} y={plotTop + 12} textAnchor="end" fontSize={9.5} fill="var(--verify)">d</text>
+                <text x={sx + aLen} y={sy - 18} textAnchor="middle" fontSize={9.5} fill="var(--text-dim)">a</text>
+              </>
+            )}
+
             {kind === "parabola" && (
               <>
-                <circle cx={focusX} cy={cy + 96 - aLen / 2} r={3.4} fill="var(--verify)" />
-                <line x1={cx} y1={cy - 40} x2={cx} y2={cy + 130} stroke="var(--verify)" strokeWidth={1.4} strokeDasharray="5 6" />
+                <path d={parabolaPath} fill="none" stroke="var(--text-main)" strokeWidth={2.4} strokeLinejoin="round" />
+                <line x1={parabolaDirectrix} y1={plotTop} x2={parabolaDirectrix} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.3} strokeDasharray="5 6" />
+                <line x1={parabolaDirectrix} y1={sy} x2={sx + 116} y2={sy} stroke="var(--text-main)" strokeWidth={1} opacity={0.3} strokeDasharray="4 6" />
+                <circle cx={parabolaFocus} cy={sy} r={3.2} fill="var(--verify)" />
+                <circle cx={vertexX} cy={sy} r={2.6} fill="var(--text-main)" />
+                <text x={parabolaFocus + 7} y={sy - 7} fontSize={9.5} fill="var(--verify)">focus</text>
+                <text x={parabolaDirectrix - 6} y={plotTop + 12} textAnchor="end" fontSize={9.5} fill="var(--verify)">directrix</text>
+                <text x={vertexX - 6} y={sy + 17} textAnchor="end" fontSize={9.5} fill="var(--text-dim)">vertex</text>
               </>
             )}
-            {kind === "circle" && <circle cx={cx} cy={cy} r={3.4} fill="var(--verify)" />}
-            <text x={directrix + 6} y={cy - 108} fontSize={10} fill="var(--verify)">directrix</text>
-            <text x={focusX + 6} y={cy + (kind === "parabola" ? 108 : -8)} fontSize={10} fill="var(--verify)">focus</text>
-            <text x={452} y={30} fontSize={11} fontWeight={700} fill="var(--text-dim)" textAnchor="middle">
-              {kind.toUpperCase()} · e = {kind === "circle" ? "0" : e.toFixed(2)}
+
+            {kind === "hyperbola" && hyperbola && (
+              <>
+                {/* Asymptotes first: they are the shape's frame. */}
+                <line
+                  x1={sx - 140}
+                  y1={sy - (140 * bLen) / aLen}
+                  x2={sx + 140}
+                  y2={sy + (140 * bLen) / aLen}
+                  stroke="var(--text-main)"
+                  strokeWidth={1}
+                  opacity={0.16}
+                  strokeDasharray="5 6"
+                />
+                <line
+                  x1={sx - 140}
+                  y1={sy + (140 * bLen) / aLen}
+                  x2={sx + 140}
+                  y2={sy - (140 * bLen) / aLen}
+                  stroke="var(--text-main)"
+                  strokeWidth={1}
+                  opacity={0.16}
+                  strokeDasharray="5 6"
+                />
+                <path d={hyperbola.d} fill="none" stroke="var(--text-main)" strokeWidth={2.4} strokeLinejoin="round" />
+                <circle cx={sx + focusC} cy={sy} r={3.2} fill="var(--verify)" />
+                <circle cx={sx - focusC} cy={sy} r={3.2} fill="var(--verify)" />
+                <text x={sx + focusC + 7} y={sy - 8} fontSize={9.5} fill="var(--verify)">F</text>
+                <text x={sx - focusC - 7} y={sy - 8} textAnchor="end" fontSize={9.5} fill="var(--verify)">F′</text>
+                <line x1={sx + directrixD} y1={plotTop} x2={sx + directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.7} />
+                <line x1={sx - directrixD} y1={plotTop} x2={sx - directrixD} y2={plotBottom} stroke="var(--verify)" strokeWidth={1.2} strokeDasharray="5 6" opacity={0.35} />
+                <text x={sx + directrixD - 6} y={plotTop + 12} textAnchor="end" fontSize={9.5} fill="var(--verify)">d</text>
+              </>
+            )}
+
+            <text x={366} y={366} fontSize={11} fill="var(--text-dim)">
+              {KIND_EQN[kind]}
+            </text>
+            <text x={628} y={366} textAnchor="end" fontSize={10} fill="var(--text-dim)">
+              {KIND_NOTE[kind].split(":")[0]}
             </text>
           </svg>
         </div>
@@ -193,13 +344,13 @@ export function ConicSections() {
               <span style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-dim)" }}>
                 Cone semi-angle α <b style={{ color: "var(--text-main)", fontVariantNumeric: "tabular-nums" }}>{alpha}°</b>
               </span>
-              <input className="mm-range" type="range" min={14} max={42} step={0.5} value={alpha} onChange={(ev) => setAlpha(Number(ev.target.value))} />
+              <input className="mm-range" type="range" min={14} max={42} step={0.5} value={alpha} onChange={(event) => setAlpha(Number(event.target.value))} />
             </label>
             <label style={{ display: "block", marginTop: 10 }}>
               <span style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-dim)" }}>
                 Plane angle to axis β <b style={{ color: "var(--text-main)", fontVariantNumeric: "tabular-nums" }}>{beta}°</b>
               </span>
-              <input className="mm-range" type="range" min={4} max={90} step={0.5} value={beta} onChange={(ev) => setBeta(Number(ev.target.value))} />
+              <input className="mm-range" type="range" min={4} max={90} step={0.5} value={beta} onChange={(event) => setBeta(Number(event.target.value))} />
             </label>
             <div className="mm-verdict" data-on style={{ marginTop: 10 }}>
               {KIND_NOTE[kind]}
@@ -208,8 +359,8 @@ export function ConicSections() {
 
           <div className="mm-panel">
             <p className="mm-panel__title">Measured</p>
-            {rows.map(([k, v]) => (
-              <div className="mm-row" key={k}><span>{k}</span><b>{v}</b></div>
+            {rows.map(([key, value]) => (
+              <div className="mm-row" key={key}><span>{key}</span><b>{value}</b></div>
             ))}
             <div className="mm-row"><span>Standard equation</span><b style={{ fontSize: 11.5 }}>{KIND_EQN[kind]}</b></div>
           </div>
@@ -217,8 +368,8 @@ export function ConicSections() {
           <p className="mm-note">
             Push β to α exactly and the eccentricity hits 1: the curve stops
             closing and becomes a parabola. That single boundary is the whole
-            difference between "ellipse" and "hyperbola" — the same cone, the
-            same formula, one degree of tilt apart.
+            difference between &quot;ellipse&quot; and &quot;hyperbola&quot; —
+            the same cone, the same formula, one degree of tilt apart.
           </p>
         </div>
       </div>
