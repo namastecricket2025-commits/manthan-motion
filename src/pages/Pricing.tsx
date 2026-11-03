@@ -90,10 +90,11 @@ function BillingSwitch({
   );
 }
 
-/** One subscription card. */
-function PlanColumn({
+/** One plan on the stage: the lit hero, or one of the three rows beside it. */
+function PlanCard({
   name,
-  flag,
+  tag,
+  metalTag,
   summary,
   price,
   priceSuffix,
@@ -101,6 +102,9 @@ function PlanColumn({
   hook,
   features,
   includedLabel,
+  rail,
+  free,
+  pass,
   featured,
   prime,
   current,
@@ -108,17 +112,22 @@ function PlanColumn({
   ctaLabel,
 }: {
   name: string;
-  /** A status tag that rides the card's top edge instead of a header row. */
-  flag?: string;
+  /** A short status tag that sits beside the name, never above it. */
+  tag?: string;
+  metalTag?: boolean;
   summary: string;
   price: number;
   priceSuffix: string;
   billingLine: string;
   hook?: string;
-  features: string[];
-  includedLabel: string;
+  /** Only the large card lists its features; the rows stay scannable. */
+  features?: string[];
+  includedLabel?: string;
+  rail?: boolean;
+  free?: boolean;
+  pass?: boolean;
   featured?: boolean;
-  /** The top tier: the same card, one step lighter and one shade warmer. */
+  /** The top tier: same layout, warmer metal, no glow. */
   prime?: boolean;
   current: boolean;
   onChoose?: () => void;
@@ -128,23 +137,25 @@ function PlanColumn({
     <article
       className={cn(
         "plan-card",
+        rail && "plan-card--rail",
+        free && "plan-card--free",
+        pass && "plan-card--pass",
         featured && "plan-card--featured",
         prime && "plan-card--prime",
       )}
     >
-      {/* Rides the top edge rather than costing every card a header row. */}
-      {flag ? (
-        <span
-          className={cn("plan-card__flag", prime && "plan-card__flag--prime")}
-        >
-          {flag}
-        </span>
-      ) : null}
-
-      <div className="plan-card__intro">
+      <div className="plan-card__head">
         <h2 className="plan-card__name">{name}</h2>
-        <p className="plan-card__summary">{summary}</p>
+        {tag ? (
+          <span
+            className={cn("plan-card__tag", metalTag && "plan-card__tag--metal")}
+          >
+            {tag}
+          </span>
+        ) : null}
       </div>
+
+      <p className="plan-card__summary">{summary}</p>
 
       {/* The number glides when the term changes — one animated figure per
           card, never a second price in the small print. */}
@@ -165,37 +176,43 @@ function PlanColumn({
       </div>
 
       <p className="plan-card__billing">{billingLine}</p>
-      <p className="plan-card__hook">{hook ?? ""}</p>
+      {hook ? <p className="plan-card__hook">{hook}</p> : null}
 
-      <button
-        type="button"
-        onClick={onChoose}
-        disabled={current}
-        className={cn(
-          "plan-card__cta",
-          featured && "plan-card__cta--solid",
-          current && "plan-card__cta--current",
-        )}
-      >
-        {current ? (
-          "Your current plan"
-        ) : (
-          <>
-            {ctaLabel}
-            <ArrowRight aria-hidden="true" />
-          </>
-        )}
-      </button>
+      {features && features.length > 0 ? (
+        <>
+          <p className="plan-card__label">{includedLabel}</p>
+          <ul className="plan-card__features">
+            {features.map((feature) => (
+              <li key={feature}>
+                <Check aria-hidden="true" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
 
-      <p className="plan-card__label">{includedLabel}</p>
-      <ul className="plan-card__features">
-        {features.map((feature) => (
-          <li key={feature}>
-            <Check aria-hidden="true" />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="plan-card__foot">
+        <button
+          type="button"
+          onClick={onChoose}
+          disabled={current}
+          className={cn(
+            "plan-card__cta",
+            featured && "plan-card__cta--solid",
+            current && "plan-card__cta--current",
+          )}
+        >
+          {current ? (
+            "Your current plan"
+          ) : (
+            <>
+              {ctaLabel}
+              <ArrowRight aria-hidden="true" />
+            </>
+          )}
+        </button>
+      </div>
     </article>
   );
 }
@@ -360,49 +377,13 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* Four cards in one panel: free, the one-off pass, then the two
-              term plans — the layout exactly as it was before the fourth
-              subscription was ever added. */}
+          {/* One lit hero and three rows, not four equal cards. The pass sits
+              beside the term plans because it is bought here, not on a
+              schedule of its own. */}
           <div data-reveal className="mt-12">
-            <div className="plan-grid">
-              <PlanColumn
-                name={FREE_PLAN.name}
-                summary={FREE_PLAN.summary}
-                price={0}
-                priceSuffix="/ forever"
-                billingLine="No card, no trial clock."
-                hook="60,000 tokens a day, refreshed every morning."
-                features={FREE_PLAN.features}
-                includedLabel="What you get"
-                current={plan === "free"}
-                ctaLabel="Switch to Free"
-                onChoose={() => setPlan("free")}
-              />
-
-              {/* The one-off pass sits with the term plans, second: a fixed
-                  7 days, one price, nothing renews. */}
-              {passTiers.map((tier) => {
-                const days = 7;
-                return (
-                  <PlanColumn
-                    key={tier.id}
-                    name={tier.name}
-                    summary={tier.summary}
-                    price={tier.price}
-                    priceSuffix={`/ ${tier.unit}`}
-                    billingLine="One payment, nothing renews."
-                    hook={`${tier.allowance} · about ₹${Math.round(tier.price / days)} a day`}
-                    features={tier.features}
-                    includedLabel="What the pass opens"
-                    current={plan === tier.id}
-                    ctaLabel="Take the pass"
-                    onChoose={() => setCheckout(tier)}
-                  />
-                );
-              })}
-
-              <PlanColumn
-                flag="Most popular"
+            <div className="plans-stage">
+              <PlanCard
+                tag="Most popular"
                 name={featuredTier.name}
                 summary={featuredTier.summary}
                 price={tierDisplay(featuredTier).price}
@@ -417,17 +398,46 @@ export default function Pricing() {
                 onChoose={() => setCheckout(featuredTier)}
               />
 
-              <PlanColumn
-                flag="Top tier"
+              <PlanCard
+                rail
+                free
+                name={FREE_PLAN.name}
+                summary={FREE_PLAN.summary}
+                price={0}
+                priceSuffix="/ forever"
+                billingLine="No card, no trial clock."
+                current={plan === "free"}
+                ctaLabel="Switch to Free"
+                onChoose={() => setPlan("free")}
+              />
+
+              {passTiers.map((tier) => (
+                <PlanCard
+                  key={tier.id}
+                  rail
+                  pass
+                  name={tier.name}
+                  summary={tier.summary}
+                  price={tier.price}
+                  priceSuffix={`/ ${tier.unit}`}
+                  billingLine="One payment, nothing renews."
+                  current={plan === tier.id}
+                  ctaLabel="Take the pass"
+                  onChoose={() => setCheckout(tier)}
+                />
+              ))}
+
+              <PlanCard
+                rail
                 prime
+                tag="Top tier"
+                metalTag
                 name={primeTier.name}
                 summary={primeTier.summary}
                 price={tierDisplay(primeTier).price}
                 priceSuffix={tierDisplay(primeTier).suffix}
                 billingLine={tierDisplay(primeTier).billing}
                 hook={tierDisplay(primeTier).hook}
-                features={primeTier.features}
-                includedLabel="Everything in Free, plus"
                 current={plan === primeTier.id}
                 ctaLabel={`Choose ${primeTier.name}`}
                 onChoose={() => setCheckout(primeTier)}
