@@ -27,11 +27,10 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * One stage, not four equal cards. EduVantage takes the left column at full
- * height under its slow travelling light; Free, the Sprint Pass and Prime
- * stack beside it as three compact rows in three different materials —
- * plain, torn, warm metal. A reader gets one recommendation and three
- * alternatives without comparing four identical rectangles.
+ * One shelf, not four equal cards. Each plan is a full-width band read left
+ * to right: name and promise, what it opens, the figure, the action. The
+ * popular band is the one tinted and lit; Prime is warm metal; the pass is
+ * cut by a dashed tear line. Nothing is a box with an empty top.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
@@ -102,7 +101,6 @@ function PlanCard({
   hook,
   features,
   includedLabel,
-  rail,
   free,
   pass,
   featured,
@@ -121,9 +119,8 @@ function PlanCard({
   billingLine: string;
   hook?: string;
   /** Only the large card lists its features; the rows stay scannable. */
-  features?: string[];
-  includedLabel?: string;
-  rail?: boolean;
+  features: string[];
+  includedLabel: string;
   free?: boolean;
   pass?: boolean;
   featured?: boolean;
@@ -137,7 +134,6 @@ function PlanCard({
     <article
       className={cn(
         "plan-card",
-        rail && "plan-card--rail",
         free && "plan-card--free",
         pass && "plan-card--pass",
         featured && "plan-card--featured",
@@ -157,61 +153,61 @@ function PlanCard({
 
       <p className="plan-card__summary">{summary}</p>
 
-      {/* The number glides when the term changes — one animated figure per
-          card, never a second price in the small print. */}
-      <div className="plan-card__price">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={`${name}-${price}`}
-            initial={{ y: 14, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -14, opacity: 0 }}
-            transition={{ duration: 0.26, ease: [0.25, 1, 0.5, 1] }}
-            className="plan-card__amount"
-          >
-            {formatINR(price)}
-          </motion.span>
-        </AnimatePresence>
-        <span className="plan-card__suffix">{priceSuffix}</span>
+      <div className="plan-card__includes">
+        <p className="plan-card__label">{includedLabel}</p>
+        <ul className="plan-card__features">
+          {features.map((feature) => (
+            <li key={feature}>
+              <Check aria-hidden="true" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <p className="plan-card__billing">{billingLine}</p>
-      {hook ? <p className="plan-card__hook">{hook}</p> : null}
+      <div className="plan-card__buy">
+        {/* The number glides when the term changes — one animated figure per
+            card, never a second price in the small print. */}
+        <div className="plan-card__price">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={`${name}-${price}`}
+              initial={{ y: 14, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -14, opacity: 0 }}
+              transition={{ duration: 0.26, ease: [0.25, 1, 0.5, 1] }}
+              className="plan-card__amount"
+            >
+              {formatINR(price)}
+            </motion.span>
+          </AnimatePresence>
+          <span className="plan-card__suffix">{priceSuffix}</span>
+        </div>
 
-      {features && features.length > 0 ? (
-        <>
-          <p className="plan-card__label">{includedLabel}</p>
-          <ul className="plan-card__features">
-            {features.map((feature) => (
-              <li key={feature}>
-                <Check aria-hidden="true" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
+        <p className="plan-card__billing">{billingLine}</p>
+        {hook ? <p className="plan-card__hook">{hook}</p> : null}
 
-      <div className="plan-card__foot">
-        <button
-          type="button"
-          onClick={onChoose}
-          disabled={current}
-          className={cn(
-            "plan-card__cta",
-            featured && "plan-card__cta--solid",
-            current && "plan-card__cta--current",
-          )}
-        >
-          {current ? (
-            "Your current plan"
-          ) : (
-            <>
-              {ctaLabel}
-              <ArrowRight aria-hidden="true" />
-            </>
-          )}
-        </button>
+        <div className="plan-card__foot">
+          <button
+            type="button"
+            onClick={onChoose}
+            disabled={current}
+            className={cn(
+              "plan-card__cta",
+              featured && "plan-card__cta--solid",
+              current && "plan-card__cta--current",
+            )}
+          >
+            {current ? (
+              "Your current plan"
+            ) : (
+              <>
+                {ctaLabel}
+                <ArrowRight aria-hidden="true" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -377,11 +373,44 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* One lit hero and three rows, not four equal cards. The pass sits
-              beside the term plans because it is bought here, not on a
-              schedule of its own. */}
+          {/* Four bands, not four boxes: name and promise on the left, what
+              the plan opens in the middle, the figure and the action on the
+              right. The pass sits in the same list because it is bought
+              here, not on a schedule of its own. */}
           <div data-reveal className="mt-12">
-            <div className="plans-stage">
+            <div className="plans-shelf">
+              <PlanCard
+                free
+                name={FREE_PLAN.name}
+                summary={FREE_PLAN.summary}
+                price={0}
+                priceSuffix="/ forever"
+                billingLine="No card, no trial clock."
+                features={FREE_PLAN.features}
+                includedLabel="What you get"
+                current={plan === "free"}
+                ctaLabel="Switch to Free"
+                onChoose={() => setPlan("free")}
+              />
+
+              {passTiers.map((tier) => (
+                <PlanCard
+                  key={tier.id}
+                  pass
+                  name={tier.name}
+                  summary={tier.summary}
+                  price={tier.price}
+                  priceSuffix={`/ ${tier.unit}`}
+                  billingLine="One payment, nothing renews."
+                  hook={`${tier.allowance} · about ₹${Math.round(tier.price / 7)} a day`}
+                  features={tier.features}
+                  includedLabel="What the pass opens"
+                  current={plan === tier.id}
+                  ctaLabel="Take the pass"
+                  onChoose={() => setCheckout(tier)}
+                />
+              ))}
+
               <PlanCard
                 tag="Most popular"
                 name={featuredTier.name}
@@ -399,36 +428,6 @@ export default function Pricing() {
               />
 
               <PlanCard
-                rail
-                free
-                name={FREE_PLAN.name}
-                summary={FREE_PLAN.summary}
-                price={0}
-                priceSuffix="/ forever"
-                billingLine="No card, no trial clock."
-                current={plan === "free"}
-                ctaLabel="Switch to Free"
-                onChoose={() => setPlan("free")}
-              />
-
-              {passTiers.map((tier) => (
-                <PlanCard
-                  key={tier.id}
-                  rail
-                  pass
-                  name={tier.name}
-                  summary={tier.summary}
-                  price={tier.price}
-                  priceSuffix={`/ ${tier.unit}`}
-                  billingLine="One payment, nothing renews."
-                  current={plan === tier.id}
-                  ctaLabel="Take the pass"
-                  onChoose={() => setCheckout(tier)}
-                />
-              ))}
-
-              <PlanCard
-                rail
                 prime
                 tag="Top tier"
                 metalTag
@@ -438,6 +437,8 @@ export default function Pricing() {
                 priceSuffix={tierDisplay(primeTier).suffix}
                 billingLine={tierDisplay(primeTier).billing}
                 hook={tierDisplay(primeTier).hook}
+                features={primeTier.features}
+                includedLabel="Everything in Free, plus"
                 current={plan === primeTier.id}
                 ctaLabel={`Choose ${primeTier.name}`}
                 onChoose={() => setCheckout(primeTier)}

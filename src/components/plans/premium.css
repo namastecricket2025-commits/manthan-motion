@@ -38,52 +38,19 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Plans — one lit plan, three ways in                                 */
+/* Plans — one shelf, four bands                                       */
 /* ------------------------------------------------------------------ */
 
-/* Not four equal boxes. EduVantage takes the left column at full height,
-   because it is the plan most students should leave with; Free, the Sprint
-   Pass and Prime stack beside it as three compact rows, each with its own
-   material — plain, torn, warm metal. The asymmetry is the design: the eye
-   lands on the one lit card, then reads the alternatives down the right
-   without comparing four identical rectangles. */
+/* Not four equal boxes and not a hero-plus-sidebar: four full-width bands,
+   read top to bottom like a membership list. Each band puts the name and the
+   promise on the left, what it opens in the middle, and the figure and the
+   action on the right, so nothing sits alone in an empty corner. The popular
+   band is the one tinted and lit; Prime is warm metal; the pass is cut by a
+   dashed tear line. */
 
-.plans-stage {
+.plans-shelf {
   display: grid;
-  gap: 14px;
-  grid-template-areas:
-    "feature"
-    "free"
-    "sprint"
-    "prime";
-}
-
-@media (min-width: 1024px) {
-  .plans-stage {
-    grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
-    grid-template-areas:
-      "feature free"
-      "feature sprint"
-      "feature prime";
-    align-items: stretch;
-    gap: 16px;
-  }
-}
-
-.plan-card--featured {
-  grid-area: feature;
-}
-
-.plan-card--free {
-  grid-area: free;
-}
-
-.plan-card--pass {
-  grid-area: sprint;
-}
-
-.plan-card--prime {
-  grid-area: prime;
+  gap: 12px;
 }
 
 /* A plan card is a panel one step above the page: a shallow top-down light,
@@ -91,21 +58,29 @@
    entirely out of sight. Four identical black rectangles on a black page is
    what made the row read as empty. */
 .plan-card {
+  --plan-muted: color-mix(in srgb, var(--text-main) 60%, transparent);
+  --plan-faint: color-mix(in srgb, var(--text-main) 46%, transparent);
   position: relative;
-  display: flex;
+  display: grid;
   min-width: 0;
-  flex-direction: column;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr) minmax(0, 210px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "head includes buy"
+    "summary includes buy";
+  column-gap: 32px;
+  align-items: start;
   /* Visible so the rim's bloom is never clipped at the corners. */
   overflow: visible;
-  border: 1px solid var(--panel-line);
-  border-radius: 22px;
+  border: 1px solid var(--panel-line-strong);
+  border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 60%),
     var(--panel);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 22px 48px -36px rgba(0, 0, 0, 0.95);
-  padding: 32px 30px 26px;
+    0 22px 48px -40px rgba(0, 0, 0, 0.9);
+  padding: 28px 30px;
   /* The global rule lets prose break anywhere so long tokens cannot overflow;
      in a plan card that turned "EduVantage" into "EduVanta / ge". Keep the
      safety net for a genuinely long word, but break between words first. */
@@ -114,78 +89,83 @@
   hyphens: none;
 }
 
-/* The three alternatives are rows, not cards: a name, a figure, three lines
-   of copy and one action, arranged on a small grid so the price sits at the
-   top right and the button falls to the bottom edge. */
-.plan-card--rail {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto auto 1fr;
-  grid-template-areas:
-    "head price"
-    "summary summary"
-    "billing billing"
-    "foot foot";
-  align-items: start;
-  column-gap: 20px;
-  border-radius: 18px;
-  padding: 22px 24px 20px;
-}
-
-.plan-card--rail .plan-card__head {
+.plan-card__head {
   grid-area: head;
 }
 
-.plan-card--rail .plan-card__price {
-  grid-area: price;
-  justify-self: end;
-  margin-top: 0;
-}
-
-.plan-card--rail .plan-card__summary {
+.plan-card__summary {
   grid-area: summary;
 }
 
-.plan-card--rail .plan-card__billing {
-  grid-area: billing;
+.plan-card__includes {
+  grid-area: includes;
+  align-self: center;
+  min-width: 0;
 }
 
-.plan-card--rail .plan-card__foot {
-  grid-area: foot;
-  align-self: end;
+.plan-card__buy {
+  grid-area: buy;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-self: center;
 }
 
-/* The popular plan is the one surface allowed a tint: one step lighter than
-   the row, faintly cool, under the revolving rim. */
+/* Below the three-column shelf the band folds in two: the name and promise
+   on the left, the figure and action on the right, the inclusions under
+   both. */
+@media (max-width: 1023px) {
+  .plan-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 200px);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "head buy"
+      "summary buy"
+      "includes includes";
+  }
+
+  .plan-card__buy {
+    align-self: start;
+  }
+
+  .plan-card__includes {
+    margin-top: 18px;
+  }
+}
+
+/* The popular band is the one surface allowed a colour: a real cool wash
+   that survives on a dark page, not a 6%-white grey pretending to be tinted. */
 .plan-card--featured {
-  border-color: color-mix(in srgb, #4cc9f0 22%, var(--panel-line));
+  border-color: color-mix(in srgb, #4cc9f0 34%, transparent);
   background:
     linear-gradient(
-      180deg,
-      color-mix(in srgb, #4cc9f0 8%, transparent),
-      transparent 52%
+      100deg,
+      rgba(76, 201, 240, 0.14),
+      rgba(76, 201, 240, 0.035) 58%,
+      transparent
     ),
-    color-mix(in srgb, var(--text-main) 7%, var(--panel));
+    #0c1113;
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #4cc9f0 30%, transparent),
-    0 18px 40px -32px rgba(0, 0, 0, 0.9);
+    inset 0 1px 0 rgba(76, 201, 240, 0.35),
+    0 30px 70px -52px rgba(76, 201, 240, 0.55);
 }
 
-/* The most expensive plan stays calm, the way top tiers do on Linear, Vercel
-   and Cursor: no glow and no gold leaf. It sits a step higher instead — a
-   warmer panel, a brass hairline, one brass figure and one brass action. */
+/* The top tier is warm metal, visibly so: a lit amber-black band with a
+   brass edge, one brass figure and one brass action. No glow; the glow is
+   the popular plan's job. */
 .plan-card--prime {
-  border-color: color-mix(in srgb, #d8bd94 24%, var(--panel-line));
+  border-color: color-mix(in srgb, #d8bd94 36%, transparent);
   background:
     linear-gradient(
-      180deg,
-      color-mix(in srgb, #d8bd94 10%, transparent),
-      transparent 54%
+      100deg,
+      rgba(216, 189, 148, 0.13),
+      rgba(216, 189, 148, 0.03) 58%,
+      transparent
     ),
-    color-mix(in srgb, var(--text-main) 6%, var(--panel));
+    #13100c;
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #d8bd94 26%, transparent),
-    0 18px 40px -32px rgba(0, 0, 0, 0.9);
+    inset 0 1px 0 rgba(216, 189, 148, 0.3),
+    0 30px 70px -52px rgba(0, 0, 0, 0.9);
 }
 
 /* The revolving glow around the most popular plan. A light band travels the
@@ -260,7 +240,7 @@ html[data-motion="reduced"] .plan-card--featured::after {
    little more room inside than the rows get. */
 @media (min-width: 1024px) {
   .plan-card--featured {
-    padding: 38px 36px 30px;
+    padding: 32px 34px;
   }
 }
 
@@ -291,123 +271,100 @@ html[data-motion="reduced"] .plan-card--featured::after {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* The name is the card's front door: poster face, heavy, tight — the one
+/* The name is the band's front door: poster face, heavy, tight — the one
    place in this section that is allowed to be loud. */
 .plan-card__name {
   font-family: var(--font-poster, "Space Grotesk", sans-serif);
-  font-size: clamp(2.1rem, 3.1vw, 2.7rem);
+  font-size: clamp(1.7rem, 2.1vw, 1.95rem);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
   line-height: 1;
 }
 
-.plan-card--rail .plan-card__name {
-  font-size: clamp(1.3rem, 1.6vw, 1.45rem);
-  letter-spacing: -0.025em;
+.plan-card--featured .plan-card__name {
+  font-size: clamp(1.85rem, 2.4vw, 2.15rem);
 }
 
 .plan-card__summary {
-  margin-top: 10px;
-  font-size: 13.5px;
+  margin-top: 8px;
+  max-width: 34ch;
+  font-size: 13px;
   line-height: 1.55;
-  color: var(--text-dim);
-}
-
-.plan-card--rail .plan-card__summary {
-  margin-top: 7px;
-  font-size: 12.5px;
+  color: var(--plan-muted);
 }
 
 .plan-card__price {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  margin-top: 26px;
-}
-
-.plan-card--rail .plan-card__price {
-  gap: 5px;
+  gap: 6px;
+  margin-top: 0;
 }
 
 .plan-card__amount {
   display: block;
   font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: clamp(3.1rem, 5.2vw, 4.15rem);
+  font-size: clamp(2.35rem, 3vw, 2.8rem);
   font-weight: 650;
   line-height: 0.9;
   letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
 }
 
-.plan-card--rail .plan-card__amount {
-  font-size: clamp(1.85rem, 2.3vw, 2.1rem);
-  line-height: 1;
-  letter-spacing: -0.035em;
+.plan-card--featured .plan-card__amount {
+  font-size: clamp(2.5rem, 3.4vw, 3.05rem);
 }
 
 .plan-card__suffix {
-  padding-bottom: 4px;
-  font-size: 11.5px;
-  color: var(--text-dim);
+  padding-bottom: 3px;
+  font-size: 11px;
+  color: var(--plan-faint);
   white-space: nowrap;
 }
 
 .plan-card__billing {
-  margin-top: 14px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-dim);
-}
-
-.plan-card--rail .plan-card__billing {
   margin-top: 8px;
   font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--plan-muted);
 }
 
 .plan-card__hook {
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 3px;
+  font-size: 11px;
   line-height: 1.5;
-  color: var(--text-dim);
+  color: var(--plan-faint);
 }
 
-/* The action belongs at the card's foot, not in its middle: the card reads
-   name → price → what it opens → button, and the button lines up across the
-   stage no matter how long each list is. */
 .plan-card__foot {
-  margin-top: auto;
-  padding-top: 30px;
+  margin-top: 16px;
 }
 
-.plan-card--rail .plan-card__foot {
-  padding-top: 22px;
-}
-
-/* A tear line above the pass's action: the one plan that expires is the one
-   card with a perforation, not a badge explaining itself. */
-.plan-card--pass .plan-card__foot {
-  margin-top: 18px;
-  border-top: 1px dashed
-    color-mix(in srgb, var(--signal) 26%, var(--panel-line));
-  padding-top: 16px;
+/* The pass is cut out of the shelf: a dashed tear line between what it
+   opens and what it costs, where a paper ticket would perforate. */
+@media (min-width: 1024px) {
+  .plan-card--pass .plan-card__buy {
+    border-left: 1px dashed
+      color-mix(in srgb, var(--signal) 30%, var(--panel-line));
+    padding-left: 24px;
+  }
 }
 
 .plan-card__cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 46px;
+  gap: 7px;
+  min-height: 44px;
   width: 100%;
   cursor: pointer;
   border: 1px solid var(--panel-line-strong);
   border-radius: 999px;
   background: transparent;
   padding: 11px 18px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-main);
   transition:
@@ -460,41 +417,36 @@ html[data-motion="reduced"] .plan-card--featured::after {
 }
 
 .plan-card__label {
-  margin-top: 30px;
-  font-size: 10px;
+  margin-top: 0;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--plan-faint);
 }
 
-/* Hairline-separated rows: the feature list reads as a spec sheet rather than
-   five loose lines, and the rules give the lower half of the card structure. */
+/* Two short columns of inclusions instead of a tall list: the middle of the
+   band is a spec sheet you can take in at a glance. */
 .plan-card__features {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-top: 8px;
-  border-top: 1px solid var(--panel-line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 22px;
+  margin-top: 7px;
 }
 
 .plan-card__features li {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--panel-line) 55%, transparent);
-  padding: 10px 0;
-  font-size: 13px;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
   line-height: 1.45;
-}
-
-.plan-card__features li:first-child {
-  border-top: 0;
+  color: var(--plan-muted);
 }
 
 .plan-card__features svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   flex: none;
   margin-top: 3px;
   color: color-mix(in srgb, var(--signal) 78%, var(--text-main));
@@ -1901,63 +1853,51 @@ html:not(.dark) .lock-veil {
         portrait is the primary use case. */
 @media (max-width: 640px) {
   .plan-card {
-    border-radius: 20px;
-    padding: 24px 20px 20px;
-  }
-
-  /* On a phone every plan is one column; the rail keeps the same order, it
-     only gives up the price's seat in the corner. */
-  .plan-card--rail {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
     grid-template-areas:
       "head"
-      "price"
       "summary"
-      "billing"
-      "foot";
-    padding: 20px 18px 18px;
-  }
-
-  .plan-card--rail .plan-card__price {
-    justify-self: start;
-    margin-top: 12px;
-  }
-
-  .plan-card--rail .plan-card__foot {
-    margin-top: 18px;
-  }
-
-  .plan-card--pass .plan-card__foot {
-    margin-top: 16px;
+      "buy"
+      "includes";
+    border-radius: 18px;
+    padding: 22px 20px;
   }
 
   .plan-card__head {
-    gap: 9px;
+    gap: 8px;
   }
 
   .plan-card__name {
-    font-size: 1.85rem;
+    font-size: 1.6rem;
   }
 
-  .plan-card--rail .plan-card__name {
-    font-size: 1.25rem;
+  .plan-card--featured .plan-card__name {
+    font-size: 1.75rem;
   }
 
-  .plan-card__price {
-    margin-top: 20px;
+  .plan-card__summary {
+    max-width: none;
+  }
+
+  .plan-card__buy {
+    padding-top: 16px;
   }
 
   .plan-card__amount {
-    font-size: 2.85rem;
+    font-size: 2.25rem;
   }
 
-  .plan-card--rail .plan-card__amount {
-    font-size: 1.9rem;
+  .plan-card--featured .plan-card__amount {
+    font-size: 2.4rem;
   }
 
-  .plan-card__features li {
-    font-size: 12.5px;
+  .plan-card__includes {
+    margin-top: 20px;
+  }
+
+  .plan-card__features {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .premium-select select {
