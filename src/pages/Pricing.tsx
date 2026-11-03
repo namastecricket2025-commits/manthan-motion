@@ -299,8 +299,8 @@ export default function Pricing() {
   const term = getDuration(duration);
   const checkoutDuration = getDuration(duration);
 
-  /* The three subscriptions get the first three cards; the one-off pass is
-     the fourth. `plans.ts` still owns the order and every number. */
+  /* `plans.ts` owns the order and every number: the pass is a card in the
+     same panel as the term plans, second after Free. */
   const featuredTier =
     PLAN_TIERS.find((tier) => tier.featured) ?? PLAN_TIERS[0];
   const primeTier =
@@ -347,7 +347,9 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* Four cards in one panel: the three term plans, then the pass. */}
+          {/* Four cards in one panel: free, the one-off pass, then the two
+              term plans — the layout exactly as it was before the fourth
+              subscription was ever added. */}
           <div data-reveal className="mt-12">
             <div className="plan-grid">
               <PlanColumn
@@ -362,6 +364,28 @@ export default function Pricing() {
                 ctaLabel="Switch to Free"
                 onChoose={() => setPlan("free")}
               />
+
+              {/* The one-off pass sits with the term plans, second: a fixed
+                  7 days, one price, nothing renews. */}
+              {passTiers.map((tier) => {
+                const days = 7;
+                return (
+                  <PlanColumn
+                    key={tier.id}
+                    name={tier.name}
+                    summary={tier.summary}
+                    price={tier.price}
+                    priceSuffix={`/ ${tier.unit}`}
+                    billingLine="One payment, nothing renews."
+                    hook={`${tier.allowance} · about ₹${Math.round(tier.price / days)} a day`}
+                    features={tier.features}
+                    includedLabel="What the pass opens"
+                    current={plan === tier.id}
+                    ctaLabel="Take the pass"
+                    onChoose={() => setCheckout(tier)}
+                  />
+                );
+              })}
 
               <PlanColumn
                 name={featuredTier.name}
@@ -391,28 +415,6 @@ export default function Pricing() {
                 ctaLabel={`Choose ${primeTier.name}`}
                 onChoose={() => setCheckout(primeTier)}
               />
-
-              {/* The one-off pass lives in this same panel, as the fourth
-                  card: a fixed 7 days, one price, nothing renews. */}
-              {passTiers.map((tier) => {
-                const days = 7;
-                return (
-                  <PlanColumn
-                    key={tier.id}
-                    name={tier.name}
-                    summary={tier.summary}
-                    price={tier.price}
-                    priceSuffix={`/ ${tier.unit}`}
-                    billingLine="One payment, nothing renews."
-                    hook={`${tier.allowance} · about ₹${Math.round(tier.price / days)} a day`}
-                    features={tier.features}
-                    includedLabel="What the pass opens"
-                    current={plan === tier.id}
-                    ctaLabel="Take the pass"
-                    onChoose={() => setCheckout(tier)}
-                  />
-                );
-              })}
             </div>
           </div>
 
