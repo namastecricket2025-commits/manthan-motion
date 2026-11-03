@@ -116,6 +116,12 @@
    brass edge, one brass figure and one brass action. No glow; the glow is
    the popular plan's job. */
 .plan-card--prime {
+  /* The metal card is dark in both themes, so it carries its own light
+     palette. Without this, light mode inherits near-black body text onto the
+     near-black panel and the name, inclusions and "/ month" disappear. */
+  color: #f4ecdf;
+  --plan-muted: rgba(244, 236, 223, 0.7);
+  --plan-faint: rgba(244, 236, 223, 0.48);
   border-color: color-mix(in srgb, #d8bd94 36%, transparent);
   background:
     linear-gradient(
@@ -201,9 +207,9 @@ html[data-motion="reduced"] .plan-card--featured::after {
 /* The top tier's tag is an outline in its own metal, not a second white
    sticker: quieter than "Most popular", which is the right order. */
 .plan-card__tag--metal {
-  border: 1px solid color-mix(in srgb, #d8bd94 46%, transparent);
-  background: color-mix(in srgb, #d8bd94 12%, transparent);
-  color: color-mix(in srgb, #d8bd94 60%, var(--text-main));
+  border: 1px solid color-mix(in srgb, #d8bd94 58%, transparent);
+  background: color-mix(in srgb, #d8bd94 16%, transparent);
+  color: #ead6b5;
 }
 
 .plan-card__head {
@@ -213,16 +219,15 @@ html[data-motion="reduced"] .plan-card--featured::after {
   gap: 10px;
 }
 
-/* The name is the band's front door, and the one editorial note on the page:
-   a high-contrast serif against the grotesque used for every figure and
-   label. The serif is what makes the panel read as a printed membership card
-   instead of a game menu. */
+/* The name is set in the same grotesque as the page, a step quieter than the
+   figure. The price is the loudest thing in the card; the name only has to be
+   unmistakable. A second display face here is what read as a toy logo. */
 .plan-card__name {
-  font-family: var(--font-editorial, "Instrument Serif", Georgia, serif);
-  font-size: clamp(2rem, 2.4vw, 2.35rem);
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.02;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 1.9vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 
 .plan-card__summary {
@@ -385,17 +390,17 @@ html[data-motion="reduced"] .plan-card--featured::after {
 }
 
 .plan-card--prime .plan-card__features svg {
-  color: color-mix(in srgb, #d8bd94 85%, var(--text-main));
+  color: #d8bd94;
 }
 
 /* Prime's figure and its one button carry the same warm metal as its edge,
    so the most expensive plan reads as the most expensive — calmly. */
 .plan-card--prime .plan-card__amount {
-  color: color-mix(in srgb, #e7d3b3 62%, var(--text-main));
+  color: #ead6b5;
 }
 
 .plan-card--prime .plan-card__suffix {
-  color: color-mix(in srgb, #d8bd94 45%, var(--text-dim));
+  color: color-mix(in srgb, #e7d3b3 72%, transparent);
 }
 
 /* Only when it is a real action: a disabled "Your current plan" pill keeps its
@@ -410,6 +415,16 @@ html[data-motion="reduced"] .plan-card--featured::after {
   border-color: transparent;
   background: #e6cfaa;
   opacity: 1;
+}
+
+/* Even the disabled state has to stay legible on the metal panel. */
+.plan-card--prime .plan-card__cta--current {
+  border-color: color-mix(in srgb, #d8bd94 38%, transparent);
+  color: rgba(244, 236, 223, 0.62);
+}
+
+.plan-card--prime .plan-card__cta--current:hover {
+  border-color: color-mix(in srgb, #d8bd94 38%, transparent);
 }
 
 /* Neutral badge: a state label, not a decoration. */
@@ -1790,7 +1805,7 @@ html:not(.dark) .lock-veil {
   }
 
   .plan-card__name {
-    font-size: 1.9rem;
+    font-size: 1.45rem;
   }
 
   .plan-card__summary {
