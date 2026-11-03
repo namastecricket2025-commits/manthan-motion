@@ -83,19 +83,14 @@
   hyphens: none;
 }
 
-/* No wash, no bloom: the surface stays the same panel as its neighbours.
-   The only light on this card is the thin travelling rim below. */
-.plan-card--featured {
-  border-color: color-mix(in srgb, #4cc9f0 32%, var(--panel-line));
-  background: var(--panel);
-}
-
 /* The revolving glow around the most popular plan. A light band travels the
    whole rim of the card, driven by `--border-angle`, the property index.css
    registers for `border-rotate` — the animation this card was built around
    and that sat unused once the static top hairline replaced it. Two masked
-   rings share the loop: a wide, faint one for the bloom and a 1.5px line on
-   top of it for the edge itself. `mask-composite: exclude` (with the WebKit
+   rings share the loop: a faint bloom and a single hairline for the edge.
+   Nothing is painted where the band is not, so between passes the card is the
+   same neutral hairline and panel as its neighbours — there is no standing
+   blue edge under the light. `mask-composite: exclude` (with the WebKit
    spelling beside it) is what turns a filled box into a ring; `.about-quote`
    in about.css uses the same trick. */
 .plan-card--featured::before,
@@ -128,30 +123,32 @@
   pointer-events: none;
 }
 
-/* The bloom: a wider band of the same travelling light, held back in
-   opacity so the crisp rim on top of it reads as the lit edge. */
+/* The bloom: a slightly wider band of the same travelling light, held well
+   back in opacity so the crisp hairline on top of it reads as the lit edge. */
 .plan-card--featured::before {
-  padding: 6px;
-  opacity: 0.34;
+  padding: 4px;
+  opacity: 0.2;
 }
 
+/* The revolving line itself: one hairline, the same weight as the border it
+   replaces while it passes. */
 .plan-card--featured::after {
-  padding: 1.5px;
+  padding: 1px;
 }
 
-/* Motionless Mode and the system's reduced-motion setting park the loop;
-   the rim then holds a steady gradient instead of a frozen comet. */
+/* Motionless Mode and the system's reduced-motion setting park the loop. With
+   no motion the light goes with it rather than freezing into a standing blue
+   ring; the card keeps its lift and its badge to stand apart. */
 @media (prefers-reduced-motion: reduce) {
   .plan-card--featured::before,
   .plan-card--featured::after {
-    animation: none;
-    background: linear-gradient(150deg, #4cc9f0, #ff5a66 55%, #ff9ac8);
+    display: none;
   }
 }
 
 html[data-motion="reduced"] .plan-card--featured::before,
 html[data-motion="reduced"] .plan-card--featured::after {
-  background: linear-gradient(150deg, #4cc9f0, #ff5a66 55%, #ff9ac8);
+  display: none;
 }
 
 @media (min-width: 1024px) {
