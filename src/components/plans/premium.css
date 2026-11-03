@@ -112,9 +112,10 @@
   padding-top: 18px;
 }
 
-/* The top tier is warm metal, visibly so: a lit amber-black band with a
-   brass edge, one brass figure and one brass action. No glow; the glow is
-   the popular plan's job. */
+/* The top tier is warm metal, visibly so: black metal at night, parchment
+   and bronze by day (the light-theme block further down swaps the material).
+   One brass figure and one brass action; no glow, because the glow is the
+   popular plan's job. */
 .plan-card--prime {
   /* The metal card is dark in both themes, so it carries its own light
      palette. Without this, light mode inherits near-black body text onto the
@@ -417,6 +418,11 @@ html[data-motion="reduced"] .plan-card--featured::after {
   opacity: 1;
 }
 
+/* The internal hairline belongs to the metal too, not to the neutral card. */
+.plan-card--prime .plan-card__buy {
+  border-top-color: color-mix(in srgb, #d8bd94 30%, transparent);
+}
+
 /* Even the disabled state has to stay legible on the metal panel. */
 .plan-card--prime .plan-card__cta--current {
   border-color: color-mix(in srgb, #d8bd94 38%, transparent);
@@ -425,6 +431,55 @@ html[data-motion="reduced"] .plan-card--featured::after {
 
 .plan-card--prime .plan-card__cta--current:hover {
   border-color: color-mix(in srgb, #d8bd94 38%, transparent);
+}
+
+/* A dark metal slab is a hole in a white row, not a top tier. In the day
+   theme Prime changes material instead of just inverting its text: warm
+   parchment, bronze lettering, a deeper bronze action. Every text colour is
+   set here because the panel no longer shares the page's ink. */
+html[data-theme="light"] .plan-card--prime {
+  color: #2a2013;
+  --plan-muted: #5d4e38;
+  --plan-faint: #776246;
+  border-color: color-mix(in srgb, #a97f3f 62%, transparent);
+  background: linear-gradient(108deg, #fbf5e9 0%, #f5e9d4 58%, #efe1c8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__amount {
+  color: #8a6327;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__suffix {
+  color: #7a5a24;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__features svg {
+  color: #a67c35;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__tag--metal {
+  border-color: color-mix(in srgb, #a97f3f 52%, transparent);
+  background: color-mix(in srgb, #a97f3f 12%, transparent);
+  color: #7a5a24;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__cta:not(.plan-card__cta--current) {
+  background: #b98b45;
+  color: #241a0d;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__cta:not(.plan-card__cta--current):hover {
+  background: #c99a50;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__cta--current {
+  border-color: color-mix(in srgb, #a97f3f 38%, transparent);
+  color: #7a6547;
+}
+
+html[data-theme="light"] .plan-card--prime .plan-card__cta--current:hover {
+  border-color: color-mix(in srgb, #a97f3f 38%, transparent);
 }
 
 /* Neutral badge: a state label, not a decoration. */
