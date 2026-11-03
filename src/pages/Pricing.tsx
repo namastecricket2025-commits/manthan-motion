@@ -27,11 +27,11 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * One shelf, not four equal cards. Each plan is a full-width band read left
- * to right: name and promise, what it opens, the figure, the action. The
- * three columns hold the same line down all four bands. The popular band is
- * marked only by a hairline travelling its rim; Prime is warm metal; the pass
- * is cut by a dashed tear line. Nothing is a box with an empty top.
+ * One shelf, not four equal cards. Each plan is a full-width ticket: one
+ * content block on the left (name, promise, what it opens) and a price stub
+ * on the right, so the four figures and the four actions sit on the same
+ * lines down the list. The popular band is marked only by a hairline
+ * travelling its rim; Prime is warm metal; the pass's stub is perforated.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
@@ -141,29 +141,31 @@ function PlanCard({
         prime && "plan-card--prime",
       )}
     >
-      <div className="plan-card__head">
-        <h2 className="plan-card__name">{name}</h2>
-        {tag ? (
-          <span
-            className={cn("plan-card__tag", metalTag && "plan-card__tag--metal")}
-          >
-            {tag}
-          </span>
-        ) : null}
-      </div>
+      <div className="plan-card__main">
+        <div className="plan-card__head">
+          <h2 className="plan-card__name">{name}</h2>
+          {tag ? (
+            <span
+              className={cn("plan-card__tag", metalTag && "plan-card__tag--metal")}
+            >
+              {tag}
+            </span>
+          ) : null}
+        </div>
 
-      <p className="plan-card__summary">{summary}</p>
+        <p className="plan-card__summary">{summary}</p>
 
-      <div className="plan-card__includes">
-        <p className="plan-card__label">{includedLabel}</p>
-        <ul className="plan-card__features">
-          {features.map((feature) => (
-            <li key={feature}>
-              <Check aria-hidden="true" />
-              <span>{feature}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="plan-card__includes">
+          <p className="plan-card__label">{includedLabel}</p>
+          <ul className="plan-card__features">
+            {features.map((feature) => (
+              <li key={feature}>
+                <Check aria-hidden="true" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       <div className="plan-card__buy">
@@ -374,10 +376,9 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* Four bands, not four boxes: name and promise on the left, what
-              the plan opens in the middle, the figure and the action on the
-              right. The pass sits in the same list because it is bought
-              here, not on a schedule of its own. */}
+          {/* Four bands, not four boxes: one content block on the left and a
+              price stub on the right. The pass sits in the same list because
+              it is bought here, not on a schedule of its own. */}
           <div data-reveal className="mt-12">
             <div className="plans-shelf">
               <PlanCard
