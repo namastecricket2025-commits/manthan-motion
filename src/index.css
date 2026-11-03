@@ -60,6 +60,11 @@
     sans-serif;
   --font-poster: "Outfit", "Space Grotesk", "Inter", ui-sans-serif, system-ui,
     sans-serif;
+  /* One editorial note in an otherwise grotesque product: the plan names on
+     /pricing. A high-contrast serif reads as a printed membership card; the
+     heavy geometric sans it replaced read as a game logo. */
+  --font-editorial: "Instrument Serif", "Iowan Old Style", "Palatino Linotype",
+    Georgia, serif;
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   --color-chart-scale-pattern-color: var(----chart-scale-pattern-color);
