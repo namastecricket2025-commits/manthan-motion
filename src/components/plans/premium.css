@@ -44,13 +44,21 @@
 /* Not four equal boxes and not a hero-plus-sidebar: four full-width bands,
    read top to bottom like a membership list. Each band puts the name and the
    promise on the left, what it opens in the middle, and the figure and the
-   action on the right, so nothing sits alone in an empty corner. The popular
-   band is the one tinted and lit; Prime is warm metal; the pass is cut by a
-   dashed tear line. */
+   action on the right, on the same three lines from band to band. The lake
+   stays neutral — the popular band is marked only by the hairline travelling
+   its rim. Prime is warm metal; the pass is cut by a dashed tear line. */
 
 .plans-shelf {
   display: grid;
   gap: 12px;
+}
+
+/* All four bands are one height on desktop, so their top and bottom edges
+   fall on the same lines as well as their columns. */
+@media (min-width: 1024px) {
+  .plans-shelf {
+    grid-auto-rows: 1fr;
+  }
 }
 
 /* A plan card is a panel one step above the page: a shallow top-down light,
@@ -108,7 +116,9 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  align-self: center;
+  /* The figure starts on the same line as the name in every band, so the
+     four prices read as one column down the shelf. */
+  align-self: start;
 }
 
 /* Below the three-column shelf the band folds in two: the name and promise
@@ -124,30 +134,9 @@
       "includes includes";
   }
 
-  .plan-card__buy {
-    align-self: start;
-  }
-
   .plan-card__includes {
     margin-top: 18px;
   }
-}
-
-/* The popular band is the one surface allowed a colour: a real cool wash
-   that survives on a dark page, not a 6%-white grey pretending to be tinted. */
-.plan-card--featured {
-  border-color: color-mix(in srgb, #4cc9f0 34%, transparent);
-  background:
-    linear-gradient(
-      100deg,
-      rgba(76, 201, 240, 0.14),
-      rgba(76, 201, 240, 0.035) 58%,
-      transparent
-    ),
-    #0c1113;
-  box-shadow:
-    inset 0 1px 0 rgba(76, 201, 240, 0.35),
-    0 30px 70px -52px rgba(76, 201, 240, 0.55);
 }
 
 /* The top tier is warm metal, visibly so: a lit amber-black band with a
@@ -168,17 +157,14 @@
     0 30px 70px -52px rgba(0, 0, 0, 0.9);
 }
 
-/* The revolving glow around the most popular plan. A light band travels the
-   whole rim of the card, driven by `--border-angle`, the property index.css
-   registers for `border-rotate` — the animation this card was built around
-   and that sat unused once the static top hairline replaced it. Two masked
-   rings share the loop: a faint bloom and a single hairline for the edge.
-   Nothing is painted where the band is not, so between passes the card is the
-   same neutral hairline and panel as its neighbours — there is no standing
-   blue edge under the light. `mask-composite: exclude` (with the WebKit
-   spelling beside it) is what turns a filled box into a ring; `.about-quote`
-   in about.css uses the same trick. */
-.plan-card--featured::before,
+/* The one mark on the most popular plan: a single hairline travelling the
+   whole rim of the band, driven by `--border-angle`, the property index.css
+   registers for `border-rotate`. No bloom behind it, no tinted surface, no
+   coloured shadow — nothing is painted where the band is not, so between
+   passes the card is the same neutral hairline and panel as its neighbours.
+   `mask-composite: exclude` (with the WebKit spelling beside it) is what
+   turns a filled box into a ring; `.about-quote` in about.css uses the same
+   trick. */
 .plan-card--featured::after {
   content: "";
   position: absolute;
@@ -208,40 +194,22 @@
   pointer-events: none;
 }
 
-/* The bloom: a slightly wider band of the same travelling light, held well
-   back in opacity so the crisp hairline on top of it reads as the lit edge. */
-.plan-card--featured::before {
-  padding: 4px;
-  opacity: 0.2;
-}
-
-/* The revolving line itself: one hairline, the same weight as the border it
-   replaces while it passes. */
+/* One hairline, the same weight as the border it passes over. */
 .plan-card--featured::after {
   padding: 1px;
 }
 
 /* Motionless Mode and the system's reduced-motion setting park the loop. With
    no motion the light goes with it rather than freezing into a standing blue
-   ring; the card keeps its lift and its inline tag to stand apart. */
+   ring; the band keeps its inline tag to stand apart. */
 @media (prefers-reduced-motion: reduce) {
-  .plan-card--featured::before,
   .plan-card--featured::after {
     display: none;
   }
 }
 
-html[data-motion="reduced"] .plan-card--featured::before,
 html[data-motion="reduced"] .plan-card--featured::after {
   display: none;
-}
-
-/* The stage gives the hero its own measure at the top of the page, and a
-   little more room inside than the rows get. */
-@media (min-width: 1024px) {
-  .plan-card--featured {
-    padding: 32px 34px;
-  }
 }
 
 /* A status tag sits beside the name, where a reader is already looking. No
@@ -284,10 +252,6 @@ html[data-motion="reduced"] .plan-card--featured::after {
   line-height: 1;
 }
 
-.plan-card--featured .plan-card__name {
-  font-size: clamp(1.85rem, 2.4vw, 2.15rem);
-}
-
 .plan-card__summary {
   margin-top: 8px;
   max-width: 34ch;
@@ -311,10 +275,6 @@ html[data-motion="reduced"] .plan-card--featured::after {
   line-height: 0.9;
   letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
-}
-
-.plan-card--featured .plan-card__amount {
-  font-size: clamp(2.5rem, 3.4vw, 3.05rem);
 }
 
 .plan-card__suffix {
@@ -342,13 +302,22 @@ html[data-motion="reduced"] .plan-card--featured::after {
   margin-top: 16px;
 }
 
-/* The pass is cut out of the shelf: a dashed tear line between what it
-   opens and what it costs, where a paper ticket would perforate. */
+/* The pass is cut out of the shelf: a dashed tear line beside what it costs,
+   where a paper ticket would perforate. It is drawn outside the column so the
+   pass's figure and action keep the same line as every other band. */
 @media (min-width: 1024px) {
   .plan-card--pass .plan-card__buy {
+    position: relative;
+  }
+
+  .plan-card--pass .plan-card__buy::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -18px;
     border-left: 1px dashed
       color-mix(in srgb, var(--signal) 30%, var(--panel-line));
-    padding-left: 24px;
   }
 }
 
@@ -450,10 +419,6 @@ html[data-motion="reduced"] .plan-card--featured::after {
   flex: none;
   margin-top: 3px;
   color: color-mix(in srgb, var(--signal) 78%, var(--text-main));
-}
-
-.plan-card--featured .plan-card__features svg {
-  color: #4cc9f0;
 }
 
 .plan-card--prime .plan-card__features svg {
@@ -1872,10 +1837,6 @@ html:not(.dark) .lock-veil {
     font-size: 1.6rem;
   }
 
-  .plan-card--featured .plan-card__name {
-    font-size: 1.75rem;
-  }
-
   .plan-card__summary {
     max-width: none;
   }
@@ -1886,10 +1847,6 @@ html:not(.dark) .lock-veil {
 
   .plan-card__amount {
     font-size: 2.25rem;
-  }
-
-  .plan-card--featured .plan-card__amount {
-    font-size: 2.4rem;
   }
 
   .plan-card__includes {

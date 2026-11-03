@@ -29,8 +29,9 @@ import { Link } from "react-router";
  *
  * One shelf, not four equal cards. Each plan is a full-width band read left
  * to right: name and promise, what it opens, the figure, the action. The
- * popular band is the one tinted and lit; Prime is warm metal; the pass is
- * cut by a dashed tear line. Nothing is a box with an empty top.
+ * three columns hold the same line down all four bands. The popular band is
+ * marked only by a hairline travelling its rim; Prime is warm metal; the pass
+ * is cut by a dashed tear line. Nothing is a box with an empty top.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
@@ -89,7 +90,7 @@ function BillingSwitch({
   );
 }
 
-/** One plan on the stage: the lit hero, or one of the three rows beside it. */
+/** One plan band in the shelf. */
 function PlanCard({
   name,
   tag,
@@ -118,7 +119,7 @@ function PlanCard({
   priceSuffix: string;
   billingLine: string;
   hook?: string;
-  /** Only the large card lists its features; the rows stay scannable. */
+  /** What the plan opens, laid out in two short columns. */
   features: string[];
   includedLabel: string;
   free?: boolean;
