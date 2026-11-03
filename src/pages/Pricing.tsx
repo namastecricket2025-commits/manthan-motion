@@ -27,11 +27,11 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * Four cards in one panel. Free, EduVantage, Prime and the one-week Sprint
- * Pass are four cards with different surfaces rather than one table divided
- * into columns, because a price page should feel like choosing a room, not
- * reading a grid. The recommended plan is the only lit card; the pass sits
- * beside them as a card too — a fixed length and one price, no strip.
+ * One stage, not four equal cards. EduVantage takes the left column at full
+ * height under its slow travelling light; Free, the Sprint Pass and Prime
+ * stack beside it as three compact rows in three different materials —
+ * plain, torn, warm metal. A reader gets one recommendation and three
+ * alternatives without comparing four identical rectangles.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four

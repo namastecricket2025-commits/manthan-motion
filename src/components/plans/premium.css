@@ -38,31 +38,52 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Plans — four cards in one panel                                     */
+/* Plans — one lit plan, three ways in                                 */
 /* ------------------------------------------------------------------ */
 
-/* Four independent cards, not one sheet divided into columns. Each card can
-   then have its own surface and its own silhouette: Free is the open page,
-   EduVantage is the lit card, Prime is the quiet complete one, and the
-   Sprint Pass is the short one-off — a card in this same panel, because it
-   is bought alongside the term plans, not on a schedule of its own. */
+/* Not four equal boxes. EduVantage takes the left column at full height,
+   because it is the plan most students should leave with; Free, the Sprint
+   Pass and Prime stack beside it as three compact rows, each with its own
+   material — plain, torn, warm metal. The asymmetry is the design: the eye
+   lands on the one lit card, then reads the alternatives down the right
+   without comparing four identical rectangles. */
 
-.plan-grid {
+.plans-stage {
   display: grid;
   gap: 14px;
-}
-
-@media (min-width: 700px) {
-  .plan-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  grid-template-areas:
+    "feature"
+    "free"
+    "sprint"
+    "prime";
 }
 
 @media (min-width: 1024px) {
-  .plan-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .plans-stage {
+    grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+    grid-template-areas:
+      "feature free"
+      "feature sprint"
+      "feature prime";
     align-items: stretch;
+    gap: 16px;
   }
+}
+
+.plan-card--featured {
+  grid-area: feature;
+}
+
+.plan-card--free {
+  grid-area: free;
+}
+
+.plan-card--pass {
+  grid-area: sprint;
+}
+
+.plan-card--prime {
+  grid-area: prime;
 }
 
 /* A plan card is a panel one step above the page: a shallow top-down light,
@@ -74,24 +95,64 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  /* Visible so the popular flag can sit on the top edge without stealing a
-     row from every other card. */
+  /* Visible so the rim's bloom is never clipped at the corners. */
   overflow: visible;
   border: 1px solid var(--panel-line);
-  border-radius: 20px;
+  border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 44%),
     var(--panel);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 18px 40px -32px rgba(0, 0, 0, 0.9);
-  padding: 24px 22px 22px;
+    0 22px 48px -36px rgba(0, 0, 0, 0.95);
+  padding: 32px 30px 26px;
   /* The global rule lets prose break anywhere so long tokens cannot overflow;
      in a plan card that turned "EduVantage" into "EduVanta / ge". Keep the
      safety net for a genuinely long word, but break between words first. */
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+}
+
+/* The three alternatives are rows, not cards: a name, a figure, three lines
+   of copy and one action, arranged on a small grid so the price sits at the
+   top right and the button falls to the bottom edge. */
+.plan-card--rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas:
+    "head price"
+    "summary summary"
+    "billing billing"
+    "foot foot";
+  align-items: start;
+  column-gap: 20px;
+  border-radius: 18px;
+  padding: 22px 24px 20px;
+}
+
+.plan-card--rail .plan-card__head {
+  grid-area: head;
+}
+
+.plan-card--rail .plan-card__price {
+  grid-area: price;
+  justify-self: end;
+  margin-top: 0;
+}
+
+.plan-card--rail .plan-card__summary {
+  grid-area: summary;
+}
+
+.plan-card--rail .plan-card__billing {
+  grid-area: billing;
+}
+
+.plan-card--rail .plan-card__foot {
+  grid-area: foot;
+  align-self: end;
 }
 
 /* The popular plan is the one surface allowed a tint: one step lighter than
@@ -111,8 +172,8 @@
 }
 
 /* The most expensive plan stays calm, the way top tiers do on Linear, Vercel
-   and Cursor: no badge, no glow, no gold leaf. It simply sits higher — a
-   lighter, faintly warm panel with a brass hairline. */
+   and Cursor: no glow and no gold leaf. It sits a step higher instead — a
+   warmer panel, a brass hairline, one brass figure and one brass action. */
 .plan-card--prime {
   border-color: color-mix(in srgb, #d8bd94 24%, var(--panel-line));
   background:
@@ -182,7 +243,7 @@
 
 /* Motionless Mode and the system's reduced-motion setting park the loop. With
    no motion the light goes with it rather than freezing into a standing blue
-   ring; the card keeps its lift and its badge to stand apart. */
+   ring; the card keeps its lift and its inline tag to stand apart. */
 @media (prefers-reduced-motion: reduce) {
   .plan-card--featured::before,
   .plan-card--featured::after {
@@ -195,104 +256,143 @@ html[data-motion="reduced"] .plan-card--featured::after {
   display: none;
 }
 
+/* The stage gives the hero its own measure at the top of the page, and a
+   little more room inside than the rows get. */
 @media (min-width: 1024px) {
   .plan-card--featured {
-    margin-top: -10px;
-    padding-top: 34px;
-    padding-bottom: 34px;
+    padding: 38px 36px 30px;
   }
 }
 
-/* Status flags ride the card's top edge instead of holding a header row open
-   on every card. Nothing sits between the name and the top border, so the
-   cards have no dead band to explain — the name is the first thing in them. */
-.plan-card__flag {
-  position: absolute;
-  top: -9px;
-  left: 22px;
-  z-index: 2;
+/* A status tag sits beside the name, where a reader is already looking. No
+   pill, tab or rule is stacked above the name — the name is still the first
+   thing in the card. */
+.plan-card__tag {
   border-radius: 999px;
   background: var(--text-main);
-  padding: 3px 10px;
-  font-size: 9px;
+  padding: 4px 10px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--background);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-/* The top tier's flag is an outline in its own metal, not a second white
+/* The top tier's tag is an outline in its own metal, not a second white
    sticker: quieter than "Most popular", which is the right order. */
-.plan-card__flag--prime {
+.plan-card__tag--metal {
   border: 1px solid color-mix(in srgb, #d8bd94 46%, transparent);
-  background: color-mix(in srgb, #d8bd94 14%, var(--panel));
-  color: color-mix(in srgb, #d8bd94 58%, var(--text-main));
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  background: color-mix(in srgb, #d8bd94 12%, transparent);
+  color: color-mix(in srgb, #d8bd94 60%, var(--text-main));
 }
 
-.plan-card__intro {
-  margin-top: 0;
+.plan-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
 /* The name is the card's front door: poster face, heavy, tight — the one
    place in this section that is allowed to be loud. */
 .plan-card__name {
   font-family: var(--font-poster, "Space Grotesk", sans-serif);
-  font-size: clamp(1.45rem, 2.2vw, 1.8rem);
+  font-size: clamp(2.1rem, 3.1vw, 2.7rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.04;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.plan-card--rail .plan-card__name {
+  font-size: clamp(1.3rem, 1.6vw, 1.45rem);
+  letter-spacing: -0.025em;
 }
 
 .plan-card__summary {
-  margin-top: 6px;
-  min-height: 38px;
-  font-size: 12.5px;
+  margin-top: 10px;
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--text-dim);
+}
+
+.plan-card--rail .plan-card__summary {
+  margin-top: 7px;
+  font-size: 12.5px;
 }
 
 .plan-card__price {
   display: flex;
   align-items: flex-end;
-  gap: 7px;
-  margin-top: 22px;
+  gap: 8px;
+  margin-top: 26px;
+}
+
+.plan-card--rail .plan-card__price {
+  gap: 5px;
 }
 
 .plan-card__amount {
   display: block;
   font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: clamp(2.6rem, 4.6vw, 3.35rem);
+  font-size: clamp(3.1rem, 5.2vw, 4.15rem);
   font-weight: 650;
-  line-height: 0.95;
-  letter-spacing: -0.045em;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
 }
 
+.plan-card--rail .plan-card__amount {
+  font-size: clamp(1.85rem, 2.3vw, 2.1rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
 .plan-card__suffix {
-  padding-bottom: 5px;
+  padding-bottom: 4px;
   font-size: 11.5px;
   color: var(--text-dim);
   white-space: nowrap;
 }
 
 .plan-card__billing {
-  margin-top: 12px;
-  min-height: 18px;
-  font-size: 11.5px;
+  margin-top: 14px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--text-dim);
 }
 
+.plan-card--rail .plan-card__billing {
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+
 .plan-card__hook {
   margin-top: 4px;
-  min-height: 34px;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--text-dim);
+}
+
+/* The action belongs at the card's foot, not in its middle: the card reads
+   name → price → what it opens → button, and the button lines up across the
+   stage no matter how long each list is. */
+.plan-card__foot {
+  margin-top: auto;
+  padding-top: 30px;
+}
+
+.plan-card--rail .plan-card__foot {
+  padding-top: 22px;
+}
+
+/* A tear line above the pass's action: the one plan that expires is the one
+   card with a perforation, not a badge explaining itself. */
+.plan-card--pass .plan-card__foot {
+  margin-top: 18px;
+  border-top: 1px dashed
+    color-mix(in srgb, var(--signal) 26%, var(--panel-line));
+  padding-top: 16px;
 }
 
 .plan-card__cta {
@@ -300,8 +400,7 @@ html[data-motion="reduced"] .plan-card--featured::after {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 20px;
-  min-height: 44px;
+  min-height: 46px;
   width: 100%;
   cursor: pointer;
   border: 1px solid var(--panel-line-strong);
@@ -361,7 +460,7 @@ html[data-motion="reduced"] .plan-card--featured::after {
 }
 
 .plan-card__label {
-  margin-top: 22px;
+  margin-top: 30px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -382,10 +481,10 @@ html[data-motion="reduced"] .plan-card--featured::after {
 .plan-card__features li {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: 10px;
   border-top: 1px solid color-mix(in srgb, var(--panel-line) 55%, transparent);
-  padding: 9px 0;
-  font-size: 12.5px;
+  padding: 10px 0;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -1803,16 +1902,46 @@ html:not(.dark) .lock-veil {
 @media (max-width: 640px) {
   .plan-card {
     border-radius: 20px;
-    padding: 20px 18px 22px;
+    padding: 24px 20px 20px;
   }
 
-  .plan-card__flag {
-    left: 18px;
+  /* On a phone every plan is one column; the rail keeps the same order, it
+     only gives up the price's seat in the corner. */
+  .plan-card--rail {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "head"
+      "price"
+      "summary"
+      "billing"
+      "foot";
+    padding: 20px 18px 18px;
   }
 
-  .plan-card--featured {
-    padding-top: 24px;
-    padding-bottom: 24px;
+  .plan-card--rail .plan-card__price {
+    justify-self: start;
+    margin-top: 12px;
+  }
+
+  .plan-card--rail .plan-card__foot {
+    margin-top: 18px;
+  }
+
+  .plan-card--pass .plan-card__foot {
+    margin-top: 16px;
+  }
+
+  .plan-card__head {
+    gap: 9px;
+  }
+
+  .plan-card__name {
+    font-size: 1.85rem;
+  }
+
+  .plan-card--rail .plan-card__name {
+    font-size: 1.25rem;
   }
 
   .plan-card__price {
@@ -1820,7 +1949,15 @@ html:not(.dark) .lock-veil {
   }
 
   .plan-card__amount {
-    font-size: 2.3rem;
+    font-size: 2.85rem;
+  }
+
+  .plan-card--rail .plan-card__amount {
+    font-size: 1.9rem;
+  }
+
+  .plan-card__features li {
+    font-size: 12.5px;
   }
 
   .premium-select select {
