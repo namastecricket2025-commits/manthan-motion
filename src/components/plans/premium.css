@@ -65,69 +65,66 @@
   }
 }
 
+/* A plan card is a panel one step above the page: a shallow top-down light,
+   a 1px inner highlight on its top edge, and a soft drop that sits almost
+   entirely out of sight. Four identical black rectangles on a black page is
+   what made the row read as empty. */
 .plan-card {
   position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
-  overflow: hidden;
+  /* Visible so the popular flag can sit on the top edge without stealing a
+     row from every other card. */
+  overflow: visible;
   border: 1px solid var(--panel-line);
-  border-radius: 22px;
-  background: var(--panel);
-  padding: 24px 24px 26px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 44%),
+    var(--panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 18px 40px -32px rgba(0, 0, 0, 0.9);
+  padding: 24px 22px 22px;
   /* The global rule lets prose break anywhere so long tokens cannot overflow;
      in a plan card that turned "EduVantage" into "EduVanta / ge". Keep the
      safety net for a genuinely long word, but break between words first. */
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
-  /* One accent per card. It is spent sparingly — the tick beside the kicker,
-     the check marks, and on Prime the figure — so four cards can each have an
-     identity without the grid turning into four competing posters. */
-  --card-accent: color-mix(in srgb, var(--text-main) 55%, var(--text-dim));
 }
 
-.plan-card--free {
-  --card-accent: color-mix(in srgb, var(--text-main) 55%, var(--text-dim));
+/* The popular plan is the one surface allowed a tint: one step lighter than
+   the row, faintly cool, under the revolving rim. */
+.plan-card--featured {
+  border-color: color-mix(in srgb, #4cc9f0 22%, var(--panel-line));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #4cc9f0 8%, transparent),
+      transparent 52%
+    ),
+    color-mix(in srgb, var(--text-main) 7%, var(--panel));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #4cc9f0 30%, transparent),
+    0 18px 40px -32px rgba(0, 0, 0, 0.9);
 }
 
-.plan-card--pass {
-  --card-accent: #ff5a66;
-}
-
-.plan-card--popular {
-  --card-accent: #4cc9f0;
-}
-
+/* The most expensive plan stays calm, the way top tiers do on Linear, Vercel
+   and Cursor: no badge, no glow, no gold leaf. It simply sits higher — a
+   lighter, faintly warm panel with a brass hairline. */
 .plan-card--prime {
-  --card-accent: #d8bd94;
-}
-
-/* The most expensive plan is not the loudest one, it is the quietest lit
-   surface: warm graphite body, brass hairline, a single bright top edge.
-   It gets no second glow — that belongs to the popular card. */
-.plan-card--prime {
-  border-color: color-mix(in srgb, #d8bd94 26%, var(--panel-line));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, #d8bd94 7%, var(--panel)) 0%,
-    var(--panel) 48%
-  );
-}
-
-.plan-card--prime::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, #d8bd94 70%, transparent) 30%,
-    color-mix(in srgb, #d8bd94 70%, transparent) 70%,
-    transparent
-  );
-  pointer-events: none;
+  border-color: color-mix(in srgb, #d8bd94 24%, var(--panel-line));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #d8bd94 10%, transparent),
+      transparent 54%
+    ),
+    color-mix(in srgb, var(--text-main) 6%, var(--panel));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #d8bd94 26%, transparent),
+    0 18px 40px -32px rgba(0, 0, 0, 0.9);
 }
 
 /* The revolving glow around the most popular plan. A light band travels the
@@ -206,77 +203,38 @@ html[data-motion="reduced"] .plan-card--featured::after {
   }
 }
 
-/* The header row: the plan's shape on the left, status badges on the right.
-   A short accent tick leads the kicker, which is what gives each card its
-   identity now that the old editorial 01/02/03 indices are gone. */
-.plan-card__top {
-  display: flex;
-  min-height: 20px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.plan-card__kicker {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 7px;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  /* Half the accent, half the ink: stays legible on the paper themes as well
-     as on the black one. */
-  color: color-mix(in srgb, var(--card-accent) 52%, var(--text-main));
-  white-space: nowrap;
-}
-
-.plan-card__kicker::before {
-  content: "";
-  width: 14px;
-  height: 2px;
-  flex: none;
-  border-radius: 2px;
-  background: var(--card-accent);
-}
-
-.plan-card__tags {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.plan-card__badge {
-  display: inline-flex;
-  align-items: center;
+/* Status flags ride the card's top edge instead of holding a header row open
+   on every card. Nothing sits between the name and the top border, so the
+   cards have no dead band to explain — the name is the first thing in them. */
+.plan-card__flag {
+  position: absolute;
+  top: -9px;
+  left: 22px;
+  z-index: 2;
   border-radius: 999px;
   background: var(--text-main);
-  padding: 4px 10px;
-  font-size: 9.5px;
+  padding: 3px 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--background);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-.plan-card__badge--ghost {
-  border: 1px solid var(--panel-line);
-  background: transparent;
-  color: var(--text-dim);
-}
-
-/* A status tag in the plan's own metal rather than another white sticker. */
-.plan-card__badge--accent {
-  border: 1px solid color-mix(in srgb, var(--card-accent) 42%, transparent);
-  background: color-mix(in srgb, var(--card-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--card-accent) 55%, var(--text-main));
+/* The top tier's flag is an outline in its own metal, not a second white
+   sticker: quieter than "Most popular", which is the right order. */
+.plan-card__flag--prime {
+  border: 1px solid color-mix(in srgb, #d8bd94 46%, transparent);
+  background: color-mix(in srgb, #d8bd94 14%, var(--panel));
+  color: color-mix(in srgb, #d8bd94 58%, var(--text-main));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
 .plan-card__intro {
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 /* The name is the card's front door: poster face, heavy, tight — the one
@@ -301,13 +259,13 @@ html[data-motion="reduced"] .plan-card--featured::after {
   display: flex;
   align-items: flex-end;
   gap: 7px;
-  margin-top: 26px;
+  margin-top: 22px;
 }
 
 .plan-card__amount {
   display: block;
   font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: clamp(2.45rem, 4.2vw, 3rem);
+  font-size: clamp(2.6rem, 4.6vw, 3.35rem);
   font-weight: 650;
   line-height: 0.95;
   letter-spacing: -0.045em;
@@ -338,6 +296,10 @@ html[data-motion="reduced"] .plan-card--featured::after {
 }
 
 .plan-card__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin-top: 20px;
   min-height: 44px;
   width: 100%;
@@ -353,6 +315,21 @@ html[data-motion="reduced"] .plan-card--featured::after {
     background 200ms ease,
     border-color 200ms ease,
     opacity 200ms ease;
+}
+
+.plan-card__cta svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  transition: transform 200ms var(--ease-momentum);
+}
+
+.plan-card__cta:hover svg {
+  transform: translateX(3px);
+}
+
+.plan-card__cta--current svg {
+  display: none;
 }
 
 .plan-card__cta:hover {
@@ -383,14 +360,8 @@ html[data-motion="reduced"] .plan-card--featured::after {
   border-color: var(--panel-line);
 }
 
-.plan-card__rule {
-  height: 1px;
-  margin-top: 24px;
-  background: var(--panel-line);
-}
-
 .plan-card__label {
-  margin-top: 16px;
+  margin-top: 22px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -398,19 +369,28 @@ html[data-motion="reduced"] .plan-card--featured::after {
   color: var(--text-dim);
 }
 
+/* Hairline-separated rows: the feature list reads as a spec sheet rather than
+   five loose lines, and the rules give the lower half of the card structure. */
 .plan-card__features {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 0;
+  margin-top: 8px;
+  border-top: 1px solid var(--panel-line);
 }
 
 .plan-card__features li {
   display: flex;
   align-items: flex-start;
   gap: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--panel-line) 55%, transparent);
+  padding: 9px 0;
   font-size: 12.5px;
-  line-height: 1.5;
+  line-height: 1.45;
+}
+
+.plan-card__features li:first-child {
+  border-top: 0;
 }
 
 .plan-card__features svg {
@@ -423,10 +403,6 @@ html[data-motion="reduced"] .plan-card--featured::after {
 
 .plan-card--featured .plan-card__features svg {
   color: #4cc9f0;
-}
-
-.plan-card--pass .plan-card__features svg {
-  color: color-mix(in srgb, #ff5a66 64%, var(--text-main));
 }
 
 .plan-card--prime .plan-card__features svg {
@@ -1828,6 +1804,10 @@ html:not(.dark) .lock-veil {
   .plan-card {
     border-radius: 20px;
     padding: 20px 18px 22px;
+  }
+
+  .plan-card__flag {
+    left: 18px;
   }
 
   .plan-card--featured {

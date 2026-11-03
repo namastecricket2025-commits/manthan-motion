@@ -19,7 +19,7 @@ import {
 } from "@/lib/plans";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, Minus } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Minus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Fragment, useState } from "react";
 import { Link } from "react-router";
@@ -92,10 +92,8 @@ function BillingSwitch({
 
 /** One subscription card. */
 function PlanColumn({
-  kicker,
-  tone,
-  badge,
   name,
+  flag,
   summary,
   price,
   priceSuffix,
@@ -104,16 +102,14 @@ function PlanColumn({
   features,
   includedLabel,
   featured,
+  prime,
   current,
   onChoose,
   ctaLabel,
 }: {
-  /** The plan's shape in a few words — free forever, 7-day pass, monthly. */
-  kicker: string;
-  tone: "free" | "pass" | "popular" | "prime";
-  /** A standing status tag, independent of the "popular" badge. */
-  badge?: string;
   name: string;
+  /** A status tag that rides the card's top edge instead of a header row. */
+  flag?: string;
   summary: string;
   price: number;
   priceSuffix: string;
@@ -122,6 +118,8 @@ function PlanColumn({
   features: string[];
   includedLabel: string;
   featured?: boolean;
+  /** The top tier: the same card, one step lighter and one shade warmer. */
+  prime?: boolean;
   current: boolean;
   onChoose?: () => void;
   ctaLabel: string;
@@ -130,28 +128,18 @@ function PlanColumn({
     <article
       className={cn(
         "plan-card",
-        `plan-card--${tone}`,
         featured && "plan-card--featured",
+        prime && "plan-card--prime",
       )}
     >
-      <div className="plan-card__top">
-        <p className="plan-card__kicker">{kicker}</p>
-        <span className="plan-card__tags">
-          {badge ? (
-            <span className="plan-card__badge plan-card__badge--accent">
-              {badge}
-            </span>
-          ) : null}
-          {featured ? (
-            <span className="plan-card__badge">Most popular</span>
-          ) : null}
-          {current ? (
-            <span className="plan-card__badge plan-card__badge--ghost">
-              Current
-            </span>
-          ) : null}
+      {/* Rides the top edge rather than costing every card a header row. */}
+      {flag ? (
+        <span
+          className={cn("plan-card__flag", prime && "plan-card__flag--prime")}
+        >
+          {flag}
         </span>
-      </div>
+      ) : null}
 
       <div className="plan-card__intro">
         <h2 className="plan-card__name">{name}</h2>
@@ -189,10 +177,15 @@ function PlanColumn({
           current && "plan-card__cta--current",
         )}
       >
-        {current ? "Your current plan" : ctaLabel}
+        {current ? (
+          "Your current plan"
+        ) : (
+          <>
+            {ctaLabel}
+            <ArrowRight aria-hidden="true" />
+          </>
+        )}
       </button>
-
-      <div className="plan-card__rule" />
 
       <p className="plan-card__label">{includedLabel}</p>
       <ul className="plan-card__features">
@@ -373,13 +366,12 @@ export default function Pricing() {
           <div data-reveal className="mt-12">
             <div className="plan-grid">
               <PlanColumn
-                kicker="Free forever"
-                tone="free"
                 name={FREE_PLAN.name}
                 summary={FREE_PLAN.summary}
                 price={0}
                 priceSuffix="/ forever"
                 billingLine="No card, no trial clock."
+                hook="60,000 tokens a day, refreshed every morning."
                 features={FREE_PLAN.features}
                 includedLabel="What you get"
                 current={plan === "free"}
@@ -394,8 +386,6 @@ export default function Pricing() {
                 return (
                   <PlanColumn
                     key={tier.id}
-                    kicker="7-day pass"
-                    tone="pass"
                     name={tier.name}
                     summary={tier.summary}
                     price={tier.price}
@@ -412,8 +402,7 @@ export default function Pricing() {
               })}
 
               <PlanColumn
-                kicker="Monthly"
-                tone="popular"
+                flag="Most popular"
                 name={featuredTier.name}
                 summary={featuredTier.summary}
                 price={tierDisplay(featuredTier).price}
@@ -429,9 +418,8 @@ export default function Pricing() {
               />
 
               <PlanColumn
-                kicker="All access"
-                tone="prime"
-                badge="Top tier"
+                flag="Top tier"
+                prime
                 name={primeTier.name}
                 summary={primeTier.summary}
                 price={tierDisplay(primeTier).price}
