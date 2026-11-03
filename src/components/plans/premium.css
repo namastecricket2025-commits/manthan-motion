@@ -81,6 +81,53 @@
   overflow-wrap: normal;
   word-break: normal;
   hyphens: none;
+  /* One accent per card. It is spent sparingly — the tick beside the kicker,
+     the check marks, and on Prime the figure — so four cards can each have an
+     identity without the grid turning into four competing posters. */
+  --card-accent: color-mix(in srgb, var(--text-main) 55%, var(--text-dim));
+}
+
+.plan-card--free {
+  --card-accent: color-mix(in srgb, var(--text-main) 55%, var(--text-dim));
+}
+
+.plan-card--pass {
+  --card-accent: #ff5a66;
+}
+
+.plan-card--popular {
+  --card-accent: #4cc9f0;
+}
+
+.plan-card--prime {
+  --card-accent: #d8bd94;
+}
+
+/* The most expensive plan is not the loudest one, it is the quietest lit
+   surface: warm graphite body, brass hairline, a single bright top edge.
+   It gets no second glow — that belongs to the popular card. */
+.plan-card--prime {
+  border-color: color-mix(in srgb, #d8bd94 26%, var(--panel-line));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #d8bd94 7%, var(--panel)) 0%,
+    var(--panel) 48%
+  );
+}
+
+.plan-card--prime::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, #d8bd94 70%, transparent) 30%,
+    color-mix(in srgb, #d8bd94 70%, transparent) 70%,
+    transparent
+  );
+  pointer-events: none;
 }
 
 /* The revolving glow around the most popular plan. A light band travels the
@@ -159,15 +206,39 @@ html[data-motion="reduced"] .plan-card--featured::after {
   }
 }
 
-/* The badge row: kept on every card so the names and prices below line up
-   across the panel, even where there is no badge to show. Badges sit on the
-   right — the old editorial 01/02/03 indices are gone. */
+/* The header row: the plan's shape on the left, status badges on the right.
+   A short accent tick leads the kicker, which is what gives each card its
+   identity now that the old editorial 01/02/03 indices are gone. */
 .plan-card__top {
   display: flex;
-  min-height: 24px;
+  min-height: 20px;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.plan-card__kicker {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* Half the accent, half the ink: stays legible on the paper themes as well
+     as on the black one. */
+  color: color-mix(in srgb, var(--card-accent) 52%, var(--text-main));
+  white-space: nowrap;
+}
+
+.plan-card__kicker::before {
+  content: "";
+  width: 14px;
+  height: 2px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--card-accent);
 }
 
 .plan-card__tags {
@@ -197,20 +268,29 @@ html[data-motion="reduced"] .plan-card--featured::after {
   color: var(--text-dim);
 }
 
-.plan-card__intro {
-  margin-top: 22px;
+/* A status tag in the plan's own metal rather than another white sticker. */
+.plan-card__badge--accent {
+  border: 1px solid color-mix(in srgb, var(--card-accent) 42%, transparent);
+  background: color-mix(in srgb, var(--card-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--card-accent) 55%, var(--text-main));
 }
 
+.plan-card__intro {
+  margin-top: 14px;
+}
+
+/* The name is the card's front door: poster face, heavy, tight — the one
+   place in this section that is allowed to be loud. */
 .plan-card__name {
-  font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: clamp(1.2rem, 2vw, 1.45rem);
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  font-family: var(--font-poster, "Space Grotesk", sans-serif);
+  font-size: clamp(1.45rem, 2.2vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
 }
 
 .plan-card__summary {
-  margin-top: 7px;
+  margin-top: 6px;
   min-height: 38px;
   font-size: 12.5px;
   line-height: 1.55;
@@ -343,6 +423,38 @@ html[data-motion="reduced"] .plan-card--featured::after {
 
 .plan-card--featured .plan-card__features svg {
   color: #4cc9f0;
+}
+
+.plan-card--pass .plan-card__features svg {
+  color: color-mix(in srgb, #ff5a66 64%, var(--text-main));
+}
+
+.plan-card--prime .plan-card__features svg {
+  color: color-mix(in srgb, #d8bd94 85%, var(--text-main));
+}
+
+/* Prime's figure and its one button carry the same warm metal as its edge,
+   so the most expensive plan reads as the most expensive — calmly. */
+.plan-card--prime .plan-card__amount {
+  color: color-mix(in srgb, #e7d3b3 62%, var(--text-main));
+}
+
+.plan-card--prime .plan-card__suffix {
+  color: color-mix(in srgb, #d8bd94 45%, var(--text-dim));
+}
+
+/* Only when it is a real action: a disabled "Your current plan" pill keeps its
+   dashed neutral treatment. */
+.plan-card--prime .plan-card__cta:not(.plan-card__cta--current) {
+  border-color: transparent;
+  background: #d8bd94;
+  color: #1d1710;
+}
+
+.plan-card--prime .plan-card__cta:not(.plan-card__cta--current):hover {
+  border-color: transparent;
+  background: #e6cfaa;
+  opacity: 1;
 }
 
 /* Neutral badge: a state label, not a decoration. */

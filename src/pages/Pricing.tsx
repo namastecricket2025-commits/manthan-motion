@@ -92,6 +92,9 @@ function BillingSwitch({
 
 /** One subscription card. */
 function PlanColumn({
+  kicker,
+  tone,
+  badge,
   name,
   summary,
   price,
@@ -105,6 +108,11 @@ function PlanColumn({
   onChoose,
   ctaLabel,
 }: {
+  /** The plan's shape in a few words — free forever, 7-day pass, monthly. */
+  kicker: string;
+  tone: "free" | "pass" | "popular" | "prime";
+  /** A standing status tag, independent of the "popular" badge. */
+  badge?: string;
   name: string;
   summary: string;
   price: number;
@@ -119,9 +127,21 @@ function PlanColumn({
   ctaLabel: string;
 }) {
   return (
-    <article className={cn("plan-card", featured && "plan-card--featured")}>
+    <article
+      className={cn(
+        "plan-card",
+        `plan-card--${tone}`,
+        featured && "plan-card--featured",
+      )}
+    >
       <div className="plan-card__top">
+        <p className="plan-card__kicker">{kicker}</p>
         <span className="plan-card__tags">
+          {badge ? (
+            <span className="plan-card__badge plan-card__badge--accent">
+              {badge}
+            </span>
+          ) : null}
           {featured ? (
             <span className="plan-card__badge">Most popular</span>
           ) : null}
@@ -353,6 +373,8 @@ export default function Pricing() {
           <div data-reveal className="mt-12">
             <div className="plan-grid">
               <PlanColumn
+                kicker="Free forever"
+                tone="free"
                 name={FREE_PLAN.name}
                 summary={FREE_PLAN.summary}
                 price={0}
@@ -372,6 +394,8 @@ export default function Pricing() {
                 return (
                   <PlanColumn
                     key={tier.id}
+                    kicker="7-day pass"
+                    tone="pass"
                     name={tier.name}
                     summary={tier.summary}
                     price={tier.price}
@@ -388,6 +412,8 @@ export default function Pricing() {
               })}
 
               <PlanColumn
+                kicker="Monthly"
+                tone="popular"
                 name={featuredTier.name}
                 summary={featuredTier.summary}
                 price={tierDisplay(featuredTier).price}
@@ -403,6 +429,9 @@ export default function Pricing() {
               />
 
               <PlanColumn
+                kicker="All access"
+                tone="prime"
+                badge="Top tier"
                 name={primeTier.name}
                 summary={primeTier.summary}
                 price={tierDisplay(primeTier).price}

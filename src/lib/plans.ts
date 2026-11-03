@@ -93,7 +93,7 @@ export const PLAN_TIERS: PlanTier[] = [
   {
     id: "prime",
     name: "Manthan Prime",
-    summary: "The comprehensive elite tier.",
+    summary: "Every workspace and every ceiling, in one plan.",
     price: 349,
     unit: "month",
     allowance: "500,000 monthly tokens",
