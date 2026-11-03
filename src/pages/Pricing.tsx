@@ -27,11 +27,10 @@ import { Link } from "react-router";
 /**
  * Plans and pricing.
  *
- * One shelf, not four equal cards. Each plan is a full-width ticket: one
- * content block on the left (name, promise, what it opens) and a price stub
- * on the right, so the four figures and the four actions sit on the same
- * lines down the list. The popular band is marked only by a hairline
- * travelling its rim; Prime is warm metal; the pass's stub is perforated.
+ * Four panels in one row. Each card stacks the promise and what it opens
+ * above a price stub, so the four names, figures and actions can be read in
+ * one sweep. The popular band is marked only by a hairline travelling its
+ * rim; Prime is warm metal; the pass's stub is perforated.
  *
  * One billing switch sits above the cards and moves every term plan at once,
  * because three separate switches on three cards made the reader compare four
@@ -90,7 +89,7 @@ function BillingSwitch({
   );
 }
 
-/** One plan band in the shelf. */
+/** One plan panel in the row. */
 function PlanCard({
   name,
   tag,
@@ -119,7 +118,7 @@ function PlanCard({
   priceSuffix: string;
   billingLine: string;
   hook?: string;
-  /** What the plan opens, laid out in two short columns. */
+  /** What the plan opens, one inclusion per line. */
   features: string[];
   includedLabel: string;
   free?: boolean;
@@ -188,7 +187,11 @@ function PlanCard({
         </div>
 
         <p className="plan-card__billing">{billingLine}</p>
-        {hook ? <p className="plan-card__hook">{hook}</p> : null}
+        {/* Every card reserves the same two hook lines, so the prices and
+            actions stay on one line across the row. */}
+        <p className="plan-card__hook" aria-hidden={hook ? undefined : true}>
+          {hook ?? "\u00A0"}
+        </p>
 
         <div className="plan-card__foot">
           <button
@@ -376,9 +379,9 @@ export default function Pricing() {
             <BillingSwitch duration={duration} onSelect={setDuration} />
           </div>
 
-          {/* Four bands, not four boxes: one content block on the left and a
-              price stub on the right. The pass sits in the same list because
-              it is bought here, not on a schedule of its own. */}
+          {/* Four panels in one row, not a stacked list. The pass sits in the
+              same row because it is bought here, not on a schedule of its
+              own. */}
           <div data-reveal className="mt-12">
             <div className="plans-shelf">
               <PlanCard

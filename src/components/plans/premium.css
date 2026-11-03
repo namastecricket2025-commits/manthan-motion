@@ -38,51 +38,51 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Plans — one shelf, four bands                                       */
+/* Plans — four panels, one row                                        */
 /* ------------------------------------------------------------------ */
 
-/* Not four equal boxes and not a hero-plus-sidebar: four full-width tickets,
-   read top to bottom like a membership list. Each band is one content block
-   on the left and a price stub on the right, so the name, the promise, the
-   inclusions, the figure and the action all sit on the same lines from band
-   to band. The shelf stays neutral — the popular band is marked only by the
-   hairline travelling its rim. Prime is warm metal; the pass's stub is
-   perforated. */
+/* Four panels in one row, read left to right like a membership wall. Each
+   card stacks the promise and the inclusions above a price stub, so the four
+   names, the four figures and the four actions sit on the same lines. The
+   shelf stays neutral — the popular band is marked only by the hairline
+   travelling its rim. Prime is warm metal; the pass's stub is perforated. */
 
 .plans-shelf {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
-/* All four bands are one height on desktop, so their top and bottom edges
-   fall on the same lines as well as their columns. */
-@media (min-width: 1024px) {
+/* Two panels across on a tablet, all four on a desktop, so the four prices
+   are read in one sweep instead of four scrolls. */
+@media (min-width: 720px) {
   .plans-shelf {
-    grid-auto-rows: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* A plan band is a ticket, not a table. One content block on the left —
-   name, promise, inclusions — and a price stub on the right, cut off by the
-   same hairline as a ticket's perforation. The stub is why the four prices
-   and the four actions sit on the same lines without any of the middle
-   column reading as a spreadsheet cell. */
+@media (min-width: 1024px) {
+  .plans-shelf {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
+/* One panel: name, promise and inclusions in the body, then a price stub
+   under a hairline. The stub is pinned to the bottom of the card, so the four
+   prices and the four actions line up across the row. */
 .plan-card {
   --plan-muted: color-mix(in srgb, var(--text-main) 60%, transparent);
   --plan-faint: color-mix(in srgb, var(--text-main) 46%, transparent);
   position: relative;
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) 238px;
-  grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: "main buy";
-  align-items: stretch;
+  flex-direction: column;
   /* Visible so the rim is never clipped at the corners. */
   overflow: visible;
   border: 1px solid var(--panel-line-strong);
   border-radius: 20px;
   background: var(--panel);
-  padding: 26px 28px;
+  padding: 24px 22px;
   /* The global rule lets prose break anywhere so long tokens cannot overflow;
      in a plan card that turned "EduVantage" into "EduVanta / ge". Keep the
      safety net for a genuinely long word, but break between words first. */
@@ -92,9 +92,8 @@
 }
 
 .plan-card__main {
-  grid-area: main;
   min-width: 0;
-  padding-right: 30px;
+  padding-bottom: 20px;
 }
 
 .plan-card__includes {
@@ -102,31 +101,15 @@
   min-width: 0;
 }
 
-/* The stub. The figure starts on the same line as the name in every band and
-   the action ends on the same line as every other action, so the shelf reads
-   as four rows of one object. */
+/* The stub. Pinned to the bottom of the panel, so the action ends on the
+   same line in every card and the four prices read as one row. */
 .plan-card__buy {
-  grid-area: buy;
   display: flex;
   min-width: 0;
   flex-direction: column;
-  align-self: stretch;
-  border-left: 1px solid var(--panel-line);
-  padding-left: 28px;
-}
-
-@media (max-width: 1023px) {
-  .plan-card {
-    grid-template-columns: minmax(0, 1fr) 210px;
-  }
-
-  .plan-card__main {
-    padding-right: 22px;
-  }
-
-  .plan-card__buy {
-    padding-left: 22px;
-  }
+  margin-top: auto;
+  border-top: 1px solid var(--panel-line);
+  padding-top: 18px;
 }
 
 /* The top tier is warm metal, visibly so: a lit amber-black band with a
@@ -258,7 +241,7 @@ html[data-motion="reduced"] .plan-card--featured::after {
 .plan-card__amount {
   display: block;
   font-family: var(--font-display, "Space Grotesk", sans-serif);
-  font-size: clamp(2.35rem, 3vw, 2.8rem);
+  font-size: clamp(2rem, 2.6vw, 2.6rem);
   font-weight: 650;
   line-height: 0.9;
   letter-spacing: -0.05em;
@@ -281,6 +264,7 @@ html[data-motion="reduced"] .plan-card--featured::after {
 
 .plan-card__hook {
   margin-top: 3px;
+  min-height: 33px;
   font-size: 11px;
   line-height: 1.5;
   color: var(--plan-faint);
@@ -291,12 +275,12 @@ html[data-motion="reduced"] .plan-card--featured::after {
   padding-top: 22px;
 }
 
-/* The pass is the one ticket actually torn off: its stub is perforated in
-   the same place, so the dashed line reads as the edge of the ticket rather
-   than a decoration beside it. */
+/* The pass is the one ticket actually torn off: its stub is perforated at
+   the top, so the dashed line reads as the edge of the ticket rather than a
+   decoration beside it. */
 .plan-card--pass .plan-card__buy {
-  border-left-style: dashed;
-  border-left-color: color-mix(in srgb, var(--signal) 30%, var(--panel-line));
+  border-top-style: dashed;
+  border-top-color: color-mix(in srgb, var(--signal) 30%, var(--panel-line));
 }
 
 .plan-card__cta {
@@ -372,12 +356,11 @@ html[data-motion="reduced"] .plan-card--featured::after {
   color: var(--plan-faint);
 }
 
-/* Two short columns of inclusions under the promise, so the left side is one
-   block of reading instead of a spec table. */
+/* One column of inclusions under the promise: in a panel this narrow, two
+   columns would break every line at the halfway mark. */
 .plan-card__features {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px 22px;
+  grid-template-columns: minmax(0, 1fr);
   margin-top: 7px;
 }
 
@@ -1796,17 +1779,8 @@ html:not(.dark) .lock-veil {
         portrait is the primary use case. */
 @media (max-width: 640px) {
   .plan-card {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    grid-template-areas:
-      "main"
-      "buy";
     border-radius: 18px;
     padding: 22px 20px;
-  }
-
-  .plan-card__main {
-    padding-right: 0;
   }
 
   .plan-card__head {
@@ -1821,20 +1795,7 @@ html:not(.dark) .lock-veil {
     max-width: none;
   }
 
-  .plan-card__buy {
-    margin-top: 20px;
-    border-left: 0;
-    border-top: 1px solid var(--panel-line);
-    padding-top: 18px;
-    padding-left: 0;
-  }
-
-  .plan-card--pass .plan-card__buy {
-    border-top-style: dashed;
-  }
-
   .plan-card__foot {
-    margin-top: 0;
     padding-top: 16px;
   }
 
@@ -1844,10 +1805,6 @@ html:not(.dark) .lock-veil {
 
   .plan-card__includes {
     margin-top: 20px;
-  }
-
-  .plan-card__features {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .premium-select select {
