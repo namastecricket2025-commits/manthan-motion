@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Phone,
 } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -18,6 +19,21 @@ import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 interface AuthProps {
   redirectAfterAuth?: string;
 }
+
+/* The dial codes most of our students need first. The number itself is kept
+   separate so changing the country never edits what they already typed. */
+const DIAL_CODES = [
+  { code: "+91", label: "IN +91" },
+  { code: "+977", label: "NP +977" },
+  { code: "+94", label: "LK +94" },
+  { code: "+880", label: "BD +880" },
+  { code: "+92", label: "PK +92" },
+  { code: "+971", label: "AE +971" },
+  { code: "+1", label: "US/CA +1" },
+  { code: "+44", label: "UK +44" },
+  { code: "+65", label: "SG +65" },
+  { code: "+61", label: "AU +61" },
+] as const;
 
 function resolveRedirectAfterAuth(
   returnTo: string | null,
@@ -93,6 +109,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const [nameValue, setNameValue] = useState("");
   const askedRef = useRef(false);
 
+  /* Phone sign-in is a two-screen detour from the password form. The number
+     is held in E.164 (`+919876543210`) once a code has been requested; the
+     national digits stay separate so changing the country code is harmless. */
+  const [phoneStep, setPhoneStep] = useState<"idle" | "enter" | "code">(
+    "idle",
+  );
+  const [dialCode, setDialCode] = useState<string>("+91");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resendIn, setResendIn] = useState(0);
+  const [phoneRequest, setPhoneRequest] = useState(0);
+
   // "Forgot password?" links come back here marked as a recovery trip, and the
   // student chooses a new password before they are let into the app.
   const wantsRecovery = searchParams.get("mode") === "recovery";
@@ -119,6 +148,52 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     go,
     redirect,
   ]);
+
+  /* Supabase sends one code a minute. The countdown mirrors that limit so the
+     resend button never spends an SMS faster than the project allows. */
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendIn]);
+
+  /* Chrome on Android can read a sign-in SMS out of the message stream and
+     hand over the digits, but only when the SMS contains this page's origin
+     in the `@domain #code` form. When it does, the field fills itself; every
+     other browser falls back to the `one-time-code` keyboard suggestion. */
+  useEffect(() => {
+    if (phoneStep !== "code") return;
+    if (!("OTPCredential" in window)) return;
+    const container = navigator.credentials as unknown as
+      | {
+          get: (options: {
+            otp: { transport: string[] };
+            signal: AbortSignal;
+          }) => Promise<{ code?: string } | null>;
+        }
+      | undefined;
+    if (!container) return;
+
+    const controller = new AbortController();
+    /* Chrome's SMS window is about five minutes; keep listening that long so
+       a delayed carrier delivery still fills the field. */
+    const timer = window.setTimeout(() => controller.abort(), 5 * 60_000);
+    void container
+      .get({ otp: { transport: ["sms"] }, signal: controller.signal })
+      .then((credential) => {
+        const code = credential?.code?.replace(/\D/g, "").slice(0, 6);
+        if (code?.length === 6) setOtp(code);
+      })
+      .catch(() => {
+        /* No matching SMS, permission denied, or unsupported: the visible
+           field still accepts typing and the platform's autofill. */
+      });
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [phoneStep, phoneRequest]);
 
   /** Where Supabase should send the browser back to after Google / email links. */
   const returnUrl = `${window.location.origin}/auth?returnTo=${encodeURIComponent(redirect)}`;
@@ -215,6 +290,107 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       );
     }
     // On success the browser leaves the page for Google, so nothing else to do.
+  }
+
+  /* --------------- phone (SMS OTP) --------------- */
+
+  /**
+   * Supabase sends the text and verifies the code, so a phone account gets the
+   * same session, JWT and Convex identity as every other account. The Supabase
+   * project needs Phone auth enabled and an SMS provider configured; until
+   * then the call returns a provider error, which we translate below.
+   */
+  function phoneErrorMessage(message: string) {
+    if (/(phone|sms).*(disabled|not enabled)|provider.*disabled/i.test(message)) {
+      return "Phone sign-in isn't enabled for this project yet. Use email for now.";
+    }
+    if (/invalid.*phone|phone.*invalid/i.test(message)) {
+      return "That number doesn't look right. Check the country code and digits.";
+    }
+    if (/rate limit|too many|security purposes/i.test(message)) {
+      return "Too many code requests. Wait a minute, then try again.";
+    }
+    if (/sms|twilio|send|confirmation/i.test(message)) {
+      return "We couldn't send the text. Check the number and try again.";
+    }
+    return message;
+  }
+
+  function normalizedPhone() {
+    const national = phoneInput.replace(/\D/g, "").replace(/^0+/, "");
+    return { national, e164: `${dialCode}${national}` };
+  }
+
+  async function requestPhoneCode(e164: string): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const { error: sendError } = await supabase.auth.signInWithOtp({
+      phone: e164,
+    });
+    setBusy(false);
+    if (sendError) {
+      setError(phoneErrorMessage(sendError.message));
+      return false;
+    }
+    setPhoneNumber(e164);
+    setPhoneStep("code");
+    setOtp("");
+    setResendIn(60);
+    /* A resend should listen for the new SMS, not the one already in flight. */
+    setPhoneRequest((n) => n + 1);
+    return true;
+  }
+
+  async function handlePhoneSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const { national, e164 } = normalizedPhone();
+    const digits = e164.replace(/\D/g, "");
+    if (national.length < 6 || digits.length > 15) {
+      setError("Enter a valid phone number, including the country code.");
+      return;
+    }
+    setPhoneInput(national);
+    await requestPhoneCode(e164);
+  }
+
+  async function handleResendPhoneCode() {
+    if (busy || resendIn > 0) return;
+    if (!phoneNumber) {
+      setPhoneStep("enter");
+      return;
+    }
+    const sent = await requestPhoneCode(phoneNumber);
+    if (sent) setNotice("A new code is on its way.");
+  }
+
+  async function handlePhoneVerify(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    if (!/^\d{6}$/.test(otp)) {
+      setError("Enter the 6-digit code from the SMS.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      phone: phoneNumber,
+      token: otp,
+      type: "sms",
+    });
+    setBusy(false);
+    if (verifyError) {
+      setError(
+        /expired|invalid|token/i.test(verifyError.message)
+          ? "That code is incorrect or has expired. Request a new one."
+          : verifyError.message,
+      );
+      return;
+    }
+    /* The session is live now. The effect above sends a named account on to
+       `redirect`, or shows the one-field name step for a brand-new number. */
   }
 
   const submitting = busy;
@@ -367,6 +543,172 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <ArrowRight className="h-4 w-4" />
               </PrimaryButton>
             </form>
+          ) : phoneStep !== "idle" ? (
+            /* ---------------- phone sign-in ---------------- */
+            phoneStep === "enter" ? (
+              <form
+                onSubmit={handlePhoneSubmit}
+                className="flex flex-col gap-4"
+              >
+                <div>
+                  <h1 className="font-display text-lg font-bold tracking-tight">
+                    Sign in with your phone
+                  </h1>
+                  <p className="mt-1 text-sm leading-relaxed text-text-dim">
+                    We'll text a 6-digit code. It can fill in automatically on
+                    the phone that receives it.
+                  </p>
+                </div>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold tracking-wide text-text-dim">
+                    Phone number
+                  </span>
+                  <div className="flex gap-2">
+                    <select
+                      aria-label="Country code"
+                      value={dialCode}
+                      onChange={(e) => setDialCode(e.target.value)}
+                      disabled={submitting}
+                      className="w-[104px] shrink-0 rounded-xl border border-[var(--card-border)] bg-[var(--panel)] px-2.5 py-3 text-[16px] text-foreground outline-none transition-colors focus:border-[var(--signal)] disabled:opacity-60"
+                    >
+                      {DIAL_CODES.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      id="auth-phone"
+                      name="phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      placeholder="98765 43210"
+                      value={phoneInput}
+                      onChange={(e) => {
+                        setPhoneInput(e.target.value);
+                        if (error) setError(null);
+                      }}
+                      required
+                      autoFocus
+                      disabled={submitting}
+                      className="min-w-0 flex-1 rounded-xl border border-[var(--card-border)] bg-transparent px-3.5 py-3 text-[16px] outline-none transition-colors placeholder:text-text-dim/60 focus:border-[var(--signal)] disabled:opacity-60"
+                    />
+                  </div>
+                </label>
+
+                <p className="text-[11px] leading-relaxed text-text-dim">
+                  Standard SMS rates may apply. We only use this number to sign
+                  you in.
+                </p>
+
+                {error && <ErrorNote text={error} />}
+
+                <PrimaryButton disabled={submitting}>
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Phone className="h-4 w-4" />
+                  )}
+                  Send code
+                  {busy ? null : <ArrowRight className="h-4 w-4" />}
+                </PrimaryButton>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhoneStep("idle");
+                    setError(null);
+                    setNotice(null);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-text-dim transition-colors hover:text-foreground"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Use email instead
+                </button>
+              </form>
+            ) : (
+              <form
+                onSubmit={handlePhoneVerify}
+                className="flex flex-col gap-4"
+              >
+                <div>
+                  <h1 className="font-display text-lg font-bold tracking-tight">
+                    Enter the code
+                  </h1>
+                  <p className="mt-1 text-sm leading-relaxed text-text-dim">
+                    We sent a 6-digit code to{" "}
+                    <span className="text-foreground">{phoneNumber}</span>.
+                  </p>
+                </div>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold tracking-wide text-text-dim">
+                    6-digit code
+                  </span>
+                  <input
+                    id="auth-otp"
+                    name="otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={otp}
+                    onChange={(e) => {
+                      setOtp(e.currentTarget.value.replace(/\D/g, "").slice(0, 6));
+                      if (error) setError(null);
+                    }}
+                    required
+                    autoFocus
+                    disabled={submitting}
+                    className="w-full rounded-xl border border-[var(--card-border)] bg-transparent px-3.5 py-3 text-center font-display text-2xl tracking-[0.42em] outline-none transition-colors placeholder:text-text-dim/40 focus:border-[var(--signal)] disabled:opacity-60"
+                  />
+                </label>
+
+                <p className="text-[11px] leading-relaxed text-text-dim">
+                  On the phone that received the text, the code fills in by
+                  itself. Otherwise type the six digits above.
+                </p>
+
+                {notice && <NoticeNote text={notice} />}
+                {error && <ErrorNote text={error} />}
+
+                <PrimaryButton disabled={submitting || otp.length !== 6}>
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Verify and continue
+                  {busy ? null : <ArrowRight className="h-4 w-4" />}
+                </PrimaryButton>
+
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneStep("enter");
+                      setOtp("");
+                      setError(null);
+                      setNotice(null);
+                    }}
+                    className="inline-flex items-center gap-1.5 font-medium text-text-dim transition-colors hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    Use another number
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleResendPhoneCode()}
+                    disabled={busy || resendIn > 0}
+                    className="font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
+                  >
+                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+                  </button>
+                </div>
+              </form>
+            )
           ) : (
             <>
               <form
@@ -494,6 +836,20 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               >
                 <GoogleMark />
                 Continue with Google
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setNotice(null);
+                  setPhoneStep("enter");
+                }}
+                disabled={busy}
+                className="mt-2.5 flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--card-border)] bg-transparent px-5 py-3 text-sm font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-60"
+              >
+                <Phone className="h-4 w-4" />
+                Continue with phone
               </button>
             </>
           )}
