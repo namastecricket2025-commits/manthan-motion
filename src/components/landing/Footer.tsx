@@ -64,6 +64,9 @@ export default function Footer() {
             <Link to="/pricing" className="transition-colors hover:text-foreground">
               Plans & Pricing
             </Link>
+            <Link to="/#app" className="transition-colors hover:text-foreground">
+              Install app
+            </Link>
             <Link
               to={AUTH_URL}
               className="transition-colors hover:text-foreground"

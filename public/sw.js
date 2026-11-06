@@ -12,8 +12,17 @@
  *   everything else (POST, /api, cross-origin)  untouched
  */
 
-const VERSION = "manthan-shell-v1";
-const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/favicon.svg"];
+const VERSION = "manthan-shell-v2";
+const SHELL = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/favicon.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/icon-maskable-512.png",
+  "/icons/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

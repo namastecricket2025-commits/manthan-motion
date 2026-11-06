@@ -7,6 +7,7 @@ import {
   LogIn,
   Search,
   Sigma,
+  Smartphone,
   Tag,
   User,
 } from "lucide-react";
@@ -91,6 +92,12 @@ export function MobileMenu() {
       sub: "Allowances and pricing",
       href: "/pricing",
       icon: <Tag className="h-full w-full" strokeWidth={1.7} />,
+    },
+    {
+      title: "Install app",
+      sub: "Add Manthan to your home screen",
+      href: "/#app",
+      icon: <Smartphone className="h-full w-full" strokeWidth={1.7} />,
     },
     {
       title: "Feedback",

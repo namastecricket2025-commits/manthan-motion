@@ -4,6 +4,7 @@ import Features from "@/components/landing/Features";
 import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
 import HeroPreview from "@/components/landing/HeroPreview";
+import InstallApp from "@/components/landing/InstallApp";
 import KitShowcase from "@/components/landing/KitShowcase";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import Navbar from "@/components/landing/Navbar";
@@ -393,6 +394,7 @@ export default function Landing() {
               rows — the count and the average move with the database. */}
           <Testimonials />
           <Faq />
+          <InstallApp />
           <CtaSection />
         </main>
         <Footer />
