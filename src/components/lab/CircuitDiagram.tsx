@@ -1,4 +1,5 @@
 import { AMBER, CYAN, Picker, Range, Readout, VIOLET, ink, plate } from "@/components/lab/bench-atoms";
+import { LabFigure } from "@/components/lab/LabFigure";
 import { motion, useAnimationFrame, useReducedMotion } from "motion/react";
 import { Power, RotateCcw } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
@@ -611,7 +612,7 @@ export function CircuitsBench() {
           </button>
         </div>
 
-        <div className="mt-2 overflow-x-auto pb-1">
+        <LabFigure label="Circuit diagram" className="mt-2">
           <svg
             viewBox="0 0 900 440"
             className="h-auto w-full min-w-[680px]"
@@ -755,7 +756,7 @@ export function CircuitsBench() {
               </text>
             )}
           </svg>
-        </div>
+        </LabFigure>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" style={{ borderColor: "var(--lab-line)" }}>
           <span className="apple-lab-micro">Circuit symbols</span>

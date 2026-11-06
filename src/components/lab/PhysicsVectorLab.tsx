@@ -10,6 +10,13 @@ import PVProcessBench from "@/components/lab/physics/PVProcessBench";
 import RayOpticsBench from "@/components/lab/physics/RayOpticsBench";
 import ElectrostaticsBench from "@/components/lab/physics/ElectrostaticsBench";
 import { CircuitsBench } from "@/components/lab/CircuitDiagram";
+import { LabPicker } from "@/components/lab/lab-picker";
+import {
+  LabPhoneBar,
+  LabPhoneLibrary,
+  useLabPhone,
+  type LabPhoneGroup,
+} from "@/components/lab/LabPhone";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { SPRING, useSpringTransition, useStillMotion, viewVariants } from "@/lib/motion";
 import { AnimatePresence, animate, motion, useAnimationFrame } from "motion/react";
@@ -92,6 +99,70 @@ const BENCHES: { id: Bench; label: string }[] = [
   { id: "magnet", label: "Magnetism" },
   { id: "instruments", label: "Instruments" },
   { id: "classlabs", label: "Class 8–12" },
+];
+
+/** The grouped choices the phone shows instead of the desktop bench rail. */
+const PHONE_GROUPS: LabPhoneGroup[] = [
+  {
+    label: "Mechanics",
+    topics: [
+      {
+        id: "motion",
+        label: "Motion",
+        blurb: "Launch a ball, swing a bob or send a cart down a ramp.",
+      },
+      {
+        id: "dynamics",
+        label: "Dynamics",
+        blurb: "Drop a body 80 m and compare free fall, drag and energy.",
+      },
+    ],
+  },
+  {
+    label: "Electricity & magnetism",
+    topics: [
+      {
+        id: "circuits",
+        label: "Circuits",
+        blurb: "Build a loop, flip the key and read current, voltage and power.",
+      },
+      {
+        id: "magnet",
+        label: "Magnetism",
+        blurb: "Map a bar magnet's field, or circle a current-carrying wire.",
+      },
+    ],
+  },
+  {
+    label: "Waves & optics",
+    topics: [
+      {
+        id: "waves",
+        label: "Waves",
+        blurb: "Two waves, their phase difference and the sum they make.",
+      },
+      {
+        id: "optics",
+        label: "Optics",
+        blurb: "Trace a lens or mirror ray diagram and measure the image.",
+      },
+    ],
+  },
+  {
+    label: "Practical & class",
+    topics: [
+      {
+        id: "instruments",
+        label: "Instruments",
+        blurb: "Read the lab's measuring instruments before the practical.",
+      },
+      {
+        id: "classlabs",
+        label: "Class 8–12",
+        blurb: "Pressure, echoes, projectiles, p–V cycles and electric fields.",
+      },
+    ],
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -1948,84 +2019,149 @@ export function PhysicsVectorLab() {
   });
   const transition = useSpringTransition();
   const theme = useLabTheme();
+  const phone = useLabPhone();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [phoneOpen, setPhoneOpen] = useState(() => {
+    const wanted = params.get("bench");
+    return Boolean(
+      wanted &&
+        (wanted === "rayoptics" ||
+          BENCHES.some((entry) => entry.id === wanted) ||
+          CLASS_BENCHES.some((entry) => entry.id === wanted)),
+    );
+  });
+
+  const phoneTitle =
+    bench === "classlabs"
+      ? CLASS_BENCHES.find((entry) => entry.id === classBench)?.label ?? "Class benches"
+      : BENCHES.find((entry) => entry.id === bench)?.label ?? "Physics bench";
+
+  const showPhone = (open: boolean) => {
+    setPhoneOpen(open);
+    requestAnimationFrame(() =>
+      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" }),
+    );
+  };
+
+  const benchContent = (
+    <>
+      {bench === "circuits" && <CircuitsBench />}
+      {bench === "motion" && <MotionSandbox />}
+      {bench === "dynamics" && <DynamicsBench />}
+      {bench === "waves" && <WaveBench />}
+      {bench === "optics" && <OpticsTab />}
+      {bench === "magnet" && <MagnetismBench />}
+      {bench === "instruments" && <InstrumentsBench />}
+      {(bench === "classlabs" || CLASS_BENCHES.some((entry) => entry.id === bench)) && (
+        <div className="flex flex-col gap-4">
+          {/* Chapter choice: a compact dropdown on a phone, the chapter
+              strip on a wide bench. */}
+          {phone ? (
+            <LabPicker
+              label="Class bench"
+              value={classBench}
+              options={CLASS_BENCHES.map((entry) => ({
+                value: entry.id,
+                label: `${entry.grade} · ${entry.label}`,
+              }))}
+              onChange={(value) => setClassBench(value as ClassBench)}
+            />
+          ) : (
+            <div className="apple-lab-glass flex flex-wrap items-center gap-1.5 px-2.5 py-2">
+              <span className="apple-lab-micro mr-1 hidden px-1 sm:block">Class benches</span>
+              {CLASS_BENCHES.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  data-active={classBench === entry.id}
+                  onClick={() => setClassBench(entry.id)}
+                  className="apple-lab-btn !gap-2 !px-2.5 !py-1.5"
+                >
+                  <span className="font-display text-[12.5px] font-semibold tabular-nums opacity-60">
+                    {entry.grade}
+                  </span>
+                  <span className="text-[11.5px]">{entry.label}</span>
+                </button>
+              ))}
+              <span className="ml-auto hidden text-[10.5px] text-[var(--lab-ink-micro)] lg:block">
+                one chapter per instrument
+              </span>
+            </div>
+          )}
+          {classBench === "pressure" && <PressureBench />}
+          {classBench === "echo" && <EchoSonarBench />}
+          {classBench === "projectile" && <ProjectileBench />}
+          {classBench === "pv" && <PVProcessBench />}
+          {classBench === "electrostatics" && <ElectrostaticsBench />}
+        </div>
+      )}
+    </>
+  );
 
   return (
-    <div data-lab-theme={theme} className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="apple-lab-tabrail" role="tablist" aria-label="Physics benches">
-          {BENCHES.map((entry) => {
-            const active = bench === entry.id;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className="apple-lab-tab"
-                onClick={() => setBench(entry.id)}
-              >
-                {active && (
-                  <motion.span layoutId="physics-bench-pill" className="apple-lab-pill" transition={transition} />
-                )}
-                <span className="relative z-10">{entry.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <p className="apple-lab-note hidden max-w-sm text-right md:block">
-          Ultra-clean vector engines: real equations, drawn as lines.
-        </p>
-      </div>
-
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={bench}
-          variants={viewVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={transition}
-        >
-          {bench === "circuits" && <CircuitsBench />}
-          {bench === "motion" && <MotionSandbox />}
-          {bench === "dynamics" && <DynamicsBench />}
-          {bench === "waves" && <WaveBench />}
-          {bench === "optics" && <OpticsTab />}
-          {bench === "magnet" && <MagnetismBench />}
-          {bench === "instruments" && <InstrumentsBench />}
-          {(bench === "classlabs" || CLASS_BENCHES.some((entry) => entry.id === bench)) && (
-            <div className="flex flex-col gap-4">
-              {/* Chapter strip, not a second tab rail: the class is the big
-                  number, the instrument is the name. */}
-              <div className="apple-lab-glass flex flex-wrap items-center gap-1.5 px-2.5 py-2">
-                <span className="apple-lab-micro mr-1 hidden px-1 sm:block">Class benches</span>
-                {CLASS_BENCHES.map((entry) => (
+    <div ref={rootRef} data-lab-theme={theme} className="flex scroll-mt-20 flex-col gap-4 sm:gap-5">
+      {phone ? (
+        phoneOpen ? (
+          <>
+            <LabPhoneBar
+              subject="Physics"
+              label={phoneTitle}
+              onBack={() => showPhone(false)}
+            />
+            {benchContent}
+          </>
+        ) : (
+          <LabPhoneLibrary
+            subject="Physics"
+            groups={PHONE_GROUPS}
+            onOpen={(id) => {
+              setBench(id as Bench);
+              showPhone(true);
+            }}
+          />
+        )
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="apple-lab-tabrail" role="tablist" aria-label="Physics benches">
+              {BENCHES.map((entry) => {
+                const active = bench === entry.id;
+                return (
                   <button
                     key={entry.id}
                     type="button"
-                    data-active={classBench === entry.id}
-                    onClick={() => setClassBench(entry.id)}
-                    className="apple-lab-btn !gap-2 !px-2.5 !py-1.5"
+                    role="tab"
+                    aria-selected={active}
+                    className="apple-lab-tab"
+                    onClick={() => setBench(entry.id)}
                   >
-                    <span className="font-display text-[12.5px] font-semibold tabular-nums opacity-60">
-                      {entry.grade}
-                    </span>
-                    <span className="text-[11.5px]">{entry.label}</span>
+                    {active && (
+                      <motion.span layoutId="physics-bench-pill" className="apple-lab-pill" transition={transition} />
+                    )}
+                    <span className="relative z-10">{entry.label}</span>
                   </button>
-                ))}
-                <span className="ml-auto hidden text-[10.5px] text-[var(--lab-ink-micro)] lg:block">
-                  one chapter per instrument
-                </span>
-              </div>
-              {classBench === "pressure" && <PressureBench />}
-              {classBench === "echo" && <EchoSonarBench />}
-              {classBench === "projectile" && <ProjectileBench />}
-              {classBench === "pv" && <PVProcessBench />}
-              {classBench === "electrostatics" && <ElectrostaticsBench />}
+                );
+              })}
             </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+            <p className="apple-lab-note hidden max-w-sm text-right md:block">
+              Ultra-clean vector engines: real equations, drawn as lines.
+            </p>
+          </div>
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={bench}
+              variants={viewVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={transition}
+            >
+              {benchContent}
+            </motion.div>
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }

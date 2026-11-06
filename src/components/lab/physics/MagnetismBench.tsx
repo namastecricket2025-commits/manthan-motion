@@ -1,4 +1,5 @@
 import { Picker, Questions, Range, Readout, ink, plate, AMBER, MINT } from "@/components/lab/bench-atoms";
+import { LabFigure } from "@/components/lab/LabFigure";
 import { useMemo, useState } from "react";
 
 /**
@@ -388,7 +389,10 @@ export default function MagnetismBench() {
           </div>
         </div>
 
-        <div className="lab-scroll mt-2 overflow-x-auto">
+        <LabFigure
+          label={source === "magnet" ? "Bar magnet field lines" : "Straight wire field circles"}
+          className="mt-2"
+        >
           <svg
             viewBox={`0 0 ${PLATE_W} ${PLATE_H}`}
             className="h-auto w-full min-w-[560px]"
@@ -670,7 +674,7 @@ export default function MagnetismBench() {
               </>
             )}
           </svg>
-        </div>
+        </LabFigure>
 
         <p className="apple-lab-note mt-1">
           {source === "magnet"

@@ -1,4 +1,5 @@
 import { Picker, Questions, Range, Readout, ink, plate, VIOLET, CYAN, AMBER, MINT } from "@/components/lab/bench-atoms";
+import { LabFigure } from "@/components/lab/LabFigure";
 import { useRecorder } from "@/components/lab/practical/useRecorder";
 import { useSpringTransition } from "@/lib/motion";
 import { motion } from "motion/react";
@@ -268,7 +269,7 @@ export default function OpticsPractical() {
           </div>
         </div>
 
-        <div className="lab-scroll mt-2 overflow-x-auto">
+        <LabFigure label="Ray diagram" className="mt-2">
           <svg
             viewBox={`0 0 ${BENCH_W} ${BENCH_H}`}
             className="h-auto w-full min-w-[560px]"
@@ -619,7 +620,7 @@ export default function OpticsPractical() {
               </g>
             )}
           </svg>
-        </div>
+        </LabFigure>
 
         <p className="apple-lab-note mt-1">{hint}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">

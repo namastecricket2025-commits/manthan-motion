@@ -18,6 +18,12 @@ import { useRecorder } from "@/components/lab/practical/useRecorder";
 import MoleBench from "@/components/lab/MoleBench";
 import { Questions, type BenchQuestion } from "@/components/lab/bench-atoms";
 import { LabPicker, type LabPickerOption } from "@/components/lab/lab-picker";
+import {
+  LabPhoneBar,
+  LabPhoneLibrary,
+  useLabPhone,
+  type LabPhoneGroup,
+} from "@/components/lab/LabPhone";
 import { useLabTheme } from "@/components/lab/lab-theme";
 import { REACTIONS, SUBSTANCES, type Reaction, type Substance } from "@/components/lab/reactions";
 import { useSpringTransition, useStillMotion, useStagger, viewVariants } from "@/lib/motion";
@@ -62,6 +68,65 @@ const SUBTABS: Array<{ id: SubTab; label: string }> = [
   { id: "separation", label: "Separation" },
   { id: "reactions", label: "Reactions" },
   { id: "balance", label: "Balancing" },
+];
+
+/** The grouped choices the phone shows instead of the desktop bench rail. */
+const PHONE_GROUPS: LabPhoneGroup[] = [
+  {
+    label: "The table",
+    topics: [
+      {
+        id: "table",
+        label: "Periodic Table",
+        blurb: "All 118 elements, grouped and colour-coded.",
+      },
+      {
+        id: "bohr",
+        label: "Atomic Models",
+        blurb: "Bohr shells and the electron structure of an element.",
+      },
+    ],
+  },
+  {
+    label: "Practical work",
+    topics: [
+      {
+        id: "titration",
+        label: "Titration",
+        blurb: "Run a burette, find the end point and read the volume.",
+      },
+      {
+        id: "salts",
+        label: "Salt Analysis",
+        blurb: "Identify an unknown salt by its cation and anion tests.",
+      },
+      {
+        id: "instruments",
+        label: "Instruments",
+        blurb: "The glassware and measuring tools used at the bench.",
+      },
+      {
+        id: "separation",
+        label: "Separation",
+        blurb: "Distil, filter and separate a mixture step by step.",
+      },
+    ],
+  },
+  {
+    label: "Reactions",
+    topics: [
+      {
+        id: "reactions",
+        label: "Reactions",
+        blurb: "Mix reagents and watch the reaction change.",
+      },
+      {
+        id: "balance",
+        label: "Balancing",
+        blurb: "Balance an equation and check the mole counts.",
+      },
+    ],
+  },
 ];
 
 /* ---- Category colours ------------------------------------------------
@@ -2515,59 +2580,104 @@ export function ChemistryGlassLab() {
   const theme = useLabTheme();
   const transition = useSpringTransition();
   const stagger = useStagger(0.05);
+  const phone = useLabPhone();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [phoneOpen, setPhoneOpen] = useState(() => {
+    const wanted = params.get("bench") ?? params.get("tab");
+    return SUBTABS.some((entry) => entry.id === wanted);
+  });
+
+  const phoneTitle = SUBTABS.find((entry) => entry.id === tab)?.label ?? "Chemistry bench";
+
+  const showPhone = (open: boolean) => {
+    setPhoneOpen(open);
+    requestAnimationFrame(() =>
+      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" }),
+    );
+  };
+
+  const tabContent = (
+    <>
+      {tab === "table" && (
+        <PeriodicTableTab selected={selected} onSelect={setSelected} theme={theme} />
+      )}
+      {tab === "bohr" && <AtomicModelsTab theme={theme} />}
+      {tab === "titration" && <TitrationTab />}
+      {tab === "reactions" && <ReactionsTab />}
+      {tab === "balance" && <MoleBench />}
+      {tab === "salts" && <ChemistrySaltBench />}
+      {tab === "instruments" && <ChemistryInstruments />}
+      {tab === "separation" && <SeparationBench />}
+    </>
+  );
 
   return (
-    <div data-lab-theme={theme} className="rounded-[28px] pb-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="apple-lab-tabrail" role="tablist" aria-label="Chemistry sections">
-          {SUBTABS.map((entry) => {
-            const isActive = tab === entry.id;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className="apple-lab-subtab"
-                onClick={() => setTab(entry.id)}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId="chem-subtab-pill"
-                    className="apple-lab-pill"
-                    transition={transition}
-                  />
-                )}
-                <span className="relative z-10">{entry.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <div ref={rootRef} data-lab-theme={theme} className="scroll-mt-20 rounded-[28px] pb-2 sm:pb-6">
+      {phone ? (
+        phoneOpen ? (
+          <>
+            <LabPhoneBar
+              subject="Chemistry"
+              label={phoneTitle}
+              onBack={() => showPhone(false)}
+            />
+            <div className="mt-3">{tabContent}</div>
+          </>
+        ) : (
+          <LabPhoneLibrary
+            subject="Chemistry"
+            groups={PHONE_GROUPS}
+            onOpen={(id) => {
+              setTab(id as SubTab);
+              showPhone(true);
+            }}
+          />
+        )
+      ) : (
+        <>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="apple-lab-tabrail" role="tablist" aria-label="Chemistry sections">
+              {SUBTABS.map((entry) => {
+                const isActive = tab === entry.id;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className="apple-lab-subtab"
+                    onClick={() => setTab(entry.id)}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="chem-subtab-pill"
+                        className="apple-lab-pill"
+                        transition={transition}
+                      />
+                    )}
+                    <span className="relative z-10">{entry.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Sub-tab cross-fade — the same AnimatePresence "wait" pattern the
-          subject rail uses, so the swap keeps the lab's one motion system. */}
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={tab}
-          variants={viewVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={{ ...transition, delay: stagger(0) }}
-        >
-          {tab === "table" && (
-            <PeriodicTableTab selected={selected} onSelect={setSelected} theme={theme} />
-          )}
-          {tab === "bohr" && <AtomicModelsTab theme={theme} />}
-          {tab === "titration" && <TitrationTab />}
-          {tab === "reactions" && <ReactionsTab />}
-          {tab === "balance" && <MoleBench />}
-          {tab === "salts" && <ChemistrySaltBench />}
-          {tab === "instruments" && <ChemistryInstruments />}
-          {tab === "separation" && <SeparationBench />}
-        </motion.div>
-      </AnimatePresence>
+          {/* Sub-tab cross-fade — the same AnimatePresence "wait" pattern the
+              subject rail uses, so the swap keeps the lab's one motion system. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={tab}
+              variants={viewVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ ...transition, delay: stagger(0) }}
+            >
+              {tabContent}
+            </motion.div>
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }

@@ -1368,22 +1368,19 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
   }
 
   /* The subject/bench rail takes the full column, so the three controls do
-     not sit as a small centred island, and long rails still pan from the
-     left edge instead of being spread to the corners. */
+     not sit as a small centred island. Inner rails (a bench's own modes) stay
+     on one line and pan sideways; the main bench choice is the grouped phone
+     library now, not a wrapped block of eight pills. */
   .apple-lab-tabrail {
     width: 100%;
     justify-content: flex-start;
-    /* Every bench and plate is visible at once: four chips that need 470px
-       on a 390px screen wrap onto a second row instead of hiding three of
-       them past a scroll edge. */
-    flex-wrap: wrap;
-    row-gap: 3px;
-    overflow: visible;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .apple-lab-tab,
   .apple-lab-subtab {
-    min-height: 2.25rem;
+    min-height: 2.5rem;
     padding: 0.5rem 0.6rem;
     font-size: 0.78rem;
   }
@@ -1414,23 +1411,10 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
     gap: 0.55rem;
   }
 
-  /* The two bench actions sit as a pair; the Google trigger gets the row
-     beneath them, because a search is a different kind of control and reads
-     as a third chip when it is squeezed into the same line. */
+  /* The four lab tools and Google search move into the phone Tools sheet;
+     the visible row is Ask + Tools. */
   .stem-actions {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.45rem;
-  }
-
-  .stem-actions > * {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .stem-actions .gs-trigger {
-    grid-column: 1 / -1;
+    display: none;
   }
 
   .apple-lab-tab svg {
@@ -1602,5 +1586,429 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
   /* The apparatus is still running; the beads simply stop accelerating. */
   .lab-drip {
     animation-timing-function: linear;
+  }
+}
+
+/* ============================================================
+   The phone lab — two levels, not one long page
+
+   The wide layout keeps its bench rail. Below 760px the lab opens on a
+   grouped list (Physics → Mechanics → Motion), and choosing a row opens that
+   one bench with a back bar. Everything here is a list and a bar: no shared
+   layout animation, no wrapped pill block, and no extra controls above the
+   experiment.
+   ============================================================ */
+
+.stem-phone-actions {
+  display: flex;
+  width: 100%;
+  gap: 0.45rem;
+}
+
+/* Wide figures: fit first on a phone, then let the reader grow the drawing
+   inside a bounded window instead of making the page wider than the phone. */
+.lab-figure {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.lab-figure-bar {
+  display: none;
+}
+
+.lab-figure-viewport {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lab-line) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lab-figure-plane {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .lab-figure-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .lab-figure-hint {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--lab-ink-micro);
+  }
+
+  .lab-figure-zoom {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.1rem;
+    border: 1px solid var(--lab-line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.12rem;
+  }
+
+  .lab-figure-zoom button {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--lab-ink-dim);
+    touch-action: manipulation;
+  }
+
+  .lab-figure-zoom button:hover,
+  .lab-figure-zoom button:focus-visible {
+    background: color-mix(in srgb, var(--lab-ink) 9%, transparent);
+    color: var(--lab-ink);
+    outline: none;
+  }
+
+  .lab-figure-zoom button:disabled {
+    opacity: 0.32;
+  }
+
+  .lab-figure-percent {
+    min-width: 2.55rem;
+    text-align: center;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--lab-ink-micro);
+  }
+
+  .lab-figure-viewport {
+    max-height: 48vh;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .lab-figure-plane > svg {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
+.apple-lab [data-lab-theme="light"] .lab-figure-zoom {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.stem-phone-actions .apple-lab-btn {
+  min-height: 2.75rem;
+}
+
+@media (min-width: 761px) {
+  .stem-phone-actions {
+    display: none;
+  }
+}
+
+.lab-phone {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  padding-top: 0.15rem;
+}
+
+.lab-phone-intro {
+  padding: 0.1rem 0.15rem 0;
+}
+
+.lab-phone-heading {
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--lab-ink);
+}
+
+.lab-phone-lede {
+  max-width: 34ch;
+  margin-top: 0.35rem;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--lab-ink-dim);
+}
+
+.lab-phone-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lab-phone-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.15rem;
+}
+
+.lab-phone-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--lab-ink-micro);
+}
+
+.lab-phone-group-count {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lab-ink-micro);
+}
+
+.lab-phone-list {
+  overflow: hidden;
+  border: 1px solid var(--lab-line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--lab-ink) 3%, var(--lab-canvas));
+}
+
+.lab-phone-row {
+  display: flex;
+  width: 100%;
+  min-height: 4rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--lab-line-soft);
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+  touch-action: manipulation;
+  transition: background 180ms ease;
+}
+
+.lab-phone-row:first-child {
+  border-top: 0;
+}
+
+.lab-phone-row:hover {
+  background: color-mix(in srgb, var(--lab-ink) 5%, transparent);
+}
+
+.lab-phone-row:focus-visible {
+  background: color-mix(in srgb, var(--lab-ink) 5%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--lab-ink) 28%, transparent);
+  outline-offset: -2px;
+}
+
+.lab-phone-row:active {
+  background: color-mix(in srgb, var(--lab-ink) 8%, transparent);
+}
+
+.lab-phone-row-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.lab-phone-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--lab-ink);
+}
+
+.lab-phone-row-blurb {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--lab-ink-dim);
+}
+
+.lab-phone-row-go {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--lab-line);
+  border-radius: 999px;
+  color: var(--lab-ink-dim);
+  transition: border-color 180ms ease, color 180ms ease;
+}
+
+.lab-phone-row:hover .lab-phone-row-go,
+.lab-phone-row:focus-visible .lab-phone-row-go {
+  border-color: color-mix(in srgb, var(--lab-ink) 28%, transparent);
+  color: var(--lab-ink);
+}
+
+.lab-phone-bar {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.lab-phone-back {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--lab-line);
+  background: color-mix(in srgb, var(--lab-ink) 3%, transparent);
+  padding: 0.35rem 0.7rem;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--lab-ink-dim);
+  touch-action: manipulation;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+}
+
+.lab-phone-back:hover,
+.lab-phone-back:focus-visible {
+  border-color: color-mix(in srgb, var(--lab-ink) 28%, transparent);
+  background: color-mix(in srgb, var(--lab-ink) 6%, transparent);
+  color: var(--lab-ink);
+}
+
+.lab-phone-back:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--lab-ink) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.lab-phone-here {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--lab-ink-micro);
+}
+
+.lab-phone-bar-extra {
+  flex: none;
+}
+
+/* The phone tools sheet: one row per tool, thumb height, no grid of pills. */
+.lab-tools-sheet {
+  /* The sheet portals to <body>, outside `.apple-lab`, so it carries its own
+     app-theme aliases instead of inheriting the lab tokens. */
+  --lab-ink: var(--text-main);
+  --lab-ink-dim: var(--text-dim);
+  --lab-ink-micro: color-mix(in srgb, var(--text-main) 58%, transparent);
+  --lab-line: var(--card-border);
+  --lab-line-soft: color-mix(in srgb, var(--text-main) 7%, transparent);
+  gap: 0;
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid var(--lab-line);
+  background: var(--panel);
+  color: var(--text-main);
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
+.lab-tools-sheet .lab-tool {
+  display: flex;
+  min-height: 3rem;
+  width: 100%;
+  align-items: center;
+  gap: 0.7rem;
+  border-top: 1px solid var(--lab-line-soft);
+  padding: 0.65rem 0.25rem;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--lab-ink);
+  touch-action: manipulation;
+}
+
+.lab-tools-sheet .lab-tool:first-child {
+  border-top: 0;
+}
+
+.lab-tools-sheet .lab-tool:hover,
+.lab-tools-sheet .lab-tool:focus-visible {
+  color: var(--lab-ink);
+  outline: none;
+}
+
+.lab-tools-sheet .lab-tool-icon {
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--lab-line);
+  border-radius: 10px;
+  color: var(--lab-ink-dim);
+}
+
+.lab-tools-sheet .lab-tool > svg:last-child {
+  margin-left: auto;
+  color: var(--lab-ink-micro);
+}
+
+/* SearchWithGoogle brings its own trigger; inside the sheet it becomes the
+   last row instead of a second pill-shaped button. */
+.lab-tools-sheet .gs-trigger,
+.lab-tools-sheet .gs-trigger:hover,
+.lab-tools-sheet .gs-trigger:active,
+.lab-tools-sheet .gs-trigger:focus-visible {
+  /* The standalone trigger is a white Google button; inside the sheet it is
+     one dark row like the others. This has to beat its !important white. */
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--lab-ink) !important;
+  box-shadow: none !important;
+}
+
+.lab-tools-sheet .gs-trigger.lab-tool {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  border-top: 0;
+  border-radius: 10px;
+  padding: 0.65rem 0.25rem;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.lab-tools-sheet .gs-trigger__logo {
+  margin-left: auto;
+}
+
+.apple-lab [data-lab-theme="light"] .lab-phone-list {
+  background: #ffffff;
+}
+
+.apple-lab [data-lab-theme="light"] .lab-phone-row:hover,
+.apple-lab [data-lab-theme="light"] .lab-phone-row:focus-visible,
+.apple-lab [data-lab-theme="light"] .lab-phone-row:active {
+  background: rgba(16, 16, 16, 0.045);
+}
+
+.apple-lab [data-lab-theme="light"] .lab-phone-back {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* A phone has no shared-layout pill: the subject switch simply changes state.
+   Removing the travel removes a compositor layer from the busiest screen. */
+@media (max-width: 760px) {
+  .stem-subject-rail .apple-lab-pill {
+    box-shadow: none;
   }
 }

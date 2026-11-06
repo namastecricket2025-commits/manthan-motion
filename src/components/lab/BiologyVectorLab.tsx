@@ -1,4 +1,10 @@
 import { useLabTheme } from "@/components/lab/lab-theme";
+import {
+  LabPhoneBar,
+  LabPhoneLibrary,
+  useLabPhone,
+  type LabPhoneGroup,
+} from "@/components/lab/LabPhone";
 import OrganStage, { type OrganSystem } from "@/components/lab/bio/OrganStage";
 import CellModelViewer from "@/components/lab/bio/CellModelViewer";
 import HeartModelViewer from "@/components/lab/bio/HeartModelViewer";
@@ -9,7 +15,7 @@ import DigestiveStage from "@/components/lab/bio/DigestiveStage";
 import MicroscopeBench from "@/components/lab/bio/MicroscopeBench";
 import { useSpringTransition, viewVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
 
 /**
@@ -51,6 +57,16 @@ type Part = {
 /** The cell and the nervous system stay vector schematics; the three organ
     systems render in the shared Three.js stage (OrganStage). */
 type Plate = "cell" | "nervous" | "digestive" | "microscope" | OrganSystem;
+
+const PLATE_IDS: Plate[] = [
+  "cell",
+  "microscope",
+  "heart",
+  "respiratory",
+  "excretory",
+  "digestive",
+  "nervous",
+];
 
 type Diagram = {
   id: Plate;
@@ -1135,10 +1151,17 @@ export function BiologyVectorLab() {
   const transition = useSpringTransition();
   const theme = useLabTheme();
   const [params] = useSearchParams();
-  const [plate, setPlate] = useState<Plate>(() =>
-    params.get("plate") === "microscope" ? "microscope" : "cell",
-  );
+  const [plate, setPlate] = useState<Plate>(() => {
+    const wanted = params.get("plate") as Plate | null;
+    return wanted && PLATE_IDS.includes(wanted) ? wanted : "cell";
+  });
   const [plant, setPlant] = useState(false);
+  const phone = useLabPhone();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [phoneOpen, setPhoneOpen] = useState(() => {
+    const wanted = params.get("plate") as Plate | null;
+    return Boolean(wanted && PLATE_IDS.includes(wanted));
+  });
 
   const diagrams: Diagram[] = [
     {
@@ -1232,92 +1255,142 @@ export function BiologyVectorLab() {
 
   const active = diagrams.find((diagram) => diagram.id === plate) ?? diagrams[0];
 
+  const phoneGroups: LabPhoneGroup[] = [
+    {
+      label: "Cell & microscopy",
+      topics: diagrams
+        .filter((diagram) => diagram.id === "cell" || diagram.id === "microscope")
+        .map((diagram) => ({ id: diagram.id, label: diagram.label, blurb: diagram.blurb })),
+    },
+    {
+      label: "Human systems",
+      topics: diagrams
+        .filter((diagram) => diagram.id !== "cell" && diagram.id !== "microscope")
+        .map((diagram) => ({ id: diagram.id, label: diagram.label, blurb: diagram.blurb })),
+    },
+  ];
+
+  const showPhone = (open: boolean) => {
+    setPhoneOpen(open);
+    requestAnimationFrame(() =>
+      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" }),
+    );
+  };
+
+  const cellSwitch =
+    plate === "cell" ? (
+      <button
+        type="button"
+        className="apple-lab-btn !px-2.5 !py-1 !text-[11px]"
+        data-active={plant}
+        onClick={() => setPlant((value) => !value)}
+      >
+        {plant ? "Animal cell" : "Plant cell"}
+      </button>
+    ) : null;
+
+  const plateBody =
+    plate === "cell" ? (
+      <CellModelViewer kind={plant ? "plant" : "animal"} theme={theme} />
+    ) : plate === "microscope" ? (
+      <MicroscopeBench />
+    ) : plate === "nervous" ? (
+      <NerveStage label={active.label} blurb={active.blurb} />
+    ) : plate === "digestive" ? (
+      <DigestiveStage label={active.label} blurb={active.blurb} />
+    ) : plate === "heart" ? (
+      <HeartModelViewer label={active.label} blurb={active.blurb} theme={theme} />
+    ) : plate === "respiratory" ? (
+      <RespiratoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />
+    ) : plate === "excretory" ? (
+      <ExcretoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />
+    ) : (
+      <OrganStage
+        system={plate}
+        label={active.label}
+        blurb={active.blurb}
+        theme={theme}
+      />
+    );
+
   return (
-    <div data-lab-theme={theme} className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="apple-lab-tabrail" role="tablist" aria-label="Biology plates">
-          {diagrams.map((diagram) => {
-            const isActive = diagram.id === plate;
-            return (
-              <button
-                key={diagram.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className="apple-lab-tab"
-                onClick={() => setPlate(diagram.id)}
-              >
-                {isActive && (
-                  <motion.span layoutId="biology-plate-pill" className="apple-lab-pill" transition={transition} />
-                )}
-                <span className="relative z-10">{diagram.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {plate === "cell" && (
-            <button
-              type="button"
-              className="apple-lab-btn"
-              data-active={plant}
-              onClick={() => setPlant((value) => !value)}
-            >
-              {plant ? "Animal cell" : "Plant cell"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence mode="wait" initial={false}>
-        {plate !== "cell" ? (
-          /* The three organ systems share one engine and one dark-stage
-             presentation. Keying by plate resets the per-organ tools
-             (view, cut, labels, isolation) and lets the outgoing organ
-             dispose its geometries before the next one is built. */
-          <motion.div
-            key={`organ-stage-${plate}`}
-            variants={viewVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={transition}
-          >
-            {plate === "microscope" ? (
-              <MicroscopeBench />
-            ) : plate === "nervous" ? (
-              <NerveStage label={active.label} blurb={active.blurb} />
-            ) : plate === "digestive" ? (
-              <DigestiveStage label={active.label} blurb={active.blurb} />
-            ) : plate === "heart" ? (
-              <HeartModelViewer label={active.label} blurb={active.blurb} theme={theme} />
-            ) : plate === "respiratory" ? (
-              <RespiratoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />
-            ) : plate === "excretory" ? (
-              <ExcretoryModelViewer label={active.label} blurb={active.blurb} theme={theme} />
-            ) : (
-              <OrganStage
-                system={plate}
-                label={active.label}
-                blurb={active.blurb}
-                theme={theme}
-              />
-            )}
-          </motion.div>
+    <div ref={rootRef} data-lab-theme={theme} className="flex scroll-mt-20 flex-col gap-4 sm:gap-5">
+      {phone ? (
+        phoneOpen ? (
+          <>
+            <LabPhoneBar
+              subject="Biology"
+              label={active.label}
+              onBack={() => showPhone(false)}
+              right={cellSwitch}
+            />
+            <div className="mt-1">{plateBody}</div>
+          </>
         ) : (
-          <motion.div
-            key={`cell-${plant}`}
-            variants={viewVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={transition}
-          >
-            <CellModelViewer kind={plant ? "plant" : "animal"} theme={theme} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <LabPhoneLibrary
+            subject="Biology"
+            groups={phoneGroups}
+            onOpen={(id) => {
+              setPlate(id as Plate);
+              showPhone(true);
+            }}
+          />
+        )
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="apple-lab-tabrail" role="tablist" aria-label="Biology plates">
+              {diagrams.map((diagram) => {
+                const isActive = diagram.id === plate;
+                return (
+                  <button
+                    key={diagram.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className="apple-lab-tab"
+                    onClick={() => setPlate(diagram.id)}
+                  >
+                    {isActive && (
+                      <motion.span layoutId="biology-plate-pill" className="apple-lab-pill" transition={transition} />
+                    )}
+                    <span className="relative z-10">{diagram.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {plate === "cell" && (
+                <button
+                  type="button"
+                  className="apple-lab-btn"
+                  data-active={plant}
+                  onClick={() => setPlant((value) => !value)}
+                >
+                  {plant ? "Animal cell" : "Plant cell"}
+                </button>
+              )}
+            </div>
+          </div>
 
+          <AnimatePresence mode="wait" initial={false}>
+            {/* Keying by plate (and by the cell kind) resets the per-organ
+                tools and lets an outgoing 3D stage dispose its geometries
+                before the next one is built. The phone branch skips this
+                double mount entirely. */}
+            <motion.div
+              key={`${plate}-${plant}`}
+              variants={viewVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={transition}
+            >
+              {plateBody}
+            </motion.div>
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }

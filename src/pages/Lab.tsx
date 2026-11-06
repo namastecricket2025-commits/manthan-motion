@@ -11,6 +11,7 @@ import { Logo } from "@/components/landing/Logo";
 import { DisplayToggles } from "@/components/landing/DisplayToggles";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { StemAsk } from "@/components/lab/StemAsk";
+import { useLabPhone } from "@/components/lab/LabPhone";
 import { PracticalNotebook } from "@/components/lab/practical/PracticalNotebook";
 import { LabNotebook } from "@/components/lab/progress/LabNotebook";
 import { useResolvedTheme } from "@/lib/app-settings";
@@ -21,11 +22,13 @@ import {
   Atom,
   Beaker,
   BookOpen,
+  ChevronRight,
   Dna,
   FlaskConical,
   ListChecks,
   LogOut,
   Menu,
+  MoreHorizontal,
   NotebookPen,
   Sparkles,
 } from "lucide-react";
@@ -34,6 +37,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -82,8 +86,10 @@ export default function Lab() {
   const [askMode, setAskMode] = useState<"ask" | "drill">("ask");
   const [askSeed, setAskSeed] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
   const [labBookOpen, setLabBookOpen] = useState(false);
+  const phone = useLabPhone();
   const [collapsed, setCollapsed] = useSidebarCollapsed();
   const transition = useSpringTransition();
   const theme = useResolvedTheme();
@@ -111,6 +117,11 @@ export default function Lab() {
   function openAssistant(mode: "ask" | "drill") {
     setAskMode(mode);
     setAskOpen(true);
+  }
+
+  function openTool(action: () => void) {
+    setToolsOpen(false);
+    action();
   }
 
   /* A bench may finish a reading while the notebook is closed; the event is
@@ -233,15 +244,15 @@ export default function Lab() {
 
         {/* ---- Canvas ---- */}
         <main
-          className="app-canvas px-4 py-6 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          className="app-canvas px-4 py-4 transition-[margin-left] duration-300 ease-out sm:px-6 sm:py-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
-          <div className="mx-auto flex max-w-6xl flex-col gap-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-6">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim max-sm:hidden">
                 Workspace · Physics, Chemistry, Biology
               </p>
-              <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              <h1 className="mt-0 font-display text-2xl font-bold tracking-tight sm:mt-1.5 sm:text-3xl md:text-4xl">
                 STEM Lab<span className="text-[var(--signal)]">.</span>
               </h1>
               <p className="mt-2 hidden max-w-2xl text-sm leading-relaxed text-text-dim sm:block">
@@ -278,13 +289,16 @@ export default function Lab() {
                         className="apple-lab-tab"
                         onClick={() => setSubject(entry.id)}
                       >
-                        {isActive && (
-                          <motion.span
-                            layoutId="lab-subject-pill"
-                            className="apple-lab-pill"
-                            transition={transition}
-                          />
-                        )}
+                        {isActive &&
+                          (phone ? (
+                            <span className="apple-lab-pill" aria-hidden="true" />
+                          ) : (
+                            <motion.span
+                              layoutId="lab-subject-pill"
+                              className="apple-lab-pill"
+                              transition={transition}
+                            />
+                          ))}
                         <Icon
                           className={`relative z-10 h-4 w-4 ${isActive ? "text-[var(--lab-ink)]" : ""}`}
                         />
@@ -332,23 +346,50 @@ export default function Lab() {
                     label="Search on Google"
                   />
                 </div>
+
+                <div className="stem-phone-actions min-[761px]:hidden">
+                  <button
+                    type="button"
+                    className="apple-lab-btn apple-lab-btn--solid flex-1 justify-center !py-2.5"
+                    onClick={() => openAssistant("ask")}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Ask the lab
+                  </button>
+                  <button
+                    type="button"
+                    className="apple-lab-btn justify-center !py-2.5"
+                    onClick={() => setToolsOpen(true)}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                    Tools
+                  </button>
+                </div>
               </div>
 
-              <div className="mt-3">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
-                    key={subject}
-                    variants={viewVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    transition={transition}
-                  >
+              <div className="mt-1 sm:mt-3">
+                {phone ? (
+                  <div>
                     {subject === "physics" && <PhysicsVectorLab />}
                     {subject === "chemistry" && <ChemistryGlassLab />}
                     {subject === "biology" && <BiologyVectorLab />}
-                  </motion.div>
-                </AnimatePresence>
+                  </div>
+                ) : (
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={subject}
+                      variants={viewVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      transition={transition}
+                    >
+                      {subject === "physics" && <PhysicsVectorLab />}
+                      {subject === "chemistry" && <ChemistryGlassLab />}
+                      {subject === "biology" && <BiologyVectorLab />}
+                    </motion.div>
+                  </AnimatePresence>
+                )}
               </div>
             </div>
 
@@ -362,6 +403,57 @@ export default function Lab() {
 
       <PracticalNotebook open={notebookOpen} onOpenChange={setNotebookOpen} />
       <LabNotebook open={labBookOpen} onOpenChange={setLabBookOpen} />
+
+      {/* The phone shell keeps one primary action and one door for the rest:
+          four tools plus search above every bench is what made the page feel
+          like a toolbar with a lab underneath it. */}
+      <Sheet open={toolsOpen} onOpenChange={setToolsOpen}>
+        <SheetContent side="bottom" className="lab-tools-sheet">
+          <SheetHeader className="px-5 pb-2 pt-5">
+            <SheetTitle className="font-display text-lg tracking-tight">
+              Lab tools
+            </SheetTitle>
+            <SheetDescription className="text-[12px] leading-relaxed text-text-dim">
+              Drills, notebooks and search, kept out of the bench itself.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-5">
+            <button
+              type="button"
+              className="lab-tool"
+              onClick={() => openTool(() => openAssistant("drill"))}
+            >
+              <span className="lab-tool-icon">
+                <ListChecks className="h-4 w-4" />
+              </span>
+              Quick drill
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="lab-tool"
+              onClick={() => openTool(() => setNotebookOpen(true))}
+            >
+              <span className="lab-tool-icon">
+                <NotebookPen className="h-4 w-4" />
+              </span>
+              Practical notebook
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="lab-tool"
+              onClick={() => openTool(() => setLabBookOpen(true))}
+            >
+              <span className="lab-tool-icon">
+                <BookOpen className="h-4 w-4" />
+              </span>
+              Lab notebook
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Mounted only while open: each visit starts from the subject, mode and
           seed in hand, and the seed is spent on close. */}
