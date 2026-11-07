@@ -1713,6 +1713,23 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
   min-height: 2.75rem;
 }
 
+/* Search is a single mark in this row, not a second labelled pill: the action
+   is recognisable, and the bench keeps the width. */
+.stem-phone-search {
+  flex: none;
+}
+
+.stem-phone-search .gs-trigger {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 !important;
+}
+
+.stem-phone-search .gs-trigger__text {
+  display: none;
+}
+
 @media (min-width: 761px) {
   .stem-phone-actions {
     display: none;
@@ -1962,34 +1979,6 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
   color: var(--lab-ink-micro);
 }
 
-/* SearchWithGoogle brings its own trigger; inside the sheet it becomes the
-   last row instead of a second pill-shaped button. */
-.lab-tools-sheet .gs-trigger,
-.lab-tools-sheet .gs-trigger:hover,
-.lab-tools-sheet .gs-trigger:active,
-.lab-tools-sheet .gs-trigger:focus-visible {
-  /* The standalone trigger is a white Google button; inside the sheet it is
-     one dark row like the others. This has to beat its !important white. */
-  border-color: transparent !important;
-  background: transparent !important;
-  color: var(--lab-ink) !important;
-  box-shadow: none !important;
-}
-
-.lab-tools-sheet .gs-trigger.lab-tool {
-  width: 100%;
-  justify-content: flex-start;
-  gap: 0.55rem;
-  border-top: 0;
-  border-radius: 10px;
-  padding: 0.65rem 0.25rem;
-  font-size: 13.5px;
-  font-weight: 500;
-}
-
-.lab-tools-sheet .gs-trigger__logo {
-  margin-left: auto;
-}
 
 .apple-lab [data-lab-theme="light"] .lab-phone-list {
   background: #ffffff;

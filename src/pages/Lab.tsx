@@ -364,6 +364,12 @@ export default function Lab() {
                     <MoreHorizontal className="h-4 w-4" />
                     Tools
                   </button>
+                  <div className="stem-phone-search">
+                    <SearchWithGoogle
+                      topic={`${active.label} practical experiment — NCERT CBSE explained`}
+                      label="Search on Google"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -414,7 +420,7 @@ export default function Lab() {
               Lab tools
             </SheetTitle>
             <SheetDescription className="text-[12px] leading-relaxed text-text-dim">
-              Drills, notebooks and search, kept out of the bench itself.
+              Drills and notebooks, kept up here instead of above every bench.
             </SheetDescription>
           </SheetHeader>
           <div className="px-5">
