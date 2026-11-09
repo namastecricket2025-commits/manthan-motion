@@ -108,16 +108,6 @@ const KIND_META: { kind: Kind; label: string; hint: string }[] = [
 
 const MAX_UPLOAD = 20 * 1024 * 1024;
 
-function relativeTime(timestamp: number) {
-  const seconds = Math.round((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
-  return `${Math.round(hours / 24)} d ago`;
-}
-
 function SourceIcon({ kind }: { kind: "file" | "link" | "text" }) {
   if (kind === "file") return <FileText className="h-4 w-4 shrink-0" />;
   if (kind === "link") return <Link2 className="h-4 w-4 shrink-0" />;
@@ -1158,13 +1148,7 @@ export function NotebookWorkspace({
 
             {active && (
               <>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--card-border)] pb-3">
-                  <p className="text-[11px] text-text-dim">
-                    {active.title} · from {active.sourceIds.length} source
-                    {active.sourceIds.length === 1 ? "" : "s"} ·{" "}
-                    {relativeTime(active.createdAt)} · {active.model}
-                    {hindi ? " · हिंदी" : ""}
-                  </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-b border-[var(--card-border)] pb-3 sm:justify-end">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"

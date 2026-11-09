@@ -13,10 +13,11 @@ import { useCdPill } from "@/components/landing/use-cd-pill";
  * validated JSON straight out of the `materials` row — no reshaping and no
  * invented content.
  *
- * Provenance lives in the artefact header ("from N sources · model"), not on
- * every item: a filename chip under each flashcard and quiz explanation read
- * as clutter, so per-item source tags are deliberately shown only in the
- * summary, where a section genuinely traces to one source.
+ * Provenance stays quiet: a filename chip under each flashcard and quiz
+ * explanation read as clutter, so per-item source tags are deliberately shown
+ * only in the summary, where a section genuinely traces to one source. The
+ * artefact header no longer repeats title, age and model — the tab and the
+ * content already carry what matters.
  */
 
 export interface SummaryPayload {
@@ -66,40 +67,45 @@ export function SummaryView({
   onSourcePeek?: (sourceName: string, focus?: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h3 className="font-display text-lg font-bold tracking-tight">
+    <div className="flex flex-col gap-5">
+      <header className="border-b border-[var(--card-border)] pb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--signal)]">
+          Summary
+        </p>
+        <h3 className="mt-1.5 font-display text-xl font-bold tracking-tight sm:text-2xl">
           {payload.title}
         </h3>
         {/* Reading copy steps up to 15px on a phone and returns to the 14px
             desktop step from sm up — the artefact is read on a small screen
             far more often than on a laptop. */}
-        <p className="mt-2 text-[15px] leading-relaxed text-text-dim sm:text-sm">
+        <p className="mt-2 max-w-[72ch] text-[14.5px] leading-relaxed text-text-dim sm:text-sm">
           {payload.overview}
         </p>
-      </div>
+      </header>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {payload.sections.map((section, i) => (
-          <div
+          <section
             key={`${section.heading}-${i}`}
-            className="rounded-2xl border border-[var(--card-border)] p-4"
+            className="rounded-2xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--text-main)_2%,transparent)] p-4"
           >
-            <p className="flex items-baseline gap-2 font-display text-sm font-bold tracking-tight">
+            <div className="flex items-start gap-2.5">
               <span
                 aria-hidden="true"
-                className="text-[11px] font-semibold tabular-nums text-[var(--signal)]"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--signal)_10%,transparent)] text-[10px] font-semibold tabular-nums text-[var(--signal)]"
               >
                 {sectionOrdinal(i)}
               </span>
-              {section.heading}
-            </p>
-            <ul className="mt-2.5 space-y-1.5">
+              <h4 className="min-w-0 pt-0.5 font-display text-[14.5px] font-bold leading-snug tracking-tight">
+                {section.heading}
+              </h4>
+            </div>
+            <ul className="mt-3 space-y-2">
               {section.points.map((point, j) => (
-                <li key={j} className="flex gap-2 text-[15px] leading-relaxed sm:text-sm">
+                <li key={j} className="flex gap-2 text-[14px] leading-relaxed sm:text-sm">
                   <span
                     aria-hidden="true"
-                    className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--signal)]"
+                    className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-[var(--signal)]"
                   />
                   <span className="text-text-dim">{point}</span>
                 </li>
@@ -111,33 +117,36 @@ export function SummaryView({
                   type="button"
                   onClick={() => onSourcePeek(section.source as string, section.heading)}
                   title="See the exact passage this section came from"
-                  className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[10px] font-medium text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
+                  className="mt-3 inline-flex max-w-full items-center gap-1 truncate rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-medium text-text-dim transition-colors hover:border-[var(--signal)] hover:text-foreground"
                 >
                   {section.source}
                   <span className="text-[9px] text-[var(--signal)]">peek</span>
                 </button>
               ) : (
-                <span className="mt-1 inline-block max-w-full truncate rounded-full border border-[var(--card-border)] px-2 py-0.5 text-[10px] font-medium text-text-dim">
+                <span className="mt-3 inline-block max-w-full truncate rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-medium text-text-dim">
                   {section.source}
                 </span>
               ))}
-          </div>
+          </section>
         ))}
       </div>
 
       {payload.keyTerms && payload.keyTerms.length > 0 && (
         <div>
-          <p className="font-display text-sm font-bold tracking-tight">
-            Key terms
-          </p>
-          <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-base font-bold tracking-tight">Key terms</p>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+              {payload.keyTerms.length} terms
+            </span>
+          </div>
+          <dl className="mt-3 grid gap-2.5 sm:grid-cols-2">
             {payload.keyTerms.map((term, i) => (
               <div
                 key={`${term.term}-${i}`}
-                className="rounded-xl border border-[var(--card-border)] px-3.5 py-2.5"
+                className="rounded-xl border border-[var(--card-border)] px-3.5 py-3"
               >
-                <dt className="text-sm font-medium">{term.term}</dt>
-                <dd className="mt-0.5 text-[13px] leading-relaxed text-text-dim sm:text-xs">
+                <dt className="text-[13.5px] font-semibold">{term.term}</dt>
+                <dd className="mt-1 text-[12.5px] leading-relaxed text-text-dim">
                   {term.meaning}
                 </dd>
               </div>
@@ -344,23 +353,23 @@ export function QuizView({
                   else onWrongAnswer?.({ question, pickedIndex: i });
                 }}
                 className={
-                  "group flex w-full items-start gap-3 rounded-xl border px-3.5 py-3.5 text-left text-[14px] leading-relaxed transition-colors sm:text-[14.5px] " +
+                  "group flex w-full items-start gap-3 rounded-2xl border px-3.5 py-3 text-left text-[14px] leading-relaxed transition-[border-color,background-color,opacity] sm:px-4 sm:py-3.5 sm:text-[14.5px] " +
                   (revealed && isAnswer
-                    ? "border-[color-mix(in_srgb,#57c99a_60%,transparent)] bg-[color-mix(in_srgb,#57c99a_7%,transparent)] text-foreground"
+                    ? "border-[color-mix(in_srgb,#57c99a_38%,var(--card-border))] bg-[color-mix(in_srgb,#57c99a_5%,transparent)] text-foreground"
                     : revealed && isPicked
-                      ? "border-[color-mix(in_srgb,var(--destructive)_55%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_6%,transparent)] text-foreground"
+                      ? "border-[color-mix(in_srgb,var(--destructive)_38%,var(--card-border))] bg-[color-mix(in_srgb,var(--destructive)_4%,transparent)] text-foreground"
                       : dim
-                        ? "border-[var(--card-border)] text-text-dim opacity-55"
-                        : "border-[var(--card-border)] text-foreground hover:border-[color-mix(in_srgb,var(--text-main)_38%,transparent)] hover:bg-[color-mix(in_srgb,var(--text-main)_3%,transparent)]")
+                        ? "border-[var(--card-border)] text-text-dim opacity-50"
+                        : "border-[var(--card-border)] text-foreground hover:border-[color-mix(in_srgb,var(--text-main)_32%,transparent)] hover:bg-[color-mix(in_srgb,var(--text-main)_3%,transparent)]")
                 }
               >
                 <span
                   className={
                     "mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10.5px] font-semibold tabular-nums " +
                     (revealed && isAnswer
-                      ? "border-[color-mix(in_srgb,#57c99a_60%,transparent)] bg-[color-mix(in_srgb,#57c99a_15%,transparent)] text-[#6fdcae]"
+                      ? "border-[color-mix(in_srgb,#57c99a_40%,transparent)] bg-[color-mix(in_srgb,#57c99a_10%,transparent)] text-[#6fdcae]"
                       : revealed && isPicked
-                        ? "border-[color-mix(in_srgb,var(--destructive)_55%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_12%,transparent)] text-[var(--destructive)]"
+                        ? "border-[color-mix(in_srgb,var(--destructive)_40%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_10%,transparent)] text-[var(--destructive)]"
                         : "border-[var(--card-border)] text-text-dim")
                   }
                 >
@@ -393,47 +402,47 @@ export function QuizView({
           aria-live="polite"
           className="overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[color-mix(in_srgb,var(--text-main)_2.5%,transparent)]"
         >
-          <div className="flex items-center gap-2.5 border-b border-[var(--card-border)] px-4 py-3">
+          <div className="flex items-start gap-2.5 px-4 pb-3.5 pt-4">
             <span
               className={
-                "flex h-5 w-5 items-center justify-center rounded-full " +
+                "mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full " +
                 (correctPick
-                  ? "bg-[color-mix(in_srgb,#57c99a_15%,transparent)] text-[#6fdcae]"
-                  : "bg-[color-mix(in_srgb,var(--destructive)_12%,transparent)] text-[var(--destructive)]")
+                  ? "bg-[color-mix(in_srgb,#57c99a_12%,transparent)] text-[#6fdcae]"
+                  : "bg-[color-mix(in_srgb,var(--destructive)_10%,transparent)] text-[var(--destructive)]")
               }
             >
-              {correctPick ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+              {correctPick ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
             </span>
-            <span
-              className={
-                "text-[12px] font-semibold " +
-                (correctPick ? "text-[#6fdcae]" : "text-[var(--destructive)]")
-              }
-            >
-              {correctPick ? "Correct" : "Not quite"}
-            </span>
-            {!correctPick ? (
-              <span className="text-[11.5px] text-text-dim">
-                The answer is {answerLetter}.
-              </span>
-            ) : null}
-            <span className="ml-auto hidden text-[10px] uppercase tracking-[0.14em] text-text-dim sm:inline">
-              Why
-            </span>
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span
+                  className={
+                    "text-[13px] font-semibold " +
+                    (correctPick ? "text-[#6fdcae]" : "text-[var(--destructive)]")
+                  }
+                >
+                  {correctPick ? "Correct" : "Not quite"}
+                </span>
+                <span className="text-[11.5px] text-text-dim">
+                  {correctPick
+                    ? "You picked the right answer."
+                    : `Correct answer: ${answerLetter}`}
+                </span>
+              </p>
+              {question.explanation ? (
+                <p className="mt-2 max-w-[62ch] text-[14px] leading-relaxed text-foreground/85 sm:text-[13.5px]">
+                  {question.explanation}
+                </p>
+              ) : (
+                <p className="mt-2 text-[13px] leading-relaxed text-text-dim">
+                  The source that settled this question is one tap away.
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="px-4 py-3.5">
-            {question.explanation ? (
-              <p className="max-w-[62ch] text-[14px] leading-relaxed text-text-dim sm:text-[13.5px]">
-                {question.explanation}
-              </p>
-            ) : (
-              <p className="text-[13px] leading-relaxed text-text-dim">
-                The source that settled this question is one tap away.
-              </p>
-            )}
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--card-border)] pt-3">
+          <div className="px-4 pb-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--card-border)] pt-3">
               {question.source && onSourcePeek ? (
                 <button
                   type="button"
@@ -841,83 +850,95 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="glass-panel overflow-hidden">
-        <div className="border-b border-[var(--card-border)] px-4 py-5 sm:px-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--signal)]">
-            {payload.title}
-            {payload.subtitle ? ` · ${payload.subtitle}` : ""}
-          </p>
-          <div className="mt-2 flex items-baseline gap-3">
-            <span
-              aria-hidden="true"
-              className="font-display text-2xl font-bold tabular-nums text-[var(--signal)]"
-            >
-              {String(index + 1).padStart(2, "0")}
+        <div className="relative border-b border-[var(--card-border)] px-4 py-4 sm:px-6 sm:py-5">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--signal)] to-transparent opacity-60"
+          />
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="line-clamp-2 text-[10px] font-semibold uppercase leading-[1.6] tracking-[0.14em] text-[var(--signal)]">
+                {payload.title}
+              </p>
+              {payload.subtitle && (
+                <p className="mt-1 line-clamp-1 text-[10.5px] leading-relaxed text-text-dim">
+                  {payload.subtitle}
+                </p>
+              )}
+            </div>
+            <span className="shrink-0 rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-text-dim">
+              {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
             </span>
-            <h4 className="font-display text-xl font-bold tracking-tight">
-              {slide.title}
-            </h4>
           </div>
+          <h4 className="mt-4 font-display text-xl font-bold leading-[1.18] tracking-tight sm:text-2xl">
+            {slide.title}
+          </h4>
         </div>
-        <ul className="flex flex-col gap-2.5 px-4 py-5 sm:px-6">
+        <ul aria-live="polite" className="flex flex-col gap-3 px-4 py-5 sm:px-6">
           {slide.bullets.map((bullet, i) => (
-            <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed sm:text-sm">
+            <li key={i} className="flex gap-2.5 text-[14.5px] leading-relaxed sm:text-[15px]">
               <span
                 aria-hidden="true"
-                className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signal)]"
+                className="mt-[0.62em] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--signal)]"
               />
               <span>{bullet}</span>
             </li>
           ))}
         </ul>
         {slide.notes && (
-          <p className="border-t border-[var(--card-border)] px-4 py-3 text-xs italic leading-relaxed text-text-dim sm:px-6">
-            Speaker note — {slide.notes}
-          </p>
+          <div className="border-t border-[var(--card-border)] bg-[color-mix(in_srgb,var(--text-main)_2%,transparent)] px-4 py-3.5 sm:px-6">
+            <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+              Speaker notes
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-text-dim">
+              {slide.notes}
+            </p>
+          </div>
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex w-full items-center justify-between">
-          <button
-            type="button"
-            ref={slidePrevRef}
-            onClick={() => setIndex((i) => Math.max(0, i - 1))}
-            disabled={index === 0}
-            className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
-            aria-label="Previous slide"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span className="text-xs tabular-nums text-text-dim">
-            Slide {index + 1} / {total}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          ref={slidePrevRef}
+          onClick={() => setIndex((i) => Math.max(0, i - 1))}
+          disabled={index === 0}
+          className="glass-chip cd-pill inline-flex h-10 w-10 shrink-0 items-center justify-center disabled:opacity-40"
+          aria-label="Previous slide"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+          <span className="text-[11px] tabular-nums text-text-dim">
+            Slide {index + 1} of {total}
           </span>
-          <button
-            type="button"
-            ref={slideNextRef}
-            onClick={() => setIndex((i) => Math.min(total - 1, i + 1))}
-            disabled={index === total - 1}
-            className="glass-chip cd-pill inline-flex h-10 w-10 items-center justify-center disabled:opacity-40"
-            aria-label="Next slide"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            {payload.slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIndex(i)}
+                tabIndex={-1}
+                className={
+                  "h-1.5 rounded-full transition-all " +
+                  (i === index
+                    ? "w-5 bg-[var(--signal)]"
+                    : "w-1.5 bg-[var(--card-border)] hover:bg-[var(--text-dim)]")
+                }
+              />
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          {payload.slides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setIndex(i)}
-              tabIndex={-1}
-              className={
-                "h-1.5 rounded-full transition-all " +
-                (i === index
-                  ? "w-5 bg-[var(--signal)]"
-                  : "w-1.5 bg-[var(--card-border)] hover:bg-[var(--text-dim)]")
-              }
-            />
-          ))}
-        </div>
+        <button
+          type="button"
+          ref={slideNextRef}
+          onClick={() => setIndex((i) => Math.min(total - 1, i + 1))}
+          disabled={index === total - 1}
+          className="glass-chip cd-pill inline-flex h-10 w-10 shrink-0 items-center justify-center disabled:opacity-40"
+          aria-label="Next slide"
+        >
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
