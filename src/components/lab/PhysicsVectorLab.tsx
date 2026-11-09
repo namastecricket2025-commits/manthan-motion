@@ -109,12 +109,12 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "motion",
         label: "Motion",
-        blurb: "Launch a ball, swing a bob or send a cart down a ramp.",
+        blurb: "Launch, swing, or roll a body.",
       },
       {
         id: "dynamics",
         label: "Dynamics",
-        blurb: "Drop a body 80 m and compare free fall, drag and energy.",
+        blurb: "Free fall, drag and energy.",
       },
     ],
   },
@@ -124,12 +124,12 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "circuits",
         label: "Circuits",
-        blurb: "Build a loop, flip the key and read current, voltage and power.",
+        blurb: "Build a loop and read the meters.",
       },
       {
         id: "magnet",
         label: "Magnetism",
-        blurb: "Map a bar magnet's field, or circle a current-carrying wire.",
+        blurb: "Map a field around a magnet or wire.",
       },
     ],
   },
@@ -139,12 +139,12 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "waves",
         label: "Waves",
-        blurb: "Two waves, their phase difference and the sum they make.",
+        blurb: "Phase, amplitude and the sum.",
       },
       {
         id: "optics",
         label: "Optics",
-        blurb: "Trace a lens or mirror ray diagram and measure the image.",
+        blurb: "Trace a lens or mirror image.",
       },
     ],
   },
@@ -154,12 +154,12 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "instruments",
         label: "Instruments",
-        blurb: "Read the lab's measuring instruments before the practical.",
+        blurb: "Read the lab's measuring tools.",
       },
       {
         id: "classlabs",
         label: "Class 8–12",
-        blurb: "Pressure, echoes, projectiles, p–V cycles and electric fields.",
+        blurb: "Pressure, echoes, projectiles and fields.",
       },
     ],
   },
@@ -2021,6 +2021,7 @@ export function PhysicsVectorLab() {
   const theme = useLabTheme();
   const phone = useLabPhone();
   const rootRef = useRef<HTMLDivElement>(null);
+  const libraryScroll = useRef(0);
   const [phoneOpen, setPhoneOpen] = useState(() => {
     const wanted = params.get("bench");
     return Boolean(
@@ -2037,9 +2038,19 @@ export function PhysicsVectorLab() {
       : BENCHES.find((entry) => entry.id === bench)?.label ?? "Physics bench";
 
   const showPhone = (open: boolean) => {
+    if (open) libraryScroll.current = window.scrollY;
     setPhoneOpen(open);
+    /* One frame commits the new mode (the masthead and rail leave, the bench
+       arrives), the next scrolls against that finished layout. Back returns to
+       the exact library row; the index is the place the reader left. */
     requestAnimationFrame(() =>
-      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" }),
+      requestAnimationFrame(() => {
+        if (!open) {
+          window.scrollTo({ top: libraryScroll.current, behavior: "auto" });
+          return;
+        }
+        rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+      }),
     );
   };
 
@@ -2099,7 +2110,12 @@ export function PhysicsVectorLab() {
   );
 
   return (
-    <div ref={rootRef} data-lab-theme={theme} className="flex scroll-mt-20 flex-col gap-4 sm:gap-5">
+    <div
+      ref={rootRef}
+      data-lab-theme={theme}
+      data-phone-detail={phone && phoneOpen ? "true" : undefined}
+      className="flex scroll-mt-20 flex-col gap-4 sm:gap-5"
+    >
       {phone ? (
         phoneOpen ? (
           <>
@@ -2109,6 +2125,7 @@ export function PhysicsVectorLab() {
               onBack={() => showPhone(false)}
             />
             {benchContent}
+            <div className="lab-phone-dock-space" aria-hidden="true" />
           </>
         ) : (
           <LabPhoneLibrary

@@ -52,24 +52,17 @@ export function LabPhoneLibrary({
   const count = groups.reduce((total, group) => total + group.topics.length, 0);
 
   return (
-    <div className="lab-phone">
+    <div className="lab-phone" role="region" aria-label={`${subject} bench library`}>
       <div className="lab-phone-intro">
-        <p className="apple-lab-micro">
-          {subject} · {count} benches
-        </p>
         <h2 className="lab-phone-heading">Choose a bench</h2>
-        <p className="lab-phone-lede">
-          Open one experiment at a time. Its bench and controls get the whole
-          screen.
-        </p>
+        <span className="lab-phone-count">
+          {count} {count === 1 ? "experiment" : "experiments"}
+        </span>
       </div>
 
       {groups.map((group) => (
         <section className="lab-phone-group" key={group.label}>
-          <div className="lab-phone-group-head">
-            <p className="lab-phone-group-label">{group.label}</p>
-            <span className="lab-phone-group-count">{group.topics.length}</span>
-          </div>
+          <h3 className="lab-phone-group-label">{group.label}</h3>
           <div className="lab-phone-list">
             {group.topics.map((topic) => (
               <button
@@ -107,11 +100,19 @@ export function LabPhoneBar({
 }) {
   return (
     <div className="lab-phone-bar">
-      <button type="button" className="lab-phone-back" onClick={onBack}>
-        <ArrowLeft className="h-3.5 w-3.5" />
-        <span>All {subject.toLowerCase()}</span>
+      <button
+        type="button"
+        className="lab-phone-back"
+        aria-label={`Back to all ${subject.toLowerCase()}`}
+        title={`All ${subject.toLowerCase()}`}
+        onClick={onBack}
+      >
+        <ArrowLeft className="h-4 w-4" />
       </button>
-      <span className="lab-phone-here">{label}</span>
+      <span className="lab-phone-bar-copy">
+        <span className="lab-phone-bar-subject">{subject}</span>
+        <span className="lab-phone-here">{label}</span>
+      </span>
       {right ? <div className="lab-phone-bar-extra">{right}</div> : null}
     </div>
   );

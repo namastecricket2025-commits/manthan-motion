@@ -244,11 +244,11 @@ export default function Lab() {
 
         {/* ---- Canvas ---- */}
         <main
-          className="app-canvas px-4 py-4 transition-[margin-left] duration-300 ease-out sm:px-6 sm:py-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
+          className="app-canvas px-4 py-3 transition-[margin-left] duration-300 ease-out sm:px-6 min-[760px]:py-6 min-[760px]:ml-[var(--sidebar-w)] md:py-10"
           style={{ "--sidebar-w": collapsed ? "76px" : "240px" } as CSSProperties}
         >
-          <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-6">
-            <div className="min-w-0">
+          <div className="lab-page mx-auto flex max-w-6xl flex-col gap-2 min-[760px]:gap-6">
+            <div className="lab-page-head min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-text-dim max-sm:hidden">
                 Workspace · Physics, Chemistry, Biology
               </p>
@@ -359,6 +359,7 @@ export default function Lab() {
                   <button
                     type="button"
                     className="apple-lab-btn justify-center !py-2.5"
+                    aria-label="Lab tools"
                     onClick={() => setToolsOpen(true)}
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -420,7 +421,7 @@ export default function Lab() {
               Lab tools
             </SheetTitle>
             <SheetDescription className="text-[12px] leading-relaxed text-text-dim">
-              Drills and notebooks, kept up here instead of above every bench.
+              Drills and notebooks, kept out of the bench itself.
             </SheetDescription>
           </SheetHeader>
           <div className="px-5">

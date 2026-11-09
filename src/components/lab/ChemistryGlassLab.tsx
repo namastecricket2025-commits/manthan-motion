@@ -78,12 +78,12 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "table",
         label: "Periodic Table",
-        blurb: "All 118 elements, grouped and colour-coded.",
+        blurb: "All 118 elements, colour-coded.",
       },
       {
         id: "bohr",
         label: "Atomic Models",
-        blurb: "Bohr shells and the electron structure of an element.",
+        blurb: "Bohr shells and electron structure.",
       },
     ],
   },
@@ -93,22 +93,22 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "titration",
         label: "Titration",
-        blurb: "Run a burette, find the end point and read the volume.",
+        blurb: "Run a burette and find the end point.",
       },
       {
         id: "salts",
         label: "Salt Analysis",
-        blurb: "Identify an unknown salt by its cation and anion tests.",
+        blurb: "Identify a salt by cation and anion.",
       },
       {
         id: "instruments",
         label: "Instruments",
-        blurb: "The glassware and measuring tools used at the bench.",
+        blurb: "Glassware and measuring tools.",
       },
       {
         id: "separation",
         label: "Separation",
-        blurb: "Distil, filter and separate a mixture step by step.",
+        blurb: "Distil, filter and separate a mixture.",
       },
     ],
   },
@@ -118,12 +118,12 @@ const PHONE_GROUPS: LabPhoneGroup[] = [
       {
         id: "reactions",
         label: "Reactions",
-        blurb: "Mix reagents and watch the reaction change.",
+        blurb: "Mix reagents and watch them change.",
       },
       {
         id: "balance",
         label: "Balancing",
-        blurb: "Balance an equation and check the mole counts.",
+        blurb: "Balance an equation and its moles.",
       },
     ],
   },
@@ -2582,6 +2582,7 @@ export function ChemistryGlassLab() {
   const stagger = useStagger(0.05);
   const phone = useLabPhone();
   const rootRef = useRef<HTMLDivElement>(null);
+  const libraryScroll = useRef(0);
   const [phoneOpen, setPhoneOpen] = useState(() => {
     const wanted = params.get("bench") ?? params.get("tab");
     return SUBTABS.some((entry) => entry.id === wanted);
@@ -2590,9 +2591,16 @@ export function ChemistryGlassLab() {
   const phoneTitle = SUBTABS.find((entry) => entry.id === tab)?.label ?? "Chemistry bench";
 
   const showPhone = (open: boolean) => {
+    if (open) libraryScroll.current = window.scrollY;
     setPhoneOpen(open);
     requestAnimationFrame(() =>
-      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" }),
+      requestAnimationFrame(() => {
+        if (!open) {
+          window.scrollTo({ top: libraryScroll.current, behavior: "auto" });
+          return;
+        }
+        rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+      }),
     );
   };
 
@@ -2612,7 +2620,12 @@ export function ChemistryGlassLab() {
   );
 
   return (
-    <div ref={rootRef} data-lab-theme={theme} className="scroll-mt-20 rounded-[28px] pb-2 sm:pb-6">
+    <div
+      ref={rootRef}
+      data-lab-theme={theme}
+      data-phone-detail={phone && phoneOpen ? "true" : undefined}
+      className="scroll-mt-20 rounded-[28px] pb-2 sm:pb-6"
+    >
       {phone ? (
         phoneOpen ? (
           <>
@@ -2622,6 +2635,7 @@ export function ChemistryGlassLab() {
               onBack={() => showPhone(false)}
             />
             <div className="mt-3">{tabContent}</div>
+            <div className="lab-phone-dock-space" aria-hidden="true" />
           </>
         ) : (
           <LabPhoneLibrary

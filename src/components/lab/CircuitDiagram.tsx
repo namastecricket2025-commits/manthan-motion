@@ -549,7 +549,7 @@ export function CircuitsBench() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
-      <div className="apple-lab-panel apple-lab-glass">
+      <div className="apple-lab-panel apple-lab-glass circuit-panel">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="apple-lab-micro">{headline}</p>
@@ -585,7 +585,7 @@ export function CircuitsBench() {
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="circuit-display-row mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="apple-lab-micro mr-1">Symbols</span>
             {SYMBOL_STYLES.map((option) => (
@@ -758,7 +758,7 @@ export function CircuitsBench() {
           </svg>
         </LabFigure>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" style={{ borderColor: "var(--lab-line)" }}>
+        <div className="circuit-symbol-key mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" style={{ borderColor: "var(--lab-line)" }}>
           <span className="apple-lab-micro">Circuit symbols</span>
           <SymbolKey kind="battery" style={symbolStyle} label="battery" />
           <SymbolKey kind="cell" style={symbolStyle} label="cell" />

@@ -1158,6 +1158,7 @@ export function BiologyVectorLab() {
   const [plant, setPlant] = useState(false);
   const phone = useLabPhone();
   const rootRef = useRef<HTMLDivElement>(null);
+  const libraryScroll = useRef(0);
   const [phoneOpen, setPhoneOpen] = useState(() => {
     const wanted = params.get("plate") as Plate | null;
     return Boolean(wanted && PLATE_IDS.includes(wanted));
@@ -1172,8 +1173,8 @@ export function BiologyVectorLab() {
          rename itself under the pointer. */
       label: "Cells",
       blurb: plant
-        ? "Rigid wall, chloroplasts and one huge vacuole"
-        : "Membrane, nucleus, mitochondria and the protein line",
+        ? "Wall, chloroplasts and a vacuole"
+        : "Membrane, nucleus and mitochondria",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: cellBase(plant),
       parts: cellParts(plant),
@@ -1181,14 +1182,14 @@ export function BiologyVectorLab() {
     {
       id: "microscope",
       label: "Microscope",
-      blurb: "Focus a prepared slide and identify the tissue",
+      blurb: "Focus a slide and identify the tissue",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       parts: [],
     },
     {
       id: "heart",
       label: "Heart System",
-      blurb: "A scanned heart you can turn, label and read",
+      blurb: "A scanned heart you can turn and label",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <path
@@ -1202,7 +1203,7 @@ export function BiologyVectorLab() {
     {
       id: "respiratory",
       label: "Respiratory System",
-      blurb: "Lungs you can inflate with a deep-breathing slider",
+      blurb: "Lungs you can inflate with a slider",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <>
@@ -1224,7 +1225,7 @@ export function BiologyVectorLab() {
     {
       id: "excretory",
       label: "Excretory System",
-      blurb: "A kidney you can filter down to the nephrons",
+      blurb: "A kidney you can filter to the nephrons",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       base: (
         <path
@@ -1240,14 +1241,14 @@ export function BiologyVectorLab() {
     {
       id: "digestive",
       label: "Digestive System",
-      blurb: "Swallow a meal and follow it from mouth to rectum",
+      blurb: "Follow a meal from mouth to rectum",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       parts: [],
     },
     {
       id: "nervous",
       label: "Nervous System",
-      blurb: "A neuron and a reflex loop you can fire",
+      blurb: "A neuron and a reflex loop to fire",
       viewBox: `0 0 ${PLATE_W} ${PLATE_H}`,
       parts: [],
     },
@@ -1271,9 +1272,16 @@ export function BiologyVectorLab() {
   ];
 
   const showPhone = (open: boolean) => {
+    if (open) libraryScroll.current = window.scrollY;
     setPhoneOpen(open);
     requestAnimationFrame(() =>
-      rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" }),
+      requestAnimationFrame(() => {
+        if (!open) {
+          window.scrollTo({ top: libraryScroll.current, behavior: "auto" });
+          return;
+        }
+        rootRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+      }),
     );
   };
 
@@ -1314,7 +1322,12 @@ export function BiologyVectorLab() {
     );
 
   return (
-    <div ref={rootRef} data-lab-theme={theme} className="flex scroll-mt-20 flex-col gap-4 sm:gap-5">
+    <div
+      ref={rootRef}
+      data-lab-theme={theme}
+      data-phone-detail={phone && phoneOpen ? "true" : undefined}
+      className="flex scroll-mt-20 flex-col gap-4 sm:gap-5"
+    >
       {phone ? (
         phoneOpen ? (
           <>
@@ -1325,6 +1338,7 @@ export function BiologyVectorLab() {
               right={cellSwitch}
             />
             <div className="mt-1">{plateBody}</div>
+            <div className="lab-phone-dock-space" aria-hidden="true" />
           </>
         ) : (
           <LabPhoneLibrary
