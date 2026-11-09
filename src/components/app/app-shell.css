@@ -1,0 +1,318 @@
+/* ============================================================
+   Signed-in app chrome
+   ============================================================ */
+
+.app-tabbar {
+  display: none;
+}
+
+@media (max-width: 759px) {
+  .app-tabbar {
+    position: fixed;
+    z-index: 45;
+    left: 50%;
+    bottom: calc(0.45rem + env(safe-area-inset-bottom));
+    display: grid;
+    width: min(calc(100vw - 0.9rem), 30rem);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    padding: 0.32rem 0.35rem 0.34rem;
+    transform: translateX(-50%);
+    border: 1px solid var(--panel-line-strong);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 18px 42px -20px rgba(0, 0, 0, 0.65);
+  }
+
+  .app-tabbar__item {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 0;
+    border-radius: 17px;
+    background: transparent;
+    color: var(--text-dim);
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .app-tabbar__item:active {
+    transform: scale(0.94);
+  }
+
+  .app-tabbar__item[data-active="true"] {
+    color: var(--text-main);
+  }
+
+  .app-tabbar__icon {
+    display: grid;
+    height: 25px;
+    min-width: 38px;
+    place-items: center;
+    border-radius: 999px;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .app-tabbar__item[data-active="true"] .app-tabbar__icon {
+    background: color-mix(in srgb, var(--signal) 16%, transparent);
+    color: var(--signal);
+  }
+
+  .app-tabbar__label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 9.5px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-tabbar__item[data-active="true"] .app-tabbar__label {
+    font-weight: 750;
+  }
+
+  /* Leave room for the dock on ordinary app pages. The notebook and focused
+     lab bench replace it with their own bottom surface, so those pages opt
+     out through the selectors below. */
+  .app-canvas {
+    padding-bottom: calc(5.35rem + env(safe-area-inset-bottom));
+  }
+
+  body:has([data-phone-detail="true"]) .app-tabbar {
+    display: none;
+  }
+
+  /* A keyboard already owns the bottom edge. Fold the dock away while the
+     student is typing so it never sits on top of the field they are using. */
+  body:has(.app-tabbar):has(input:focus, textarea:focus) .app-tabbar,
+  body:has(.notebook-dock):has(input:focus, textarea:focus) .notebook-dock {
+    display: none;
+  }
+
+  body:has([data-phone-detail="true"]) .app-canvas {
+    padding-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 759px) and (prefers-reduced-motion: reduce) {
+  .app-tabbar__item,
+  .app-tabbar__icon {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   Notebook interior — phone pane dock
+   ============================================================ */
+
+.notebook-dock {
+  display: none;
+}
+
+@media (max-width: 759px) {
+  body:has(.notebook-dock) .app-canvas {
+    padding-bottom: 0.75rem;
+  }
+
+  .notebook-dock-space {
+    height: calc(5.2rem + env(safe-area-inset-bottom));
+  }
+
+  .notebook-dock {
+    position: fixed;
+    z-index: 46;
+    left: 50%;
+    bottom: calc(0.45rem + env(safe-area-inset-bottom));
+    display: grid;
+    width: min(calc(100vw - 0.9rem), 30rem);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 0.32rem 0.35rem 0.34rem;
+    transform: translateX(-50%);
+    border: 1px solid var(--panel-line-strong);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 18px 42px -20px rgba(0, 0, 0, 0.65);
+  }
+
+  .notebook-dock__item {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 0;
+    border-radius: 17px;
+    background: transparent;
+    color: var(--text-dim);
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .notebook-dock__item:active {
+    transform: scale(0.94);
+  }
+
+  .notebook-dock__item[data-active="true"] {
+    color: var(--text-main);
+  }
+
+  .notebook-dock__icon {
+    display: grid;
+    height: 25px;
+    min-width: 42px;
+    place-items: center;
+    border-radius: 999px;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .notebook-dock__item[data-active="true"] .notebook-dock__icon {
+    background: color-mix(in srgb, var(--signal) 16%, transparent);
+    color: var(--signal);
+  }
+
+  .notebook-dock__label {
+    font-size: 9.5px;
+    font-weight: 650;
+    line-height: 1;
+  }
+
+  .notebook-dock__item[data-active="true"] .notebook-dock__label {
+    font-weight: 750;
+  }
+
+  .notebook-dock__count {
+    position: absolute;
+    top: 0.2rem;
+    left: calc(50% + 9px);
+    display: grid;
+    min-width: 14px;
+    height: 14px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--signal);
+    padding: 0 3px;
+    color: var(--primary-foreground);
+    font-size: 8px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .notebook-dock__item:nth-child(3) .notebook-dock__count {
+    background: var(--verify);
+  }
+}
+
+@media (max-width: 759px) and (prefers-reduced-motion: reduce) {
+  .notebook-dock__item,
+  .notebook-dock__icon {
+    transition: none;
+  }
+}
+
+/* Home focus picker shared by settings (and shaped like onboarding). */
+.home-focus-picker {
+  display: grid;
+  width: 100%;
+  gap: 0.4rem;
+}
+
+.home-focus-choice {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 0.18rem;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 0.55rem 0.65rem;
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  color: var(--text-main);
+  text-align: left;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-focus-choice:active {
+  transform: scale(0.985);
+}
+
+.home-focus-choice[data-active="true"] {
+  border-color: color-mix(in srgb, var(--signal) 50%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, var(--panel));
+}
+
+.home-focus-choice__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.home-focus-choice[data-active="true"] .home-focus-choice__label {
+  color: var(--signal);
+}
+
+.home-focus-choice__hint {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+@media (min-width: 640px) {
+  .home-focus-picker {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-focus-choice {
+    transition: none;
+  }
+}
+
+/* The orb belongs above the page but below every sheet and dialog: a modal
+   should never have a voice button floating over it. */
+body .avia-root {
+  z-index: 44;
+}
+
+/* The voice orb owns the corner, the dock owns the edge. Lift the orb above
+   whichever bottom surface is present so neither hides the other. */
+@media (max-width: 760px) {
+  body:has(.app-tabbar) .avia-root,
+  body:has(.notebook-dock) .avia-root,
+  body:has([data-phone-detail="true"]) .avia-root {
+    bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  }
+
+  .feedback-prompt {
+    bottom: calc(5.8rem + env(safe-area-inset-bottom));
+  }
+}

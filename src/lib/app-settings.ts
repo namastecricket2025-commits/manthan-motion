@@ -17,6 +17,16 @@ import { useEffect, useState } from "react";
 export type ThemeMode = "light" | "dark" | "system";
 export type TextComfort = "small" | "medium" | "large" | "dyslexic";
 export type FrameTarget = "30" | "60" | "uncapped";
+/**
+ * How much the signed-in home puts on the table.
+ *
+ * "minimal" is the next action and the tools needed to take it. "balanced"
+ * adds the notebook shelf and a quiet week readout. "everything" also brings
+ * recent activity forward. This is the choice onboarding asks for, and the
+ * dashboard respects it rather than making every student scroll the same
+ * analytics wall.
+ */
+export type HomeFocus = "minimal" | "balanced" | "everything";
 
 export interface AppSettings {
   /** Motionless mode: freezes every continuous loop and idle 3D orbit. */
@@ -32,6 +42,7 @@ export interface AppSettings {
    * filter; colour-critical stains and spectra keep their meaning.
    */
   eyeComfort: boolean;
+  homeFocus: HomeFocus;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -40,6 +51,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   themeMode: "dark",
   textComfort: "medium",
   eyeComfort: false,
+  homeFocus: "balanced",
 };
 
 /**

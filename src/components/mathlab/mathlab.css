@@ -2465,6 +2465,18 @@
   }
 }
 
+/* The phone app dock owns the bottom edge. Lift the calculator orb and its
+   drawer above it so neither control is hidden under the navigation. */
+@media (max-width: 759px) {
+  .mathlab-calc-fab {
+    bottom: calc(5.9rem + env(safe-area-inset-bottom));
+  }
+
+  .mathlab-calc-drawer {
+    bottom: calc(5.9rem + 60px + env(safe-area-inset-bottom));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mathlab-view,
   .mathlab-modetab,

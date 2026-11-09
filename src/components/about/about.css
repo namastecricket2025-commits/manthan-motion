@@ -22,14 +22,14 @@ html:not(.dark) .about-root {
   --about-dim: #374151;
   --about-faint: #1e293b;
   /* Daylight palette: the accent word, kicker dots, hairlines and the CTA's
-     orbiting border all resolve to the deep caramel here. */
-  --about-signal: #b45309;
-  --about-signal-glow: rgba(180, 83, 9, 0.85);
+     orbiting border all resolve to the same coral as the rest of the app. */
+  --about-signal: #b23f1e;
+  --about-signal-glow: rgba(178, 63, 30, 0.85);
 }
 html:not(.dark) .about-root .apple-glass,
 html:not(.dark) .about-root .apple-card {
   /* glass edges keep their contrast on the pale canvas */
-  --card-border: rgba(180, 83, 9, 0.22);
+  --card-border: rgba(178, 63, 30, 0.18);
 }
 
 /* ---------- 1. The site panel ----------

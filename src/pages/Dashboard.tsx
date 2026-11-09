@@ -7,7 +7,9 @@ import {
 } from "@/components/dashboard/DashboardNav";
 import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
+import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { NotebookWorkspace } from "@/components/dashboard/NotebookWorkspace";
+import { useAppPhone } from "@/hooks/use-app-phone";
 import { FeedbackPrompt } from "@/components/shared/TestimonialsFeedbackPrompt";
 import { Logo } from "@/components/landing/Logo";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
@@ -107,6 +109,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const transition = useSpringTransition();
+  const phone = useAppPhone();
 
   const view =
     searchParams.get("view") === "notebooks" ? "notebooks" : "overview";
@@ -334,7 +337,7 @@ export default function Dashboard() {
                 {openNotebook ? (
                   <button
                     type="button"
-                    onClick={() => navigate("/dashboard")}
+                    onClick={() => navigate("/dashboard?view=notebooks")}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-text-dim transition-colors hover:text-foreground"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
@@ -342,7 +345,7 @@ export default function Dashboard() {
                   </button>
                 ) : (
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-dim">
-                    {greeting()}
+                    {view === "notebooks" ? "Your library" : greeting()}
                   </p>
                 )}
                 <motion.h1
@@ -352,19 +355,23 @@ export default function Dashboard() {
                   transition={transition}
                   className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl"
                 >
-                  {openNotebook ? openNotebook.name : (user?.name ?? "Welcome")}
+                  {openNotebook
+                    ? openNotebook.name
+                    : view === "notebooks"
+                      ? "Notebooks"
+                      : (user?.name ?? "Welcome")}
                   <span className="text-[var(--signal)]">.</span>
                 </motion.h1>
                 {/* The dashboard face already says whose it is; a line explaining
                     that it is a study dashboard underneath the greeting was
                     filler. The other faces keep their one useful sentence. */}
                 {!openNotebook && view !== "notebooks" && !hasNotebooks ? (
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim max-[759px]:hidden">
                     Create your first notebook to get started.
                   </p>
                 ) : null}
                 {openNotebook || view === "notebooks" ? (
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim">
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-text-dim max-[759px]:hidden">
                     {openNotebook
                       ? "Add your sources, then churn them into study material."
                       : "A notebook is one subject, chapter or exam. Name it, fill it with sources, then churn them."}
@@ -374,6 +381,7 @@ export default function Dashboard() {
               {openNotebook && (
                 <MovingBorderButton
                   onClick={() => navigate("/dashboard?view=notebooks")}
+                  className="max-[759px]:hidden"
                   innerClassName="px-5 py-2.5 text-[13px]"
                 >
                   <NotebookPen className="h-4 w-4" />
@@ -571,6 +579,28 @@ export default function Dashboard() {
                       </div>
                     )}
                   </>
+                ) : phone ? (
+                  <DashboardHome
+                    summary={summary}
+                    notebooks={notebooks ?? []}
+                    onOpenNotebook={(notebookId, target) => {
+                      const params = new URLSearchParams({ notebook: notebookId });
+                      if (target?.tab) params.set("tab", target.tab);
+                      navigate(
+                        `/dashboard?${params.toString()}${
+                          target?.focus ? `#${target.focus}` : ""
+                        }`,
+                      );
+                    }}
+                    onOpenNotebooks={() =>
+                      navigate("/dashboard?view=notebooks")
+                    }
+                    onCreateNotebook={() =>
+                      navigate("/dashboard?view=notebooks")
+                    }
+                    onOpenMathLab={() => selectSection("mathlab")}
+                    onOpenStemLab={() => navigate("/lab")}
+                  />
                 ) : (
                   /* ================= OVERVIEW ================= */
                   <>

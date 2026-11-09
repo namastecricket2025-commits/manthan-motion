@@ -2,22 +2,35 @@ import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useConvexAuth } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, BookOpen, Check, GraduationCap, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  GraduationCap,
+  Home,
+  LayoutGrid,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
+import { useSettings } from "@/components/settings/SettingsProvider";
+import type { HomeFocus } from "@/lib/app-settings";
+import "./onboarding.css";
 
 /**
  * First-run questions.
  *
- * Two screens, not a tour: who the student is and which class they are in,
- * then which subjects they actually study. The answers are stored on the
- * account row so they survive a new device.
+ * Three screens, not a tour: who the student is and which class they are in,
+ * which subjects they actually study, then how much the phone home should put
+ * in front of them. The identity answers are stored on the account row; the
+ * home choice joins the device's display settings and can be changed there.
  *
  * This is a gate, not a suggestion: a brand-new Google account arrives with a
  * name and an email but no class, so the workspace cannot open on the right
  * level until the student says which class they are in. The sheet therefore
- * has no skip and no close — completing the two screens is the way in. The
+ * has no skip and no close — completing the three screens is the way in. The
  * answers remain editable from Settings.
  *
  * It is deliberately absent from /auth: a sign-in form behind a modal is not a
@@ -26,6 +39,32 @@ import { toast } from "sonner";
 
 const GRADES = ["8", "9", "10", "11", "12"] as const;
 const BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "State board"] as const;
+const HOME_FOCUS: Array<{
+  key: HomeFocus;
+  label: string;
+  hint: string;
+  icon: typeof Home;
+}> = [
+  {
+    key: "minimal",
+    label: "Just the next step",
+    hint: "One notebook, the core tools, and no report to scroll.",
+    icon: Sparkles,
+  },
+  {
+    key: "balanced",
+    label: "A balanced home",
+    hint: "The next step, your notebook shelf, and a quiet week readout.",
+    icon: LayoutGrid,
+  },
+  {
+    key: "everything",
+    label: "Show me everything",
+    hint: "Adds recent activity and progress at a glance.",
+    icon: Home,
+  },
+];
+
 const SUBJECTS = [
   "Mathematics",
   "Physics",
@@ -50,6 +89,7 @@ export function OnboardingModal() {
   const profile = useQuery(api.users.profile);
   const complete = useMutation(api.users.completeOnboarding);
   const location = useLocation();
+  const { settings, update } = useSettings();
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
@@ -64,6 +104,7 @@ export function OnboardingModal() {
     "Physics",
     "Chemistry",
   ]);
+  const [homeFocus, setHomeFocus] = useState<HomeFocus>(settings.homeFocus);
   const [saving, setSaving] = useState(false);
   const [closed, setClosed] = useState(false);
 
@@ -118,6 +159,7 @@ export function OnboardingModal() {
         board,
         subjects,
       });
+      update({ homeFocus });
       setClosed(true);
       toast.success("Workspace personalised", {
         description: `Class ${grade} · ${board} · ${subjects.length} subject${
@@ -163,16 +205,22 @@ export function OnboardingModal() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--card-border)] text-[var(--signal)]">
                   {step === 0 ? (
                     <GraduationCap className="h-4 w-4" />
-                  ) : (
+                  ) : step === 1 ? (
                     <BookOpen className="h-4 w-4" />
+                  ) : (
+                    <Home className="h-4 w-4" />
                   )}
                 </span>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-dim">
-                    Step {step + 1} of 2
+                    Step {step + 1} of 3
                   </p>
                   <p className="text-[11px] text-text-dim">
-                    {step === 0 ? "Where you study" : "What you study"}
+                    {step === 0
+                      ? "Where you study"
+                      : step === 1
+                        ? "What you study"
+                        : "How home should feel"}
                   </p>
                 </div>
               </div>
@@ -263,7 +311,7 @@ export function OnboardingModal() {
                     ))}
                   </div>
                 </motion.div>
-              ) : (
+              ) : step === 1 ? (
                 <motion.div
                   key="subjects"
                   initial={{ opacity: 0, x: 14 }}
@@ -312,18 +360,81 @@ export function OnboardingModal() {
                       : `${subjects.length} selected · Class ${grade} · ${board}`}
                   </p>
                 </motion.div>
+              ) : (
+                <motion.div
+                  key="home-focus"
+                  initial={{ opacity: 0, x: 14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -14 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative mt-6"
+                >
+                  <h2
+                    id="onboarding-title"
+                    className="font-display text-2xl font-bold tracking-[-0.02em]"
+                  >
+                    How should home feel?
+                  </h2>
+                  <p className="mt-1.5 text-sm leading-relaxed text-text-dim">
+                    Choose how much you want waiting when you open Manthan.
+                    This changes the home surface, never what you are allowed
+                    to open. You can switch it in Settings later.
+                  </p>
+
+                  <div
+                    className="onboarding-focus mt-5"
+                    role="radiogroup"
+                    aria-label="Home focus"
+                  >
+                    {HOME_FOCUS.map((option) => {
+                      const Icon = option.icon;
+                      const active = homeFocus === option.key;
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => setHomeFocus(option.key)}
+                          className="onboarding-focus__option"
+                          data-active={active ? "true" : undefined}
+                        >
+                          <span className="onboarding-focus__icon">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="onboarding-focus__text">
+                            <span className="onboarding-focus__label">
+                              {option.label}
+                              {active ? (
+                                <Check className="h-3.5 w-3.5 text-[var(--signal)]" />
+                              ) : null}
+                            </span>
+                            <span className="onboarding-focus__hint">
+                              {option.hint}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-4 text-[11px] leading-relaxed text-text-dim">
+                    Your class, board and subjects still set the level of every
+                    practice set. The home choice only decides how much you see
+                    at once.
+                  </p>
+                </motion.div>
               )}
             </AnimatePresence>
 
             <div className="relative mt-7 flex items-center justify-between gap-3 border-t border-[var(--card-border)] pt-5">
               {step === 0 ? (
                 <span className="text-xs text-text-dim">
-                  Two quick questions, then your workspace opens.
+                  Three quick questions, then your workspace opens.
                 </span>
               ) : (
                 <button
                   type="button"
-                  onClick={() => setStep(0)}
+                  onClick={() => setStep(step - 1)}
                   disabled={saving}
                   className="text-xs font-medium text-text-dim transition-colors hover:text-foreground disabled:opacity-50"
                 >
@@ -333,7 +444,7 @@ export function OnboardingModal() {
 
               <div className="flex items-center gap-3">
                 <span className="flex gap-1.5" aria-hidden="true">
-                  {[0, 1].map((dot) => (
+                  {[0, 1, 2].map((dot) => (
                     <span
                       key={dot}
                       className={
@@ -345,12 +456,12 @@ export function OnboardingModal() {
                     />
                   ))}
                 </span>
-                {step === 0 ? (
+                {step < 2 ? (
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
-                    disabled={!name.trim() || !grade}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    onClick={() => setStep(step + 1)}
+                    disabled={step === 0 && (!name.trim() || !grade)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary)] px-5 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Continue
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -360,7 +471,7 @@ export function OnboardingModal() {
                     type="button"
                     onClick={() => void save()}
                     disabled={saving || !name.trim() || !grade}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--text-main)] px-5 py-2.5 text-[13px] font-semibold text-[var(--panel)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary)] px-5 py-2.5 text-[13px] font-semibold text-[var(--primary-foreground)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                     Start studying

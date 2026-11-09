@@ -44,7 +44,7 @@ import { api } from "@/convex/_generated/api";
 import { downloadLabReport, type NotebookRow, type ProgressRow, type RecordRow } from "@/components/lab/progress/report";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
-import type { TextComfort, ThemeMode } from "@/lib/app-settings";
+import type { HomeFocus, TextComfort, ThemeMode } from "@/lib/app-settings";
 import { ReviewsPanel } from "./ReviewsPanel";
 import { StudyProfileCard } from "./StudyProfileCard";
 import { useSettings } from "./SettingsProvider";
@@ -57,6 +57,24 @@ const THEMES: { key: ThemeMode; label: string; hint: string; icon: typeof Sun }[
   { key: "light", label: "Light", hint: "Warm paper ink", icon: Sun },
   { key: "dark", label: "Dark", hint: "The lab default", icon: Moon },
   { key: "system", label: "System", hint: "Follows your device", icon: Monitor },
+];
+
+const HOME_FOCUS: { key: HomeFocus; label: string; hint: string }[] = [
+  {
+    key: "minimal",
+    label: "Minimal",
+    hint: "The next step and the core tools",
+  },
+  {
+    key: "balanced",
+    label: "Balanced",
+    hint: "Next step, notebooks and a week readout",
+  },
+  {
+    key: "everything",
+    label: "Everything",
+    hint: "Also recent activity and progress",
+  },
 ];
 
 const COMFORT: { key: TextComfort; label: string; scale: string }[] = [
@@ -565,6 +583,41 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     })}
                   </div>
                 </div>
+
+                <ListRow
+                  stack
+                  title="Home focus"
+                  hint="On a phone, how much the signed-in home puts in front of you. This is the same choice onboarding makes, and it never limits what you can open."
+                >
+                  <div
+                    className="home-focus-picker"
+                    role="radiogroup"
+                    aria-label="Home focus"
+                  >
+                    {HOME_FOCUS.map((option) => {
+                      const selected = settings.homeFocus === option.key;
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => update({ homeFocus: option.key })}
+                          className="home-focus-choice"
+                          data-active={selected ? "true" : undefined}
+                        >
+                          <span className="home-focus-choice__label">
+                            {option.label}
+                            {selected ? <Check className="h-3.5 w-3.5" /> : null}
+                          </span>
+                          <span className="home-focus-choice__hint">
+                            {option.hint}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ListRow>
 
                 {/* Eye comfort sits directly under Appearance because it is a
                     property of the display, not of the text: it re-lights both

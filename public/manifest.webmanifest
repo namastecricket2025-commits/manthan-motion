@@ -10,8 +10,8 @@
   "orientation": "any",
   "dir": "ltr",
   "lang": "en-IN",
-  "background_color": "#0a0a0b",
-  "theme_color": "#0a0a0b",
+  "background_color": "#06120f",
+  "theme_color": "#06120f",
   "categories": ["education", "productivity"],
   "prefer_related_applications": false,
   "launch_handler": {

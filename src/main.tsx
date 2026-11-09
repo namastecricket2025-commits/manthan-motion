@@ -5,16 +5,19 @@ import { PlanProvider } from "@/components/plans/PlanProvider";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { CommandPalette } from "@/components/shared/CommandPalette";
 import { RequireAuth } from "@/components/RequireAuth";
+import { AppDock } from "@/components/app/AppDock";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
+import { useAuth } from "@/hooks/use-auth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import "./components/settings/settings.css";
+import "./components/app/app-shell.css";
 import { SITE_URL } from "./lib/site";
 
 // Lazy load route components. MathLab and Lab are the two heaviest pages
@@ -300,6 +303,21 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
   },
 };
 
+/**
+ * The public home is public only until we know who is asking.
+ *
+ * A signed-in student opening the app (or the installed PWA at its start URL)
+ * should land in their workspace, not on the marketing page they already
+ * bought into. Waiting for the session before choosing also prevents the
+ * landing page flashing behind a redirect.
+ */
+function HomeRoute() {
+  const { isLoading, isAuthenticated } = useAuth();
+  if (isLoading) return <RouteLoading />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return <Landing />;
+}
+
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -410,11 +428,12 @@ createRoot(document.getElementById("root")!).render(
               gate a click. */}
           <PlanProvider>
           <RouteSyncer />
+          <AppDock />
           <OnboardingModal />
           <CommandPalette />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<HomeRoute />} />
               <Route
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/dashboard" />}

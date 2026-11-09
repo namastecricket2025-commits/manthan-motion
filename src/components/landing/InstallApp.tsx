@@ -252,8 +252,8 @@ export default function InstallApp() {
               dark in both themes because it is a device — the app icon and the
               cream-on-black screen are the same artwork everywhere. */}
           <div className="relative flex items-center justify-center border-t border-[var(--card-border)] p-8 lg:border-l lg:border-t-0 lg:p-10">
-            <div className="relative w-[218px] rounded-[2.6rem] border border-[#302d27] bg-[#1a1917] p-2.5 shadow-[0_28px_60px_-28px_rgba(0,0,0,0.65)] sm:w-[238px]">
-              <div className="overflow-hidden rounded-[2.05rem] border border-white/10 bg-[#0b0b0c]">
+            <div className="relative w-[218px] rounded-[2.6rem] border border-[#2b3a33] bg-[#16211c] p-2.5 shadow-[0_28px_60px_-28px_rgba(0,0,0,0.65)] sm:w-[238px]">
+              <div className="overflow-hidden rounded-[2.05rem] border border-white/10 bg-[#0b1411]">
                 <div className="flex justify-center pt-2">
                   <span className="h-1 w-14 rounded-full bg-white/15" />
                 </div>
@@ -265,10 +265,10 @@ export default function InstallApp() {
                     height={64}
                     className="mx-auto h-16 w-16 rounded-[1.15rem]"
                   />
-                  <p className="mt-3 font-display text-lg font-semibold tracking-[-0.025em] text-[#f7f3ea]">
-                    Manthan<span className="text-[#fbbf24]">.</span>
+                  <p className="mt-3 font-display text-lg font-semibold tracking-[-0.025em] text-[#f2eee3]">
+                    Manthan<span className="text-[#ff936e]">.</span>
                   </p>
-                  <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[#8e887d]">
+                  <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-[#8e9a92]">
                     Study material, distilled
                   </p>
 
@@ -278,18 +278,18 @@ export default function InstallApp() {
                         key={label}
                         className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5"
                       >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#fbbf24] text-[#181207]">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#ff936e] text-[#14231d]">
                           <Icon className="h-3.5 w-3.5" strokeWidth={2} />
                         </span>
-                        <span className="text-[11px] font-medium text-[#f3eee4]">
+                        <span className="text-[11px] font-medium text-[#f2eee3]">
                           {label}
                         </span>
-                        <span className="ml-auto h-1 w-1 rounded-full bg-[#fbbf24]" />
+                        <span className="ml-auto h-1 w-1 rounded-full bg-[#6fe0c5]" />
                       </div>
                     ))}
                   </div>
 
-                  <div className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-[#fbbf24]/25 bg-[#fbbf24]/10 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#fbbf24]">
+                  <div className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-[#ff936e]/25 bg-[#ff936e]/10 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#ff936e]">
                     <Download className="h-3 w-3" />
                     Offline kits
                   </div>

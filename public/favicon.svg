@@ -6,7 +6,7 @@
   <style>
     .ink { fill: #ffffff; }
     @media (prefers-color-scheme: light) {
-      .ink { fill: #0a0a0b; }
+      .ink { fill: #06120f; }
     }
   </style>
   <g class="ink">

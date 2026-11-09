@@ -28,14 +28,17 @@ import { isKitSaved, offlineKitId, saveKit } from "@/lib/offline";
 import { UsageCard } from "@/components/dashboard/UsageCard";
 import {
   AlertCircle,
+  BookOpen,
   Check,
   Download,
   FileText,
   Languages,
+  Library,
   Link2,
   Link2Off,
   Loader2,
   Lock,
+  MessageCircle,
   Mic,
   NotebookPen,
   Printer,
@@ -50,6 +53,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { useAppPhone } from "@/hooks/use-app-phone";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 
@@ -75,6 +79,24 @@ async function prepareSourceFile(file: File): Promise<File> {
  */
 
 type Kind = "summary" | "flashcards" | "quiz" | "mindmap" | "slides";
+type NotebookPane = "sources" | "ask" | "study";
+const PANES: NotebookPane[] = ["sources", "ask", "study"];
+
+/** Don't turn a horizontal drag inside a scroller into a pane change. */
+function insideHorizontalScroller(node: EventTarget | null) {
+  let element = node instanceof Element ? node : null;
+  for (let depth = 0; element && depth < 8; depth += 1) {
+    const style = window.getComputedStyle(element);
+    if (
+      (style.overflowX === "auto" || style.overflowX === "scroll") &&
+      element.scrollWidth > element.clientWidth + 6
+    ) {
+      return true;
+    }
+    element = element.parentElement;
+  }
+  return false;
+}
 
 const KIND_META: { kind: Kind; label: string; hint: string }[] = [
   { kind: "summary", label: "Summary", hint: "Structured revision notes" },
@@ -127,6 +149,20 @@ export function NotebookWorkspace({
   const generate = useAction(api.ai.generate);
   const translate = useAction(api.ai.translateMaterial);
 
+  const phone = useAppPhone();
+  const [pane, setPane] = useState<NotebookPane>(() => {
+    if (initialTab) return "study";
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "sources") return "sources";
+      if (hash === "materials") return "study";
+      if (hash === "studio") return "ask";
+    }
+    return "ask";
+  });
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const swipeClickGuard = useRef(false);
+  const paneAutoRef = useRef(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploads, setUploads] = useState<
     { key: number; name: string; error?: string }[]
@@ -168,6 +204,21 @@ export function NotebookWorkspace({
    * click arrives at the panel it promised instead of the top of the page.
    * Once, on mount: scrolling again on every re-render would fight the user.
    */
+  /* An empty notebook has nothing to ask yet, so open its source shelf first.
+     A notebook with material opens on Ask; a deep link keeps its own pane. */
+  useEffect(() => {
+    if (paneAutoRef.current || !phone || initialTab) return;
+    if (sources === undefined) return;
+    paneAutoRef.current = true;
+    if (sources.length === 0 && !window.location.hash) setPane("sources");
+  }, [phone, initialTab, sources]);
+
+  /* Cram Mode is a Study-room tool. Leaving the room folds it away instead of
+     floating the overlay over Sources or Ask. */
+  useEffect(() => {
+    if (phone && pane !== "study" && tool === "cram") setTool(null);
+  }, [phone, pane, tool]);
+
   useEffect(() => {
     const target = window.location.hash.slice(1);
     if (target !== "sources" && target !== "materials" && target !== "studio") return;
@@ -569,6 +620,54 @@ export function NotebookWorkspace({
     }
   }
 
+  /** A pane only exists on the phone; the desktop keeps every panel visible. */
+  const paneStyle = (target: NotebookPane) =>
+    phone && pane !== target ? ({ display: "none" } as const) : undefined;
+
+  const onPaneTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!phone || event.touches.length !== 1) {
+      swipe.current = null;
+      return;
+    }
+    const target = event.target as Element;
+    if (
+      insideHorizontalScroller(target) ||
+      target.closest("input, textarea, select, a, [contenteditable='true']")
+    ) {
+      swipe.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    if (!touch) return;
+    swipe.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const onPaneTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!phone || !start) return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 62 || Math.abs(dx) < Math.abs(dy) * 1.35) return;
+    const index = PANES.indexOf(pane);
+    const next = PANES[index + (dx < 0 ? 1 : -1)];
+    if (!next) return;
+    swipeClickGuard.current = true;
+    setPane(next);
+    window.setTimeout(() => {
+      swipeClickGuard.current = false;
+    }, 90);
+  };
+
+  const onPaneClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!swipeClickGuard.current) return;
+    swipeClickGuard.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   async function stopSharing() {
     if (!active) return;
     try {
@@ -584,7 +683,15 @@ export function NotebookWorkspace({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className="notebook-workspace flex flex-col gap-6"
+      onTouchStart={onPaneTouchStart}
+      onTouchEnd={onPaneTouchEnd}
+      onTouchCancel={() => {
+        swipe.current = null;
+      }}
+      onClickCapture={onPaneClickCapture}
+    >
       {/* Work-area top bar: the advanced tool, as a text-link action.
           On phones the link grows to a 40px-tall target and the descriptor
           drops away, so the bar stays a single tidy row.
@@ -592,7 +699,10 @@ export function NotebookWorkspace({
           The spoken tutor is deliberately NOT here. It lives as the single
           floating orb in the corner of every route, so there is one voice and
           one conversation no matter where the student is working. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-line)] px-3 py-1.5 sm:px-4 sm:py-2.5">
+      <div
+        style={paneStyle("study")}
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-line)] px-3 py-1.5 sm:px-4 sm:py-2.5"
+      >
         <div className="flex items-center gap-3 sm:gap-5">
           <button
             type="button"
@@ -616,12 +726,16 @@ export function NotebookWorkspace({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (phone) {
+                setPane("ask");
+                return;
+              }
               document.getElementById("studio")?.scrollIntoView({
                 behavior: "smooth",
                 block: "start",
-              })
-            }
+              });
+            }}
             className="inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 text-[12.5px] font-semibold text-text-dim transition-colors hover:text-[var(--signal)] sm:min-h-0 sm:px-0"
           >
             <Sparkles className="h-3.5 w-3.5" />
@@ -648,6 +762,7 @@ export function NotebookWorkspace({
           is the work; the summary and decks are what falls out of it. */}
       <section
         id="studio"
+        style={paneStyle("ask")}
         className="glass-panel scroll-mt-6 p-5 sm:p-6"
         aria-label="Notebook studio"
       >
@@ -671,6 +786,7 @@ export function NotebookWorkspace({
         {/* ------------------------- sources ------------------------- */}
         <div
           id="sources"
+          style={paneStyle("sources")}
           className="glass-panel flex scroll-mt-6 flex-col gap-4 p-5 sm:p-6"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -913,7 +1029,10 @@ export function NotebookWorkspace({
         </div>
 
         {/* ------------------------ generation ------------------------ */}
-        <div className="glass-panel flex flex-col gap-4 p-5 sm:p-6">
+        <div
+          style={paneStyle("study")}
+          className="glass-panel flex flex-col gap-4 p-5 sm:p-6"
+        >
           <div className="flex items-center justify-between">
             <h2 className="font-display text-base font-bold tracking-tight">
               Churn
@@ -1002,7 +1121,11 @@ export function NotebookWorkspace({
       </div>
 
       {/* ------------------------- materials ------------------------- */}
-      <div id="materials" className="glass-panel scroll-mt-6 p-5 sm:p-6">
+      <div
+        id="materials"
+        style={paneStyle("study")}
+        className="glass-panel scroll-mt-6 p-5 sm:p-6"
+      >
         {availableTabs.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <NotebookPen className="h-5 w-5 text-[var(--signal)]" />
@@ -1214,6 +1337,58 @@ export function NotebookWorkspace({
           createdAt={active.createdAt}
           onDone={() => setPrinting(false)}
         />
+      ) : null}
+
+      {phone ? (
+        <>
+          <div className="notebook-dock-space" aria-hidden="true" />
+          <nav className="notebook-dock" aria-label="Notebook sections">
+            <button
+              type="button"
+              className="notebook-dock__item"
+              data-active={pane === "sources" ? "true" : undefined}
+              aria-current={pane === "sources" ? "page" : undefined}
+              onClick={() => setPane("sources")}
+            >
+              <span className="notebook-dock__icon" aria-hidden="true">
+                <Library className="h-[18px] w-[18px]" strokeWidth={1.9} />
+              </span>
+              <span className="notebook-dock__label">Sources</span>
+              {sources?.length ? (
+                <span className="notebook-dock__count">{sources.length}</span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              className="notebook-dock__item"
+              data-active={pane === "ask" ? "true" : undefined}
+              aria-current={pane === "ask" ? "page" : undefined}
+              onClick={() => setPane("ask")}
+            >
+              <span className="notebook-dock__icon" aria-hidden="true">
+                <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.9} />
+              </span>
+              <span className="notebook-dock__label">Ask</span>
+            </button>
+            <button
+              type="button"
+              className="notebook-dock__item"
+              data-active={pane === "study" ? "true" : undefined}
+              aria-current={pane === "study" ? "page" : undefined}
+              onClick={() => setPane("study")}
+            >
+              <span className="notebook-dock__icon" aria-hidden="true">
+                <BookOpen className="h-[18px] w-[18px]" strokeWidth={1.9} />
+              </span>
+              <span className="notebook-dock__label">Study</span>
+              {availableTabs.length ? (
+                <span className="notebook-dock__count">
+                  {availableTabs.length}
+                </span>
+              ) : null}
+            </button>
+          </nav>
+        </>
       ) : null}
     </div>
   );
