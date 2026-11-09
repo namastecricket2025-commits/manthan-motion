@@ -1,0 +1,66 @@
+{
+  "id": "/",
+  "name": "Manthan — Study material, distilled",
+  "short_name": "Manthan",
+  "description": "Turn a chapter into solved problems, sticky study kits and lab walkthroughs.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "dir": "ltr",
+  "lang": "en-IN",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "categories": ["education", "productivity"],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg?v=4",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Math Lab",
+      "short_name": "Math Lab",
+      "description": "Solve, graph and practise",
+      "url": "/math-lab"
+    },
+    {
+      "name": "STEM Lab",
+      "short_name": "STEM Lab",
+      "description": "Physics, chemistry and biology benches",
+      "url": "/lab"
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Notebooks and study material",
+      "url": "/dashboard"
+    }
+  ]
+}
