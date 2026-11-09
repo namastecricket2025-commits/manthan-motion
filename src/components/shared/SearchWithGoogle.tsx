@@ -45,13 +45,16 @@ function googleUrlFor(query: string) {
 export function SearchWithGoogle({
   topic,
   label = "Search on Google",
+  triggerLabel = "Search",
   compact = false,
   className,
 }: {
   /** What to search for — usually the question, chapter or bench name. */
   topic: string;
-  /** Accessible name for the trigger; the visible label is always the same. */
+  /** Accessible name for the trigger. */
   label?: string;
+  /** Visible trigger text; Math Lab uses the wider search wording. */
+  triggerLabel?: string;
   /** Compact styling for toolbars; otherwise it is a lab-chrome button. */
   compact?: boolean;
   className?: string;
@@ -173,7 +176,7 @@ export function SearchWithGoogle({
           }
           aria-label={`${label} — ${topic}`}
         >
-          <span className="gs-trigger__text">Search</span>
+          <span className="gs-trigger__text">{triggerLabel}</span>
           <img
             className="gs-trigger__logo"
             src={GOOGLE_MARK}
@@ -185,13 +188,24 @@ export function SearchWithGoogle({
         </button>
       </DialogTrigger>
 
-      <DialogContent className="gs-panel rounded-[22px]">
-        {/* Named for screen readers only: the panel itself carries no visible
-            heading, so nothing is read out that a sighted student cannot see. */}
-        <DialogTitle className="sr-only">Search Google</DialogTitle>
-        <DialogDescription className="sr-only">
-          Type a question and press Search. Results open in a new tab.
-        </DialogDescription>
+      <DialogContent className="gs-panel">
+        <div className="gs-head">
+          <span className="gs-head__mark" aria-hidden="true">
+            <img
+              src={GOOGLE_MARK}
+              alt=""
+              width={18}
+              height={18}
+              draggable={false}
+            />
+          </span>
+          <div className="gs-head__copy">
+            <DialogTitle className="gs-head__title">Search with Google</DialogTitle>
+            <DialogDescription className="gs-head__sub">
+              Answers stay in the lab. Sources open in a new tab.
+            </DialogDescription>
+          </div>
+        </div>
 
         <form
           className="gs-field"
@@ -277,7 +291,7 @@ export function SearchWithGoogle({
 
         <div className="gs-foot">
           <span className="gs-foot__brand">
-            Results from Google · open a source in a new tab
+            Google results · sources open in a new tab
           </span>
           <a className="gs-foot__link" href={googleUrl} target="_blank" rel="noreferrer">
             Open

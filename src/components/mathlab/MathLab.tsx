@@ -725,6 +725,7 @@ export function MathLab() {
             <SearchWithGoogle
               topic={formula.trim() || "Maths problem — NCERT CBSE explained"}
               label="Search ideas on the web"
+              triggerLabel="Search the web"
               compact
             />
           </div>

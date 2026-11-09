@@ -140,7 +140,10 @@ export function SearchThread({
 export function SearchSources({ hits }: { hits: Hit[] }) {
   return (
     <>
-      <p className="gs-results__label">Sources</p>
+      <p className="gs-results__label">
+        <span>Sources</span>
+        <span className="gs-results__count">{hits.length}</span>
+      </p>
       <ul className="gs-results">
         {hits.map((result, index) => (
           <li key={result.url}>

@@ -134,9 +134,8 @@ export default function MathLabPage() {
                   Math Lab<span className="text-[var(--signal)]">.</span>
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
-                  Ask a question in maths or in words, read the working, graph
-                  it, then practise the same skill until it sticks. The search
-                  sits inside the lab, next to the work it is for.
+                  Solve a problem, read the working, then graph or practise it.
+                  Web search opens inside the lab, without losing your question.
                 </p>
               </div>
             </div>

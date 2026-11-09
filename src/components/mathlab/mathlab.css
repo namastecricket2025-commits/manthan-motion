@@ -72,9 +72,22 @@
 }
 
 /* Used on the Solve tab so the incoming text can be searched in place
-   without stealing the toolbar's keyboard focus from the math input. */
+   without stealing the toolbar's keyboard focus from the math input. The
+   wider trigger reads as a search field rather than a mystery button: the
+   Google mark leads, the words say what will happen, and the whole row is a
+   full-width target on a phone. */
 .mathlab-viewbar .gs-trigger {
+  justify-content: flex-start;
+  gap: 9px;
   margin-left: auto;
+  border-radius: 14px !important;
+  padding: 11px 14px !important;
+  font-size: 12.5px;
+  box-shadow: 0 10px 28px -24px rgba(0, 0, 0, 0.55);
+}
+
+.mathlab-viewbar .gs-trigger__logo {
+  order: -1;
 }
 
 /* ------------------------------------------------------------------ */
@@ -579,6 +592,8 @@
 
 .mathlab-views {
   display: flex;
+  min-width: 0;
+  flex-wrap: nowrap;
   gap: 4px;
   overflow-x: auto;
   /* The rail scrolls sideways on narrow screens, which would otherwise clip
@@ -588,6 +603,7 @@
   border: 1px solid var(--glass-line);
   border-radius: 999px;
   background: color-mix(in srgb, var(--card) 58%, transparent);
+  scroll-padding-inline: 5px;
   scrollbar-width: none;
 }
 
@@ -3610,13 +3626,16 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   }
 
   .mathlab-view {
-    padding: 8px 12px;
+    min-height: 38px;
+    padding: 9px 13px;
     font-size: 11.5px;
   }
 
   .mathlab-viewbar .gs-trigger {
     width: 100%;
+    justify-content: flex-start;
     margin-left: 0;
+    padding: 12px 14px !important;
   }
 
   .mathlab-solvepage {
