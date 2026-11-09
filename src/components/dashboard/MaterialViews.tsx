@@ -69,13 +69,10 @@ export function SummaryView({
   return (
     <div className="flex flex-col gap-5">
       <header className="border-b border-[var(--card-border)] pb-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--signal)]">
-          Summary
-        </p>
-        <h3 className="mt-1.5 font-display text-xl font-bold tracking-tight sm:text-2xl">
+        <h3 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
           {payload.title}
         </h3>
-        {/* Reading copy steps up to 15px on a phone and returns to the 14px
+        {/* Reading copy steps up to 14.5px on a phone and returns to the 14px
             desktop step from sm up — the artefact is read on a small screen
             far more often than on a laptop. */}
         <p className="mt-2 max-w-[72ch] text-[14.5px] leading-relaxed text-text-dim sm:text-sm">
@@ -856,16 +853,13 @@ export function SlidesView({ payload }: { payload: SlidesPayload }) {
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--signal)] to-transparent opacity-60"
           />
           <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="line-clamp-2 text-[10px] font-semibold uppercase leading-[1.6] tracking-[0.14em] text-[var(--signal)]">
-                {payload.title}
-              </p>
-              {payload.subtitle && (
-                <p className="mt-1 line-clamp-1 text-[10.5px] leading-relaxed text-text-dim">
-                  {payload.subtitle}
-                </p>
-              )}
-            </div>
+            <p
+              className="min-w-0 truncate text-[11px] font-medium leading-relaxed text-text-dim"
+              title={`${payload.title}${payload.subtitle ? ` · ${payload.subtitle}` : ""}`}
+            >
+              {payload.title}
+              {payload.subtitle ? ` · ${payload.subtitle}` : ""}
+            </p>
             <span className="shrink-0 rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-text-dim">
               {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
             </span>
