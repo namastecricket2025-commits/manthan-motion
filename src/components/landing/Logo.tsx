@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 /**
  * Manthan mark: one large circle joined by a short bar to a smaller circle.
  *
- * The core carries `--brand-mark` — amber on paper, warm white at night — and
+ * The core carries `--brand-mark` — blue on paper, warm white at night — and
  * the satellite plus the bar stay in the theme's ink, which is what makes the
  * mark read on both surfaces without a tile behind it. Geometry is the
  * supplied artwork, 1:1.

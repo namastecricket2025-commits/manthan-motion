@@ -7,10 +7,10 @@
    light; there are no drifting meshes and no frosted gradients.
 
    The surfaces stay quiet and ink-first; the colour lives in the instruments.
-   A warm coral marks the selected control and the primary vector, teal marks
-   the second quantity, and ochre, plum and lilac carry the rest of the data
-   series. The old violet-on-blue-black cast, which read as a generic science
-   app, is gone; so is the pure grey photocopy that replaced it.
+   A clear blue marks the selected control and the primary vector, and lighter
+   blue, slate and periwinkle carry the rest of the data series. One hue,
+   several weights: the room reads as a black instrument panel, not a
+   rainbow.
 
    The palette is scoped here on purpose rather than taken from the app theme:
    a physics bench should not change colour when the student flips the site to
@@ -34,10 +34,10 @@
   --lab-line-soft: rgba(255, 255, 255, 0.07);
   --lab-fill: rgba(255, 255, 255, 0.028);
   --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.85);
-  /* The two accent slots the benches already read. Coral is the instrument
-     accent; teal is the verified/measured second channel. */
-  --lab-violet: #ff936e;
-  --lab-cyan: #6fe0c5;
+  /* The two accent slots the benches already read. Blue is the instrument
+     accent; its lighter weight is the measured second channel. */
+  --lab-violet: #60a5fa;
+  --lab-cyan: #93c5fd;
 
   /* The vector benches draw their own geometry, so the diagram strokes need
      their own tokens. Ink and plate are RGB triples — every line picks its own
@@ -45,12 +45,12 @@
      remaining accents are data colours, each tied to a quantity. */
   --lab-diagram-ink: 255, 255, 255;
   --lab-diagram-plate: 0, 0, 0;
-  --lab-diagram-violet: #ff936e;
-  --lab-diagram-cyan: #6fe0c5;
-  --lab-diagram-amber: #e9bd76;
-  --lab-diagram-mint: #a8d8b3;
-  --lab-diagram-rose: #e3a0b4;
-  --lab-diagram-lilac: #bdaee8;
+  --lab-diagram-violet: #60a5fa;
+  --lab-diagram-cyan: #7dd3fc;
+  --lab-diagram-amber: #a5b4fc;
+  --lab-diagram-mint: #cbd5e1;
+  --lab-diagram-rose: #94a3b8;
+  --lab-diagram-lilac: #bfdbfe;
   position: relative;
   min-height: 100vh;
   background: var(--lab-canvas);
@@ -2113,52 +2113,52 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
 }
 
 /* ============================================================
-   Field Notes instrument palette
+   Black instrument palette
 
-   The room keeps its quiet surfaces and ink-first controls, but the ink is
-   warm instead of pure white and the plate is deep green-black instead of
-   black. Data keeps distinct hues — coral, teal, ochre, plum, lilac — so a
-   diagram reads as an instrument, not as a greyscale photocopy.
+   The lab is a black room, not a green one. The ink is neutral white and
+   the plate is true black; data is carried by one blue family in several
+   weights, so a diagram still reads as an instrument without turning the
+   benches into a colour wheel.
    ============================================================ */
 
 .apple-lab {
-  --lab-canvas: #07120e;
-  --lab-ink: rgba(242, 238, 227, 0.92);
-  --lab-ink-dim: rgba(242, 238, 227, 0.7);
-  --lab-ink-micro: rgba(242, 238, 227, 0.58);
-  --lab-line: rgba(242, 238, 227, 0.13);
-  --lab-line-soft: rgba(242, 238, 227, 0.075);
-  --lab-fill: rgba(242, 238, 227, 0.038);
-  --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.82);
+  --lab-canvas: #000000;
+  --lab-ink: rgba(255, 255, 255, 0.9);
+  --lab-ink-dim: rgba(255, 255, 255, 0.68);
+  --lab-ink-micro: rgba(255, 255, 255, 0.58);
+  --lab-line: rgba(255, 255, 255, 0.12);
+  --lab-line-soft: rgba(255, 255, 255, 0.07);
+  --lab-fill: rgba(255, 255, 255, 0.028);
+  --lab-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.85);
 
-  --lab-diagram-ink: 242, 238, 227;
-  --lab-diagram-plate: 7, 18, 14;
-  --lab-diagram-violet: #ff936e;
-  --lab-diagram-cyan: #6fe0c5;
-  --lab-diagram-amber: #e9bd76;
-  --lab-diagram-mint: #a8d8b3;
-  --lab-diagram-rose: #e3a0b4;
-  --lab-diagram-lilac: #bdaee8;
+  --lab-diagram-ink: 255, 255, 255;
+  --lab-diagram-plate: 0, 0, 0;
+  --lab-diagram-violet: #60a5fa;
+  --lab-diagram-cyan: #7dd3fc;
+  --lab-diagram-amber: #a5b4fc;
+  --lab-diagram-mint: #cbd5e1;
+  --lab-diagram-rose: #94a3b8;
+  --lab-diagram-lilac: #bfdbfe;
 }
 
 .apple-lab-glass {
-  background: #0c1b16;
-  border-color: rgba(242, 238, 227, 0.13);
+  background: #0a0a0a;
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .apple-lab-card {
-  background: #10231c;
-  border-color: rgba(242, 238, 227, 0.11);
+  background: #0b0b0c;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .apple-lab-chip {
-  background: rgba(242, 238, 227, 0.045);
-  border-color: rgba(242, 238, 227, 0.13);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .apple-lab-btn {
-  background: rgba(242, 238, 227, 0.05);
-  border-color: rgba(242, 238, 227, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .apple-lab-btn:hover {
@@ -2170,11 +2170,11 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
 .apple-lab-btn[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--lab-diagram-violet) 62%, transparent);
   background: color-mix(in srgb, var(--lab-diagram-violet) 16%, transparent);
-  color: #fff4ec;
+  color: var(--lab-ink);
 }
 
 .apple-lab-tabrail {
-  background: rgba(242, 238, 227, 0.035);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .apple-lab-tab[aria-selected="true"] {
@@ -2208,46 +2208,46 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
 }
 
 .apple-lab-stage {
-  background: radial-gradient(ellipse at 50% 32%, #101f19 0%, #07120e 74%);
-  border-color: rgba(242, 238, 227, 0.12);
+  background: radial-gradient(ellipse at 50% 32%, #101010 0%, #060606 74%);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Paper benches: white becomes warm paper, graphite becomes deep ink, and
-   the same data hues deepen enough to hold contrast on the page. */
+/* Paper benches stay neutral: white paper, graphite ink, and the same blue
+   data family deepened enough to hold contrast on the page. */
 .apple-lab [data-lab-theme="light"] {
-  --lab-canvas: #f7f3ea;
-  --lab-ink: #18231f;
-  --lab-ink-dim: rgba(24, 35, 31, 0.68);
-  --lab-ink-micro: rgba(24, 35, 31, 0.54);
-  --lab-line: rgba(24, 35, 31, 0.13);
-  --lab-line-soft: rgba(24, 35, 31, 0.075);
-  --lab-fill: rgba(255, 253, 247, 0.76);
-  --lab-shadow: 0 26px 60px -36px rgba(24, 35, 31, 0.22);
+  --lab-canvas: #f5f5f5;
+  --lab-ink: rgba(16, 16, 16, 0.92);
+  --lab-ink-dim: rgba(16, 16, 16, 0.66);
+  --lab-ink-micro: rgba(16, 16, 16, 0.55);
+  --lab-line: rgba(16, 16, 16, 0.12);
+  --lab-line-soft: rgba(16, 16, 16, 0.07);
+  --lab-fill: rgba(255, 255, 255, 0.66);
+  --lab-shadow: 0 26px 60px -36px rgba(0, 0, 0, 0.3);
 
-  --lab-diagram-ink: 24, 35, 31;
-  --lab-diagram-plate: 255, 253, 247;
-  --lab-diagram-violet: #b23f1e;
-  --lab-diagram-cyan: #0b6b61;
-  --lab-diagram-amber: #96650a;
-  --lab-diagram-mint: #3f6b46;
-  --lab-diagram-rose: #9d4b75;
-  --lab-diagram-lilac: #5b4a77;
+  --lab-diagram-ink: 16, 16, 16;
+  --lab-diagram-plate: 255, 255, 255;
+  --lab-diagram-violet: #1d4ed8;
+  --lab-diagram-cyan: #0369a1;
+  --lab-diagram-amber: #4338ca;
+  --lab-diagram-mint: #475569;
+  --lab-diagram-rose: #64748b;
+  --lab-diagram-lilac: #334155;
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-glass {
-  background: #fffdf7;
-  border-color: rgba(24, 35, 31, 0.13);
+  background: #ffffff;
+  border-color: rgba(16, 16, 16, 0.12);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-card {
-  background: #fbf7ee;
-  border-color: rgba(24, 35, 31, 0.11);
+  background: #fafafa;
+  border-color: rgba(16, 16, 16, 0.1);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-chip,
 .apple-lab [data-lab-theme="light"] .apple-lab-btn {
-  background: rgba(255, 253, 247, 0.78);
-  border-color: rgba(24, 35, 31, 0.14);
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(16, 16, 16, 0.14);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-btn:hover {
@@ -2263,8 +2263,8 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-tabrail {
-  background: rgba(255, 253, 247, 0.72);
-  border-color: rgba(24, 35, 31, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(16, 16, 16, 0.12);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-tab[aria-selected="true"] {
@@ -2286,40 +2286,40 @@ html[data-comfort="on"] .apple-lab [data-lab-theme="light"] .lab-stage-stat {
   background: var(--lab-diagram-violet);
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--lab-diagram-violet) 18%, transparent),
-    0 2px 10px rgba(24, 35, 31, 0.22);
+    0 2px 10px rgba(0, 0, 0, 0.22);
 }
 
 .apple-lab [data-lab-theme="light"] .apple-lab-stage {
-  background: radial-gradient(ellipse at 50% 32%, #12211b 0%, #07120e 74%);
-  border-color: rgba(24, 35, 31, 0.16);
+  background: radial-gradient(ellipse at 50% 32%, #101010 0%, #060606 74%);
+  border-color: rgba(16, 16, 16, 0.16);
 }
 
 .apple-lab [data-lab-theme="light"] .lab-phone-list {
-  background: #fffdf7;
+  background: #ffffff;
 }
 
 .apple-lab [data-lab-theme="light"] .lab-phone-back {
-  background: rgba(255, 253, 247, 0.82);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 /* Eye comfort lowers the white point; it should not turn the instruments back
    into a greyscale photocopy. These are the same data hues, warmed and dimmed. */
 html[data-comfort="on"] .apple-lab {
-  --lab-diagram-violet: #ffb08c;
-  --lab-diagram-cyan: #8fd8c4;
-  --lab-diagram-amber: #e7c98f;
-  --lab-diagram-mint: #b9d8b0;
-  --lab-diagram-rose: #e6b1b4;
-  --lab-diagram-lilac: #c9bde8;
+  --lab-diagram-violet: #93c5fd;
+  --lab-diagram-cyan: #bae6fd;
+  --lab-diagram-amber: #818cf8;
+  --lab-diagram-mint: #cbd5e1;
+  --lab-diagram-rose: #94a3b8;
+  --lab-diagram-lilac: #bfdbfe;
 }
 
 html[data-comfort="on"] .apple-lab [data-lab-theme="light"] {
-  --lab-diagram-violet: #9c3c1e;
-  --lab-diagram-cyan: #0a5e56;
-  --lab-diagram-amber: #80560d;
-  --lab-diagram-mint: #3f6b46;
-  --lab-diagram-rose: #9d4b75;
-  --lab-diagram-lilac: #5b4a77;
+  --lab-diagram-violet: #1e40af;
+  --lab-diagram-cyan: #0369a1;
+  --lab-diagram-amber: #3730a3;
+  --lab-diagram-mint: #475569;
+  --lab-diagram-rose: #64748b;
+  --lab-diagram-lilac: #334155;
 }
 
 /* The filled action stays filled after the surface pass above: warm ink on the

@@ -264,8 +264,8 @@
   ----chart-marker-background: var(--card);
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(180, 83, 9, 0.1);
-  ----chart-segment-line: rgba(180, 83, 9, 0.25);
+  ----chart-segment-background: rgba(29, 78, 216, 0.1);
+  ----chart-segment-line: rgba(29, 78, 216, 0.25);
 
   /* shadcn aliases (light) */
   /* Neutral, not warm: the old values were espresso-tinted (#fdfaf8 card,
@@ -488,8 +488,8 @@
   ----chart-marker-background: #17171a;
   ----chart-marker-border: var(--card-border);
   ----chart-marker-foreground: var(--text-main);
-  ----chart-segment-background: rgba(251, 191, 36, 0.12);
-  ----chart-segment-line: rgba(251, 191, 36, 0.32);
+  ----chart-segment-background: rgba(96, 165, 250, 0.12);
+  ----chart-segment-line: rgba(96, 165, 250, 0.32);
 
   /* shadcn aliases (dark) */
   --background: var(--ink);
@@ -1360,8 +1360,8 @@ body::-webkit-scrollbar-thumb:hover {
       105deg,
       var(--gt-head) 0%,
       var(--gt-head) 52%,
-      #4a2606 68%,
-      #7a3d07 82%,
+      #2563eb 68%,
+      #1d4ed8 82%,
       var(--gt-tail) 100%
     );
     background-clip: text;
@@ -1384,8 +1384,8 @@ body::-webkit-scrollbar-thumb:hover {
       180deg,
       var(--gt-head) 0%,
       var(--gt-head) 32%,
-      #ffd764 68%,
-      #f5b316 84%,
+      #bfdbfe 68%,
+      #60a5fa 84%,
       var(--gt-tail) 100%
     );
   }
@@ -2907,84 +2907,85 @@ html[data-theme="dark"] .how-card:hover .card-tile {
 
 
 /* ============================================================
-   Manthan 2026 palette — "Field Notes / Night Studio"
+   Manthan accent correction — blue on black
 
-   A two-temperature system rather than a single amber wash:
-     paper/ink  warm oat, deep green-black
-     coral      attention, brand cues, active emphasis
-     teal       action, verified work, links
-     plum/olive/ochre  artefact and chart identity
+   The “Field Notes / Night Studio” experiment repainted the product:
+   green-black surfaces, coral brand, teal actions and a five-hue
+   artefact ramp. That was a palette replacement, not the single
+   accent change that was asked for. This block keeps the original
+   neutral surfaces — black at night, near-white by day — and swaps
+   only the amber brand for a restrained blue family. Charts and
+   artefacts use blue/slate shades; red and teal survive only where
+   they carry meaning (error / verified).
 
-   Kept at the end of the token file so every existing component inherits the
-   new system through the same variables it already uses. The light selector
-   explicitly excludes .dark: a bare :root rule here would otherwise win the
-   cascade and paint the dark theme light.
+   Kept at the end of the token file so every existing component
+   inherits the corrected values through the same variables.
    ============================================================ */
 html:not(.dark),
 html[data-theme="light"] {
-  --ink: #f4f0e6;
-  --panel: #fffdf7;
-  --card: #fffdf7;
-  --popover: #fffdf7;
-  --menu-bg: #fffdf7;
-  --menu-ink: #18231f;
-  --sidebar: #faf6ed;
+  --ink: #fafafa;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --popover: #ffffff;
+  --menu-bg: #ffffff;
+  --menu-ink: #171717;
+  --sidebar: #fafafa;
 
-  --text-main: #18231f;
-  --foreground: #18231f;
-  --text-dim: #55645e;
-  --muted-foreground: #67756f;
-  --card-border: rgba(24, 35, 31, 0.12);
-  --border: rgba(24, 35, 31, 0.12);
-  --input: rgba(24, 35, 31, 0.15);
-  --panel-line: rgba(24, 35, 31, 0.1);
-  --panel-line-strong: rgba(24, 35, 31, 0.22);
-  --panel-bg: rgba(255, 253, 247, 0.9);
+  --text-main: #171717;
+  --foreground: #171717;
+  --text-dim: #52525b;
+  --muted-foreground: #71717a;
+  --card-border: rgba(0, 0, 0, 0.1);
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.12);
+  --panel-line: rgba(0, 0, 0, 0.08);
+  --panel-line-strong: rgba(0, 0, 0, 0.16);
+  --panel-bg: rgba(255, 255, 255, 0.88);
 
-  --signal: #b23f1e;
-  --signal-strong: #0b6b61;
-  --signal-2: #7c2d12;
-  --primary: #0b6b61;
-  --primary-foreground: #fdf8ee;
-  --ring: #0b6b61;
+  --signal: #1d4ed8;
+  --signal-strong: #1d4ed8;
+  --signal-2: #1e3a8a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --ring: #2563eb;
 
-  --brand: #b23f1e;
-  --brand-soft: rgba(178, 63, 30, 0.14);
-  --brand-line: rgba(178, 63, 30, 0.46);
-  --brand-ink: #7c2d12;
+  --brand: #2563eb;
+  --brand-soft: rgba(37, 99, 235, 0.12);
+  --brand-line: rgba(37, 99, 235, 0.42);
+  --brand-ink: #1e40af;
   --brand-mark: var(--brand);
 
-  --secondary: #f0eadf;
-  --secondary-foreground: #18231f;
-  --muted: #f0eadf;
-  --accent: #ece4d7;
-  --accent-foreground: #18231f;
-  --destructive: #c0262d;
-  --verify: #0b6b61;
-  --verify-soft: rgba(11, 107, 97, 0.1);
-  --verify-line: rgba(11, 107, 97, 0.42);
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #c81f27;
+  --verify: #0f6f64;
+  --verify-soft: rgba(15, 111, 100, 0.1);
+  --verify-line: rgba(15, 111, 100, 0.42);
 
-  --chart-1: #c2410c;
-  --chart-2: #0f766e;
-  --chart-3: #9d4b75;
-  --chart-4: #647a3d;
-  --chart-5: #a16207;
-  --kind-summary: #c2410c;
-  --kind-flashcards: #0f766e;
-  --kind-quiz: #9d4b75;
-  --kind-mindmap: #647a3d;
-  --kind-slides: #a16207;
-  --src-files: #c2410c;
-  --src-links: #0f766e;
-  --src-notes: #7c5a4a;
+  --chart-1: #1d4ed8;
+  --chart-2: #334155;
+  --chart-3: #2563eb;
+  --chart-4: #64748b;
+  --chart-5: #1e3a8a;
+  --kind-summary: #1d4ed8;
+  --kind-flashcards: #334155;
+  --kind-quiz: #2563eb;
+  --kind-mindmap: #64748b;
+  --kind-slides: #1e3a8a;
+  --src-files: #1d4ed8;
+  --src-links: #334155;
+  --src-notes: #64748b;
 
   --chart-background: var(--card);
   --chart-foreground: var(--text-main);
   --chart-foreground-muted: var(--text-dim);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: rgba(24, 35, 31, 0.24);
-  --chart-grid: rgba(24, 35, 31, 0.1);
+  --chart-crosshair: rgba(0, 0, 0, 0.24);
+  --chart-grid: rgba(0, 0, 0, 0.1);
   --chart-tooltip-background: var(--card);
   --chart-tooltip-foreground: var(--text-main);
   --chart-tooltip-muted: var(--text-dim);
@@ -2992,108 +2993,108 @@ html[data-theme="light"] {
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: var(--text-main);
   --chart-label: var(--text-dim);
-  --chart-scale-01: rgba(194, 65, 12, 0.06);
-  --chart-scale-02: rgba(194, 65, 12, 0.12);
-  --chart-scale-03: rgba(194, 65, 12, 0.2);
-  --chart-scale-04: rgba(194, 65, 12, 0.34);
-  --chart-scale-05: rgba(194, 65, 12, 0.52);
-  --chart-scale-pattern-color: rgba(194, 65, 12, 0.08);
-  --dash-chart-label: #55645e;
-  --dash-chart-grid: rgba(24, 35, 31, 0.1);
-  --dash-series-primary: #c2410c;
-  --dash-series-secondary: #0f766e;
-  --dash-frost-top: rgba(194, 65, 12, 0.14);
-  --dash-frost-bottom: rgba(194, 65, 12, 0);
+  --chart-scale-01: rgba(29, 78, 216, 0.06);
+  --chart-scale-02: rgba(29, 78, 216, 0.12);
+  --chart-scale-03: rgba(29, 78, 216, 0.2);
+  --chart-scale-04: rgba(29, 78, 216, 0.34);
+  --chart-scale-05: rgba(29, 78, 216, 0.52);
+  --chart-scale-pattern-color: rgba(29, 78, 216, 0.08);
+  --dash-chart-label: #52525b;
+  --dash-chart-grid: rgba(0, 0, 0, 0.1);
+  --dash-series-primary: #1d4ed8;
+  --dash-series-secondary: #64748b;
+  --dash-frost-top: rgba(29, 78, 216, 0.12);
+  --dash-frost-bottom: rgba(29, 78, 216, 0);
 
-  --sidebar-primary: #0b6b61;
-  --sidebar-primary-foreground: #fdf8ee;
-  --sidebar-accent: #efe7da;
-  --sidebar-accent-foreground: #18231f;
-  --sidebar-border: rgba(24, 35, 31, 0.1);
-  --sidebar-ring: #0b6b61;
+  --sidebar-primary: #1d4ed8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #2563eb;
 
-  --gt-head: #18231f;
-  --gt-tail: #b23f1e;
-  --stroke-a: #e77a45;
-  --stroke-b: #c2410c;
-  --stroke-c: #8f2f14;
-  --bg-canvas-a: #eae4d7;
-  --bg-canvas-b: #f1ece2;
-  --bg-canvas-c: #f6f2e9;
-  --glass-fill-strong: rgba(24, 35, 31, 0.04);
-  --glass-hairline: rgba(24, 35, 31, 0.05);
-  --glass-shadow: 0 30px 80px -28px rgba(24, 35, 31, 0.16);
-  --halo-near: rgba(255, 250, 237, 0.94);
-  --halo-mid: rgba(255, 241, 224, 0.34);
-  --halo-far: rgba(11, 107, 97, 0.035);
-  --spot-light: rgba(24, 35, 31, 0.05);
+  --gt-head: #171717;
+  --gt-tail: #1d4ed8;
+  --stroke-a: #60a5fa;
+  --stroke-b: #2563eb;
+  --stroke-c: #1e3a8a;
+  --bg-canvas-a: #ececec;
+  --bg-canvas-b: #f5f5f5;
+  --bg-canvas-c: #fafafa;
+  --glass-fill-strong: rgba(0, 0, 0, 0.035);
+  --glass-hairline: rgba(0, 0, 0, 0.04);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.14);
+  --halo-near: rgba(255, 255, 255, 0.95);
+  --halo-mid: rgba(255, 255, 255, 0.32);
+  --halo-far: rgba(0, 0, 0, 0.035);
+  --spot-light: rgba(23, 23, 23, 0.05);
 }
 
 html.dark,
 html[data-theme="dark"] {
-  --ink: #06120f;
-  --panel: #0c1c17;
-  --card: #0f231d;
-  --popover: #122a23;
-  --menu-bg: #122a23;
-  --menu-ink: rgba(242, 238, 227, 0.96);
-  --sidebar: #091712;
+  --ink: #000000;
+  --panel: #0a0a0a;
+  --card: #0b0b0c;
+  --popover: #0e0e10;
+  --menu-bg: #0e0e10;
+  --menu-ink: rgba(255, 255, 255, 0.92);
+  --sidebar: #0b0b0c;
 
-  --text-main: #f2eee3;
-  --foreground: #f2eee3;
-  --text-dim: rgba(230, 236, 228, 0.82);
-  --muted-foreground: rgba(230, 236, 228, 0.72);
-  --card-border: rgba(230, 236, 228, 0.14);
-  --border: rgba(230, 236, 228, 0.14);
-  --input: rgba(230, 236, 228, 0.16);
-  --panel-line: rgba(230, 236, 228, 0.14);
-  --panel-line-strong: rgba(230, 236, 228, 0.26);
-  --panel-bg: rgba(6, 18, 15, 0.86);
+  --text-main: #f7f7f8;
+  --foreground: #f7f7f8;
+  --text-dim: rgba(255, 255, 255, 0.9);
+  --muted-foreground: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.14);
+  --panel-line: rgba(255, 255, 255, 0.14);
+  --panel-line-strong: rgba(255, 255, 255, 0.26);
+  --panel-bg: rgba(0, 0, 0, 0.82);
 
-  --signal: #ff936e;
-  --signal-strong: #efe8da;
-  --signal-2: #f3b27d;
-  --primary: #efe8da;
-  --primary-foreground: #081612;
-  --ring: #ff936e;
+  --signal: #60a5fa;
+  --signal-strong: #f4f4f6;
+  --signal-2: #3b82f6;
+  --primary: #f4f4f6;
+  --primary-foreground: #09090b;
+  --ring: #60a5fa;
 
-  --brand: #ff936e;
-  --brand-soft: rgba(255, 147, 110, 0.14);
-  --brand-line: rgba(255, 147, 110, 0.34);
-  --brand-ink: #ffb398;
+  --brand: #60a5fa;
+  --brand-soft: rgba(96, 165, 250, 0.14);
+  --brand-line: rgba(96, 165, 250, 0.34);
+  --brand-ink: #93c5fd;
   --brand-mark: var(--text-main);
 
-  --secondary: #13241f;
-  --secondary-foreground: #f2eee3;
-  --muted: #10201b;
-  --accent: #1a2f28;
-  --accent-foreground: #f2eee3;
-  --destructive: #ff7b7b;
-  --verify: #6fe0c5;
-  --verify-soft: rgba(111, 224, 197, 0.12);
-  --verify-line: rgba(111, 224, 197, 0.38);
+  --secondary: #17171a;
+  --secondary-foreground: #ededed;
+  --muted: #151517;
+  --accent: #1f1f22;
+  --accent-foreground: #ededed;
+  --destructive: #f87171;
+  --verify: #6fd3bd;
+  --verify-soft: rgba(111, 211, 189, 0.12);
+  --verify-line: rgba(111, 211, 189, 0.38);
 
-  --chart-1: #ff936e;
-  --chart-2: #6fe0c5;
-  --chart-3: #e3a0b4;
-  --chart-4: #bdaee8;
-  --chart-5: #8ec9e8;
-  --kind-summary: #ff936e;
-  --kind-flashcards: #6fe0c5;
-  --kind-quiz: #e3a0b4;
-  --kind-mindmap: #bdaee8;
-  --kind-slides: #8ec9e8;
-  --src-files: #ff936e;
-  --src-links: #6fe0c5;
-  --src-notes: #e0a0b8;
+  --chart-1: #60a5fa;
+  --chart-2: #cbd5e1;
+  --chart-3: #93c5fd;
+  --chart-4: #94a3b8;
+  --chart-5: #3b82f6;
+  --kind-summary: #60a5fa;
+  --kind-flashcards: #cbd5e1;
+  --kind-quiz: #93c5fd;
+  --kind-mindmap: #94a3b8;
+  --kind-slides: #3b82f6;
+  --src-files: #60a5fa;
+  --src-links: #cbd5e1;
+  --src-notes: #94a3b8;
 
   --chart-background: var(--card);
   --chart-foreground: var(--text-main);
   --chart-foreground-muted: var(--text-dim);
   --chart-line-primary: var(--chart-1);
   --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: rgba(230, 236, 228, 0.24);
-  --chart-grid: rgba(230, 236, 228, 0.12);
+  --chart-crosshair: rgba(255, 255, 255, 0.24);
+  --chart-grid: rgba(255, 255, 255, 0.12);
   --chart-tooltip-background: var(--popover);
   --chart-tooltip-foreground: var(--text-main);
   --chart-tooltip-muted: var(--text-dim);
@@ -3101,74 +3102,74 @@ html[data-theme="dark"] {
   --chart-marker-border: var(--card-border);
   --chart-marker-foreground: var(--text-main);
   --chart-label: var(--text-dim);
-  --chart-scale-01: rgba(255, 147, 110, 0.1);
-  --chart-scale-02: rgba(255, 147, 110, 0.18);
-  --chart-scale-03: rgba(255, 147, 110, 0.3);
-  --chart-scale-04: rgba(255, 147, 110, 0.46);
-  --chart-scale-05: rgba(255, 147, 110, 0.64);
-  --chart-scale-pattern-color: rgba(255, 147, 110, 0.1);
-  --dash-chart-label: rgba(230, 236, 228, 0.82);
-  --dash-chart-grid: rgba(230, 236, 228, 0.12);
-  --dash-series-primary: #ff936e;
-  --dash-series-secondary: #6fe0c5;
-  --dash-frost-top: rgba(255, 147, 110, 0.16);
-  --dash-frost-bottom: rgba(255, 147, 110, 0);
+  --chart-scale-01: rgba(96, 165, 250, 0.1);
+  --chart-scale-02: rgba(96, 165, 250, 0.18);
+  --chart-scale-03: rgba(96, 165, 250, 0.3);
+  --chart-scale-04: rgba(96, 165, 250, 0.46);
+  --chart-scale-05: rgba(96, 165, 250, 0.64);
+  --chart-scale-pattern-color: rgba(96, 165, 250, 0.1);
+  --dash-chart-label: rgba(255, 255, 255, 0.9);
+  --dash-chart-grid: rgba(255, 255, 255, 0.12);
+  --dash-series-primary: #60a5fa;
+  --dash-series-secondary: #94a3b8;
+  --dash-frost-top: rgba(96, 165, 250, 0.16);
+  --dash-frost-bottom: rgba(96, 165, 250, 0);
 
-  --sidebar-primary: #ff936e;
-  --sidebar-primary-foreground: #081612;
-  --sidebar-accent: #13241f;
-  --sidebar-accent-foreground: #f2eee3;
-  --sidebar-border: rgba(230, 236, 228, 0.1);
-  --sidebar-ring: #ff936e;
+  --sidebar-primary: #60a5fa;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: #17171a;
+  --sidebar-accent-foreground: #ededed;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #60a5fa;
 
-  --gt-head: #f7f3e8;
-  --gt-tail: #ff936e;
-  --stroke-a: #ffd0b8;
-  --stroke-b: #ff9b73;
-  --stroke-c: #c2562e;
-  --bg-canvas-a: #071511;
-  --bg-canvas-b: #05100d;
-  --bg-canvas-c: #06120f;
+  --gt-head: #ffffff;
+  --gt-tail: #60a5fa;
+  --stroke-a: #bfdbfe;
+  --stroke-b: #60a5fa;
+  --stroke-c: #2563eb;
+  --bg-canvas-a: #050506;
+  --bg-canvas-b: #020203;
+  --bg-canvas-c: #000000;
   --glass-fill-strong: rgba(255, 255, 255, 0.05);
-  --glass-hairline: rgba(255, 255, 255, 0.07);
-  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.56);
-  --halo-near: rgba(255, 190, 162, 0.18);
-  --halo-mid: rgba(255, 190, 162, 0.055);
-  --halo-far: rgba(111, 224, 197, 0.06);
-  --spot-light: rgba(255, 255, 255, 0.07);
+  --glass-hairline: rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 30px 80px -28px rgba(0, 0, 0, 0.5);
+  --halo-near: rgba(255, 255, 255, 0.22);
+  --halo-mid: rgba(255, 255, 255, 0.065);
+  --halo-far: rgba(255, 255, 255, 0.06);
+  --spot-light: rgba(255, 255, 255, 0.08);
 }
 
-/* Eye comfort keeps its warm white point, but the new coral/teal distinction
-   survives the lower-temperature treatment instead of falling back to amber. */
+/* Eye comfort keeps its warm white point, but the accent stays in the blue
+   family instead of falling back to amber. */
 html[data-comfort="on"]:not(.dark) {
-  --signal: #9c3c1e;
-  --signal-strong: #0a5e56;
-  --signal-2: #6e2a12;
-  --primary: #0a5e56;
-  --primary-foreground: #fdf8ee;
-  --brand: #c2410c;
-  --brand-ink: #7c2d12;
-  --ring: #0a5e56;
-  --chart-1: #a83c12;
-  --chart-2: #0b6b61;
-  --kind-summary: #a83c12;
-  --kind-flashcards: #0b6b61;
-  --dash-series-primary: #a83c12;
-  --dash-series-secondary: #0b6b61;
+  --signal: #1e40af;
+  --signal-strong: #1d4ed8;
+  --signal-2: #1e3a8a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --brand: #2563eb;
+  --brand-ink: #1e40af;
+  --ring: #2563eb;
+  --chart-1: #1d4ed8;
+  --chart-2: #475569;
+  --kind-summary: #1d4ed8;
+  --kind-flashcards: #475569;
+  --dash-series-primary: #1d4ed8;
+  --dash-series-secondary: #475569;
 }
 html[data-comfort="on"].dark,
 html[data-comfort="on"][data-theme="dark"] {
-  --signal: #f2b08c;
+  --signal: #93c5fd;
   --signal-strong: #f0e3cc;
   --primary: #f0e3cc;
   --primary-foreground: #1b150e;
-  --brand: #f2b08c;
-  --brand-ink: #f2b08c;
-  --ring: #f2b08c;
-  --chart-1: #f2b08c;
-  --chart-2: #8fd8c4;
-  --kind-summary: #f2b08c;
-  --kind-flashcards: #8fd8c4;
-  --dash-series-primary: #f2b08c;
-  --dash-series-secondary: #8fd8c4;
+  --brand: #93c5fd;
+  --brand-ink: #bfdbfe;
+  --ring: #93c5fd;
+  --chart-1: #93c5fd;
+  --chart-2: #cbd5e1;
+  --kind-summary: #93c5fd;
+  --kind-flashcards: #cbd5e1;
+  --dash-series-primary: #93c5fd;
+  --dash-series-secondary: #cbd5e1;
 }

@@ -190,7 +190,7 @@ function paintStage(canvas: HTMLCanvasElement, stage: HTMLElement, progress: num
   // in both themes and matches the cards it is building.
   const style = getComputedStyle(canvas);
   const inks = INK_TOKENS.map(
-    (token) => style.getPropertyValue(token).trim() || "#e8a410",
+    (token) => style.getPropertyValue(token).trim() || "#1d4ed8",
   );
   const scale = Math.min(1.28, Math.max(0.86, width / 1080));
   const box = stage.getBoundingClientRect();

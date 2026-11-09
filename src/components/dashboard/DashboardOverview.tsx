@@ -230,8 +230,8 @@ function useChartInk() {
         : {
             label: "#333f4b",
             grid: "rgba(36, 26, 10, 0.14)",
-            primary: "#b45309",
-            secondary: "#2f6f6b",
+            primary: "#1d4ed8",
+            secondary: "#64748b",
           };
     if (typeof document === "undefined") return fallback;
     const styles = getComputedStyle(document.documentElement);

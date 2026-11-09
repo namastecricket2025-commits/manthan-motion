@@ -12,7 +12,7 @@
  *   everything else (POST, /api, cross-origin)  untouched
  */
 
-const VERSION = "manthan-shell-v2";
+const VERSION = "manthan-shell-v3";
 const SHELL = [
   "/",
   "/index.html",

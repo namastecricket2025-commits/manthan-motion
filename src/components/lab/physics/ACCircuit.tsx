@@ -114,7 +114,7 @@ function Scope({ V, f, I, phi }: { V: number; f: number; I: number; phi: number 
     ctx.stroke();
   });
 
-  return <canvas ref={ref} className="h-44 w-full rounded-xl border border-white/10 bg-[#04120e]" />;
+  return <canvas ref={ref} className="h-44 w-full rounded-xl border border-white/10 bg-[#0b0b0c]" />;
 }
 
 export default function ACCircuit() {
