@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useViewTransitionNavigate } from "@/lib/view-transitions";
 import {
   FlaskConical,
   Home,
@@ -6,7 +7,7 @@ import {
   Sigma,
   UserRound,
 } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 
 /**
  * Thumb-level navigation for the signed-in app.
@@ -54,7 +55,7 @@ export function AppDock() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   const [search] = useSearchParams();
-  const navigate = useNavigate();
+  const go = useViewTransitionNavigate();
 
   if (!isAuthenticated || !APP_ROUTES.includes(location.pathname)) {
     return null;
@@ -94,7 +95,9 @@ export function AppDock() {
             className="app-tabbar__item"
             data-active={isActive ? "true" : undefined}
             aria-current={isActive ? "page" : undefined}
-            onClick={() => navigate(item.to)}
+            onClick={() => {
+              if (!isActive) go(item.to);
+            }}
           >
             <span className="app-tabbar__icon" aria-hidden="true">
               <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />

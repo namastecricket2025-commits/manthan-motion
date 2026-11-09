@@ -8,16 +8,9 @@ import { Logo } from "@/components/landing/Logo";
 import { DisplayToggles } from "@/components/landing/DisplayToggles";
 import { MathLab } from "@/components/mathlab/MathLab";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, LogOut } from "lucide-react";
-import { useState, type CSSProperties } from "react";
+import { LogOut } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useNavigate } from "react-router";
 
 /**
@@ -28,11 +21,9 @@ import { useNavigate } from "react-router";
 export default function MathLabPage() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [collapsed, setCollapsed] = useSidebarCollapsed();
 
   const selectSection = (key: DashboardSection) => {
-    setSheetOpen(false);
     if (key === "dashboard") navigate("/dashboard");
     else if (key === "notebooks") navigate("/dashboard?view=notebooks");
     else if (key === "mathlab") navigate("/math-lab");
@@ -54,8 +45,6 @@ export default function MathLabPage() {
       collapsed={collapsed}
     />
   );
-  const mobileNav = <DashboardNav active="mathlab" onSelect={selectSection} />;
-
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="relative z-10">
@@ -127,38 +116,6 @@ export default function MathLabPage() {
           <Logo />
           <div className="flex items-center gap-2">
             <DisplayToggles />
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Open menu"
-                  className="glass-chip inline-flex h-10 w-10 items-center justify-center text-foreground"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="app-mobile-drawer w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
-              >
-                <SheetHeader>
-                  <SheetTitle className="text-left">
-                    <Logo />
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="px-2">{mobileNav}</div>
-                <div className="mt-auto px-4 pb-8">
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-[var(--card-border)] bg-transparent"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign out
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </header>
 

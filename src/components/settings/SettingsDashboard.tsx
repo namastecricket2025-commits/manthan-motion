@@ -12,6 +12,7 @@ import {
   Info,
   Laptop,
   Lock,
+  LogOut,
   Monitor,
   Moon,
   RotateCcw,
@@ -416,6 +417,17 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
       });
     } finally {
       setRevoking(false);
+    }
+  };
+
+  const onSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (err) {
+      toast.error("Could not sign out", {
+        description: err instanceof Error ? err.message : "Please try again.",
+      });
     }
   };
 
@@ -874,6 +886,10 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
                     >
                       <ShieldCheck className="h-3.5 w-3.5" />
                       {revoking ? "Signing out…" : "Sign out of all other devices"}
+                    </button>
+                    <button type="button" className="set-btn" onClick={onSignOut}>
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sign out of this device
                     </button>
                   </div>
                 </div>

@@ -11,37 +11,40 @@
     position: fixed;
     z-index: 45;
     left: 50%;
-    bottom: calc(0.45rem + env(safe-area-inset-bottom));
+    bottom: calc(0.55rem + env(safe-area-inset-bottom));
     display: grid;
-    width: min(calc(100vw - 0.9rem), 30rem);
+    width: min(calc(100vw - 1.4rem), 29rem);
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 2px;
-    padding: 0.32rem 0.35rem 0.34rem;
+    gap: 1px;
+    padding: 0.38rem 0.42rem 0.42rem;
     transform: translateX(-50%);
-    border: 1px solid var(--panel-line-strong);
-    border-radius: 22px;
-    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text-main) 9%, transparent);
+    border-radius: 27px;
+    background: color-mix(in srgb, var(--panel) 80%, transparent);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    backdrop-filter: blur(24px) saturate(160%);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.08) inset,
-      0 18px 42px -20px rgba(0, 0, 0, 0.65);
+      0 1px 0 rgba(255, 255, 255, 0.07) inset,
+      0 16px 38px -22px rgba(0, 0, 0, 0.55),
+      0 3px 12px -4px rgba(0, 0, 0, 0.18);
   }
 
   .app-tabbar__item {
     display: flex;
     min-width: 0;
-    min-height: 48px;
+    min-height: 50px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     border: 0;
-    border-radius: 17px;
+    border-radius: 21px;
     background: transparent;
     color: var(--text-dim);
     -webkit-tap-highlight-color: transparent;
     transition:
-      background-color 160ms ease,
-      color 160ms ease,
+      background-color 200ms ease,
+      color 180ms ease,
       transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
@@ -65,7 +68,7 @@
   }
 
   .app-tabbar__item[data-active="true"] .app-tabbar__icon {
-    background: color-mix(in srgb, var(--signal) 16%, transparent);
+    background: color-mix(in srgb, var(--signal) 13%, transparent);
     color: var(--signal);
   }
 

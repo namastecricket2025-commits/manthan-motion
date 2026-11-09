@@ -27,7 +27,6 @@ import {
   FlaskConical,
   ListChecks,
   LogOut,
-  Menu,
   MoreHorizontal,
   NotebookPen,
   Sparkles,
@@ -40,7 +39,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import "@/components/lab/apple-lab.css";
@@ -85,7 +83,6 @@ export default function Lab() {
   const [askOpen, setAskOpen] = useState(false);
   const [askMode, setAskMode] = useState<"ask" | "drill">("ask");
   const [askSeed, setAskSeed] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
   const [labBookOpen, setLabBookOpen] = useState(false);
@@ -98,7 +95,6 @@ export default function Lab() {
   const active = SUBJECTS.find((entry) => entry.id === subject) ?? SUBJECTS[0];
 
   const selectSection = (key: DashboardSection) => {
-    setSheetOpen(false);
     if (key === "dashboard") navigate("/dashboard");
     else if (key === "notebooks") navigate("/dashboard?view=notebooks");
     else if (key === "exam") navigate("/exam");
@@ -135,8 +131,6 @@ export default function Lab() {
   const nav = (
     <DashboardNav active="lab" onSelect={selectSection} collapsed={collapsed} />
   );
-  const mobileNav = <DashboardNav active="lab" onSelect={selectSection} />;
-
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <div className="relative z-10">
@@ -207,38 +201,6 @@ export default function Lab() {
           <Logo />
           <div className="flex items-center gap-2">
             <DisplayToggles />
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Open menu"
-                  className="glass-chip inline-flex h-10 w-10 items-center justify-center text-foreground"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="app-mobile-drawer w-[80vw] max-w-xs overflow-y-auto border-r border-[var(--card-border)] bg-[var(--panel)] backdrop-blur-xl"
-              >
-                <SheetHeader>
-                  <SheetTitle className="text-left">
-                    <Logo />
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="px-2">{mobileNav}</div>
-                <div className="mt-auto px-4 pb-8">
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-[var(--card-border)] bg-transparent"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign out
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </header>
 
