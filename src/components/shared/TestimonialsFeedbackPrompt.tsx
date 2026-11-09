@@ -147,8 +147,8 @@ function StarField({
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-sm transition-colors",
             value >= n
-              ? "bg-[var(--signal)] border-[var(--signal)] text-[var(--panel)]"
-              : "border-[var(--card-border)] text-text-dim hover:text-[var(--signal)]",
+              ? "border-[color-mix(in_srgb,var(--rating)_55%,transparent)] bg-[color-mix(in_srgb,var(--rating)_14%,transparent)] text-[var(--rating)]"
+              : "border-[var(--card-border)] text-text-dim hover:text-[var(--rating)]",
           )}
         >
           <Star

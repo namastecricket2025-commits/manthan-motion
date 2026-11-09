@@ -134,7 +134,7 @@ export function ReviewsPanel() {
                             {review.classLabel}
                           </span>
                         ) : null}
-                        <span className="inline-flex items-center gap-0.5 text-[var(--signal)]">
+                        <span className="inline-flex items-center gap-0.5 text-[var(--rating)]">
                           {[1, 2, 3, 4, 5].map((n) => (
                             <Star
                               key={n}

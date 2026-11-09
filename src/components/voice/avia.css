@@ -698,26 +698,24 @@ html:not(.dark) .avia-bubble--avia {
 }
 
 html:not(.dark) .avia-root {
-  /* light: a warm amber glass, not a white bubble.
+  /* light: a cool blue-glass orb, not a white bubble or a warm amber one.
 
-     The pearl orb this replaced was near-white on a cream canvas: it read as
-     a smudge rather than an object, and its cool lavender cast was the only
-     cold thing on the page. The strands are now the brand's own amber family,
-     the glass is warm paper, and the edge is drawn — so the tutor is visible
-     in daylight without becoming a second accent colour. */
-  --avia-1: #b46a12;
-  --avia-2: #d79a35;
-  --avia-3: #7a4a0c;
-  --avia-4: #e0b062;
-  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #fffdf7 0%, #f8ead0 54%, #eed9b0 100%);
-  --avia-orb-edge: rgba(120, 78, 18, 0.3);
+     The strands use the site's cobalt/rose/blue family, the glass is a pale
+     cool paper, and the edge is drawn — so the tutor is visible in daylight
+     without becoming a second accent colour. */
+  --avia-1: #1d4ed8;
+  --avia-2: #2563eb;
+  --avia-3: #be123c;
+  --avia-4: #60a5fa;
+  --avia-orb-base: radial-gradient(120% 120% at 32% 20%, #fbfdff 0%, #eef5ff 54%, #dfeaff 100%);
+  --avia-orb-edge: rgba(29, 78, 216, 0.28);
   --avia-strand-blur: 5px;
   --avia-strand-mix: multiply;
   --avia-strand-opacity: 0.72;
-  --avia-orbit-glow: 0 16px 38px -16px rgba(180, 106, 18, 0.45);
+  --avia-orbit-glow: 0 16px 38px -16px rgba(37, 99, 235, 0.42);
   --avia-halo-alpha: 0.3;
   --avia-orb-inner: inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -6px 14px -10px rgba(90, 58, 12, 0.32);
+    inset 0 -6px 14px -10px rgba(30, 58, 138, 0.24);
 }
 
 .avia-fab {
@@ -782,17 +780,17 @@ html:not(.dark) .avia-root {
 }
 
 /* On paper the orb needs a real edge and a contact shadow, or it dissolves
-   into the canvas. One hairline plus a warm drop is enough. */
+   into the canvas. One hairline plus a cool drop is enough. */
 html:not(.dark) .avia-fab {
   background: color-mix(in srgb, var(--panel) 78%, transparent);
   box-shadow:
-    0 18px 40px -20px rgba(90, 58, 12, 0.4),
+    0 18px 40px -20px rgba(29, 78, 216, 0.28),
     0 2px 8px rgba(0, 0, 0, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 html:not(.dark) .avia-fab__orb {
-  border: 1px solid rgba(120, 78, 18, 0.24);
+  border: 1px solid rgba(29, 78, 216, 0.22);
 }
 
 /* the strands: six soft ribbons that drift, stretch and breathe. Their

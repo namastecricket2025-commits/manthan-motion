@@ -100,7 +100,7 @@ function Stars({
           width={size}
           height={size}
           strokeWidth={1.6}
-          className={n <= filled ? "text-[var(--brand-ink)]" : "text-text-dim/35"}
+          className={n <= filled ? "text-[var(--rating)]" : "text-text-dim/35"}
           fill={n <= filled ? "currentColor" : "none"}
         />
       ))}
