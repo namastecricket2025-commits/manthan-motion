@@ -12,6 +12,30 @@
  * student hears mid-conversation is written by the model (see convex/ai.ts).
  */
 
+export type VoiceLanguage = "en-IN" | "hi-IN";
+
+const VOICE_LANGUAGE_KEY = "manthan-voice-language";
+
+/** Remember the language across Avia, Viva and every dictation field. */
+export function loadVoiceLanguage(): VoiceLanguage {
+  if (typeof window === "undefined") return "en-IN";
+  try {
+    return window.localStorage.getItem(VOICE_LANGUAGE_KEY) === "hi-IN"
+      ? "hi-IN"
+      : "en-IN";
+  } catch {
+    return "en-IN";
+  }
+}
+
+export function saveVoiceLanguage(language: VoiceLanguage): void {
+  try {
+    window.localStorage.setItem(VOICE_LANGUAGE_KEY, language);
+  } catch {
+    /* private mode */
+  }
+}
+
 export const AVIA_GREETINGS = [
   "Hey — what are we working on?",
   "Hi. What can I help you with?",
@@ -21,13 +45,26 @@ export const AVIA_GREETINGS = [
   "What are we looking at today?",
 ];
 
+export const AVIA_GREETINGS_HI = [
+  "नमस्ते! आज क्या पढ़ रहे हैं?",
+  "हाय! मैं क्या मदद कर सकती हूँ?",
+  "तो बताइए, सवाल क्या है?",
+  "नमस्ते। आज किस विषय पर बात करें?",
+  "हाय! क्या समझना है आपको?",
+  "चलिए, शुरू करें — क्या पूछना है?",
+];
+
 /** Rotates through greetings without ever repeating the previous one. */
-export function pickGreeting(avoid?: string): string {
+export function pickGreeting(
+  avoid?: string,
+  language: VoiceLanguage = "en-IN",
+): string {
+  const greetings = language === "hi-IN" ? AVIA_GREETINGS_HI : AVIA_GREETINGS;
   const pool =
-    avoid && AVIA_GREETINGS.length > 1
-      ? AVIA_GREETINGS.filter((line) => line !== avoid)
-      : AVIA_GREETINGS;
-  return pool[Math.floor(Math.random() * pool.length)] ?? AVIA_GREETINGS[0];
+    avoid && greetings.length > 1
+      ? greetings.filter((line) => line !== avoid)
+      : greetings;
+  return pool[Math.floor(Math.random() * pool.length)] ?? greetings[0];
 }
 
 /** One greeting, used for the very first turn of a fresh session. */
@@ -92,32 +129,56 @@ export function detectStudyTopic(text: string): boolean {
  * outright, then anything the platform flags as premium, enhanced or neural,
  * then Google's voices, then a plain US English fallback.
  */
-export function scoreVoice(voice: SpeechSynthesisVoice): number {
+export function scoreVoice(
+  voice: SpeechSynthesisVoice,
+  language: VoiceLanguage = "en-IN",
+): number {
   const name = voice.name.toLowerCase();
+  const lang = voice.lang.replace("_", "-").toLowerCase();
   let score = 0;
-  if (name.includes("samantha")) score += 120;
-  if (name.includes("google us english")) score += 110;
-  if (/\b(premium|enhanced|natural|neural|siri)\b/.test(name)) score += 80;
-  if (name.includes("google")) score += 40;
-  if (name.includes("microsoft")) score += 15;
-  if (/^en[-_]us$/i.test(voice.lang)) score += 25;
-  else if (/^en[-_]/i.test(voice.lang)) score += 15;
+
+  if (language === "hi-IN") {
+    // Hindi only ever uses a Hindi voice. Falling back to an English voice is
+    // exactly what produced the "Hindi in a foreign accent" result.
+    if (lang === "hi-in") score += 220;
+    else if (lang.startsWith("hi")) score += 140;
+    else score -= 500;
+    if (/(swara|kalpana|lekha|hemant|madhur|hindi|हिन्दी)/i.test(name)) score += 110;
+    if (/\b(premium|enhanced|natural|neural)\b/.test(name)) score += 65;
+    if (name.includes("google")) score += 55;
+    if (name.includes("microsoft")) score += 25;
+  } else {
+    if (lang === "en-in") score += 220;
+    else if (lang.startsWith("en")) score += 50;
+    else score -= 500;
+    if (/(veena|rishi|heera|ravi|neerja|aarohi|indian english)/i.test(name)) score += 120;
+    if (name.includes("google indian english")) score += 150;
+    if (name.includes("samantha")) score += 100;
+    if (/\b(premium|enhanced|natural|neural|siri)\b/.test(name)) score += 70;
+    if (name.includes("google")) score += 40;
+    if (name.includes("microsoft")) score += 15;
+  }
+
   // Reject the obvious novelty / low-quality entries outright.
   if (/\b(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|zarvox|wobble)\b/.test(name)) {
-    score -= 200;
+    score -= 300;
   }
   if (voice.localService) score += 3;
   return score;
 }
 
-/** The best available English voice, or null to let the device decide. */
+/** The best available voice for the chosen language, or null to let the device decide. */
 export function pickAviaVoice(
   voices: SpeechSynthesisVoice[],
+  language: VoiceLanguage = "en-IN",
 ): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
-  const english = voices.filter((voice) => /^en([-_]|$)/i.test(voice.lang));
-  const pool = english.length > 0 ? english : voices;
-  const ranked = [...pool].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+  const prefix = language === "hi-IN" ? /^hi([-_]|$)/i : /^en([-_]|$)/i;
+  const matching = voices.filter((voice) => prefix.test(voice.lang.replace("_", "-")));
+  if (matching.length === 0) return null;
+  const ranked = [...matching].sort(
+    (a, b) => scoreVoice(b, language) - scoreVoice(a, language),
+  );
   return ranked[0] ?? null;
 }
 
@@ -146,6 +207,7 @@ export function speakText(
   voice: SpeechSynthesisVoice | null,
   onDone?: () => void,
   interrupt = true,
+  language: VoiceLanguage = "en-IN",
 ): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
     onDone?.();
@@ -177,7 +239,7 @@ export function speakText(
     utterance.voice = voice;
     utterance.lang = voice.lang;
   } else {
-    utterance.lang = "en-US";
+    utterance.lang = language;
   }
   if (onDone) {
     utterance.onend = () => onDone();
@@ -227,7 +289,10 @@ export function isIdentityAsk(text: string): boolean {
  * It states the two facts the product stands behind — Luv Moond founded and
  * built Manthan, and Avia is part of it — and invents nothing further.
  */
-export function identityReply(): string {
+export function identityReply(language: VoiceLanguage = "en-IN"): string {
+  if (language === "hi-IN") {
+    return `${AVIA_FOUNDER} ने मंथन बनाया है और उन्होंने ही मुझे बनाया है। बताइए, क्या पढ़ना है?`;
+  }
   return (
     `${AVIA_FOUNDER} is the founder who built Manthan, and the person who made me. ` +
     "What are we working on?"
@@ -242,7 +307,15 @@ export function identityReply(): string {
  * Avia still speaks when the model chain is out of free capacity, and says so
  * plainly — one honest line, no performance.
  */
-export function fallbackReply(studying: boolean): string {
+export function fallbackReply(
+  studying: boolean,
+  language: VoiceLanguage = "en-IN",
+): string {
+  if (language === "hi-IN") {
+    return studying
+      ? "अभी थोड़ी क्षमता नहीं बची है, इसलिए मैं इसे ठीक से हल नहीं कर पा रही हूँ। थोड़ी देर बाद फिर पूछिए।"
+      : "अभी थोड़ी देर के लिए क्षमता खत्म है — एक मिनट बाद फिर पूछिए।";
+  }
   return studying
     ? "I'm out of capacity for a minute, so I can't work this through properly yet. Ask me again shortly."
     : "I'm briefly out of capacity — give me a minute and ask again.";

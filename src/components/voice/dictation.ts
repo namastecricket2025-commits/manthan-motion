@@ -267,14 +267,37 @@ export function mergeTranscript(base: string, addition: string): string {
   if (left.length === 0) return right.join(" ");
   if (right.length === 0) return left.join(" ");
 
-  const limit = Math.min(20, left.length, right.length);
+  const normal = (tokens: string[]) => tokens.map(normaliseWord);
+  const leftNorm = normal(left);
+  const rightNorm = normal(right);
+
+  /** Is `needle` a contiguous block inside `haystack`? */
+  const contains = (haystack: string[], needle: string[]) => {
+    if (needle.length === 0 || needle.length > haystack.length) return false;
+    for (let start = 0; start <= haystack.length - needle.length; start += 1) {
+      if (needle.every((token, offset) => token === haystack[start + offset])) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // A phone often re-reports the *whole* utterance after a restart. The old
+  // overlap check only looked at the first twenty words, so a longer sentence
+  // was appended again and again. If one side already contains the other, the
+  // longer copy wins — no repeated paragraphs.
+  if (contains(leftNorm, rightNorm)) return left.join(" ");
+  if (contains(rightNorm, leftNorm)) return right.join(" ");
+
+  // Grow the overlap to the full sentence. Twenty words was not enough for a
+  // long dictated answer, and the result was the same answer printed twice.
+  const limit = Math.min(80, left.length, right.length);
   for (let size = limit; size >= 1; size -= 1) {
-    if (
-      sameWords(left.slice(left.length - size), right.slice(0, size))
-    ) {
+    if (sameWords(left.slice(left.length - size), right.slice(0, size))) {
       return [...left, ...right.slice(size)].join(" ");
     }
   }
+
   return [...left, ...right].join(" ");
 }
 

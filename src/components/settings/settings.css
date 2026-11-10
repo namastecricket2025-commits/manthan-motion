@@ -1393,6 +1393,138 @@ html:not(.dark) .set-panel-title__icon {
 }
 
 /* ============================================================
+   Your plan — the upgrade path lives in the You tab
+   ============================================================ */
+
+.set-plan {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  margin: 0 0 18px;
+  border: 1px solid color-mix(in srgb, var(--signal) 24%, var(--panel-line));
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      85% 140% at 0% 0%,
+      color-mix(in srgb, var(--signal) 11%, transparent),
+      transparent 62%
+    ),
+    var(--panel);
+  padding: 15px 16px;
+}
+
+.set-plan::after {
+  content: "";
+  position: absolute;
+  right: -36px;
+  top: -58px;
+  width: 150px;
+  height: 150px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--signal) 16%, transparent);
+  pointer-events: none;
+}
+
+.set-plan__icon {
+  display: grid;
+  height: 42px;
+  width: 42px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--signal) 26%, var(--panel-line));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--signal) 12%, transparent);
+  color: color-mix(in srgb, var(--signal) 78%, var(--text-main));
+}
+
+.set-plan__copy {
+  min-width: 0;
+}
+
+.set-plan__kicker {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.set-plan__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 3px;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.02rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-main);
+}
+
+.set-plan__price {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+}
+
+.set-plan__hint {
+  margin-top: 4px;
+  max-width: 64ch;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  opacity: 0.84;
+}
+
+.set-plan__cta {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--panel-line-strong, var(--panel-line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  padding: 7px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.set-plan__cta:hover {
+  border-color: color-mix(in srgb, var(--signal) 44%, transparent);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
+}
+
+.set-plan__cta:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 560px) {
+  .set-plan {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 11px;
+    padding: 14px;
+  }
+
+  .set-plan__cta {
+    grid-column: 1 / -1;
+    justify-content: center;
+    padding: 9px 12px;
+  }
+}
+
+/* ============================================================
    Settings refresh — one sheet, not a pile of cards
    ============================================================
    The page had grown three generations of card rules on top of each other:

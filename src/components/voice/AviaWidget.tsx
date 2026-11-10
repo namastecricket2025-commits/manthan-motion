@@ -4,15 +4,19 @@ import {
   fallbackReply,
   identityReply,
   isIdentityAsk,
+  loadVoiceLanguage,
   pickAviaVoice,
   pickGreeting,
+  saveVoiceLanguage,
   speakText,
   stopSpeaking,
+  type VoiceLanguage,
 } from "@/components/voice/avia";
 import { createDictation, studyTerms, type Dictation } from "@/components/voice/dictation";
 import { renderBlocks, toSpokenText } from "@/components/voice/format";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowUp,
   Mic,
   MicOff,
   RotateCcw,
@@ -26,18 +30,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./avia.css";
 
 /**
- * Avia — the floating voice companion.
+ * Avia — the floating study companion.
  *
- * A single circular orb in the bottom right of every page. Listening uses the
- * browser's own Web Speech API and speaking uses window.speechSynthesis, so
- * the whole widget runs with no API keys and no cost. The reply itself comes
- * from Manthan's model chain with Avia's personality prompt (see
- * convex/ai.ts); if that chain is out of free capacity she says so in
- * character instead of failing silently.
- *
- * She speaks in her own words: the reply comes from the model, and the only
- * fixed lines here are the short greeting and the honest out-of-capacity
- * notice. No scripted announcements, no filler noises.
+ * Listening uses the browser's own Web Speech API and speaking uses
+ * window.speechSynthesis, so the widget runs with no API keys and no cost.
+ * The reply comes from Manthan's model chain with Avia's personality prompt.
+ * She can answer schoolwork and ordinary worldwide questions, and she speaks
+ * and listens in Indian English or Hindi.
  */
 
 interface Turn {
@@ -46,27 +45,38 @@ interface Turn {
   text: string;
 }
 
-/** Openers shown to a cold-start visitor who has nothing to say yet. */
-const PROMPTS = [
+const PROMPTS_EN = [
   "What can you help me with?",
   "Explain photosynthesis",
   "Solve 2x + 5 = 17",
-  "Quiz me on Newton's laws",
+  "What should I see in Japan?",
 ];
 
-/** Persistent nudges — usable at any point in the conversation. */
-const QUICK_ACTIONS = [
+const PROMPTS_HI = [
+  "आप किसमें मदद कर सकती हैं?",
+  "प्रकाश संश्लेषण समझाइए",
+  "2x + 5 = 17 हल कीजिए",
+  "जापान में क्या देखना चाहिए?",
+];
+
+const QUICK_EN = [
   "Explain that simpler",
   "Give me an example",
   "Quiz me on this",
   "Why does that work?",
 ];
 
+const QUICK_HI = [
+  "इसे आसान शब्दों में समझाइए",
+  "एक उदाहरण दीजिए",
+  "इस पर क्विज़ लीजिए",
+  "यह कैसे काम करता है?",
+];
+
 /**
  * How long a gap has to last before what she has heard counts as the finished
- * question. A student thinks mid-question ("solve for x ... where x is
- * positive"), and a 1.4-second gap sent the first half of that sentence on its
- * own. Four seconds of real quiet is the shortest gap that keeps a whole
+ * question. A student thinks mid-question, and a 1.4-second gap sent the first
+ * half of that sentence on its own. Four seconds of real quiet keeps a whole
  * question together.
  */
 const SILENCE_MS = 4200;
@@ -81,30 +91,38 @@ export function AviaWidget() {
   const [draft, setDraft] = useState("");
   const [handsFree, setHandsFree] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const [greeting, setGreeting] = useState(() => pickGreeting());
-  // The transcript opens on the same line she speaks when the panel opens, so
-  // the first bubble is never a different greeting from the one she says.
+  const [language, setLanguage] = useState<VoiceLanguage>(() => loadVoiceLanguage());
+  const [greeting, setGreeting] = useState(() =>
+    pickGreeting(undefined, loadVoiceLanguage()),
+  );
   const [turns, setTurns] = useState<Turn[]>(() => [
     { id: 0, from: "avia", text: greeting },
   ]);
 
+  const isHindi = language === "hi-IN";
+  const copy = useCallback(
+    (english: string, hindi: string) => (isHindi ? hindi : english),
+    [isHindi],
+  );
+
   const idRef = useRef(1);
   const turnsRef = useRef(turns);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
-  /** The live take, and the text it has produced so far. */
+  const languageRef = useRef(language);
   const dictationRef = useRef<Dictation | null>(null);
   const transcriptRef = useRef("");
   const queuedRef = useRef(0);
   const greetedRef = useRef(false);
   const openRef = useRef(false);
   const logRef = useRef<HTMLDivElement | null>(null);
-  /** Live mirrors for callbacks that must not close over stale state. */
   const handsFreeRef = useRef(false);
   const listenRef = useRef<() => void>(() => {});
 
   turnsRef.current = turns;
   openRef.current = open;
   handsFreeRef.current = handsFree;
+  languageRef.current = language;
 
   const supported = useMemo(
     () =>
@@ -120,10 +138,8 @@ export function AviaWidget() {
     const synth = window.speechSynthesis;
 
     const load = () => {
-      // Named naturals first, then "premium"/"enhanced"/"neural" entries, then
-      // any English voice the device offers. The chosen voice is kept in the
-      // ref only: the panel names Avia, not the browser's synthesiser.
-      voiceRef.current = pickAviaVoice(synth.getVoices());
+      voicesRef.current = synth.getVoices();
+      voiceRef.current = pickAviaVoice(voicesRef.current, languageRef.current);
     };
 
     load();
@@ -135,6 +151,11 @@ export function AviaWidget() {
       window.clearTimeout(late);
     };
   }, []);
+
+  useEffect(() => {
+    languageRef.current = language;
+    voiceRef.current = pickAviaVoice(voicesRef.current, language);
+  }, [language]);
 
   /* ---------------- speaking ---------------- */
 
@@ -151,6 +172,7 @@ export function AviaWidget() {
         onDone?.();
       },
       interrupt,
+      languageRef.current,
     );
   }, []);
 
@@ -175,11 +197,7 @@ export function AviaWidget() {
       addTurn("student", message);
       setNote(null);
 
-      // Silent: a study question is flagged so the server labels the turn as
-      // tutoring rather than casual chat. Nothing is announced on the device —
-      // she just answers.
       const studying = detectStudyTopic(message);
-
       setThinking(true);
 
       const history = turnsRef.current.slice(-8).map((turn) => ({
@@ -193,7 +211,12 @@ export function AviaWidget() {
       };
 
       try {
-        const result = await askAvia({ message, history, studying });
+        const result = await askAvia({
+          message,
+          history,
+          studying,
+          language: languageRef.current,
+        });
         addTurn("avia", result.reply);
         // `say` strips markdown for speech; the transcript keeps the structure.
         say(result.reply, false, resume);
@@ -201,8 +224,8 @@ export function AviaWidget() {
         // A question about who made her is answered even when the model chain
         // is unreachable — the credit must never depend on a provider being up.
         const reply = isIdentityAsk(message)
-          ? identityReply()
-          : fallbackReply(studying);
+          ? identityReply(languageRef.current)
+          : fallbackReply(studying, languageRef.current);
         addTurn("avia", reply);
         say(reply, false, resume);
       } finally {
@@ -217,27 +240,19 @@ export function AviaWidget() {
 
   /* ---------------- listening ----------------
 
-     All of the accumulation lives in `createDictation`, because the viva had
-     the same bug this panel did: a phone re-reports the same sentence at a new
-     result index, and appending the whole result list printed it five times.
-     What the panel owns is the hand-off:
+     All accumulation lives in `createDictation`, because a phone re-reports
+     the same sentence at a new result index. The panel owns only the hand-off:
+     the live transcript mirrors into the composer, nothing is sent until the
+     room is quiet, and closing or starting a new chat drops the take. */
 
-       - the live transcript is mirrored into the composer while the student
-         talks, so they can watch the sentence being taken down;
-       - nothing is sent until the room is quiet for SILENCE_MS, or until the
-         mic is tapped again (that tap means "that's what I said");
-       - closing the panel or starting a new chat drops the take entirely. */
-
-  /** Words from the last couple of turns, used to bias and repair dictation. */
   const vocabulary = useCallback(() => {
     return turnsRef.current
       .filter((turn) => turn.from === "student")
       .slice(-2)
-      .flatMap((turn) => turn.text.split(/[^A-Za-z0-9'-]+/))
+      .flatMap((turn) => turn.text.split(/[^\p{L}\p{N}'-]+/u))
       .filter((word) => word.length > 3);
   }, []);
 
-  /** Drop the take without sending anything (closing the panel, new chat). */
   const stopListening = useCallback(() => {
     const dictation = dictationRef.current;
     dictationRef.current = null;
@@ -250,7 +265,9 @@ export function AviaWidget() {
     if (typeof window === "undefined") return;
     if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
       setNote(
-        "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
+        isHindi
+          ? "यह ब्राउज़र सुन नहीं सकता। Chrome, Edge या Safari आज़माइए — आप लिख भी सकते हैं।"
+          : "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
       );
       return;
     }
@@ -264,11 +281,9 @@ export function AviaWidget() {
     stopSpeaking();
     setNote(null);
     transcriptRef.current = "";
-    /* Tapping the mic pulls up a fresh take; anything already in the composer
-       was typed by the student and is replaced only once speech arrives. */
 
     const dictation = createDictation({
-      lang: "en-IN",
+      lang: languageRef.current,
       silenceMs: SILENCE_MS,
       terms: () => [...studyTerms(), ...vocabulary()],
       repair: vocabulary,
@@ -290,11 +305,15 @@ export function AviaWidget() {
         if (!transcript) {
           if (reason === "unsupported") {
             setNote(
-              "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
+              isHindi
+                ? "यह ब्राउज़र सुन नहीं सकता। Chrome, Edge या Safari आज़माइए — आप लिख भी सकते हैं।"
+                : "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
             );
           } else if (reason === "error") {
             setNote(
-              "I need microphone permission to hear you. Allow it in the address bar and try again.",
+              isHindi
+                ? "सुनने के लिए माइक्रोफ़ोन की अनुमति चाहिए। पता बार में अनुमति दें और फिर कोशिश करें।"
+                : "I need microphone permission to hear you. Allow it in the address bar and try again.",
             );
           }
           return;
@@ -306,7 +325,7 @@ export function AviaWidget() {
 
     dictationRef.current = dictation;
     dictation.start();
-  }, [vocabulary]);
+  }, [isHindi, vocabulary]);
 
   listenRef.current = startListening;
 
@@ -326,11 +345,22 @@ export function AviaWidget() {
     if (node) node.scrollTop = node.scrollHeight;
   }, [turns, thinking, note]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeWidget();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.classList.add("avia-open");
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.classList.remove("avia-open");
+    };
+  }, [open]);
+
   function openWidget() {
     setOpen(true);
     if (!greetedRef.current) {
-      // First click: Avia introduces herself out loud, then the mic opens on
-      // its own so the student can simply start talking.
       greetedRef.current = true;
       say(greeting, true, () => {
         if (openRef.current) startListening();
@@ -348,6 +378,35 @@ export function AviaWidget() {
     setOpen(false);
   }
 
+  function chooseLanguage(next: VoiceLanguage) {
+    if (next === language) return;
+    saveVoiceLanguage(next);
+    languageRef.current = next;
+    voiceRef.current = pickAviaVoice(voicesRef.current, next);
+    hush();
+    stopListening();
+    setLanguage(next);
+    setNote(null);
+
+    if (turns.length <= 1) {
+      const nextGreeting = pickGreeting(undefined, next);
+      setGreeting(nextGreeting);
+      idRef.current = 1;
+      setTurns([{ id: 0, from: "avia", text: nextGreeting }]);
+      setDraft("");
+      say(nextGreeting, true);
+      return;
+    }
+
+    const switchLine =
+      next === "hi-IN"
+        ? "ठीक है, अब हिंदी में बात करेंगे।"
+        : "Okay, switching back to English.";
+    addTurn("avia", switchLine);
+    setDraft("");
+    say(switchLine, true);
+  }
+
   /**
    * Hands-free mode: she keeps the microphone open between turns, so a whole
    * revision session can be held by voice without tapping the mic after every
@@ -357,13 +416,19 @@ export function AviaWidget() {
     const next = !handsFree;
     if (next && !supported) {
       setNote(
-        "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
+        isHindi
+          ? "यह ब्राउज़र सुन नहीं सकता। Chrome, Edge या Safari आज़माइए।"
+          : "This browser can't listen in — Chrome, Edge and Safari can. You can still type to me.",
       );
       return;
     }
     setHandsFree(next);
     setNote(
-      next ? "Hands-free on. I'll listen again as soon as I finish answering." : null,
+      next
+        ? isHindi
+          ? "हैंड्स-फ़्री चालू है। जवाब पूरा होते ही मैं फिर सुनूँगी।"
+          : "Hands-free on. I'll listen again as soon as I finish answering."
+        : null,
     );
   }
 
@@ -371,50 +436,105 @@ export function AviaWidget() {
   function newChat() {
     stopListening();
     hush();
-    const next = pickGreeting(greeting);
+    const next = pickGreeting(greeting, language);
     setGreeting(next);
     setNote(null);
     setDraft("");
     idRef.current = 1;
     setTurns([{ id: 0, from: "avia", text: next }]);
-    say(next);
+    say(next, true);
   }
 
   const statusLabel = listening
-    ? "Listening"
+    ? copy("Listening", "सुन रही हूँ")
     : thinking
-      ? "Thinking"
+      ? copy("Thinking", "सोच रही हूँ")
       : speaking
-        ? "Speaking"
-        : "Tap the mic and talk";
+        ? copy("Speaking", "बोल रही हूँ")
+        : copy("Tap the mic and talk", "माइक दबाकर बोलिए");
+
+  const prompts = isHindi ? PROMPTS_HI : PROMPTS_EN;
+  const quickActions = isHindi ? QUICK_HI : QUICK_EN;
 
   return (
-    <div className="avia-root">
+    <div className={"avia-root" + (open ? " is-open" : "")}>
+      <AnimatePresence>
+        {open && (
+          <motion.button
+            key="avia-scrim"
+            type="button"
+            className="avia-scrim"
+            aria-label={copy("Close Avia", "अविया बंद करें")}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            onClick={closeWidget}
+          />
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {open && (
           <motion.section
             key="avia-panel"
-            className="avia-panel"
-            style={{ transformOrigin: "calc(100% - 30px) calc(100% - 30px)" }}
-            initial={{ opacity: 0, scale: 0.62, y: 26, filter: "blur(14px)" }}
-            animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 0.7, y: 20, filter: "blur(10px)" }}
-            transition={{
-              type: "spring",
-              stiffness: 380,
-              damping: 32,
-              mass: 0.85,
-            }}
-            aria-label="Avia voice tutor"
+            className="avia-panel avia-panel--v2"
+            style={{ transformOrigin: "100% 100%" }}
+            initial={{ opacity: 0, y: 34, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 26, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            aria-label={copy("Avia voice tutor", "अविया वॉइस ट्यूटर")}
           >
-            <header className="avia-head">
-              <span className={"avia-dot" + (listening || speaking ? " is-live" : "")} />
-              <div className="min-w-0 flex-1">
+            <motion.div
+              className="avia-grab"
+              aria-hidden="true"
+              onPanEnd={(_, info) => {
+                if (info.offset.y > 64 && info.velocity.y > 0) closeWidget();
+              }}
+            >
+              <span />
+            </motion.div>
+
+            <motion.header
+              className="avia-head avia-head--v2"
+              onPanEnd={(_, info) => {
+                if (info.offset.y > 84 && info.velocity.y > 0) closeWidget();
+              }}
+            >
+              <span className={"avia-avatar" + (listening || speaking ? " is-live" : "")}>
+                <span className="avia-avatar__strand" />
+                <span className="avia-avatar__core" />
+              </span>
+              <div className="avia-head__copy">
                 <p className="avia-name">Avia</p>
+                <p className="avia-sub">
+                  {isHindi
+                    ? "अध्ययन साथी · दुनिया की जानकारी"
+                    : "Study companion · world knowledge"}
+                </p>
+              </div>
+              <div className="avia-lang" role="group" aria-label={copy("Voice language", "आवाज़ की भाषा")}>
+                <button
+                  type="button"
+                  data-active={language === "en-IN" ? "true" : undefined}
+                  aria-pressed={language === "en-IN"}
+                  onClick={() => chooseLanguage("en-IN")}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  data-active={language === "hi-IN" ? "true" : undefined}
+                  aria-pressed={language === "hi-IN"}
+                  onClick={() => chooseLanguage("hi-IN")}
+                >
+                  हिं
+                </button>
               </div>
               <button
                 type="button"
-                aria-label="Start a new chat with Avia"
+                aria-label={copy("Start a new chat with Avia", "अविया के साथ नई बातचीत")}
                 className="avia-icon-btn"
                 onClick={newChat}
               >
@@ -422,21 +542,21 @@ export function AviaWidget() {
               </button>
               <button
                 type="button"
-                aria-label="Close Avia"
+                aria-label={copy("Close Avia", "अविया बंद करें")}
                 className="avia-icon-btn"
                 onClick={closeWidget}
               >
                 <X className="h-4 w-4" />
               </button>
-            </header>
+            </motion.header>
 
             <div ref={logRef} className="avia-log">
               {turns.map((turn) => (
                 <motion.div
                   key={turn.id}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 7 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.28, ease: [0.25, 1, 0.5, 1] }}
+                  transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
                   className={
                     "avia-bubble " +
                     (turn.from === "student"
@@ -444,9 +564,7 @@ export function AviaWidget() {
                       : "avia-bubble--avia")
                   }
                 >
-                  {turn.from === "avia"
-                    ? renderBlocks(turn.text)
-                    : turn.text}
+                  {turn.from === "avia" ? renderBlocks(turn.text) : turn.text}
                 </motion.div>
               ))}
               {thinking && (
@@ -476,7 +594,7 @@ export function AviaWidget() {
                   className="avia-status__action"
                 >
                   <VolumeX className="h-3 w-3" />
-                  Quiet
+                  {copy("Quiet", "चुप")}
                 </button>
               )}
               {supported && (
@@ -484,11 +602,11 @@ export function AviaWidget() {
                   type="button"
                   onClick={toggleHandsFree}
                   aria-pressed={handsFree}
-                  className={
-                    "avia-status__action" + (handsFree ? " is-on" : "")
-                  }
+                  className={"avia-status__action" + (handsFree ? " is-on" : "")}
                 >
-                  {handsFree ? "Hands-free on" : "Hands-free"}
+                  {handsFree
+                    ? copy("Hands-free on", "हैंड्स-फ़्री चालू")
+                    : copy("Hands-free", "हैंड्स-फ़्री")}
                 </button>
               )}
             </div>
@@ -496,7 +614,7 @@ export function AviaWidget() {
             {note && <p className="avia-note">{note}</p>}
 
             <div className="avia-chips">
-              {(turns.length <= 1 ? PROMPTS : QUICK_ACTIONS).map((prompt) => (
+              {(turns.length <= 1 ? prompts : quickActions).map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
@@ -524,18 +642,31 @@ export function AviaWidget() {
                   dictationRef.current?.setSeed(event.target.value);
                   setDraft(event.target.value);
                 }}
-                placeholder={supported ? "Or type to Avia…" : "Type to Avia…"}
+                placeholder={
+                  supported
+                    ? copy("Ask anything, in English or Hindi…", "अंग्रेज़ी या हिंदी में कुछ भी पूछिए…")
+                    : copy("Type to Avia…", "अविया से लिखिए…")
+                }
                 className="avia-input"
-                aria-label="Type a message to Avia"
+                aria-label={copy("Type a message to Avia", "अविया को संदेश लिखें")}
               />
+              <button
+                type="submit"
+                className="avia-send"
+                disabled={!draft.trim() || thinking}
+                aria-label={copy("Send message", "संदेश भेजें")}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={startListening}
                 aria-pressed={listening}
-                /* While it listens this button means "that's what I said": it
-                   commits and sends, which is the student's way of skipping the
-                   silence wait. */
-                aria-label={listening ? "Finish and send" : "Start listening"}
+                aria-label={
+                  listening
+                    ? copy("Finish and send", "खत्म करके भेजें")
+                    : copy("Start listening", "सुनना शुरू करें")
+                }
                 className={"avia-mic" + (listening ? " is-live" : "")}
               >
                 {listening ? (
@@ -547,28 +678,33 @@ export function AviaWidget() {
                 )}
               </button>
             </form>
+
+            <p className="avia-footnote">
+              {isHindi
+                ? "भारतीय अंग्रेज़ी और हिंदी में बोलती और सुनती है"
+                : "Speaks and listens in Indian English or Hindi"}
+            </p>
           </motion.section>
         )}
       </AnimatePresence>
 
-      {/* The launcher itself: one living orb, no icon. Six soft light strands
-          drift behind a hairline edge while a conic sweep turns around it, so
-          the state is legible from across the room — slow and calm at rest,
-          wide and fast while she listens, and rippling at speech cadence while
-          she talks. */}
+      {/* The launcher itself: one living orb, no icon. */}
       <motion.button
         type="button"
         onClick={() => (open ? closeWidget() : openWidget())}
         aria-expanded={open}
-        aria-label={listening ? "Avia is listening" : "Open Avia, the AI voice tutor"}
-        className={
-          "avia-fab" + (listening || speaking ? " is-live" : "")
+        aria-label={
+          listening
+            ? copy("Avia is listening", "अविया सुन रही है")
+            : copy("Open Avia, the AI voice tutor", "अविया खोलें, AI वॉइस ट्यूटर")
         }
+        data-open={open ? "true" : undefined}
+        className={"avia-fab" + (listening || speaking ? " is-live" : "")}
         initial={false}
-        animate={{ scale: open ? 0.88 : 1, opacity: open ? 0.7 : 1 }}
-        whileHover={{ scale: open ? 0.92 : 1.05 }}
+        animate={{ scale: open ? 0.9 : 1, opacity: open ? 0.8 : 1 }}
+        whileHover={{ scale: open ? 0.94 : 1.05 }}
         whileTap={{ scale: 0.94 }}
-        transition={{ type: "spring", stiffness: 420, damping: 26, mass: 0.6 }}
+        transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.6 }}
       >
         <span className="avia-fab__halo" aria-hidden="true" />
         <span className="avia-fab__ring" aria-hidden="true" />

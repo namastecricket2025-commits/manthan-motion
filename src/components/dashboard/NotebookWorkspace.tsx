@@ -22,6 +22,7 @@ import { usePlan } from "@/components/plans/PlanProvider";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import { useCdPill } from "@/components/landing/use-cd-pill";
 import { SITE_URL } from "@/lib/site";
+import { loadVoiceLanguage } from "@/components/voice/avia";
 import { createDictation, type Dictation } from "@/components/voice/dictation";
 import { enhancePhotoToFile } from "@/lib/enhance-photo";
 import { isKitSaved, offlineKitId, saveKit } from "@/lib/offline";
@@ -331,7 +332,7 @@ export function NotebookWorkspace({
     }
     notesBaseRef.current = notesBody;
     const dictation = createDictation({
-      lang: "en-IN",
+      lang: loadVoiceLanguage(),
       silenceMs: 3000,
       onText: (text) => {
         const base = notesBaseRef.current;

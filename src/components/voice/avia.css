@@ -887,6 +887,383 @@ html:not(.dark) .avia-fab__orb {
   }
 }
 
+/* ============================================================================
+   AVIA 2 — a proper sheet, not a floating card
+   ----------------------------------------------------------------------------
+   Desktop keeps a compact panel above the orb. On a phone the panel is a
+   bottom sheet: edge to edge, safe-area aware, with a grab handle, a dimmed
+   page behind it, and one scrollable transcript. The animation is transform
+   and opacity only — the old blur filter on a spring was what made opening
+   feel heavy on a mid-range phone.
+   ========================================================================== */
+
+.avia-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  background: rgba(4, 4, 6, 0.62);
+}
+
+.avia-panel--v2 {
+  position: relative;
+  z-index: 2;
+  width: min(94vw, 408px);
+  max-height: min(72dvh, 640px);
+  border-radius: 24px;
+  border: 1px solid var(--panel-line-strong, var(--panel-line));
+  background:
+    radial-gradient(
+      120% 70% at 100% 0%,
+      color-mix(in srgb, var(--signal) 9%, transparent),
+      transparent 60%
+    ),
+    var(--panel);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 44px 110px -42px rgba(0, 0, 0, 0.9);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.avia-grab {
+  display: none;
+}
+
+.avia-head--v2 {
+  gap: 9px;
+  padding: 13px 13px 11px 14px;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  border-bottom: 1px solid var(--glass-line);
+}
+
+.avia-avatar {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  height: 34px;
+  width: 34px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--panel-line-strong, var(--panel-line));
+  border-radius: 999px;
+  background: var(--avia-orb-base);
+  box-shadow: var(--avia-orb-inner);
+}
+
+.avia-avatar__strand {
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 210deg,
+    transparent 0deg,
+    var(--avia-1) 70deg,
+    transparent 160deg,
+    var(--avia-2) 250deg,
+    transparent 340deg
+  );
+  filter: blur(2px);
+  opacity: 0.9;
+  animation: avia-spin 8s linear infinite;
+}
+
+.avia-avatar__core {
+  position: relative;
+  height: 22px;
+  width: 22px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 36% 28%,
+    rgba(255, 255, 255, 0.3),
+    transparent 60%
+  );
+  box-shadow: 0 0 12px color-mix(in srgb, var(--avia-1) 32%, transparent);
+}
+
+.avia-avatar.is-live .avia-avatar__strand {
+  animation-duration: 3s;
+}
+
+.avia-head__copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.avia-head--v2 .avia-name {
+  font-size: 14.5px;
+  line-height: 1.1;
+}
+
+.avia-sub {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avia-lang {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 1px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  padding: 2px;
+}
+
+.avia-lang button {
+  min-width: 25px;
+  border-radius: 999px;
+  padding: 4px 5px;
+  color: var(--text-dim);
+  font-size: 9.5px;
+  font-weight: 750;
+  line-height: 1;
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.avia-lang button[data-active="true"] {
+  background: color-mix(in srgb, var(--signal) 18%, transparent);
+  color: color-mix(in srgb, var(--signal) 76%, var(--text-main));
+}
+
+.avia-panel--v2 .avia-log {
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 9px;
+  padding: 14px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.avia-panel--v2 .avia-bubble {
+  max-width: 92%;
+  border-radius: 16px;
+  padding: 9px 12px;
+  font-size: 12.8px;
+  line-height: 1.62;
+}
+
+.avia-panel--v2 .avia-bubble--avia {
+  border-color: var(--glass-line);
+  background: color-mix(in srgb, var(--text-main) 3.5%, transparent);
+  border-bottom-left-radius: 5px;
+}
+
+.avia-panel--v2 .avia-bubble--student {
+  background: color-mix(in srgb, var(--signal) 14%, transparent);
+  border-color: color-mix(in srgb, var(--signal) 28%, transparent);
+  border-bottom-right-radius: 5px;
+}
+
+.avia-panel--v2 .avia-status {
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 0 14px 8px;
+  font-size: 10px;
+}
+
+.avia-panel--v2 .avia-note {
+  padding: 0 14px 8px;
+  font-size: 10.5px;
+}
+
+.avia-panel--v2 .avia-chips {
+  flex: 0 0 auto;
+  gap: 5px;
+  padding: 0 14px 10px;
+}
+
+.avia-panel--v2 .avia-chip {
+  padding: 5px 9px;
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.avia-panel--v2 .avia-foot {
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 10px 12px 7px;
+  border-top: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+
+.avia-panel--v2 .avia-input {
+  height: 42px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  font-size: 16px;
+}
+
+.avia-panel--v2 .avia-send,
+.avia-panel--v2 .avia-mic {
+  height: 42px;
+  width: 42px;
+  border-radius: 14px;
+}
+
+.avia-panel--v2 .avia-send:disabled {
+  opacity: 0.32;
+}
+
+.avia-panel--v2 .avia-mic {
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  border-color: var(--glass-line);
+}
+
+.avia-panel--v2 .avia-mic.is-live {
+  background: var(--signal-strong);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+
+.avia-footnote {
+  flex: 0 0 auto;
+  padding: 0 14px 9px;
+  color: color-mix(in srgb, var(--text-dim) 72%, transparent);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+html:not(.dark) .avia-scrim {
+  background: rgba(18, 22, 34, 0.38);
+}
+
+html:not(.dark) .avia-panel--v2 .avia-bubble--avia {
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+}
+
+@media (max-width: 640px) {
+  .avia-root {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  .avia-root.is-open .avia-scrim {
+    display: block;
+  }
+
+  .avia-panel--v2 {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: min(88dvh, 780px);
+    max-height: none;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 27px 27px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -24px 80px -40px rgba(0, 0, 0, 0.9);
+  }
+
+  .avia-grab {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    padding: 8px 0 2px;
+    touch-action: none;
+  }
+
+  .avia-grab span {
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-main) 22%, transparent);
+  }
+
+  .avia-head--v2 {
+    padding: 7px 11px 10px 13px;
+  }
+
+  .avia-head--v2 .avia-icon-btn {
+    padding: 7px;
+  }
+
+  .avia-panel--v2 .avia-log {
+    padding: 12px 13px;
+  }
+
+  .avia-panel--v2 .avia-bubble {
+    max-width: 94%;
+    font-size: 13px;
+  }
+
+  .avia-panel--v2 .avia-status,
+  .avia-panel--v2 .avia-note {
+    padding-inline: 13px;
+  }
+
+  .avia-panel--v2 .avia-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 13px 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .avia-panel--v2 .avia-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .avia-panel--v2 .avia-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .avia-panel--v2 .avia-foot {
+    padding: 9px 11px 7px;
+  }
+
+  .avia-panel--v2 .avia-input {
+    height: 44px;
+    border-radius: 16px;
+  }
+
+  .avia-panel--v2 .avia-send,
+  .avia-panel--v2 .avia-mic {
+    height: 44px;
+    width: 44px;
+    border-radius: 16px;
+  }
+
+  .avia-footnote {
+    padding-bottom: 7px;
+  }
+
+  .avia-fab[data-open="true"] {
+    display: none;
+  }
+
+  body.avia-open {
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 641px) {
+  .avia-scrim {
+    display: none;
+  }
+}
+
 /* a soft inner light so the strands read as depth, not as stripes */
 .avia-fab__core {
   height: 100%;

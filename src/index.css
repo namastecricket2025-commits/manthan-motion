@@ -2224,6 +2224,30 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Native-feeling touch: controls never wait for a double-tap, the page does
+   not rubber-band or offer pull-to-refresh over the app, and horizontal rails
+   keep their own momentum instead of dragging the whole screen sideways. */
+@media (max-width: 759px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  button,
+  a,
+  [role="button"],
+  label {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mathlab-views,
+  .avia-panel--v2 .avia-chips,
+  .avia-panel--v2 .avia-log,
+  .gs-body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 @media (max-width: 900px) {
   /* 4. Flex and grid children may shrink below their content. Without this a
      single long label drags its whole row — and the page — wider than the

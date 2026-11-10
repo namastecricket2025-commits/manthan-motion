@@ -306,10 +306,12 @@ export const vivaStart = action({
     notebookId: v.optional(v.id("notebooks")),
     scope: v.optional(v.string()),
     topic: v.optional(v.string()),
+    /** The student's spoken language, chosen in the client. */
+    language: v.optional(v.union(v.literal("en-IN"), v.literal("hi-IN"))),
   },
   handler: async (
     ctx,
-    { notebookId, scope, topic },
+    { notebookId, scope, topic, language: speechLanguage },
   ): Promise<{
     question: string;
     focus: string;
@@ -333,7 +335,12 @@ export const vivaStart = action({
       heading = `SYLLABUS: ${syllabus}`;
       body =
         "This viva is set from the CBSE / NCERT syllabus line above, not from an uploaded source. Ask from the standard textbook treatment of that chapter.";
-      language = detectLanguage([syllabus]);
+      language =
+        speechLanguage === "hi-IN"
+          ? "hi"
+          : speechLanguage === "en-IN"
+            ? "en"
+            : detectLanguage([syllabus]);
       labels = syllabus
         .split("\n")
         .map((line) => line.trim())
@@ -354,9 +361,14 @@ export const vivaStart = action({
       ownerId = context.ownerId;
       heading = `NOTEBOOK: ${context.name}`;
       body = `SOURCES:\n${corpusFor(context.sources)}`;
-      language = detectLanguage(
-        context.sources.map((source) => source.text.slice(0, 500)),
-      );
+      language =
+        speechLanguage === "hi-IN"
+          ? "hi"
+          : speechLanguage === "en-IN"
+            ? "en"
+            : detectLanguage(
+                context.sources.map((source) => source.text.slice(0, 500)),
+              );
       labels = context.sources.map((source) => source.name).slice(0, 4);
     }
 
@@ -399,6 +411,7 @@ export const vivaRespond = action({
     expected: v.array(v.string()),
     answer: v.string(),
     turn: v.number(),
+    language: v.optional(v.union(v.literal("en-IN"), v.literal("hi-IN"))),
     history: v.optional(
       v.array(
         v.object({
@@ -412,7 +425,17 @@ export const vivaRespond = action({
   },
   handler: async (
     ctx,
-    { notebookId, scope, topic, question, expected, answer, turn, history },
+    {
+      notebookId,
+      scope,
+      topic,
+      question,
+      expected,
+      answer,
+      turn,
+      history,
+      language: speechLanguage,
+    },
   ): Promise<{
     score: number;
     feedback: string;
@@ -443,7 +466,12 @@ export const vivaRespond = action({
       heading = `SYLLABUS: ${syllabus}`;
       body =
         "Grade against the standard CBSE / NCERT treatment of that chapter; the expected points below are the marking scheme.";
-      language = detectLanguage([syllabus]);
+      language =
+        speechLanguage === "hi-IN"
+          ? "hi"
+          : speechLanguage === "en-IN"
+            ? "en"
+            : detectLanguage([syllabus]);
     } else {
       if (!notebookId) {
         throw new Error("Choose a notebook, or pick a class, subject and chapter.");
@@ -457,9 +485,14 @@ export const vivaRespond = action({
       ownerId = context.ownerId;
       heading = `NOTEBOOK: ${context.name}`;
       body = `SOURCES:\n${corpusFor(context.sources)}`;
-      language = detectLanguage(
-        context.sources.map((source) => source.text.slice(0, 500)),
-      );
+      language =
+        speechLanguage === "hi-IN"
+          ? "hi"
+          : speechLanguage === "en-IN"
+            ? "en"
+            : detectLanguage(
+                context.sources.map((source) => source.text.slice(0, 500)),
+              );
     }
 
     await assertAllowance(ctx, ownerId);

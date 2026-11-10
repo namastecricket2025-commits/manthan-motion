@@ -4,7 +4,9 @@ import { useLocation, useNavigate } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
+  ArrowUpRight,
   Check,
+  CreditCard,
   Download,
   Eye,
   EyeOff,
@@ -43,7 +45,9 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/convex/_generated/api";
 import { downloadLabReport, type NotebookRow, type ProgressRow, type RecordRow } from "@/components/lab/progress/report";
+import { usePlan } from "@/components/plans/PlanProvider";
 import { useAuth } from "@/hooks/use-auth";
+import { formatINR, getTier, planName } from "@/lib/plans";
 import { supabase } from "@/lib/supabase";
 import type { HomeFocus, TextComfort, ThemeMode } from "@/lib/app-settings";
 import { ReviewsPanel } from "./ReviewsPanel";
@@ -279,6 +283,8 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
   const spring = settings.reduceMotion ? { duration: 0 } : PANEL_SPRING;
 
   const { user, signOut } = useAuth();
+  const { plan } = usePlan();
+  const currentTier = getTier(plan);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -539,6 +545,38 @@ export default function SettingsDashboard({ bare = false }: { bare?: boolean } =
             Reset defaults
           </button>
         </header>
+
+        <section className="set-plan" aria-label="Your plan">
+          <span className="set-plan__icon" aria-hidden="true">
+            <CreditCard className="h-4 w-4" />
+          </span>
+          <div className="set-plan__copy">
+            <p className="set-plan__kicker">Your plan</p>
+            <h3 className="set-plan__name">
+              {planName(plan)}
+              {currentTier ? (
+                <span className="set-plan__price">
+                  {formatINR(currentTier.price)} / {currentTier.unit}
+                </span>
+              ) : (
+                <span className="set-plan__price">Free forever</span>
+              )}
+            </h3>
+            <p className="set-plan__hint">
+              {currentTier
+                ? `${currentTier.allowance} · ${currentTier.summary}`
+                : "60,000 tokens a day, the full notebook studio and the STEM Lab. Upgrade for the Math Lab, photo solving and the full voice tutor."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="set-plan__cta"
+            onClick={() => navigate("/pricing")}
+          >
+            {plan === "free" ? "Upgrade plan" : "Manage plan"}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </button>
+        </section>
 
         <Accordion
           type="multiple"

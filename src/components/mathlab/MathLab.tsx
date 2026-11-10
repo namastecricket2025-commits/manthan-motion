@@ -36,7 +36,12 @@ import {
   type EngineTurn,
 } from "@/components/mathlab/solution";
 import "@/components/mathlab/mathlab.css";
-import { stopSpeaking } from "@/components/voice/avia";
+import {
+  loadVoiceLanguage,
+  saveVoiceLanguage,
+  stopSpeaking,
+  type VoiceLanguage,
+} from "@/components/voice/avia";
 import { createDictation, type Dictation } from "@/components/voice/dictation";
 import {
   ArrowRight,
@@ -368,6 +373,9 @@ export function MathLab() {
   const [turns, setTurns] = useState<EngineTurn[]>([]);
   const [followUp, setFollowUp] = useState("");
   const [listening, setListening] = useState(false);
+  const [voiceLanguage, setVoiceLanguage] = useState<VoiceLanguage>(() =>
+    loadVoiceLanguage(),
+  );
   const [copied, setCopied] = useState<"plain" | "latex" | null>(null);
   const [showWorked, setShowWorked] = useState(true);
   const [hintMode, setHintMode] = useState(false);
@@ -617,7 +625,7 @@ export function MathLab() {
     setEngineError(null);
 
     const dictation = createDictation({
-      lang: "en-IN",
+      lang: loadVoiceLanguage(),
       // A spoken problem is usually one sentence, but a student pauses while
       // reading a long one aloud; four seconds keeps the whole problem.
       silenceMs: 4000,
@@ -725,7 +733,7 @@ export function MathLab() {
             <SearchWithGoogle
               topic={formula.trim() || "Maths problem — NCERT CBSE explained"}
               label="Search ideas on the web"
-              triggerLabel="Search the web"
+              triggerLabel="Search"
               compact
             />
           </div>
@@ -735,16 +743,16 @@ export function MathLab() {
         <motion.div
           key={view}
           className="mathlab-viewbody"
-          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
           animate={
             reduceMotion
               ? { opacity: 1 }
-              : { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 32 } }
+              : { opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }
           }
           exit={
             reduceMotion
               ? { opacity: 0 }
-              : { opacity: 0, y: -12, transition: { duration: 0.16, ease: "easeOut" } }
+              : { opacity: 0, y: -6, transition: { duration: 0.11, ease: "easeOut" } }
           }
         >
 
@@ -798,6 +806,28 @@ export function MathLab() {
                   ariaLabel="Your maths problem"
                 />
                 <div className="mathlab-input__row">
+                  <button
+                    type="button"
+                    className="mathlab-tool mathlab-tool--lang"
+                    onClick={() => {
+                      const next: VoiceLanguage =
+                        voiceLanguage === "hi-IN" ? "en-IN" : "hi-IN";
+                      saveVoiceLanguage(next);
+                      setVoiceLanguage(next);
+                    }}
+                    aria-label={
+                      voiceLanguage === "hi-IN"
+                        ? "Dictation language: Hindi. Switch to English"
+                        : "Dictation language: English. Switch to Hindi"
+                    }
+                    title={
+                      voiceLanguage === "hi-IN"
+                        ? "हिंदी में बोलिए · switch to English"
+                        : "Speak in English · हिंदी के लिए दबाइए"
+                    }
+                  >
+                    {voiceLanguage === "hi-IN" ? "हिं" : "EN"}
+                  </button>
                   <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
                   <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
                   <motion.button
@@ -1189,11 +1219,11 @@ export function MathLab() {
             {calcOpen ? (
               <motion.aside
                 className="mathlab-calc-drawer"
-                initial={reduceMotion ? { opacity: 0 } : { y: 26, opacity: 0, scale: 0.94 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                exit={reduceMotion ? { opacity: 0 } : { y: 20, opacity: 0, scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 330, damping: 30, mass: 0.9 }}
-                style={{ transformOrigin: "0% 100%" }}
+                initial={reduceMotion ? { opacity: 0 } : { y: 16, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={reduceMotion ? { opacity: 0 } : { y: 10, opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+                style={{ transformOrigin: "0% 100%", willChange: "transform, opacity" }}
                 aria-label="Scientific calculator"
               >
                 <ScientificCalculator onClose={() => setCalcOpen(false)} />

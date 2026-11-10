@@ -16,7 +16,7 @@ export function AppLaunch() {
     const reduced =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(() => setGone(true), reduced ? 220 : 1720);
+    const timer = window.setTimeout(() => setGone(true), reduced ? 260 : 2080);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -24,8 +24,8 @@ export function AppLaunch() {
 
   return (
     <div className="app-launch" aria-hidden="true">
+      <span className="app-launch__aura" />
       <LogoMark className="app-launch__mark" />
-      <span className="app-launch__word">Manthan</span>
     </div>
   );
 }

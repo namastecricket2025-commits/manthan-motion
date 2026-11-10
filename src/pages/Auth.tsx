@@ -828,29 +828,33 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <span className="h-px flex-1 bg-[var(--card-border)]" />
               </div>
 
-              <button
-                type="button"
-                onClick={() => void handleGoogle()}
-                disabled={busy}
-                className="flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--card-border)] bg-transparent px-5 py-3 text-sm font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-60"
-              >
-                <GoogleMark />
-                Continue with Google
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleGoogle()}
+                  disabled={busy}
+                  aria-label="Continue with Google"
+                  className="flex min-w-0 items-center justify-center gap-2 rounded-full border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-[12px] font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-60"
+                >
+                  <GoogleMark />
+                  Google
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  setNotice(null);
-                  setPhoneStep("enter");
-                }}
-                disabled={busy}
-                className="mt-2.5 flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--card-border)] bg-transparent px-5 py-3 text-sm font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-60"
-              >
-                <Phone className="h-4 w-4" />
-                Continue with phone
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setNotice(null);
+                    setPhoneStep("enter");
+                  }}
+                  disabled={busy}
+                  aria-label="Continue with phone"
+                  className="flex min-w-0 items-center justify-center gap-2 rounded-full border border-[var(--card-border)] bg-transparent px-3 py-2.5 text-[12px] font-semibold transition-colors hover:border-[var(--signal)] disabled:opacity-60"
+                >
+                  <Phone className="h-4 w-4" />
+                  Phone
+                </button>
+              </div>
             </>
           )}
         </div>

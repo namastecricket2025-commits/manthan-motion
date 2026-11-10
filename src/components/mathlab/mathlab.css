@@ -800,6 +800,22 @@
   transform: scale(0.94);
 }
 
+.mathlab-tool--lang {
+  width: auto;
+  min-width: 36px;
+  padding: 0 7px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--signal) 72%, var(--text-main));
+}
+
+.mathlab-tool--lang:active {
+  transform: scale(0.94);
+}
+
 .mathlab-input__row {
   display: flex;
   flex-wrap: wrap;
@@ -1662,10 +1678,12 @@
   overflow-y: auto;
   border: 1px solid var(--glass-line);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--ink) 94%, transparent);
-  backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--ink) 96%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
   box-shadow: 0 34px 80px -34px rgba(0, 0, 0, 0.92);
   padding: 14px;
+  will-change: transform, opacity;
 }
 
 @media (min-width: 760px) {
@@ -2472,8 +2490,12 @@
   }
 
   .mathlab-calc-drawer {
-    left: max(12px, env(safe-area-inset-left));
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
     bottom: calc(max(12px, env(safe-area-inset-bottom)) + 60px);
+    width: auto;
+    max-height: min(66dvh, 540px);
+    border-radius: 22px;
   }
 
   .mathlab-fp .function-plot {
@@ -3609,33 +3631,59 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
    rail; stacking them gives each its own full line and leaves the tabs to
    pan without a second control sitting on top of them. */
 @media (max-width: 759px) {
+  /* Keep the lab's own tab rail reachable while the page scrolls. The page
+     header above it is long on a phone, and a non-sticky rail meant the eight
+     views disappeared as soon as the student opened a solution. It parks just
+     under the app's sticky mobile bar, with a real surface behind it. */
   .mathlab-viewbar {
-    margin-bottom: 10px;
+    position: sticky;
+    top: calc(env(safe-area-inset-top) + 3.05rem);
+    z-index: 25;
+    margin: -2px -0.1rem 10px;
+    padding: 7px 0 8px;
+    border-bottom: 1px solid var(--glass-line);
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
   }
 
   .mathlab-viewbar__row {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 7px;
   }
 
   .mathlab-views {
     width: 100%;
+    min-width: 0;
     justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scroll-snap-type: x proximity;
   }
 
   .mathlab-view {
     min-height: 38px;
-    padding: 9px 13px;
+    flex: 0 0 auto;
+    padding: 9px 12px;
     font-size: 11.5px;
+    scroll-snap-align: start;
   }
 
   .mathlab-viewbar .gs-trigger {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
+    max-width: 100%;
+    align-self: flex-end;
+    justify-content: center;
     margin-left: 0;
-    padding: 12px 14px !important;
+    padding: 8px 12px !important;
+    border-radius: 999px !important;
+    font-size: 11px;
+  }
+
+  .mathlab-viewbar .gs-trigger__logo {
+    width: 15px;
+    height: 15px;
   }
 
   .mathlab-solvepage {

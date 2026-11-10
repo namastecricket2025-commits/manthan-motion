@@ -4,9 +4,12 @@ import Footer from "@/components/landing/Footer";
 import Navbar from "@/components/landing/Navbar";
 import { MovingBorderButton } from "@/components/landing/MovingBorderButton";
 import {
+  loadVoiceLanguage,
   pickAviaVoice,
+  saveVoiceLanguage,
   speakText,
   stopSpeaking,
+  type VoiceLanguage,
 } from "@/components/voice/avia";
 import {
   createDictation,
@@ -84,9 +87,12 @@ export default function Viva() {
   const [listening, setListening] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [language, setLanguage] = useState<VoiceLanguage>(() => loadVoiceLanguage());
 
   const dictationRef = useRef<Dictation | null>(null);
-  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const languageRef = useRef(language);
+  languageRef.current = language;
 
   const supported = useMemo(
     () =>
@@ -131,7 +137,7 @@ export default function Viva() {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     const synth = window.speechSynthesis;
     const load = () => {
-      voiceRef.current = pickAviaVoice(synth.getVoices());
+      voicesRef.current = synth.getVoices();
     };
     load();
     synth.addEventListener?.("voiceschanged", load);
@@ -144,8 +150,34 @@ export default function Viva() {
 
   const say = (text: string) => {
     if (!text || !soundOn) return;
-    speakText(text, voiceRef.current);
+    speakText(
+      text,
+      pickAviaVoice(voicesRef.current, languageRef.current),
+      undefined,
+      true,
+      languageRef.current,
+    );
   };
+
+  function chooseLanguage(next: VoiceLanguage) {
+    if (next === language) return;
+    stopSpeaking();
+    saveVoiceLanguage(next);
+    languageRef.current = next;
+    setLanguage(next);
+    setNote(null);
+    if (phase === "active" && question) {
+      window.setTimeout(() => {
+        speakText(
+          question,
+          pickAviaVoice(voicesRef.current, next),
+          undefined,
+          true,
+          next,
+        );
+      }, 60);
+    }
+  }
 
   useEffect(() => {
     if (phase === "active" && question) say(question);
@@ -197,7 +229,7 @@ export default function Viva() {
     const seed = answer.trim();
 
     const dictation = createDictation({
-      lang: "en-IN",
+      lang: languageRef.current,
       silenceMs: SILENCE_MS,
       terms: () => [...studyTerms(), ...lexicon()],
       repair: lexicon,
@@ -233,6 +265,7 @@ export default function Viva() {
           mode === "notebook" ? (notebookId as Id<"notebooks">) : undefined,
         scope: mode === "syllabus" ? scope : undefined,
         topic: topic.trim() || undefined,
+        language: languageRef.current,
       });
       setStarted(result);
       setQuestion(result.question);
@@ -267,6 +300,7 @@ export default function Viva() {
         expected,
         answer,
         turn: turns.length + 1,
+        language: languageRef.current,
         history: turns.map((turn) => ({
           question: turn.question,
           answer: turn.answer,
@@ -338,6 +372,36 @@ export default function Viva() {
             asks two follow-ups, then tells you what was missing. Speaking is
             the point, and typing works too when you need it.
           </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+              Examiner language
+            </span>
+            <div className="inline-flex gap-0.5 rounded-full border border-[var(--card-border)] p-0.5">
+              {([
+                { id: "en-IN" as const, label: "English" },
+                { id: "hi-IN" as const, label: "हिंदी" },
+              ]).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={language === option.id}
+                  onClick={() => chooseLanguage(option.id)}
+                  className={
+                    "rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors " +
+                    (language === option.id
+                      ? "bg-[color-mix(in_srgb,var(--signal)_16%,transparent)] text-[var(--signal)]"
+                      : "text-text-dim hover:text-foreground")
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[10.5px] text-text-dim">
+              Questions and feedback follow this choice.
+            </span>
+          </div>
 
           {phase === "setup" ? (
             <section className="mt-8 rounded-2xl border border-[var(--card-border)] bg-[var(--panel)] p-5 sm:p-7">

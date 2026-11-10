@@ -133,7 +133,7 @@ export default function MathLabPage() {
                 <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
                   Math Lab<span className="text-[var(--signal)]">.</span>
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim">
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-text-dim max-sm:hidden">
                   Solve a problem, read the working, then graph or practise it.
                   Web search opens inside the lab, without losing your question.
                 </p>
