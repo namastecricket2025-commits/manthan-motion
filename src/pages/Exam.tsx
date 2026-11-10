@@ -17,11 +17,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   CLASSES,
+  CURRICULUM_BOARDS,
   describePlan,
   findClass,
   findSubject,
   paperPlan,
   type ClassId,
+  type CurriculumBoard,
   type PaperKind,
   type SubjectId,
 } from "@/lib/curriculum";
@@ -99,6 +101,7 @@ type SyllabusMeta = {
   subject: string;
   chapters: string[];
   paperKind: string;
+  board?: string;
 };
 
 type Exam = {
@@ -146,6 +149,27 @@ const STATUS_LABEL: Record<Exam["status"], string> = {
   graded: "Marked",
 };
 
+function boardSimulationBlurb(
+  board: CurriculumBoard,
+  className: string,
+  hasBoard: boolean,
+) {
+  if (board === "RBSE") {
+    if (className === "10") {
+      return "RBSE board-pattern questions written from the Rajasthan Board syllabus, with no CBSE past-paper questions mixed in.";
+    }
+    return hasBoard
+      ? "The section pattern and marking style of the RBSE board paper for this class and subject."
+      : "The section pattern and marking weights your annual exam uses.";
+  }
+  if (className === "10") {
+    return "Real CBSE board questions from 2020–2026, mixed with fresh questions in the same pattern.";
+  }
+  return hasBoard
+    ? "The section pattern and marking style of the CBSE board paper for this class and subject."
+    : "The section pattern and marking weights your annual exam uses.";
+}
+
 function formatClock(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const hours = Math.floor(total / 3600);
@@ -170,13 +194,18 @@ function examDate(timestamp: number) {
 export default function Exam() {
   const notebooks = useQuery(api.notebooks.list);
   const recent = useQuery(api.exams.list);
+  const activeGeneration = useQuery(api.exams.activeGeneration);
+  const profile = useQuery(api.users.profile);
   const generatePaper = useAction(api.examStudio.generate);
   const markPaper = useAction(api.examStudio.grade);
   const beginExam = useMutation(api.exams.begin);
   const saveResponses = useMutation(api.exams.saveResponses);
   const submitExam = useMutation(api.exams.submit);
+  const startGeneration = useMutation(api.exams.startGeneration);
+  const acknowledgeGeneration = useMutation(api.exams.acknowledgeGeneration);
 
   const [source, setSource] = useState<"syllabus" | "notebook">("syllabus");
+  const [board, setBoard] = useState<CurriculumBoard>("CBSE");
   const [className, setClassName] = useState<ClassId>("10");
   const [subjectId, setSubjectId] = useState<SubjectId>("science");
   const [chapters, setChapters] = useState<string[]>([]);
@@ -196,6 +225,8 @@ export default function Exam() {
 
   const hydrated = useRef<string | null>(null);
   const submittingRef = useRef(false);
+  const consumedGeneration = useRef<string | null>(null);
+  const seededBoard = useRef(false);
 
   const exam = useQuery(
     api.exams.get,
@@ -212,16 +243,20 @@ export default function Exam() {
     (pattern === "objective" || effectiveDuration >= 15);
 
   const syllabusClass = findClass(className);
-  const syllabusSubject = findSubject(className, subjectId);
+  const syllabusSubject = findSubject(className, subjectId, board);
   // A half-typed custom duration must not print "NaN questions".
   const plan = paperPlan(
     Number.isFinite(effectiveDuration) ? effectiveDuration : duration,
     pattern,
   );
-  const availableBank = boardBank(className, subjectId).filter(
-    (item) => chapters.length === 0 || chapters.includes(item.chapter),
-  ).length;
-  const realQuestions = hasBoardQuestions(className, subjectId, chapters);
+  const availableBank =
+    board === "CBSE"
+      ? boardBank(className, subjectId).filter(
+          (item) => chapters.length === 0 || chapters.includes(item.chapter),
+        ).length
+      : 0;
+  const realQuestions =
+    board === "CBSE" && hasBoardQuestions(className, subjectId, chapters);
   const readyToGenerate =
     durationValid &&
     (source === "syllabus" ? Boolean(syllabusSubject) : Boolean(notebookId));
@@ -231,6 +266,17 @@ export default function Exam() {
       setNotebookId(notebooks[0].id);
     }
   }, [notebookId, notebooks]);
+
+  /* Start on the board saved in the study profile. Only RBSE changes the
+     chapter lists, so the other saved boards keep the CBSE/NCERT default. */
+  useEffect(() => {
+    if (seededBoard.current || !profile) return;
+    seededBoard.current = true;
+    if (profile.board === "RBSE") {
+      setBoard("RBSE");
+      setChapters([]);
+    }
+  }, [profile]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setTick(Date.now()), 1000);
@@ -243,6 +289,42 @@ export default function Exam() {
     setResponses(exam.responses ?? {});
     setIndex(0);
   }, [exam]);
+
+  /* A paper is written by a server action, not by this component. The job row
+     is the source of truth: coming back to the tab finds the same in-flight
+     generation, and a paper that finished while the phone was asleep opens
+     itself instead of asking for a second run. */
+  useEffect(() => {
+    const job = activeGeneration;
+    if (!job || job.id === consumedGeneration.current) return;
+    if (job.status === "generating") return;
+
+    consumedGeneration.current = job.id;
+    if (job.status === "ready" && job.examId) {
+      setExamId(job.examId);
+      setIndex(0);
+      setResponses({});
+      hydrated.current = null;
+      toast.success("Paper ready", {
+        description: `${job.label} is ready.`,
+      });
+    } else if (job.status === "failed") {
+      toast.error("Paper generation stopped", {
+        description: job.error ?? "Try again from the setup below.",
+      });
+    }
+    void acknowledgeGeneration({ generationId: job.id }).catch(() => {
+      /* A leftover row is harmless; it will be replaced on the next run. */
+    });
+  }, [activeGeneration, acknowledgeGeneration]);
+
+  const stalledGeneration =
+    activeGeneration?.status === "generating" &&
+    (activeGeneration.stale ||
+      tick - activeGeneration.updatedAt > 6 * 60 * 1000);
+  const backgroundGenerating =
+    activeGeneration?.status === "generating" && !stalledGeneration;
+  const busyGenerating = generating || backgroundGenerating;
 
   // Autosave while the paper is running. The answers are also passed to
   // `submit`, so a dropped save cannot lose the last keystroke.
@@ -277,47 +359,67 @@ export default function Exam() {
   }, [questions]);
 
   async function createPaper() {
-    if (!readyToGenerate || generating) return;
+    if (!readyToGenerate || busyGenerating) return;
     if (!durationValid) {
       toast.error("Choose a duration between 5 and 300 minutes.", {
         description: "Board-style papers need at least 15 minutes.",
       });
       return;
     }
+
     setGenerating(true);
+    let jobId: Id<"examGenerations"> | null = null;
     try {
+      const job = await startGeneration({
+        label:
+          source === "syllabus"
+            ? `${board} ${syllabusSubject?.name ?? "Syllabus"} · ${pattern === "objective" ? "objective" : "board"} paper`
+            : `Notebook paper · ${effectiveDuration} min`,
+      });
+      jobId = job.generationId;
+      if (job.alreadyRunning) {
+        toast("Your paper is already being written", {
+          description:
+            "The same run is still in progress — it will open here as soon as it is ready.",
+        });
+        return;
+      }
+
       const result =
         source === "syllabus"
           ? await generatePaper({
               className,
               subject: subjectId,
               chapters,
+              board,
               paperKind,
               durationMinutes: effectiveDuration,
               pattern,
+              generationId: jobId,
             })
           : await generatePaper({
               notebookId: notebookId as Id<"notebooks">,
               paperKind,
               durationMinutes: effectiveDuration,
               pattern,
+              generationId: jobId,
             });
+
+      /* Open the paper from the action result as well as from the reactive job
+         query. If the student switched tabs during generation, the query is
+         what restores it; if the query is briefly behind, this keeps the
+         current screen from asking for a second paper. */
       setExamId(result.examId);
       setIndex(0);
       setResponses({});
-      toast.success("Paper ready", {
-        description: [
-          `${result.questionCount} questions`,
-          `${result.totalMarks} marks`,
-          `${result.durationMinutes} minutes`,
-          result.boardQuestions > 0
-            ? `${result.boardQuestions} real board question${result.boardQuestions === 1 ? "" : "s"}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-      });
+      hydrated.current = null;
     } catch (error) {
+      if (jobId) {
+        consumedGeneration.current = jobId;
+        void acknowledgeGeneration({ generationId: jobId }).catch(() => {
+          /* The stale-job timeout still clears it on the next run. */
+        });
+      }
       toast.error("Could not make that paper", {
         description: error instanceof Error ? error.message : "Try again.",
       });
@@ -510,11 +612,12 @@ export default function Exam() {
                 A real paper. A real clock.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-text-dim">
-                Pick your class, subject and chapters, then choose the time a
-                real paper would give you. The timer is enforced on the server,
-                answers save as you write, and written answers are marked
-                against a scheme. Class 10 papers mix real CBSE board
-                questions from 2020–2026 with fresh ones in the same pattern.
+                Pick your board, class, subject and chapters, then choose the
+                time a real paper would give you. The timer is enforced on the
+                server, answers save as you write, and written answers are
+                marked against a scheme. CBSE Class 10 papers mix real board
+                questions from 2020–2026 with fresh ones; RBSE papers follow
+                the Rajasthan Board syllabus and pattern.
               </p>
 
               <section className="mt-7 rounded-2xl border border-[var(--card-border)] bg-[var(--panel)] p-5 sm:p-7">
@@ -522,6 +625,31 @@ export default function Exam() {
                   <FileText className="h-3.5 w-3.5 text-[var(--signal)]" />
                   Paper settings
                 </div>
+
+                {busyGenerating ? (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="mt-5 flex items-start gap-3 rounded-xl border border-[color-mix(in_srgb,var(--signal)_30%,transparent)] bg-[color-mix(in_srgb,var(--signal)_7%,transparent)] px-3.5 py-3"
+                  >
+                    <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[var(--signal)]" />
+                    <div className="min-w-0">
+                      <p className="text-[12.5px] font-semibold">
+                        Writing your paper…
+                      </p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-text-dim">
+                        {activeGeneration?.label ?? "Your paper"} keeps running on
+                        the server if you switch tabs. Leave this screen — the paper
+                        will open here when it is ready.
+                      </p>
+                    </div>
+                  </div>
+                ) : stalledGeneration ? (
+                  <p className="mt-5 rounded-xl border border-[color-mix(in_srgb,var(--text-main)_14%,transparent)] px-3.5 py-3 text-[11px] leading-relaxed text-text-dim">
+                    The last run is taking longer than usual. You can start a new
+                    paper; the old one may still finish in the background.
+                  </p>
+                ) : null}
 
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   {(
@@ -570,6 +698,37 @@ export default function Exam() {
                 {source === "syllabus" ? (
                   <div className="mt-5 flex flex-col gap-5">
                     <div>
+                      <p className="text-[11px] font-medium text-text-dim">Board</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {CURRICULUM_BOARDS.map((entry) => (
+                          <button
+                            key={entry.id}
+                            type="button"
+                            aria-pressed={board === entry.id}
+                            onClick={() => {
+                              setBoard(entry.id);
+                              setChapters([]);
+                            }}
+                            className={
+                              "rounded-full border px-3.5 py-1.5 text-[12px] font-medium transition-colors " +
+                              (board === entry.id
+                                ? "border-[color-mix(in_srgb,var(--text-main)_46%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_11%,transparent)] text-foreground"
+                                : "border-[var(--card-border)] text-text-dim hover:text-foreground")
+                            }
+                          >
+                            {entry.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                        {
+                          CURRICULUM_BOARDS.find((entry) => entry.id === board)
+                            ?.note
+                        }
+                      </p>
+                    </div>
+
+                    <div>
                       <p className="text-[11px] font-medium text-text-dim">Class</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {CLASSES.map((entry) => (
@@ -594,7 +753,9 @@ export default function Exam() {
                         ))}
                       </div>
                       <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
-                        {syllabusClass?.note}
+                        {board === "RBSE"
+                          ? `${syllabusClass?.label ?? ""} follows the RBSE prescribed books; science and maths chapter names are shown as the Rajasthan Board examines them.`
+                          : syllabusClass?.note}
                       </p>
                     </div>
 
@@ -702,12 +863,11 @@ export default function Exam() {
                               title: syllabusClass?.hasBoard
                                 ? "Board simulation"
                                 : "Exam simulation",
-                              body:
-                                className === "10"
-                                  ? "Real CBSE board questions from 2020–2026, mixed with fresh questions in the same pattern."
-                                  : syllabusClass?.hasBoard
-                                    ? "The section pattern and marking style of the CBSE board paper for this class and subject."
-                                    : "The section pattern and marking weights your annual exam uses.",
+                              body: boardSimulationBlurb(
+                                board,
+                                className,
+                                Boolean(syllabusClass?.hasBoard),
+                              ),
                             },
                           ] as const
                         ).map((option) => (
@@ -732,7 +892,14 @@ export default function Exam() {
                           </button>
                         ))}
                       </div>
-                      {paperKind === "board" && className === "10" ? (
+                      {paperKind === "board" && board === "RBSE" ? (
+                        <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
+                          This paper is written fresh from the RBSE prescribed
+                          syllabus and its section pattern. The saved past-paper
+                          bank is CBSE-only, so no CBSE questions are mixed into an
+                          RBSE paper.
+                        </p>
+                      ) : paperKind === "board" && className === "10" ? (
                         <p className="mt-2 text-[10.5px] leading-relaxed text-text-dim">
                           {realQuestions
                             ? `${availableBank} real board question${availableBank === 1 ? "" : "s"} match your chapters. Up to half the paper is filled from those papers and the rest is written fresh in the board pattern. The bank covers 2020–2026; the 2021 papers were cancelled and 2022 was term-based.`
@@ -888,18 +1055,18 @@ export default function Exam() {
                       <button
                         type="button"
                         onClick={() => void createPaper()}
-                        disabled={generating || !readyToGenerate}
+                        disabled={busyGenerating || !readyToGenerate}
                         className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--signal-strong)] px-5 py-2.5 text-[12.5px] font-semibold text-[var(--primary-foreground)] transition-opacity disabled:opacity-40"
                       >
-                        {generating ? (
+                        {busyGenerating ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Sparkles className="h-4 w-4" />
                         )}
-                        {generating ? "Writing your paper…" : "Generate paper"}
+                        {busyGenerating ? "Writing your paper…" : "Generate paper"}
                       </button>
                     </div>
-                    {generating ? (
+                    {busyGenerating ? (
                       <p className="text-[11px] leading-relaxed text-text-dim">
                         {source === "syllabus"
                           ? `Setting ${plan.mcq + plan.short + plan.long} questions one section at a time. A long paper can take a minute or two; the timer has not started yet.`
@@ -999,6 +1166,7 @@ export default function Exam() {
                   </p>
                   {exam.syllabus ? (
                     <p className="mt-1 text-[10.5px] leading-relaxed text-text-dim">
+                      {exam.syllabus.board ? `${exam.syllabus.board} · ` : ""}
                       {exam.syllabus.paperKind === "board"
                         ? exam.syllabus.className === "10"
                           ? "Board simulation"

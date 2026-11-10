@@ -4,6 +4,7 @@
  * Until now a paper could only come from a notebook the student had built
  * themselves, which meant an empty account could not sit a single test. This
  * file is the other half: the CBSE / NCERT chapter lists for Classes 8 to 12,
+ * with Rajasthan Board (RBSE) overrides where its prescribed sequence differs,
  * and the arithmetic that decides how big a paper should be for a given clock.
  *
  * Chapter names follow the NCERT textbooks in use in the 2026–27 session:
@@ -45,6 +46,26 @@ export type SubjectId =
   | "sociology";
 
 export type ExamPattern = "objective" | "board";
+
+/** Boards whose syllabus this workspace can set a paper from. */
+export type CurriculumBoard = "CBSE" | "RBSE";
+
+export const CURRICULUM_BOARDS: Array<{
+  id: CurriculumBoard;
+  label: string;
+  note: string;
+}> = [
+  {
+    id: "CBSE",
+    label: "CBSE",
+    note: "Central Board papers follow the NCERT books and the CBSE 2026–27 pattern.",
+  },
+  {
+    id: "RBSE",
+    label: "RBSE",
+    note: "Rajasthan Board (Ajmer) papers follow the RBSE prescribed books. Core science and maths use the NCERT sequence, with RBSE chapter names where they differ.",
+  },
+];
 
 /**
  * What kind of paper the student asked for.
@@ -871,6 +892,75 @@ const CLASS_12_SOCIOLOGY = [
   "Social Change · Social Movements",
 ];
 
+/**
+ * RBSE overrides.
+ *
+ * Rajasthan Board follows the NCERT course for Mathematics, Science and the
+ * senior-secondary science stream, but its own chapter names and, in Class 12
+ * Chemistry, the unrationalised NCERT sequence are still examined. Keeping
+ * only the differences here means one chapter model stays in sync for both
+ * boards instead of two near-identical copies drifting apart.
+ */
+const RBSE_CHAPTERS: Partial<
+  Record<ClassId, Partial<Record<SubjectId, string[]>>>
+> = {
+  "10": {
+    science: [
+      "Chemical Reactions and Equations",
+      "Acids, Bases and Salts",
+      "Metals and Non-metals",
+      "Carbon and its Compounds",
+      "Life Processes",
+      "Control and Coordination",
+      "Reproduction in Organisms",
+      "Heredity and Evolution",
+      "Reflection and Refraction of Light",
+      "The Human Eye and the Colourful World",
+      "Electricity",
+      "Magnetic Effects of Current",
+      "Our Environment",
+    ],
+  },
+  "12": {
+    chemistry: [
+      "Solid State",
+      "Solutions",
+      "Electrochemistry",
+      "Chemical Kinetics",
+      "Surface Chemistry",
+      "General Principles and Processes of Isolation of Elements",
+      "The p-Block Elements",
+      "The d- and f-Block Elements",
+      "Coordination Compounds",
+      "Haloalkanes and Haloarenes",
+      "Alcohols, Phenols and Ethers",
+      "Aldehydes, Ketones and Carboxylic Acids",
+      "Amines",
+      "Biomolecules",
+      "Polymers",
+      "Chemistry in Everyday Life",
+    ],
+  },
+};
+
+/** The chapter list a board actually examines for this class and subject. */
+export function chaptersForBoard(
+  board: CurriculumBoard | string | undefined,
+  classId: string | undefined,
+  subjectId: string | undefined,
+): string[] {
+  const subject = findSubject(classId, subjectId);
+  if (!subject) return [];
+  if (board !== "RBSE") return subject.chapters;
+  return (
+    RBSE_CHAPTERS[subjectClassId(classId)]?.[subject.id] ?? subject.chapters
+  );
+}
+
+function subjectClassId(classId: string | undefined): ClassId {
+  return (classId as ClassId) ?? "10";
+}
+
 export const CLASSES: ClassSyllabus[] = [
   {
     id: "8",
@@ -975,8 +1065,16 @@ export function findClass(id: string | undefined): ClassSyllabus | undefined {
 export function findSubject(
   classId: string | undefined,
   subjectId: string | undefined,
+  board: CurriculumBoard | string | undefined = "CBSE",
 ): Subject | undefined {
-  return findClass(classId)?.subjects.find((entry) => entry.id === subjectId);
+  const subject = findClass(classId)?.subjects.find(
+    (entry) => entry.id === subjectId,
+  );
+  if (!subject || board !== "RBSE") return subject;
+  return {
+    ...subject,
+    chapters: chaptersForBoard("RBSE", classId, subject.id),
+  };
 }
 
 export interface PaperPlan {

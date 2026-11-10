@@ -36,7 +36,7 @@ const LEVELS: Array<{ id: Level; label: string; hint: string }> = [
   { id: "easy", label: "Easy", hint: "One idea, friendly numbers" },
   { id: "medium", label: "Medium", hint: "Two or three moves" },
   { id: "hard", label: "Hard", hint: "HOTS — plan before you compute" },
-  { id: "board", label: "Board paper", hint: "CBSE style, with marks" },
+  { id: "board", label: "Board paper", hint: "Board style, with marks" },
 ];
 
 /** Only Class 10 has a board paper in this lab's classes — a Class 8 or 9
@@ -45,13 +45,21 @@ const BOARD_GRADE = "10";
 
 const COUNTS = [1, 3, 5];
 
-const BOARDS = [
+const CBSE_BOARDS = [
   "CBSE 2026",
   "CBSE 2025",
   "CBSE 2024",
   "CBSE 2023",
   "CBSE 2022",
   "CBSE (mixed)",
+];
+
+const RBSE_BOARDS = [
+  "RBSE 2026",
+  "RBSE 2025",
+  "RBSE 2024",
+  "RBSE 2023",
+  "RBSE (mixed)",
 ];
 
 /** A CBSE Class 10 maths paper runs three hours; this set is a section of it,
@@ -91,13 +99,14 @@ export function PracticePanel({
 }) {
   const boardAllowed = gradeId === BOARD_GRADE;
   const levels = boardAllowed ? LEVELS : LEVELS.filter((entry) => entry.id !== "board");
+  const boardPapers = track === "RBSE" ? RBSE_BOARDS : CBSE_BOARDS;
   const setAction = useAction(api.mathTutor.practiceSet);
   const gradeAction = useAction(api.mathTutor.gradeAnswer);
   const recordMistake = useMutation(api.studyMistakes.record);
 
   const [level, setLevel] = useState<Level>("medium");
   const [count, setCount] = useState(3);
-  const [boardYear, setBoardYear] = useState(BOARDS[0]);
+  const [boardYear, setBoardYear] = useState(boardPapers[0]);
   const [realWorld, setRealWorld] = useState(true);
 
   const [busy, setBusy] = useState(false);
@@ -109,6 +118,12 @@ export function PracticePanel({
   const [openWorking, setOpenWorking] = useState<Record<number, boolean>>({});
   const [remaining, setRemaining] = useState(BOARD_SECONDS);
   const [finished, setFinished] = useState(false);
+
+  /* The selected paper year belongs to the selected board; carrying a CBSE
+     label into an RBSE practice set would make the source tag untrue. */
+  useEffect(() => {
+    setBoardYear(boardPapers[0]);
+  }, [boardPapers]);
 
   const generate = useCallback(
     async (overrideCount?: number) => {
@@ -280,7 +295,7 @@ export function PracticePanel({
                 setLevel("board");
               }}
               ariaLabel="Board paper year"
-              options={BOARDS.map((entry) => ({ value: entry, label: entry }))}
+              options={boardPapers.map((entry) => ({ value: entry, label: entry }))}
             />
           ) : null}
         </div>
@@ -297,7 +312,7 @@ export function PracticePanel({
           </button>
           <span className="mathlab-practice__meta">
             {level === "board"
-              ? `${boardYear} · real board questions tagged with their year`
+              ? `${boardYear} · board-pattern questions tagged with their year`
               : LEVELS.find((entry) => entry.id === level)?.hint}
           </span>
         </div>

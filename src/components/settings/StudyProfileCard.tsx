@@ -14,7 +14,7 @@ import { toast } from "sonner";
  */
 
 const GRADES = ["8", "9", "10", "11", "12"] as const;
-const BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "State board"] as const;
+const BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "RBSE", "State board"] as const;
 const SUBJECTS = [
   "Mathematics",
   "Physics",

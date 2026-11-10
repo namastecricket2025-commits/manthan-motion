@@ -360,9 +360,9 @@ export const practiceProblem = action({
 /**
  * The four rungs a student can ask for.
  *
- * `board` is not just "harder": it asks for the shape of a CBSE board paper —
- * a multi-part question, a stated mark value and a real previous-year tag when
- * the model can reproduce one honestly.
+ * `board` is not just "harder": it asks for the shape of the selected board's
+ * paper — a multi-part question, a stated mark value and a real previous-year
+ * tag when the model can reproduce one honestly.
  */
 const PRACTICE_LEVELS = {
   easy: [
@@ -378,9 +378,9 @@ const PRACTICE_LEVELS = {
     "The numbers should be awkward enough that a student has to plan before calculating. Still solvable exactly.",
   ].join(" "),
   board: [
-    "BOARD-PAPER level: write it the way CBSE sets it — a complete question stem, any sub-parts, and a mark value.",
-    "Use the language of an Indian board paper (prove that, find, construct, case-study based) and keep the working to what earns full marks.",
-    "If this is a question you can reproduce faithfully from a CBSE previous-year paper, set source to the exact paper and year (for example \"CBSE 2024 · 3 marks\").",
+    "BOARD-PAPER level: write it the way the selected Indian board sets it — a complete question stem, any sub-parts, and a mark value.",
+    "Use the language of a board paper (prove that, find, construct, case-study based) and keep the working to what earns full marks.",
+    "If this is a question you can reproduce faithfully from the selected board's previous-year paper, set source to the exact paper and year (for example \"CBSE 2024 · 3 marks\" or \"RBSE 2025 · 3 marks\").",
     "If you cannot reproduce a real one verbatim, write an original question in that pattern and set source to the year plus the word pattern, for example \"CBSE 2026 pattern · 3 marks\". Never invent a citation you are not sure of.",
   ].join(" "),
 } as const;
@@ -454,20 +454,26 @@ export const practiceSet = action({
     { problem, steps, finalAnswer, track, chapterName, chapterFormulas, className, count, level, boardYear, realWorld },
   ): Promise<{ problems: SolvedProblem[]; model: string }> => {
     const total = Math.max(1, Math.min(6, Math.round(count)));
+    const requestedBoard = (boardYear ?? "CBSE").trim() || "CBSE";
+    const rbse = track === "RBSE" || /^RBSE/i.test(requestedBoard);
+    /* The saved bank is CBSE-only. Never put a CBSE paper tag on an RBSE set. */
     const realBoard =
-      level === "board" && className === "10"
+      !rbse && level === "board" && className === "10"
         ? pickMathsBoardQuestion(chapterName, boardYear)
         : null;
     const language = detectLanguage([problem]);
     const method = (steps ?? [])
       .map((step, index) => `${index + 1}. ${step.rule ? `[${step.rule}] ` : ""}${step.expression || step.title}`)
       .join("\n");
-    const requestedBoard = (boardYear ?? "CBSE").trim() || "CBSE";
     // "CBSE (mixed)" is the student asking for either year, not a paper name.
-    const board = /mixed/i.test(requestedBoard) ? "CBSE" : requestedBoard;
+    const board = /mixed/i.test(requestedBoard)
+      ? rbse
+        ? "RBSE"
+        : "CBSE"
+      : requestedBoard.replace(/^CBSE/i, rbse ? "RBSE" : "CBSE");
     const boardBrief = /mixed/i.test(requestedBoard)
-      ? "CBSE — pick EITHER the 2025 or the 2026 paper and put that year in the source tag (for example \"CBSE 2026 pattern · 3 marks\")"
-      : requestedBoard;
+      ? `${rbse ? "RBSE" : "CBSE"} — pick EITHER the 2025 or the 2026 paper and put that year in the source tag (for example \"${rbse ? "RBSE 2026" : "CBSE 2026"} pattern · 3 marks\")`
+      : board;
 
     const problems: SolvedProblem[] = [];
     let lastModel = "";

@@ -38,7 +38,7 @@ import "./onboarding.css";
  */
 
 const GRADES = ["8", "9", "10", "11", "12"] as const;
-const BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "State board"] as const;
+const BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "RBSE", "State board"] as const;
 const HOME_FOCUS: Array<{
   key: HomeFocus;
   label: string;

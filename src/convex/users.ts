@@ -67,7 +67,7 @@ export const profile = query({
 });
 
 const ALLOWED_GRADES = ["8", "9", "10", "11", "12"] as const;
-const ALLOWED_BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "State board"] as const;
+const ALLOWED_BOARDS = ["CBSE", "ICSE", "IB", "IGCSE", "RBSE", "State board"] as const;
 
 /**
  * Save the first-run answers (and the same fields later from Settings).

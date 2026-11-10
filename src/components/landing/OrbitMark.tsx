@@ -55,8 +55,8 @@ export default function OrbitMark({
         aria-label="Manthan"
       >
         <g className="orbit-group">
-          <line className="connector" x1="200" y1="200" x2="358" y2="200" />
-          <circle className="small-circle" cx="358" cy="200" r="22" />
+          <line className="connector" x1="200" y1="200" x2="366" y2="200" />
+          <circle className="small-circle" cx="366" cy="200" r="22" />
         </g>
         <circle className="big-circle" cx="200" cy="200" r="86" />
       </svg>

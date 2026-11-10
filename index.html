@@ -6,11 +6,11 @@
   <!-- Versioned URLs: browsers cache favicons far longer than they cache the
        page, so a new mark at the old path keeps showing the old icon after a
        deploy. Bump `?v=` whenever the artwork changes. -->
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" sizes="any" />
-  <link rel="shortcut icon" href="/favicon.svg?v=4" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=5" sizes="any" />
+  <link rel="shortcut icon" href="/favicon.svg?v=5" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
-  <link rel="mask-icon" href="/favicon.svg?v=4" color="#ffffff" />
-  <link rel="manifest" href="/manifest.webmanifest?v=6" />
+  <link rel="mask-icon" href="/favicon.svg?v=5" color="#ffffff" />
+  <link rel="manifest" href="/manifest.webmanifest?v=7" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <!-- Installed-app chrome: iOS reads the apple-* tags, Android reads the
        manifest. `black` keeps the status bar below the content instead of
@@ -38,6 +38,22 @@
     rel="stylesheet"
   />
   <title>Manthan — Study material, distilled</title>
+  <!-- Paint the launch surface before the stylesheet arrives so a cold open
+       never flashes white before the mark appears. The app stylesheet takes
+       over these properties once it loads. -->
+  <style>
+    html,
+    body,
+    #root {
+      min-height: 100%;
+      margin: 0;
+      background: #000;
+    }
+
+    body {
+      overflow-x: clip;
+    }
+  </style>
   <script>
     // Manthan theme: dark by default, driven by data-theme + .dark (no-JS safe)
     (function () {

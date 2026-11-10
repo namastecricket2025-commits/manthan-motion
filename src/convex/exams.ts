@@ -324,6 +324,115 @@ export const getForGrading = internalQuery({
   },
 });
 
+/** A model paper normally lands in under two minutes; six minutes is a safe
+ *  point to stop treating a silent job as live. */
+const GENERATION_STALE_MS = 6 * 60 * 1000;
+
+/** The latest paper job for this account. The Exam page reads this reactively,
+ *  so leaving and returning shows the same in-flight generation. */
+export const activeGeneration = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const row = await ctx.db
+      .query("examGenerations")
+      .withIndex("by_owner_created", (q) => q.eq("ownerId", userId))
+      .order("desc")
+      .first();
+    if (!row) return null;
+    return {
+      id: row._id,
+      status: row.status,
+      label: row.label,
+      examId: row.examId ?? null,
+      error: row.error ?? null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      stale:
+        row.status === "generating" &&
+        Date.now() - row.updatedAt > GENERATION_STALE_MS,
+    };
+  },
+});
+
+/** Claim a generation slot before the action starts. A second tap returns the
+ *  live job instead of creating another model run. */
+export const startGeneration = mutation({
+  args: { label: v.string() },
+  handler: async (ctx, { label }) => {
+    const userId = await requireAuthUserId(ctx);
+    const latest = await ctx.db
+      .query("examGenerations")
+      .withIndex("by_owner_created", (q) => q.eq("ownerId", userId))
+      .order("desc")
+      .first();
+    const now = Date.now();
+
+    if (
+      latest?.status === "generating" &&
+      now - latest.updatedAt <= GENERATION_STALE_MS
+    ) {
+      return { generationId: latest._id, alreadyRunning: true };
+    }
+
+    /* A finished or abandoned job is no longer useful once the student has
+       come back to start a new paper. */
+    if (latest) await ctx.db.delete(latest._id);
+
+    const generationId = await ctx.db.insert("examGenerations", {
+      ownerId: userId,
+      status: "generating",
+      label: label.trim().slice(0, 120) || "Mock paper",
+      createdAt: now,
+      updatedAt: now,
+    });
+    return { generationId, alreadyRunning: false };
+  },
+});
+
+/** Mark a live job complete from the action. */
+export const completeGeneration = internalMutation({
+  args: { generationId: v.id("examGenerations"), examId: v.id("mockExams") },
+  handler: async (ctx, { generationId, examId }) => {
+    const row = await ctx.db.get(generationId);
+    if (!row || row.status !== "generating") return;
+    await ctx.db.patch(generationId, {
+      status: "ready",
+      examId,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** A client-side failure can end the job immediately, so the student is not
+ *  left staring at a spinner for six minutes. */
+export const failGeneration = mutation({
+  args: { generationId: v.id("examGenerations"), error: v.string() },
+  handler: async (ctx, { generationId, error }) => {
+    const userId = await requireAuthUserId(ctx);
+    const row = await ctx.db.get(generationId);
+    if (!row || row.ownerId !== userId) return;
+    if (row.status !== "generating") return;
+    await ctx.db.patch(generationId, {
+      status: "failed",
+      error: error.slice(0, 300),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** Remove a consumed job. The exam itself is untouched. */
+export const acknowledgeGeneration = mutation({
+  args: { generationId: v.id("examGenerations") },
+  handler: async (ctx, { generationId }) => {
+    const userId = await requireAuthUserId(ctx);
+    const row = await ctx.db.get(generationId);
+    if (!row || row.ownerId !== userId) return;
+    await ctx.db.delete(generationId);
+  },
+});
+
 export const insertExam = internalMutation({
   args: {
     ownerId: v.id("users"),
@@ -334,6 +443,7 @@ export const insertExam = internalMutation({
         subject: v.string(),
         chapters: v.array(v.string()),
         paperKind: v.string(),
+        board: v.optional(v.string()),
       }),
     ),
     title: v.string(),

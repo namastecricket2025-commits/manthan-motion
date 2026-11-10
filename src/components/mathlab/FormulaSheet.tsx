@@ -29,6 +29,7 @@ import { MathTex } from "@/components/mathlab/latex";
 
 const TRACKS: Array<{ id: string; label: string; covers: GradeId[]; note: string }> = [
   { id: "CBSE", label: "CBSE", covers: ["8", "9", "10", "11", "12"], note: "Classes 8 to 12, as examined in the board papers. NCERT books follow the same sequence." },
+  { id: "RBSE", label: "RBSE", covers: ["8", "9", "10", "11", "12"], note: "Rajasthan Board classes 8 to 12. The core maths sequence matches the NCERT chapters, with RBSE names where they differ." },
   { id: "IB", label: "IB", covers: ["8", "9", "10"], note: "MYP years through Class 10; the senior-secondary chapters follow the CBSE sequence." },
   { id: "IGCSE", label: "IGCSE", covers: ["8", "9", "10"], note: "Lower Secondary through IGCSE across Classes 8 to 10." },
 ];

@@ -7,13 +7,28 @@
 }
 
 @media (max-width: 759px) {
+  /* The page itself is the app surface: no gutter scrollbar, no rubber-band
+     sideways reveal. Internal decks may still scroll in their own boxes. */
+  html,
+  body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
   .app-tabbar {
     position: fixed;
     z-index: 45;
     left: 50%;
-    bottom: calc(0.55rem + env(safe-area-inset-bottom));
+    bottom: calc(0.4rem + env(safe-area-inset-bottom));
     display: grid;
-    width: min(calc(100vw - 1.4rem), 29rem);
+    width: min(calc(100vw - 0.8rem), 31rem);
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 1px;
     padding: 0.38rem 0.42rem 0.42rem;
@@ -62,6 +77,7 @@
     min-width: 38px;
     place-items: center;
     border-radius: 999px;
+    transform-origin: center;
     transition:
       background-color 180ms ease,
       color 180ms ease;
@@ -70,6 +86,14 @@
   .app-tabbar__item[data-active="true"] .app-tabbar__icon {
     background: color-mix(in srgb, var(--signal) 13%, transparent);
     color: var(--signal);
+  }
+
+  .app-tabbar__item[data-pulse="true"] .app-tabbar__icon {
+    animation: app-tab-pop 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .app-tabbar__item[data-pulse="true"] .app-tabbar__label {
+    animation: app-tab-label 480ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .app-tabbar__label {
@@ -85,6 +109,33 @@
 
   .app-tabbar__item[data-active="true"] .app-tabbar__label {
     font-weight: 750;
+  }
+
+  @keyframes app-tab-pop {
+    0% {
+      transform: translateY(0) scale(1);
+    }
+    32% {
+      transform: translateY(-4px) scale(1.16);
+    }
+    62% {
+      transform: translateY(1px) scale(0.94);
+    }
+    100% {
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes app-tab-label {
+    0%,
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    38% {
+      transform: translateY(1px);
+      opacity: 0.55;
+    }
   }
 
   /* Leave room for the dock on ordinary app pages. The notebook and focused
@@ -112,8 +163,10 @@
 
 @media (max-width: 759px) and (prefers-reduced-motion: reduce) {
   .app-tabbar__item,
-  .app-tabbar__icon {
+  .app-tabbar__icon,
+  .app-tabbar__label {
     transition: none;
+    animation: none !important;
   }
 }
 
@@ -297,6 +350,99 @@
 @media (prefers-reduced-motion: reduce) {
   .home-focus-choice {
     transition: none;
+  }
+}
+
+/* ============================================================
+   App launch — the mark takes the screen, then hands it over
+   ============================================================ */
+
+.app-launch {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+  animation: app-launch-veil 1700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+.app-launch__mark {
+  width: clamp(68px, 18vw, 106px);
+  height: auto;
+  transform-origin: center;
+  animation: app-launch-mark 1500ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  will-change: transform, opacity;
+}
+
+.app-launch__word {
+  position: absolute;
+  bottom: calc(28% - 2.1rem);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: app-launch-word 900ms 180ms ease-out forwards;
+}
+
+@keyframes app-launch-mark {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  36% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(18);
+  }
+}
+
+@keyframes app-launch-word {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes app-launch-veil {
+  0%,
+  78% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-launch {
+    animation: app-launch-veil 180ms ease-out forwards;
+  }
+  .app-launch__mark {
+    animation: none;
+  }
+  .app-launch__word {
+    animation: none;
+    opacity: 1;
   }
 }
 

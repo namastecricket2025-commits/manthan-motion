@@ -13,10 +13,12 @@ import {
   parseJsonLoose,
 } from "./ai";
 import {
+  chaptersForBoard,
   findClass,
   findSubject,
   paperPlan,
   scopeLine,
+  type CurriculumBoard,
   type ExamPattern,
   type PaperKind,
 } from "../lib/curriculum";
@@ -126,11 +128,11 @@ const NOTEBOOK_SYSTEM = [
 ].join(" ");
 
 const SYLLABUS_SYSTEM = [
-  "You are a senior CBSE paper setter in India, writing a mock examination from the NCERT syllabus.",
+  "You are a senior paper setter for an Indian school board, writing a mock examination from the prescribed syllabus named in the brief.",
   "Write questions at the standard of the named class and subject, the way a real school or board paper is written: precise, syllabus-bound, with no trivia and no question that needs a diagram you cannot supply.",
-  "Use the NCERT terminology for that chapter. Do not lift a question from a textbook exercise word for word; write fresh questions in the board's style.",
+  "Use the textbook terminology the named board prescribes for that chapter. Do not lift a question from a textbook exercise word for word; write fresh questions in the board's style.",
   "For multiple-choice questions write exactly four plausible options and set answerIndex to the 0-based correct option. Distractors must be the mistakes students actually make.",
-  "For written questions, give a complete modelAnswer and two to five markingPoints that a CBSE examiner would tick.",
+  "For written questions, give a complete modelAnswer and two to five markingPoints that the board examiner would tick.",
   "Write mathematical expressions in plain text with Unicode symbols (x², √3, ½, 30°, ∠ABC), never LaTeX, $ signs or Markdown.",
   "Reply with a single JSON object and nothing else — no prose before or after it.",
 ].join(" ");
@@ -389,13 +391,27 @@ export const generate = action({
     className: v.optional(v.string()),
     subject: v.optional(v.string()),
     chapters: v.optional(v.array(v.string())),
+    /** CBSE by default; RBSE uses its own prescribed chapter sequence. */
+    board: v.optional(v.union(v.literal("CBSE"), v.literal("RBSE"))),
     paperKind: v.optional(v.union(v.literal("practice"), v.literal("board"))),
     durationMinutes: v.number(),
     pattern: v.union(v.literal("objective"), v.literal("board")),
+    /** The durable job row that keeps the Exam screen honest across a tab switch. */
+    generationId: v.optional(v.id("examGenerations")),
   },
   handler: async (
     ctx,
-    { notebookId, className, subject, chapters, paperKind, durationMinutes, pattern },
+    {
+      notebookId,
+      className,
+      subject,
+      chapters,
+      board: requestedBoard,
+      paperKind,
+      durationMinutes,
+      pattern,
+      generationId,
+    },
   ): Promise<{
     examId: Id<"mockExams">;
     title: string;
@@ -415,8 +431,9 @@ export const generate = action({
     }
 
     const plan = paperPlan(duration, pattern);
+    const board: CurriculumBoard = requestedBoard ?? "CBSE";
     const syllabusClass = findClass(className);
-    const syllabusSubject = findSubject(className, subject);
+    const syllabusSubject = findSubject(className, subject, board);
     const kind: PaperKind = paperKind ?? "practice";
 
     if (!notebookId && !syllabusClass) {
@@ -464,13 +481,22 @@ export const generate = action({
       if (!userId) throw new Error("Sign in first.");
       ownerId = userId;
 
+      const allowedChapters = chaptersForBoard(
+        board,
+        className,
+        syllabusSubject!.id,
+      );
       chaptersUsed = (chapters ?? [])
         .map((chapter) => chapter.trim())
-        .filter((chapter) => syllabusSubject!.chapters.includes(chapter));
+        .filter((chapter) => allowedChapters.includes(chapter));
 
       language = syllabusSubject!.id === "hindi" ? "hi" : "en";
       brief = [
-        `CLASS: ${syllabusClass!.label} (CBSE).`,
+        `BOARD: ${board === "RBSE" ? "Rajasthan Board of Secondary Education (RBSE), Ajmer" : "Central Board of Secondary Education (CBSE)"}.`,
+        board === "RBSE"
+          ? "Set the paper from the RBSE prescribed books and chapter sequence. Use RBSE terminology and the board's marking style; do not import CBSE-only chapters or CBSE past-paper questions into this paper."
+          : "Set the paper from the CBSE / NCERT course and marking style.",
+        `CLASS: ${syllabusClass!.label} (${board}).`,
         `SUBJECT: ${syllabusSubject!.name}.`,
         `SYLLABUS SCOPE: ${scopeLine(chaptersUsed)}.`,
         `TIME ALLOWED: ${duration} minutes.`,
@@ -497,7 +523,10 @@ export const generate = action({
 
     /* ---------------- real board questions first ---------------- */
     const bank =
-      !notebookId && kind === "board" && syllabusClass?.hasBoard
+      !notebookId &&
+      board === "CBSE" &&
+      kind === "board" &&
+      syllabusClass?.hasBoard
         ? pickBank(syllabusClass.id, syllabusSubject!.id, chaptersUsed, plan)
         : [];
 
@@ -591,6 +620,7 @@ export const generate = action({
               subject: syllabusSubject.name,
               chapters: chaptersUsed,
               paperKind: kind,
+              board,
             }
           : undefined,
       title,
@@ -605,6 +635,13 @@ export const generate = action({
       questions: ordered,
       model,
     });
+
+    if (generationId) {
+      await ctx.runMutation(internal.exams.completeGeneration, {
+        generationId,
+        examId,
+      });
+    }
 
     return {
       examId,

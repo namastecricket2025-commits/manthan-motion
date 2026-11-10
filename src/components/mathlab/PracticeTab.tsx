@@ -29,7 +29,7 @@ import {
  * textbooks CBSE prescribes rather than being a separate syllabus, so listing
  * both as tracks asked students to make a choice that does not exist.
  */
-const TRACKS = ["CBSE", "ICSE", "IB", "IGCSE"] as const;
+const TRACKS = ["CBSE", "RBSE", "ICSE", "IB", "IGCSE"] as const;
 
 /** The three ways to practise: fresh questions, error-spotting, marking. */
 type PracticeMode = "set" | "error" | "marks";

@@ -812,11 +812,16 @@ html[data-comfort="on"] {
     @apply border-border outline-ring/50;
   }
   html {
+    min-height: 100%;
+    background: var(--background);
     scroll-behavior: smooth;
     /* Slow, motion-rich glide as the default; reduced-motion falls back to
        instant inside the @media block below and inside the Lenis hook for
        the marketing page. */
     scroll-behavior: smooth;
+    /* clip (not hidden) — a sideways spill must never expose a second page
+       scrollbar or let a thumb drag the whole app off its axis. */
+    overflow-x: clip;
   }
   html {
     scroll-behavior: smooth;
@@ -824,12 +829,18 @@ html[data-comfort="on"] {
   }
   body {
     @apply bg-background text-foreground;
+    min-height: 100dvh;
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     /* clip (not hidden) — hidden would create a scroll container and break
        the pinned horizontal "How it works" section */
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
+  #root {
+    min-height: 100dvh;
     overflow-x: clip;
   }
   /* Mobile: pages open at the correct scale with no layout-driven reflow —
@@ -2768,6 +2779,17 @@ html[data-theme="dark"] .how-card:hover .card-tile {
   html,
   body {
     overflow-x: clip;
+  }
+
+  /* `vh` is the tall layout viewport on a phone, so a min-h-screen page can
+     extend under the browser chrome. The dynamic viewport is the part the
+     student can actually see; use it so the app fills the display exactly. */
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+
+  .h-screen {
+    height: 100dvh;
   }
 
   /* Page titles: the app uses 30px on dashboard screens and 36px on the

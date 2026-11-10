@@ -327,6 +327,24 @@ const schema = defineSchema(
       .index("by_owner_due", ["ownerId", "dueAt"])
       .index("by_owner_key", ["ownerId", "key"]),
 
+    // One paper-generation job. The model action outlives the page that
+    // started it, so this row is what lets the Exam screen show the same
+    // in-flight paper after a tab switch instead of offering a second
+    // generation and spending the allowance twice.
+    examGenerations: defineTable({
+      ownerId: v.id("users"),
+      status: v.union(
+        v.literal("generating"),
+        v.literal("ready"),
+        v.literal("failed"),
+      ),
+      label: v.string(),
+      examId: v.optional(v.id("mockExams")),
+      error: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }).index("by_owner_created", ["ownerId", "createdAt"]),
+
     // One generated mock paper. Questions and answers stay server-side: while
     // an attempt is in progress the public query strips answer keys so the
     // browser cannot read the marking scheme before submitting.
@@ -341,6 +359,7 @@ const schema = defineSchema(
           subject: v.string(),
           chapters: v.array(v.string()),
           paperKind: v.string(),
+          board: v.optional(v.string()),
         }),
       ),
       title: v.string(),

@@ -7,6 +7,7 @@ import {
   Sigma,
   UserRound,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 
 /**
@@ -56,6 +57,20 @@ export function AppDock() {
   const location = useLocation();
   const [search] = useSearchParams();
   const go = useViewTransitionNavigate();
+  const [pulse, setPulse] = useState<{ key: string; n: number } | null>(null);
+  const pulseTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
+    };
+  }, []);
+
+  function animateTab(key: string) {
+    if (pulseTimer.current) window.clearTimeout(pulseTimer.current);
+    setPulse((current) => ({ key, n: (current?.n ?? 0) + 1 }));
+    pulseTimer.current = window.setTimeout(() => setPulse(null), 520);
+  }
 
   if (!isAuthenticated || !APP_ROUTES.includes(location.pathname)) {
     return null;
@@ -94,12 +109,18 @@ export function AppDock() {
             type="button"
             className="app-tabbar__item"
             data-active={isActive ? "true" : undefined}
+            data-pulse={pulse?.key === item.key ? "true" : undefined}
             aria-current={isActive ? "page" : undefined}
             onClick={() => {
+              animateTab(item.key);
               if (!isActive) go(item.to);
             }}
           >
-            <span className="app-tabbar__icon" aria-hidden="true">
+            <span
+              key={`${item.key}-${pulse?.key === item.key ? pulse.n : 0}`}
+              className="app-tabbar__icon"
+              aria-hidden="true"
+            >
               <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
             </span>
             <span className="app-tabbar__label">{item.label}</span>

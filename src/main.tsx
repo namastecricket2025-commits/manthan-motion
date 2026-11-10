@@ -6,6 +6,7 @@ import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { CommandPalette } from "@/components/shared/CommandPalette";
 import { RequireAuth } from "@/components/RequireAuth";
 import { AppDock } from "@/components/app/AppDock";
+import { AppLaunch } from "@/components/app/AppLaunch";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
@@ -412,6 +413,7 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
+      <AppLaunch />
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>

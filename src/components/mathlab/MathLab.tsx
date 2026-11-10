@@ -70,7 +70,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { SearchWithGoogle } from "@/components/shared/SearchWithGoogle";
 import { enhancePhoto } from "@/lib/enhance-photo";
 
-type CurriculumTrack = "CBSE" | "ICSE" | "IB" | "IGCSE";
+type CurriculumTrack = "CBSE" | "RBSE" | "ICSE" | "IB" | "IGCSE";
 
 /* How much working the sheet shows. Simple is the default; Detailed keeps the
    full proof, including the rule names. The engine writes both from the same
