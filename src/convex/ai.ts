@@ -1494,7 +1494,7 @@ const AVIA_SYSTEM = [
   "STRUCTURE: use short markdown only when it helps — a '###' heading or a '- ' list when the content is genuinely a list. Never wrap a simple answer in headers and bullets for the sake of it; for a conceptual answer, plain sentences are usually best.",
   "If the student is just chatting, answer normally and briefly, the way a person would.",
   "WORLD KNOWLEDGE: you are not limited to the school syllabus. Answer general knowledge and worldwide questions — places, travel, food, culture, languages, science, technology and everyday facts — as accurately as you can. You have no live browsing or real-time feeds, so when a question needs today's news, live prices or current events, say plainly that you cannot check live information and answer with what you reliably know.",
-  "LANGUAGE: reply in the language the student used. For Hindi, write natural Indian Hindi in Devanagari, the way an educated Indian teacher speaks — not a literal translation, not Sanskritised textbook prose, and not Hindi written in English letters. For Hinglish, write the way an Indian student actually talks: Hindi sentence structure with everyday English words, in Roman script, not pure Hindi and not pure English. Keep a technical term in English when that is what a student would say. For English, use natural Indian English.",
+  "LANGUAGE & SCRIPT: mirror the student's language and script exactly. Devanagari Hindi gets natural Indian Hindi in Devanagari, the way an educated Indian teacher speaks. Roman-script Hindi/Hinglish gets Roman-script Hinglish — Hindi sentence structure with everyday English words — and never a single Devanagari character. English gets natural Indian English. Keep a technical term in English when that is what a student would say. The topic never changes this: a question about Hindi, India or another country is still answered in the language and script the student used.",
   'Reply with a single JSON object and nothing else: {"reply":string,"mode":"banter"|"tutoring"}.',
 ].join(" ");
 
@@ -1502,6 +1502,19 @@ const aviaSchema = z.object({
   reply: z.string().min(1),
   mode: z.enum(["banter", "tutoring"]).catch("banter"),
 });
+
+/** The reply must use the same script as the turn the student just wrote. */
+function replyMatchesScript(
+  reply: string,
+  language?: "en-IN" | "hi-IN" | "hinglish",
+): boolean {
+  if (!language) return true;
+  const devanagari = /[\u0900-\u097F]/.test(reply);
+  if (language === "hi-IN") return devanagari;
+  // Hinglish and English are Latin-script answers. A stray Devanagari word
+  // means the model switched languages, which is the exact bug to catch.
+  return !devanagari;
+}
 
 /**
  * One turn of conversation with Avia.
@@ -1553,10 +1566,10 @@ export const aviaReply = action({
     const prompt = [
       "MODE NOTE: decide your own mode. If the student's latest message is a study question, set mode to 'tutoring'; if it is casual chat, 'banter'.",
       language === "hi-IN"
-        ? "LANGUAGE NOTE: the student wrote in Hindi. Write the reply in natural Indian Hindi (Devanagari), even if some words in their message were English. Keep only terms that an Indian student would normally say in English."
+        ? "LANGUAGE LOCK: the student wrote in Devanagari Hindi. Your entire reply must be in Devanagari Hindi, even if some words in their message were English. Do not switch to Roman Hindi or English."
         : language === "hinglish"
-          ? "LANGUAGE NOTE: the student wrote in Hinglish. Reply in natural Hinglish — Hindi sentence structure, everyday English words, Roman script. Do not answer in pure Hindi or pure English."
-          : "LANGUAGE NOTE: reply in natural Indian English.",
+          ? "LANGUAGE LOCK: the student wrote Roman-script Hindi/Hinglish. Your entire reply must be Roman-script Hinglish — Hindi sentence structure, everyday English words, Latin letters only. Do not output any Devanagari characters, not even for one word."
+          : "LANGUAGE LOCK: the student wrote in English. Reply in natural Indian English, in Latin script.",
       transcript ? `CONVERSATION SO FAR:\n${transcript}` : "",
       `STUDENT NOW: ${message}`,
       transcript
@@ -1570,7 +1583,30 @@ export const aviaReply = action({
     // 0.85, not the study-material 0.3: a companion sampled that low answers
     // every question in the same shape, which is what made her sound scripted.
     const { text } = await callModel(candidates, AVIA_SYSTEM, prompt, undefined, 0.85);
-    const parsed = aviaSchema.parse(parseJsonLoose(text));
+    let parsed = aviaSchema.parse(parseJsonLoose(text));
+
+    // Models drift toward Devanagari when the topic sounds Indian, or toward
+    // English when it sounds like general knowledge. Ask once more with an
+    // explicit script correction; if that also fails, keep the first answer
+    // rather than dropping the turn.
+    if (!replyMatchesScript(parsed.reply, language)) {
+      const scriptRule =
+        language === "hinglish"
+          ? "Use Latin letters only — no Devanagari characters at all."
+          : language === "hi-IN"
+            ? "Use Devanagari Hindi only."
+            : "Use English in Latin script only.";
+      try {
+        const correction = [
+          prompt,
+          `SCRIPT CORRECTION: the previous draft was in the wrong script. Rewrite the same answer in the student's language and script. ${scriptRule} Do not translate it into a different language.`,
+        ].join("\n\n");
+        const retry = await callModel(candidates, AVIA_SYSTEM, correction, undefined, 0.6);
+        parsed = aviaSchema.parse(parseJsonLoose(retry.text));
+      } catch {
+        /* Keep the first valid reply if the correction attempt cannot run. */
+      }
+    }
 
     // The transcript renders markdown, so the reply keeps its structure
     // (headers, bold step labels, line breaks). Only the voice path strips it.

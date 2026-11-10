@@ -12,6 +12,7 @@ import {
   speakText,
   speechLanguageForText,
   stopSpeaking,
+  type InputLanguage,
 } from "@/components/voice/avia";
 import { createDictation, studyTerms, type Dictation } from "@/components/voice/dictation";
 import { renderBlocks, toSpokenText } from "@/components/voice/format";
@@ -90,20 +91,28 @@ export function AviaWidget() {
 
   /* ---------------- speaking ---------------- */
 
-  const say = useCallback((text: string, interrupt = true, onDone?: () => void) => {
-    setSpeaking(true);
-    const language = speechLanguageForText(text);
-    speakText(
-      toSpokenText(text),
-      pickAviaVoice(voicesRef.current, language),
-      () => {
-        setSpeaking(false);
-        onDone?.();
-      },
-      interrupt,
-      language,
-    );
-  }, []);
+  const say = useCallback(
+    (
+      text: string,
+      interrupt = true,
+      onDone?: () => void,
+      sourceLanguage?: InputLanguage,
+    ) => {
+      setSpeaking(true);
+      const language = speechLanguageForText(text, sourceLanguage);
+      speakText(
+        toSpokenText(text),
+        pickAviaVoice(voicesRef.current, language),
+        () => {
+          setSpeaking(false);
+          onDone?.();
+        },
+        interrupt,
+        language,
+      );
+    },
+    [],
+  );
 
   const hush = useCallback(() => {
     stopSpeaking();
@@ -145,13 +154,13 @@ export function AviaWidget() {
                 : "en-IN",
         });
         addTurn("avia", result.reply);
-        say(result.reply, false);
+        say(result.reply, false, undefined, inputLanguage);
       } catch {
         const reply = isIdentityAsk(message)
-          ? identityReply(inputLanguage === "hi" ? "hi-IN" : "en-IN")
-          : fallbackReply(studying, inputLanguage === "hi" ? "hi-IN" : "en-IN");
+          ? identityReply(inputLanguage)
+          : fallbackReply(studying, inputLanguage);
         addTurn("avia", reply);
-        say(reply, false);
+        say(reply, false, undefined, inputLanguage);
       } finally {
         setThinking(false);
       }

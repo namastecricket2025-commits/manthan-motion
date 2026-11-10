@@ -36,7 +36,7 @@ export function AppLaunch() {
 
   return (
     <div className="app-launch" aria-hidden="true">
-      <LogoMark className="app-launch__mark" color="#fff" />
+      <LogoMark className="app-launch__mark h-auto" color="#fff" />
     </div>
   );
 }

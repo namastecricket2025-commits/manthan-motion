@@ -500,7 +500,7 @@
 }
 
 /* ============================================================
-   App launch — the mark takes the screen, then hands it over
+   App launch — one continuous dolly-in, installed app only
    ============================================================ */
 
 .app-launch {
@@ -514,88 +514,54 @@
   pointer-events: none;
 }
 
-/* The black launch surface is its own layer, so the app is revealed through
-   the logo while the mark keeps its own continuous fade. Fading the whole
-   overlay used to fade the logo twice as fast as the page behind it. */
+/* The black surface is its own layer, so the dashboard is revealed underneath
+   while the white mark keeps a single, uninterrupted fade. */
 .app-launch::before {
   content: "";
   position: absolute;
   inset: 0;
   background: #000;
-  animation: app-launch-veil 1700ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+  animation: app-launch-veil 1000ms linear forwards;
 }
 
-/* The mark is the only thing on screen — no wordmark, no loading copy. It
-   holds for a beat, then grows until its blue core has become the surface the
-   app arrives on. The whole layer transforms, so this stays on the compositor
-   and does not re-layout the app underneath. */
-.app-launch__aura {
-  position: absolute;
-  z-index: 0;
-  width: 64vmin;
-  height: 64vmin;
-  border-radius: 999px;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--brand-mark) 70%, transparent),
-    transparent 68%
-  );
-  opacity: 0.5;
-  animation: app-launch-aura 1700ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
-  will-change: transform, opacity;
-}
-
+/* No aura, glow or splash ring: just the mark. The width itself is animated
+   instead of a fixed-size SVG being GPU-scaled 24× — that scaling is what made
+   the edges look soft and low-resolution. A vector re-rasterised each frame
+   stays crisp all the way to the edge of the screen. */
 .app-launch__mark {
   position: relative;
   z-index: 1;
-  width: clamp(92px, 23vw, 138px);
+  display: block;
+  width: 92px;
+  max-width: none;
   height: auto;
-  transform-origin: center;
-  animation: app-launch-mark 1700ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
-  will-change: transform, opacity;
+  shape-rendering: geometricPrecision;
+  animation: app-launch-mark 1000ms linear forwards;
 }
 
-/* One continuous gesture: the mark is visible from the first frame, grows for
-   the whole duration, and fades at the same rate. No hold, no second zoom. */
 @keyframes app-launch-mark {
   0% {
+    width: 92px;
     opacity: 1;
-    transform: scale(0.82);
   }
   100% {
+    width: 170vmax;
     opacity: 0;
-    transform: scale(24);
-  }
-}
-
-@keyframes app-launch-aura {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.5);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(4);
   }
 }
 
 @keyframes app-launch-veil {
   0% {
     opacity: 1;
-    visibility: visible;
   }
   100% {
     opacity: 0;
-    visibility: hidden;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .app-launch::before {
-    animation: app-launch-veil 220ms ease-out forwards;
-  }
-  .app-launch__aura {
-    display: none;
+    animation: app-launch-veil 260ms ease-out forwards;
   }
   .app-launch__mark {
     animation: app-launch-mark-reduced 260ms ease-out forwards;
@@ -604,16 +570,10 @@
 
 @keyframes app-launch-mark-reduced {
   0% {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  35% {
     opacity: 1;
-    transform: scale(1);
   }
   100% {
     opacity: 0;
-    transform: scale(1);
   }
 }
 

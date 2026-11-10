@@ -23,21 +23,26 @@ export function browserVoiceLanguage(): VoiceLanguage {
 
 /**
  * What the student actually wrote or said. This is the whole language switch:
- * no toggle, no preference to manage. Devanagari means Hindi, a handful of
- * unmistakable Roman Hindi words means Hinglish, and everything else is
- * English. The model receives this so it can answer in kind.
+ * no toggle, no preference to manage. Devanagari means Hindi, unmistakable
+ * Roman Hindi words mean Hinglish, and everything else is English. The model
+ * receives this so it can answer in the same language AND the same script.
+ *
+ * The word "Hindi" itself is deliberately not a trigger: "tumhe hindi aati h"
+ * is Roman Hinglish and must get a Roman Hinglish reply, not Devanagari.
  */
 export function detectInputLanguage(text: string): InputLanguage {
-  const devanagari = /[\u0900-\u097F]/.test(text);
-  const latin = /[A-Za-z]/.test(text);
-  // A transcript with both scripts is what Hinglish looks like once a phone
-  // recogniser has written the Hindi half in Devanagari and the English half
-  // in Latin. Answer it in Hinglish rather than flattening it to one language.
-  if (devanagari && latin) return "hinglish";
-  if (devanagari) return "hi";
-  if (/\b(hindi|हिंदी|हिन्दी)\b/i.test(text)) return "hi";
+  const devanagariCount = (text.match(/[\u0900-\u097F]/g) ?? []).length;
+  const latinCount = (text.match(/[A-Za-z]/g) ?? []).length;
+
+  if (devanagariCount > 0) {
+    // A Hindi sentence may carry an English technical word ("DNA", "photosynthesis")
+    // without becoming Hinglish. Only a substantial Latin half means the student
+    // is actually mixing the two languages.
+    return latinCount >= Math.max(8, devanagariCount * 0.8) ? "hinglish" : "hi";
+  }
+
   const hinglish =
-    /\b(hai|hain|kya|kyu|kyun|kaise|kaisa|mujhe|mera|meri|tum|aap|batao|bata|samjhao|samjha|karo|nahi|nahin|haan|acha|theek|thik|chahiye|hoga|hogi|matlab|padhai|sawal|bahut|bohot|ka|ki|ke|mein|se|ko|par|aur|abhi|phir|bhi|kuch|sab|bhai|yaar)\b/i;
+    /\b(h|hai|hain|kya|kyu|kyun|kaise|kaisa|kaun|kahan|kab|kitna|kitni|mujhe|mera|meri|tum|tumhe|tumhara|tumhari|aap|aapko|batao|bata|samjhao|samjha|karo|karna|karni|nahi|nahin|haan|acha|theek|thik|chahiye|hoga|hogi|hota|hoti|hote|matlab|padhai|sawal|bahut|bohot|ka|ki|ke|mein|se|ko|par|aur|abhi|phir|bhi|kuch|sab|bhai|yaar|raha|rahi|rahe|gaya|gayi|diya|liya|bolte|bolti|bolta|aati|aata|aate)\b/i;
   return hinglish.test(text) ? "hinglish" : "en";
 }
 
@@ -57,8 +62,16 @@ export function recognitionLanguageForText(text: string): VoiceLanguage {
   return browserVoiceLanguage();
 }
 
-/** The voice that should read a reply. Devanagari is Hindi; Roman text is not. */
-export function speechLanguageForText(text: string): VoiceLanguage {
+/**
+ * The voice that should read a reply. The reply's own script wins; when the
+ * student spoke Hinglish, the Hindi voice handles the Hindi words and the
+ * embedded English much better than an English voice does.
+ */
+export function speechLanguageForText(
+  text: string,
+  sourceLanguage?: InputLanguage,
+): VoiceLanguage {
+  if (sourceLanguage === "hi" || sourceLanguage === "hinglish") return "hi-IN";
   return /[\u0900-\u097F]/.test(text) ? "hi-IN" : "en-IN";
 }
 
@@ -315,9 +328,14 @@ export function isIdentityAsk(text: string): boolean {
  * It states the two facts the product stands behind — Luv Moond founded and
  * built Manthan, and Avia is part of it — and invents nothing further.
  */
-export function identityReply(language: VoiceLanguage = "en-IN"): string {
-  if (language === "hi-IN") {
+export function identityReply(
+  language: InputLanguage | VoiceLanguage = "en",
+): string {
+  if (language === "hi" || language === "hi-IN") {
     return `${AVIA_FOUNDER} ने मंथन बनाया है और उन्होंने ही मुझे बनाया है। बताइए, क्या पढ़ना है?`;
+  }
+  if (language === "hinglish") {
+    return `${AVIA_FOUNDER} ne Manthan banaya hai aur unhi ne mujhe banaya hai. Batao, kya padhna hai?`;
   }
   return (
     `${AVIA_FOUNDER} is the founder who built Manthan, and the person who made me. ` +
@@ -335,12 +353,17 @@ export function identityReply(language: VoiceLanguage = "en-IN"): string {
  */
 export function fallbackReply(
   studying: boolean,
-  language: VoiceLanguage = "en-IN",
+  language: InputLanguage | VoiceLanguage = "en",
 ): string {
-  if (language === "hi-IN") {
+  if (language === "hi" || language === "hi-IN") {
     return studying
       ? "अभी थोड़ी क्षमता नहीं बची है, इसलिए मैं इसे ठीक से हल नहीं कर पा रही हूँ। थोड़ी देर बाद फिर पूछिए।"
       : "अभी थोड़ी देर के लिए क्षमता खत्म है — एक मिनट बाद फिर पूछिए।";
+  }
+  if (language === "hinglish") {
+    return studying
+      ? "Abhi thodi capacity nahi bachi hai, isliye main ise theek se solve nahi kar pa rahi. Thodi der baad phir poocho."
+      : "Abhi thodi der ke liye capacity khatam hai — ek minute baad phir poocho.";
   }
   return studying
     ? "I'm out of capacity for a minute, so I can't work this through properly yet. Ask me again shortly."
