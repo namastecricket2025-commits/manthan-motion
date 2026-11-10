@@ -8,12 +8,19 @@ import { cn } from "@/lib/utils";
  * mark read on both surfaces without a tile behind it. Geometry is the
  * supplied artwork, 1:1.
  */
-export function LogoMark({ className }: { className?: string }) {
+export function LogoMark({
+  className,
+  color,
+}: {
+  className?: string;
+  /** Force one ink, e.g. pure white on the launch surface. */
+  color?: string;
+}) {
   return (
     <svg viewBox="60 190 904 640" className={cn("h-6 w-auto", className)} aria-hidden="true">
-      <circle cx="372" cy="507.5" r="312" fill="var(--brand-mark)" />
-      <rect x="684" y="492" width="88" height="48" fill="var(--text-main)" />
-      <circle cx="860" cy="516.5" r="96.5" fill="var(--text-main)" />
+      <circle cx="372" cy="507.5" r="312" fill={color ?? "var(--brand-mark)"} />
+      <rect x="684" y="492" width="88" height="48" fill={color ?? "var(--text-main)"} />
+      <circle cx="860" cy="516.5" r="96.5" fill={color ?? "var(--text-main)"} />
     </svg>
   );
 }
