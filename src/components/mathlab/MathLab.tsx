@@ -37,10 +37,8 @@ import {
 } from "@/components/mathlab/solution";
 import "@/components/mathlab/mathlab.css";
 import {
-  loadVoiceLanguage,
-  saveVoiceLanguage,
+  recognitionLanguageForText,
   stopSpeaking,
-  type VoiceLanguage,
 } from "@/components/voice/avia";
 import { createDictation, type Dictation } from "@/components/voice/dictation";
 import {
@@ -373,9 +371,6 @@ export function MathLab() {
   const [turns, setTurns] = useState<EngineTurn[]>([]);
   const [followUp, setFollowUp] = useState("");
   const [listening, setListening] = useState(false);
-  const [voiceLanguage, setVoiceLanguage] = useState<VoiceLanguage>(() =>
-    loadVoiceLanguage(),
-  );
   const [copied, setCopied] = useState<"plain" | "latex" | null>(null);
   const [showWorked, setShowWorked] = useState(true);
   const [hintMode, setHintMode] = useState(false);
@@ -625,7 +620,7 @@ export function MathLab() {
     setEngineError(null);
 
     const dictation = createDictation({
-      lang: loadVoiceLanguage(),
+      lang: recognitionLanguageForText(formula),
       // A spoken problem is usually one sentence, but a student pauses while
       // reading a long one aloud; four seconds keeps the whole problem.
       silenceMs: 4000,
@@ -643,7 +638,7 @@ export function MathLab() {
     });
     dictationRef.current = dictation;
     dictation.start();
-  }, []);
+  }, [formula]);
 
   const totalSteps = useMemo(
     () => (solution ? solution.problems.reduce((sum, problem) => sum + problem.steps.length, 0) : 0),
@@ -806,28 +801,6 @@ export function MathLab() {
                   ariaLabel="Your maths problem"
                 />
                 <div className="mathlab-input__row">
-                  <button
-                    type="button"
-                    className="mathlab-tool mathlab-tool--lang"
-                    onClick={() => {
-                      const next: VoiceLanguage =
-                        voiceLanguage === "hi-IN" ? "en-IN" : "hi-IN";
-                      saveVoiceLanguage(next);
-                      setVoiceLanguage(next);
-                    }}
-                    aria-label={
-                      voiceLanguage === "hi-IN"
-                        ? "Dictation language: Hindi. Switch to English"
-                        : "Dictation language: English. Switch to Hindi"
-                    }
-                    title={
-                      voiceLanguage === "hi-IN"
-                        ? "हिंदी में बोलिए · switch to English"
-                        : "Speak in English · हिंदी के लिए दबाइए"
-                    }
-                  >
-                    {voiceLanguage === "hi-IN" ? "हिं" : "EN"}
-                  </button>
                   <button type="button" className={"mathlab-tool" + (listening ? " is-live" : "")} onClick={toggleMic} aria-label={listening ? "Stop dictating" : "Dictate the problem"}><Mic className="h-4 w-4" /></button>
                   <button type="button" className="mathlab-tool" onClick={() => fileInputRef.current?.click()} aria-label="Photograph the question"><Camera className="h-4 w-4" /></button>
                   <motion.button

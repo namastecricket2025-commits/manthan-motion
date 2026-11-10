@@ -13,27 +13,53 @@
  */
 
 export type VoiceLanguage = "en-IN" | "hi-IN";
+export type InputLanguage = "en" | "hi" | "hinglish";
 
-const VOICE_LANGUAGE_KEY = "manthan-voice-language";
-
-/** Remember the language across Avia, Viva and every dictation field. */
-export function loadVoiceLanguage(): VoiceLanguage {
-  if (typeof window === "undefined") return "en-IN";
-  try {
-    return window.localStorage.getItem(VOICE_LANGUAGE_KEY) === "hi-IN"
-      ? "hi-IN"
-      : "en-IN";
-  } catch {
-    return "en-IN";
-  }
+/** The language the device is most likely to recognise without asking. */
+export function browserVoiceLanguage(): VoiceLanguage {
+  if (typeof navigator === "undefined") return "en-IN";
+  return /^hi([-_]|$)/i.test(navigator.language || "") ? "hi-IN" : "en-IN";
 }
 
-export function saveVoiceLanguage(language: VoiceLanguage): void {
-  try {
-    window.localStorage.setItem(VOICE_LANGUAGE_KEY, language);
-  } catch {
-    /* private mode */
+/**
+ * What the student actually wrote or said. This is the whole language switch:
+ * no toggle, no preference to manage. Devanagari means Hindi, a handful of
+ * unmistakable Roman Hindi words means Hinglish, and everything else is
+ * English. The model receives this so it can answer in kind.
+ */
+export function detectInputLanguage(text: string): InputLanguage {
+  const devanagari = /[\u0900-\u097F]/.test(text);
+  const latin = /[A-Za-z]/.test(text);
+  // A transcript with both scripts is what Hinglish looks like once a phone
+  // recogniser has written the Hindi half in Devanagari and the English half
+  // in Latin. Answer it in Hinglish rather than flattening it to one language.
+  if (devanagari && latin) return "hinglish";
+  if (devanagari) return "hi";
+  if (/\b(hindi|हिंदी|हिन्दी)\b/i.test(text)) return "hi";
+  const hinglish =
+    /\b(hai|hain|kya|kyu|kyun|kaise|kaisa|mujhe|mera|meri|tum|aap|batao|bata|samjhao|samjha|karo|nahi|nahin|haan|acha|theek|thik|chahiye|hoga|hogi|matlab|padhai|sawal|bahut|bohot|ka|ki|ke|mein|se|ko|par|aur|abhi|phir|bhi|kuch|sab|bhai|yaar)\b/i;
+  return hinglish.test(text) ? "hinglish" : "en";
+}
+
+/** The language the recogniser should listen in for this context. */
+export function recognitionLanguageForText(text: string): VoiceLanguage {
+  const input = detectInputLanguage(text);
+  if (input === "hi" || input === "hinglish") return "hi-IN";
+  if (!text.trim()) {
+    // Indian devices usually report en-IN. Hindi recognition is the one model
+    // that also handles the English words inside Hinglish, so a first take on
+    // an Indian locale starts there instead of silently ignoring Hindi.
+    const locale = typeof navigator === "undefined" ? "" : navigator.language;
+    return /-IN$/i.test(locale) || /^hi([-_]|$)/i.test(locale)
+      ? "hi-IN"
+      : browserVoiceLanguage();
   }
+  return browserVoiceLanguage();
+}
+
+/** The voice that should read a reply. Devanagari is Hindi; Roman text is not. */
+export function speechLanguageForText(text: string): VoiceLanguage {
+  return /[\u0900-\u097F]/.test(text) ? "hi-IN" : "en-IN";
 }
 
 export const AVIA_GREETINGS = [

@@ -16,7 +16,7 @@ export function AppLaunch() {
     const reduced =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(() => setGone(true), reduced ? 260 : 2080);
+    const timer = window.setTimeout(() => setGone(true), reduced ? 300 : 1780);
     return () => window.clearTimeout(timer);
   }, []);
 

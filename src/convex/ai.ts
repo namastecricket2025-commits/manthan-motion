@@ -1494,7 +1494,7 @@ const AVIA_SYSTEM = [
   "STRUCTURE: use short markdown only when it helps — a '###' heading or a '- ' list when the content is genuinely a list. Never wrap a simple answer in headers and bullets for the sake of it; for a conceptual answer, plain sentences are usually best.",
   "If the student is just chatting, answer normally and briefly, the way a person would.",
   "WORLD KNOWLEDGE: you are not limited to the school syllabus. Answer general knowledge and worldwide questions — places, travel, food, culture, languages, science, technology and everyday facts — as accurately as you can. You have no live browsing or real-time feeds, so when a question needs today's news, live prices or current events, say plainly that you cannot check live information and answer with what you reliably know.",
-  "LANGUAGE: reply in the language the student used. For Hindi, write natural Indian Hindi in Devanagari, the way an educated Indian teacher speaks — not a literal translation, not Sanskritised textbook prose, and not Hindi written in English letters. Keep a technical term in English when that is what a student would actually say. For English, use natural Indian English.",
+  "LANGUAGE: reply in the language the student used. For Hindi, write natural Indian Hindi in Devanagari, the way an educated Indian teacher speaks — not a literal translation, not Sanskritised textbook prose, and not Hindi written in English letters. For Hinglish, write the way an Indian student actually talks: Hindi sentence structure with everyday English words, in Roman script, not pure Hindi and not pure English. Keep a technical term in English when that is what a student would say. For English, use natural Indian English.",
   'Reply with a single JSON object and nothing else: {"reply":string,"mode":"banter"|"tutoring"}.',
 ].join(" ");
 
@@ -1531,7 +1531,9 @@ export const aviaReply = action({
      */
     studying: v.optional(v.boolean()),
     /** Spoken language chosen in the client. */
-    language: v.optional(v.union(v.literal("en-IN"), v.literal("hi-IN"))),
+    language: v.optional(
+      v.union(v.literal("en-IN"), v.literal("hi-IN"), v.literal("hinglish")),
+    ),
   },
   handler: async (
     _ctx,
@@ -1551,8 +1553,10 @@ export const aviaReply = action({
     const prompt = [
       "MODE NOTE: decide your own mode. If the student's latest message is a study question, set mode to 'tutoring'; if it is casual chat, 'banter'.",
       language === "hi-IN"
-        ? "LANGUAGE NOTE: the student has selected Hindi. Write the reply in natural Indian Hindi (Devanagari), even if their message was typed in English. Keep only terms that an Indian student would normally say in English."
-        : "LANGUAGE NOTE: reply in natural Indian English.",
+        ? "LANGUAGE NOTE: the student wrote in Hindi. Write the reply in natural Indian Hindi (Devanagari), even if some words in their message were English. Keep only terms that an Indian student would normally say in English."
+        : language === "hinglish"
+          ? "LANGUAGE NOTE: the student wrote in Hinglish. Reply in natural Hinglish — Hindi sentence structure, everyday English words, Roman script. Do not answer in pure Hindi or pure English."
+          : "LANGUAGE NOTE: reply in natural Indian English.",
       transcript ? `CONVERSATION SO FAR:\n${transcript}` : "",
       `STUDENT NOW: ${message}`,
       transcript

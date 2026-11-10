@@ -450,6 +450,7 @@ export const vivaRespond = action({
     if (spoken.length < 12) {
       throw new Error("Say a little more — even one full sentence gives the examiner something to work with.");
     }
+    const answerIsHindi = detectLanguage([spoken]) === "hi";
 
     const syllabus = scope?.trim() ?? "";
     let ownerId: Id<"users">;
@@ -467,7 +468,7 @@ export const vivaRespond = action({
       body =
         "Grade against the standard CBSE / NCERT treatment of that chapter; the expected points below are the marking scheme.";
       language =
-        speechLanguage === "hi-IN"
+        speechLanguage === "hi-IN" || answerIsHindi
           ? "hi"
           : speechLanguage === "en-IN"
             ? "en"
@@ -486,7 +487,7 @@ export const vivaRespond = action({
       heading = `NOTEBOOK: ${context.name}`;
       body = `SOURCES:\n${corpusFor(context.sources)}`;
       language =
-        speechLanguage === "hi-IN"
+        speechLanguage === "hi-IN" || answerIsHindi
           ? "hi"
           : speechLanguage === "en-IN"
             ? "en"
