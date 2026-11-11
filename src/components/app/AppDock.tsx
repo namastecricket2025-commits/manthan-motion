@@ -189,12 +189,14 @@ export function AppDock() {
               if (!isActive) go(item.to);
             }}
           >
-            <span
-              key={`${item.key}-${isPulsing ? pulse.n : 0}`}
-              className="app-tabbar__icon"
-              aria-hidden="true"
-            >
-              <DockGlyph name={item.key} />
+            <span className="app-tabbar__icon" aria-hidden="true">
+              {/* Only the artwork is remounted: keeping the icon container
+                  stable lets the active pill and its lift transition instead
+                  of flashing off when a tab is tapped again. */}
+              <DockGlyph
+                key={`${item.key}-${isPulsing ? pulse.n : 0}`}
+                name={item.key}
+              />
             </span>
             <span className="app-tabbar__label">{item.label}</span>
           </button>
