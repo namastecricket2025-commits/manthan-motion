@@ -14,30 +14,145 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Top bar: view tabs plus the panel's own search                       */
+/* Top bar: draggable long pill rail plus the panel's own search        */
 /* ------------------------------------------------------------------ */
 
 .mathlab-viewbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   margin: 2px 0 14px;
 }
 
 .mathlab-viewbar__row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   flex: 1 1 auto;
-  justify-content: space-between;
+  min-width: 0;
 }
 
-.mathlab-views {
+.mathlab-viewbar__dock {
+  flex: 0 0 auto;
+  /* Nothing inside a dock should overflow its rounded shell. */
+}
+
+.mathlab-viewbar__ring {
+  display: grid;
+  place-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--text-main);
+  transition: background 180ms var(--ease-momentum), border-color 180ms var(--ease-momentum), box-shadow 180ms var(--ease-momentum);
+}
+
+.mathlab-viewbar__ring:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--signal, #de9c0d) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.mathlab-viewbar__ring::before,
+.mathlab-viewbar__ring::after {
+  content: "";
+  display: block;
+  border-radius: 999px;
+  background: currentColor;
+  will-change: transform, opacity;
+}
+
+.mathlab-viewbar__mark-bowl::before {
+  width: 14px;
+  height: 14px;
+  margin: 0 auto 5px;
+}
+
+.mathlab-viewbar__mark-bowl::after {
+  width: 8px;
+  height: 8px;
+  margin: -3px auto 0;
+  opacity: 0.92;
+}
+
+.mathlab-viewbar__logo {
+  display: inline-block;
+  color: var(--text-main);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.mathlab-viewbar__logo-name {
+  font-size: 11.5px;
+  line-height: 12px;
+  text-transform: uppercase;
+}
+
+.mathlab-viewbar__logo-sub {
+  display: none;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.mathlab-viewbar__pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border: 1px solid var(--glass-line);
+  transition: color 180ms var(--ease-momentum), background 180ms var(--ease-momentum), border-color 180ms var(--ease-momentum);
+}
+
+.mathlab-viewbar__pill:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 11%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 24%, transparent);
+}
+
+.mathlab-viewbar__pill:active {
+  transform: scale(0.97);
+}
+
+.mathlab-viewbar__pill.is-active {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 30%, transparent);
+}
+
+.mathlab-viewbar__slip {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 6px 4px 6px 0;
+  margin: 2px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mathlab-viewbar__slip::-webkit-scrollbar {
+  display: none;
+}
+
+.mathlab-viewbar__rail {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  border: 1px solid var(--glass-line);
+  box-shadow: 0 12px 28px -26px rgba(0, 0, 0, 0.55);
 }
 
 .mathlab-view {
@@ -45,12 +160,14 @@
   align-items: center;
   gap: 7px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: 999px;
   padding: 8px 13px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text-dim);
-  transition: color 200ms var(--ease-momentum), background 200ms var(--ease-momentum), border-color 200ms var(--ease-momentum);
+  white-space: nowrap;
+  scroll-snap-align: start;
+  transition: color 180ms var(--ease-momentum), background 180ms var(--ease-momentum), border-color 180ms var(--ease-momentum);
 }
 
 .mathlab-view:hover {
@@ -60,11 +177,9 @@
 }
 
 .mathlab-view.is-active {
-  /* A chosen tab states itself in the page's ink, not the brand amber: the
-     accent marks things, it does not fill the control you just touched. */
   color: var(--text-main);
-  background: color-mix(in srgb, var(--text-main) 10%, transparent);
-  border-color: color-mix(in srgb, var(--text-main) 28%, transparent);
+  background: color-mix(in srgb, var(--text-main) 11%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 30%, transparent);
 }
 
 .mathlab-view__icon {
@@ -77,17 +192,59 @@
    Google mark leads, the words say what will happen, and the whole row is a
    full-width target on a phone. */
 .mathlab-viewbar .gs-trigger {
+  flex: 0 0 auto;
   justify-content: flex-start;
-  gap: 9px;
-  margin-left: auto;
-  border-radius: 14px !important;
-  padding: 11px 14px !important;
-  font-size: 12.5px;
+  gap: 8px;
+  border-radius: 999px !important;
+  padding: 9px 13px !important;
+  font-size: 12px;
   box-shadow: 0 10px 28px -24px rgba(0, 0, 0, 0.55);
 }
 
-.mathlab-viewbar .gs-trigger__logo {
-  order: -1;
+.mathlab-viewbar__google {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px !important;
+  padding: 9px 12px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  color: #1f1f1f !important;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px -22px rgba(0, 0, 0, 0.6);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.mathlab-viewbar__google:hover {
+  background: #f7f7f7 !important;
+  box-shadow: 0 10px 30px -24px rgba(0, 0, 0, 0.6);
+}
+
+.mathlab-viewbar__google:active {
+  transform: scale(0.97);
+  background: #ededed !important;
+}
+
+.mathlab-viewbar__google__goog {
+  display: block;
+  width: 16px;
+  height: 16px;
+  inline-size: 16px;
+  block-size: 16px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.mathlab-viewbar__google__text {
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mathlab-viewbar__google:focus-visible {
+  outline: 2px solid color-mix(in srgb, #4285f4 65%, transparent);
+  outline-offset: 2px;
 }
 
 /* ------------------------------------------------------------------ */

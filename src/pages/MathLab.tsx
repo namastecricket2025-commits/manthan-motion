@@ -112,11 +112,10 @@ export default function MathLabPage() {
         </aside>
 
         {/* ---- Mobile top bar ---- */}
-        <header className="app-mobile-bar sticky top-0 z-30 flex items-center justify-between border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <DisplayToggles />
-          </div>
+        <header className="app-mobile-bar sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--card-border)] bg-[var(--panel)] px-4 py-3 backdrop-blur-xl min-[760px]:hidden">
+          <ManthanMark />
+          <div className="flex-1 min-w-0" />
+          <DisplayToggles />
         </header>
 
         {/* ---- Canvas ---- */}
@@ -145,5 +144,17 @@ export default function MathLabPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+function ManthanMark() {
+  return (
+    <a href="/math-lab" className="inline-flex items-center gap-2 rounded-full bg-[var(--panel)]/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-dim ring-1 ring-[var(--card-border)] hover:text-text-main transition-colors">
+      <span className="relative inline-flex h-[20px] w-[20px]" aria-hidden>
+        <span className="absolute inset-0 rounded-full bg-[var(--brand-mark)]" />
+        <span className="absolute right-0 top-[2px] inline-block h-[13px] w-[13px] rounded-full bg-white shadow-sm ring-1 ring-black/10" />
+      </span>
+      Manthan
+    </a>
   );
 }
