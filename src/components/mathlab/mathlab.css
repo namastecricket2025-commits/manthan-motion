@@ -3621,12 +3621,19 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
      under the app's sticky mobile bar, with a real surface behind it. */
   .mathlab-viewbar {
     position: sticky;
-    top: calc(env(safe-area-inset-top) + 3.05rem);
+    /* The bar above is 3.2rem tall (36px controls + 2 × 0.45rem padding +
+       the hairline), plus the notch inset. The old 3.05rem parked this rail
+       a few pixels underneath it, clipping the top of the tabs. */
+    top: calc(env(safe-area-inset-top) + 3.25rem);
     z-index: 25;
-    margin: -2px -0.1rem 10px;
-    padding: 7px 0 8px;
+    isolation: isolate;
+    /* Full-bleed under the app bar so scrolling content cannot show through a
+       gutter on either side of the pinned rail. */
+    margin: 0 -0.85rem 10px;
+    padding: 7px 0.85rem 8px;
     border-bottom: 1px solid var(--glass-line);
-    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    background: var(--panel);
+    box-shadow: 0 8px 20px -24px rgba(0, 0, 0, 0.85);
   }
 
   .mathlab-viewbar__row {

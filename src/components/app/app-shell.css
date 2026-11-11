@@ -521,7 +521,7 @@
   position: absolute;
   inset: 0;
   background: #000;
-  animation: app-launch-veil 1000ms linear forwards;
+  animation: app-launch-veil 800ms linear forwards;
 }
 
 /* No aura, glow or splash ring: just the mark. The width itself is animated
@@ -539,13 +539,46 @@
   animation: app-launch-mark 1000ms linear forwards;
 }
 
+/* The width curve is exponential, not linear. A camera moving into a scene
+   makes the object appear to grow by a factor each beat; a constant-width
+   inflation reads as a card stretching. The mark never uses a transform, so
+   the SVG is re-rasterised at the current size and stays sharp at every
+   frame instead of being a small bitmap blown up 24×. */
 @keyframes app-launch-mark {
   0% {
     width: 92px;
     opacity: 1;
   }
+  12% {
+    width: 116px;
+    opacity: 1;
+  }
+  25% {
+    width: 152px;
+    opacity: 0.99;
+  }
+  40% {
+    width: 225px;
+    opacity: 0.97;
+  }
+  55% {
+    width: max(340px, 26vmax);
+    opacity: 0.9;
+  }
+  68% {
+    width: 42vmax;
+    opacity: 0.76;
+  }
+  80% {
+    width: 68vmax;
+    opacity: 0.5;
+  }
+  90% {
+    width: 115vmax;
+    opacity: 0.2;
+  }
   100% {
-    width: 170vmax;
+    width: 190vmax;
     opacity: 0;
   }
 }
@@ -564,6 +597,7 @@
     animation: app-launch-veil 260ms ease-out forwards;
   }
   .app-launch__mark {
+    width: 92px;
     animation: app-launch-mark-reduced 260ms ease-out forwards;
   }
 }
@@ -583,6 +617,14 @@ body .avia-root {
   z-index: 44;
 }
 
+/* An open tutor owns the screen. The sheet used to inherit the orb's low
+   z-index, so the app dock (45) could paint over its composer; the send and
+   mic buttons were there but unreachable. While she is open, the dock steps
+   out of the way as well. */
+body .avia-root.is-open {
+  z-index: 80;
+}
+
 /* The voice orb owns the corner, the dock owns the edge. Lift the orb above
    whichever bottom surface is present so neither hides the other. */
 @media (max-width: 760px) {
@@ -590,6 +632,11 @@ body .avia-root {
   body:has(.notebook-dock) .avia-root,
   body:has([data-phone-detail="true"]) .avia-root {
     bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  }
+
+  body.avia-open .app-tabbar,
+  body.avia-open .notebook-dock {
+    display: none;
   }
 
   .feedback-prompt {

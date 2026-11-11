@@ -31,15 +31,11 @@ export function browserVoiceLanguage(): VoiceLanguage {
  * is Roman Hinglish and must get a Roman Hinglish reply, not Devanagari.
  */
 export function detectInputLanguage(text: string): InputLanguage {
-  const devanagariCount = (text.match(/[\u0900-\u097F]/g) ?? []).length;
-  const latinCount = (text.match(/[A-Za-z]/g) ?? []).length;
-
-  if (devanagariCount > 0) {
-    // A Hindi sentence may carry an English technical word ("DNA", "photosynthesis")
-    // without becoming Hinglish. Only a substantial Latin half means the student
-    // is actually mixing the two languages.
-    return latinCount >= Math.max(8, devanagariCount * 0.8) ? "hinglish" : "hi";
-  }
+  // Devanagari is the strong signal. A Hindi sentence may carry an English
+  // technical word ("DNA", "photosynthesis") without becoming Hinglish; the
+  // reply must stay in the script the student actually typed. Roman Hinglish
+  // is detected below only when there is no Devanagari at all.
+  if (/[\u0900-\u097F]/.test(text)) return "hi";
 
   const hinglish =
     /\b(h|hai|hain|kya|kyu|kyun|kaise|kaisa|kaun|kahan|kab|kitna|kitni|mujhe|mera|meri|tum|tumhe|tumhara|tumhari|aap|aapko|batao|bata|samjhao|samjha|karo|karna|karni|nahi|nahin|haan|acha|theek|thik|chahiye|hoga|hogi|hota|hoti|hote|matlab|padhai|sawal|bahut|bohot|ka|ki|ke|mein|se|ko|par|aur|abhi|phir|bhi|kuch|sab|bhai|yaar|raha|rahi|rahe|gaya|gayi|diya|liya|bolte|bolti|bolta|aati|aata|aate)\b/i;

@@ -1158,19 +1158,20 @@ html:not(.dark) .avia-panel--v2 .avia-bubble--avia {
     display: block;
   }
 
+  /* A floating sheet, inset from the edges: the dock is hidden while it is
+     open, and the composer keeps its own row at the bottom. The old edge-to-
+     edge sheet plus the dock's higher z-index is what buried the send/mic
+     controls on a phone. */
   .avia-panel--v2 {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
+    left: 8px;
+    right: 8px;
+    bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    width: auto;
     height: auto;
-    max-height: min(82dvh, 720px);
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: 27px 27px 0 0;
-    padding-bottom: env(safe-area-inset-bottom);
+    max-height: min(78dvh, 680px);
+    border: 1px solid var(--panel-line-strong, var(--panel-line));
+    border-radius: 24px;
     box-shadow: 0 -24px 80px -40px rgba(0, 0, 0, 0.9);
   }
 
@@ -1198,8 +1199,11 @@ html:not(.dark) .avia-panel--v2 .avia-bubble--avia {
     padding: 7px;
   }
 
+  /* Let the transcript shrink inside the sheet. A 220px floor sounds roomy,
+     but it forced the footer below short viewports; the composer must own its
+     height and the messages must be the only thing that scrolls. */
   .avia-panel--v2 .avia-log {
-    min-height: 220px;
+    min-height: 0;
     padding: 12px 13px;
   }
 
@@ -1231,7 +1235,10 @@ html:not(.dark) .avia-panel--v2 .avia-bubble--avia {
   }
 
   .avia-panel--v2 .avia-foot {
-    padding: 9px 11px 7px;
+    position: relative;
+    z-index: 1;
+    padding: 9px 11px 11px;
+    background: var(--panel);
   }
 
   .avia-panel--v2 .avia-input {
