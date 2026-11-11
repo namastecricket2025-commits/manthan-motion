@@ -718,9 +718,14 @@ export function MathLab() {
                       setView(tab.id);
                     }}
                   >
-                    <span className="mathlab-view__icon" aria-hidden>
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
+                    <span
+                    className="mathlab-view__icon"
+                    aria-hidden
+                    data-motion="none"
+                    data-view={tab.id}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
                     {tab.label}
                   </button>
                 );                    })}
