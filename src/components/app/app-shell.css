@@ -579,6 +579,10 @@
   inset: 0;
   z-index: 100;
   display: grid;
+  /* `place-items` centres the mark inside its grid track; the track itself
+     still needs centring. Without this, an oversized animated mark starts at
+     the left edge and appears to stretch in from one side. */
+  place-content: center;
   place-items: center;
   overflow: hidden;
   background: transparent;
@@ -606,8 +610,16 @@
   width: 92px;
   max-width: none;
   height: auto;
+  aspect-ratio: 904 / 640;
+  justify-self: center;
+  align-self: center;
   shape-rendering: geometricPrecision;
-  animation: app-launch-mark 1000ms linear forwards;
+  /* Size and opacity are separate animations. Sharing keyframes meant the
+     fade was interpolated against the width curve; this fade is always a
+     clean 1 → 0, independent of how far the mark has grown. */
+  animation:
+    app-launch-mark 1000ms linear forwards,
+    app-launch-fade 1000ms linear forwards;
 }
 
 /* The width curve is exponential, not linear. A camera moving into a scene
@@ -618,38 +630,51 @@
 @keyframes app-launch-mark {
   0% {
     width: 92px;
-    opacity: 1;
   }
   12% {
     width: 116px;
-    opacity: 1;
   }
   25% {
     width: 152px;
-    opacity: 0.99;
   }
   40% {
     width: 225px;
-    opacity: 0.97;
   }
   55% {
     width: max(340px, 26vmax);
-    opacity: 0.9;
   }
   68% {
     width: 42vmax;
-    opacity: 0.76;
   }
   80% {
     width: 68vmax;
-    opacity: 0.5;
   }
   90% {
     width: 115vmax;
-    opacity: 0.2;
   }
   100% {
     width: 190vmax;
+  }
+}
+
+@keyframes app-launch-fade {
+  0%,
+  35% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.97;
+  }
+  68% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.35;
+  }
+  100% {
     opacity: 0;
   }
 }
@@ -669,16 +694,7 @@
   }
   .app-launch__mark {
     width: 92px;
-    animation: app-launch-mark-reduced 260ms ease-out forwards;
-  }
-}
-
-@keyframes app-launch-mark-reduced {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
+    animation: app-launch-fade 260ms ease-out forwards;
   }
 }
 
