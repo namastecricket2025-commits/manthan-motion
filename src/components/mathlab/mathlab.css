@@ -4455,6 +4455,29 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   .mathlab-practice__sheet {
     padding: 4px 12px 10px;
   }
+
+  /* On tablets-as-phones the Math Lab top bar should keep its two nailed-down
+     ends through every orientation: lab identity on the left, tab strip in the
+     middle, home bookmark on the right. The tablet-specific overrides below keep
+     that layout honest even when the screen rotates between portrait and
+     landscape, so one end never wraps below the other. */
+  .mathlab-viewbar {
+    padding: 10px 10px 10px;
+  }
+
+  .mathlab-viewbar__identity,
+  .mathlab-viewbar__nav {
+    gap: 8px;
+  }
+
+  .mathlab-viewbar__bookmark {
+    padding: 7px 11px;
+  }
+
+  .mathlab-view {
+    min-height: 40px;
+    padding: 9px 12px;
+  }
 }
 
 /* ================================================================== */
