@@ -566,12 +566,13 @@
     grid-template-columns: 44px minmax(0, 1fr);
   }
 
-  /* Mobile copies of the lab's own chrome live a moveable single row, not a
-     desktop-fixed header (the page header is the sticky one here). Make the
-     option buttons and pill rails large enough to be selected and labelled on
-     a phone, and let them breathe when the keyboard opens. */
+  /* On phones the Math Lab top bar is already a proper three-part window
+     (identity · tab strip · home jump), so the smaller screens only need the
+     same window shortened a little when the keyboard takes half the height.
+     Keep the two ends reachable and the tab strip touchable; do not reflow
+     the rail into a separate row. */
   .mathlab-viewbar {
-    margin: 6px 0 14px;
+    margin: 6px 0 12px;
   }
 
   .mathlab-view {
@@ -3236,6 +3237,190 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   min-width: 0;
 }
 
+/* The Math Lab top information bar has two things that the student should
+   always be able to reach on a phone: the current work context, and the
+   home/bookmark jump to whatever they were looking at. Right now those two
+   controls share one mobile row that wraps under the tab rail, so one end can
+   disappear under the keyboard or sit flush against the rounded rail on the
+   next line. On a narrow screen that row should be two nailed-down ends with
+   a touchable tab strip between them: the lab identity on the left, the
+   navigation bookmark on the right, and the view pills as the runway that
+   connects them. The tab rail itself is already tappable; this change makes
+   the rest of the bar behave like a proper mobile toolbar instead of a
+   stretched desktop row. */
+.mathlab-viewbar {
+  /* On phones the bar is no longer a wide flex row that can break its ends.
+     It is a fixed mobile toolbar: a full-width surface, with the identity
+     column fixed on the left and the navigation column fixed on the right,
+     and the pill rail as the only scrolling part in between. */
+  position: relative;
+  width: 100%;
+  margin: 6px 0 12px;
+  padding: 9px 10px 9px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background:
+    color-mix(in srgb, var(--panel) 96%, transparent),
+    color-mix(in srgb, var(--accent) 2%, transparent);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 10px 24px -22px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px) saturate(108%);
+}
+
+.mathlab-viewbar__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.mathlab-viewbar__mark {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent);
+  background:
+    color-mix(in srgb, var(--text-main) 7%, transparent),
+    radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--text-main) 12%, transparent), transparent 76%);
+  display: grid;
+  place-items: center;
+  color: var(--text-main);
+}
+
+.mathlab-viewbar__mark > * {
+  width: 14px;
+  height: 14px;
+}
+
+.mathlab-viewbar__name {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+
+.mathlab-viewbar__name--kicker {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 1px;
+}
+
+.mathlab-viewbar__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.mathlab-viewbar__bookmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-line);
+  background: color-mix(in srgb, var(--card) 62%, transparent);
+  color: var(--text-dim);
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-decoration: none;
+  transition:
+    color 180ms var(--ease-momentum),
+    background-color 180ms var(--ease-momentum),
+    border-color 180ms var(--ease-momentum);
+}
+
+.mathlab-viewbar__bookmark:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-color: var(--glass-line);
+}
+
+.mathlab-viewbar__bookmark:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--text-main), 0 0 0 4px color-mix(in srgb, var(--text-main) 30%, transparent);
+}
+
+.mathlab-viewbar__bookmark--tight {
+  padding: 6px 10px;
+}
+
+/* The pill rail is the only horizontally-scrolling child in the mobile bar,
+   and it must not let any tap area spill outside the bar's rounded container. */
+.mathlab-views {
+  min-width: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scroll-padding-inline: 8px;
+}
+
+.mathlab-view {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 36px;
+  padding-inline: 11px;
+  padding-block: 9px;
+  scroll-snap-align: start;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  transition:
+    color 180ms var(--ease-momentum),
+    background-color 180ms var(--ease-momentum),
+    border-color 180ms var(--ease-momentum);
+}
+
+.mathlab-view:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 22%, transparent);
+}
+
+.mathlab-view.is-active {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 40%, transparent);
+}
+
+.mathlab-view__icon {
+  flex: 0 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mathlab-view .h-3\.5,
+.mathlab-view .w-3\.5 {
+  width: 18px;
+  height: 18px;
+}
+
+.mathlab-viewbar__row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  width: 100%;
+}
+
 .mathlab-solvepage {
   display: flex;
   flex-direction: column;
@@ -4281,35 +4466,74 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
    rail; stacking them gives each its own full line and leaves the tabs to
    pan without a second control sitting on top of them. */
 @media (max-width: 759px) {
-  /* Keep the lab's own tab rail reachable while the page scrolls. The page
-     header above it is long on a phone, and a non-sticky rail meant the eight
-     views disappeared as soon as the student opened a solution. It parks just
-     under the app's sticky mobile bar, with a real surface behind it. */
+  /* On phones the tab bar is still pinned just under the app's mobile nav
+     shelf, but it is now a proper three-part window: lab identity on the
+     left, the tab rail as the one touchable runway in the middle, and the
+     home bookmark nailed down on the right. That keeps both ends reachable
+     and keeps the pill rail from being used as both a tabstrip and a layout
+     rail at the same time. */
   .mathlab-viewbar {
     position: sticky;
-    /* The bar above is 3.2rem tall (36px controls + 2 × 0.45rem padding +
-       the hairline), plus the notch inset. The old 3.05rem parked this rail
-       a few pixels underneath it, clipping the top of the tabs. */
-    top: calc(env(safe-area-inset-top) + 3.25rem);
+    top: calc(env(safe-area-inset-top) + 3.3rem);
     z-index: 25;
     isolation: isolate;
-    /* Full-bleed under the app bar so scrolling content cannot show through a
-       gutter on either side of the pinned rail. */
-    margin: 0 -0.85rem 10px;
-    padding: 7px 0.85rem 8px;
+    margin: 0 -0.85rem 12px;
+    padding: 10px 0.85rem 10px;
     border-bottom: 1px solid var(--glass-line);
     background: var(--panel);
-    box-shadow: 0 8px 20px -24px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 10px 24px -26px rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px) saturate(112%);
+  }
+
+  .mathlab-viewbar__identity {
+    flex-shrink: 0;
+  }
+
+  .mathlab-viewbar__mark {
+    width: 26px;
+    height: 26px;
+  }
+
+  .mathlab-viewbar__mark > * {
+    width: 15px;
+    height: 15px;
+  }
+
+  .mathlab-viewbar__name {
+    font-size: 12px;
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mathlab-viewbar__nav {
+    flex-shrink: 0;
+  }
+
+  .mathlab-viewbar__bookmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    font-size: 11.5px;
+  }
+
+  .mathlab-viewbar__bookmark--tight {
+    padding: 7px 11px;
   }
 
   .mathlab-viewbar__row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 7px;
+    position: static;
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow: hidden;
+    width: 100%;
   }
 
   .mathlab-views {
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
     min-width: 0;
     justify-content: flex-start;
     overflow-x: auto;
@@ -4320,8 +4544,7 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   }
 
   .mathlab-view {
-    min-height: 38px;
-    flex: 0 0 auto;
+    min-height: 40px;
     padding: 9px 12px;
     font-size: 11.5px;
     scroll-snap-align: start;
@@ -4330,17 +4553,47 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
   .mathlab-viewbar .gs-trigger {
     width: auto;
     max-width: 100%;
-    align-self: flex-end;
+    align-self: center;
     justify-content: center;
-    margin-left: 0;
-    padding: 8px 12px !important;
+    margin-left: 8px;
+    padding: 9px 12px !important;
     border-radius: 999px !important;
     font-size: 11px;
   }
 
   .mathlab-viewbar .gs-trigger__logo {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
+  }
+  
+  @media (dvh-ratio: 1/3), (max-height: 680px) {
+    .mathlab-viewbar {
+      padding: 8px 0.85rem 8px;
+      margin-bottom: 10px;
+    }
+
+    .mathlab-viewbar__identity,
+    .mathlab-viewbar__nav {
+      gap: 6px;
+    }
+
+    .mathlab-viewbar__mark {
+      width: 22px;
+      height: 22px;
+    }
+
+    .mathlab-viewbar__name {
+      font-size: 11.5px;
+    }
+
+    .mathlab-view {
+      min-height: 36px;
+      padding: 8px 11px;
+    }
+
+    .mathlab-viewbar .gs-trigger {
+      padding: 8px 11px !important;
+    }
   }
 
   .mathlab-solvepage {

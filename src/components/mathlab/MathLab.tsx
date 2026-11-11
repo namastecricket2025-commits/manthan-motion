@@ -8,6 +8,7 @@ import {
   type GradeSpec,
 } from "@/components/mathlab/mathlab";
 import { MathTex } from "@/components/mathlab/latex";
+import { Bookmark } from "lucide-react";
 import { MathInput, type MathInputHandle } from "@/components/mathlab/MathInput";
 import { StepList } from "@/components/mathlab/StepList";
 import { CheckMyWork } from "@/components/mathlab/CheckMyWork";
@@ -700,6 +701,38 @@ export function MathLab() {
             is the same row on every tab. */}
         <div className="mathlab-viewbar">
           <div className="mathlab-viewbar__row">
+            <div className="mathlab-viewbar__identity">
+              {locked ? null : (
+                <a
+                  href="/math-lab"
+                  className="mathlab-viewbar__bookmark mathlab-viewbar__bookmark--tight"
+                  aria-label="Back to Math Lab start"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setView("solve");
+                    setFormula("");
+                    setSolution(null);
+                    setTurns([]);
+                    setEngineError(null);
+                    setPracticeSeed(null);
+                    setCalcOpen(false);
+                    setHistoryId(null);
+                    setHintMode(false);
+                    setCopied(null);
+                    setPrinting(false);
+                    setShowWorked(true);
+                  }}
+                >
+                  <span className="mathlab-viewbar__mark" aria-hidden>
+                    <Compass className="h-[12px] w-[12px]" />
+                  </span>
+                  <span className="mathlab-viewbar__name">
+                    <span className="mathlab-viewbar__name--kicker">Math Lab</span>
+                    <span className="mathlab-viewbar__name">workbench</span>
+                  </span>
+                </a>
+              )}
+            </div>
             <nav className="mathlab-views" role="tablist" aria-label="Math Lab views">
               {VIEW_TABS.map((tab) => {
                 const Icon = tab.icon;
@@ -729,7 +762,19 @@ export function MathLab() {
                     {tab.label}
                   </button>
                 );                    })}
-            </nav>
+            </nav>              <a
+                href="/"
+                className="mathlab-viewbar__bookmark"
+                aria-label="Back to home"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate("/", { replace: true });
+                }}
+              >
+                <Bookmark className="h-[15px] w-[15px]" />
+                <span>Home</span>
+              </a>
+
             <SearchWithGoogle
               topic={formula.trim() || "Maths problem — NCERT CBSE explained"}
               label="Search ideas on the web"
