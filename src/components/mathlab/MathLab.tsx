@@ -718,7 +718,7 @@ export function MathLab() {
                     }}
                   >
                     <span className="mathlab-view__icon" aria-hidden>
-                      <Icon className="h-[16px] w-[16px]" />
+                      <Icon className="h-[20px] w-[20px]" />
                     </span>
                     {tab.label}
                   </button>

@@ -77,26 +77,50 @@
 }
 
 .mathlab-viewbar__logo {
-  display: inline-block;
-  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.mathlab-viewbar__logo__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-main) 88%, transparent);
+  color: #ffffff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  transition: transform 120ms var(--ease-momentum), color 120ms var(--ease-momentum), background 120ms var(--ease-momentum);
+  cursor: pointer;
+}
+
+.mathlab-viewbar__logo__mark:hover {
+  transform: translateY(-1px);
+}
+
+.mathlab-viewbar__logo__mark:active {
+  transform: scale(0.95);
+}
+
+.mathlab-viewbar__logo__mark-glyph {
+  display: block;
+  inline-size: 16px;
+  block-size: 16px;
+  color: inherit;
+  fill: currentColor;
+}
+
+.mathlab-viewbar__logo-word {
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-main);
+  line-height: 1.1;
 }
 
-.mathlab-viewbar__logo-name {
-  font-size: 11.5px;
-  line-height: 12px;
-  text-transform: uppercase;
-}
-
-.mathlab-viewbar__logo-sub {
-  display: none;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
 
 .mathlab-viewbar__pill {
   display: inline-flex;
