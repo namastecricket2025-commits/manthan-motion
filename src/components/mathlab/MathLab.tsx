@@ -298,15 +298,6 @@ function FractionBars({ fractions }: { fractions: Fraction[] }) {
   );
 }
 
-function ManthanBadge() {
-  return (
-    <svg className="h-[22px] w-[22px]" viewBox="0 0 22 22" aria-hidden>
-      <circle cx="9" cy="12.5" r="5.2" />
-      <circle cx="15.6" cy="13.2" r="2.6" />
-    </svg>
-  );
-}
-
 export function MathLab() {
   const navigate = useNavigate();
   const { can } = usePlan();
@@ -709,39 +700,6 @@ export function MathLab() {
             than in the page header — this is where the question lives, and it
             is the same row on every tab. */}
         <div className="mathlab-viewbar">
-          {/* Left: the lab's own circular identity, so the bar still reads as
-              the Math Lab on every tab and the student's problem is not their
-              only anchor. */}
-          <div className="mathlab-viewbar__dock">
-            <button
-              type="button"
-              className="mathlab-viewbar__ring mathlab-viewbar__mark-bowl"
-              aria-label="Back to Math Lab start"
-              onClick={(event) => {
-                event.preventDefault();
-                setView("solve");
-                setFormula("");
-                setSolution(null);
-                setTurns([]);
-                setEngineError(null);
-                setPracticeSeed(null);
-                setCalcOpen(false);
-                setHistoryId(null);
-                setHintMode(false);
-                setCopied(null);
-                setPrinting(false);
-                setShowWorked(true);
-              }}
-            >
-              <svg className="h-[12px] w-[12px]" viewBox="0 0 10 10" aria-hidden>
-                <circle cx="3" cy="4.4" r="1.6" />
-                <circle cx="6.2" cy="5.6" r="1" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Middle: a long scrolling pill rail; the student slides it with a
-              finger or a trackpad and taps the stop that opens. */}
           <div className="mathlab-viewbar__slip">
             <div className="mathlab-viewbar__rail">
               {VIEW_TABS.map((tab) => {
@@ -760,7 +718,7 @@ export function MathLab() {
                     }}
                   >
                     <span className="mathlab-view__icon" aria-hidden>
-                      <Icon className="h-[14px] w-[14px]" />
+                      <Icon className="h-[16px] w-[16px]" />
                     </span>
                     {tab.label}
                   </button>
@@ -769,7 +727,6 @@ export function MathLab() {
             </div>
           </div>
 
-          {/* Right: in-app Google search, as its own circular pill. */}
           <SearchWithGoogle
             topic={formula.trim() || "Maths problem — NCERT CBSE explained"}
             label="Search ideas on the web"

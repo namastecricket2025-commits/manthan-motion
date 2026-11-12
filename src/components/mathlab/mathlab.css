@@ -3377,205 +3377,146 @@ html[data-motion="reduced"] .mathlab-calc-fab__ring {
 }
 
 /* ================================================================== */
-/* The simplified solve page                                           */
-/* ================================================================== */
-
-/* The notebook column. The page texture and the wash are NOT here: they are
-   the page's own `.dot-field` + `.glow-aura`, mounted at the top of the /math-lab
-   wrapper (src/pages/MathLab.tsx), which is where the dashboard mounts its
-   pair. Anchored to this column instead, both layers started at the tab row,
-   below the heading — so the gradient's top edge fell mid-page and read as a
-   lit rectangle behind the toolbar. */
-.mathlab-page {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-}
-
-/* The Math Lab top information bar has two things that the student should
-   always be able to reach on a phone: the current work context, and the
-   home/bookmark jump to whatever they were looking at. Right now those two
-   controls share one mobile row that wraps under the tab rail, so one end can
-   disappear under the keyboard or sit flush against the rounded rail on the
-   next line. On a narrow screen that row should be two nailed-down ends with
-   a touchable tab strip between them: the lab identity on the left, the
-   navigation bookmark on the right, and the view pills as the runway that
-   connects them. The tab rail itself is already tappable; this change makes
-   the rest of the bar behave like a proper mobile toolbar instead of a
-   stretched desktop row. */
+/* Mobile Math Lab top bar: one long draggable pill rail holding the view
+   stops, with a circular Google pill on the right. On a narrow phone window
+   that is the only top control the student needs: drag left/right, tap a
+   stop, press the circular Google button to search. */
 .mathlab-viewbar {
-  /* On phones the bar is no longer a wide flex row that can break its ends.
-     It is a fixed mobile toolbar: a full-width surface, with the identity
-     column fixed on the left and the navigation column fixed on the right,
-     and the pill rail as the only scrolling part in between. */
-  position: relative;
   width: 100%;
   margin: 6px 0 12px;
-  padding: 9px 10px 9px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  padding: 8px 4px;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   border: 1px solid var(--glass-line);
   border-radius: 14px;
   background:
     color-mix(in srgb, var(--panel) 96%, transparent),
     color-mix(in srgb, var(--accent) 2%, transparent);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 10px 24px -22px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 24px -22px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px) saturate(108%);
 }
 
-.mathlab-viewbar__identity {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-  flex: 0 0 auto;
-}
-
-.mathlab-viewbar__mark {
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent);
-  background:
-    color-mix(in srgb, var(--text-main) 7%, transparent),
-    radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--text-main) 12%, transparent), transparent 76%);
-  display: grid;
-  place-items: center;
-  color: var(--text-main);
-}
-
-.mathlab-viewbar__mark > * {
-  width: 14px;
-  height: 14px;
-}
-
-.mathlab-viewbar__name {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--text-main);
-  line-height: 1.25;
-}
-
-.mathlab-viewbar__name--kicker {
-  display: block;
-  font-size: 8.5px;
-  font-weight: 650;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 1px;
-}
-
-.mathlab-viewbar__nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.mathlab-viewbar__bookmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-line);
-  background: color-mix(in srgb, var(--card) 62%, transparent);
-  color: var(--text-dim);
-  font-size: 10.5px;
-  font-weight: 650;
-  line-height: 1.2;
-  text-decoration: none;
-  transition:
-    color 180ms var(--ease-momentum),
-    background-color 180ms var(--ease-momentum),
-    border-color 180ms var(--ease-momentum);
-}
-
-.mathlab-viewbar__bookmark:hover {
-  color: var(--text-main);
-  background: color-mix(in srgb, var(--text-main) 7%, transparent);
-  border-color: var(--glass-line);
-}
-
-.mathlab-viewbar__bookmark:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--text-main), 0 0 0 4px color-mix(in srgb, var(--text-main) 30%, transparent);
-}
-
-.mathlab-viewbar__bookmark--tight {
-  padding: 6px 10px;
-}
-
-/* The pill rail is the only horizontally-scrolling child in the mobile bar,
-   and it must not let any tap area spill outside the bar's rounded container. */
-.mathlab-views {
-  min-width: 100%;
+.mathlab-viewbar__slip {
+  flex: 1 1 auto;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
-  overscroll-behavior-x: contain;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
-  scroll-padding-inline: 8px;
+  scroll-snap-type: x mandatory;
+  padding: 4px 0;
+  border-radius: 15px;
+  background: var(--mathlab-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+.mathlab-viewbar__slip::-webkit-scrollbar {
+  display: none;
+}
+
+.mathlab-viewbar__rail {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 2px;
+  min-width: fit-content;
 }
 
 .mathlab-view {
-  flex: 0 0 auto;
-  min-width: 0;
-  min-height: 36px;
-  padding-inline: 11px;
-  padding-block: 9px;
-  scroll-snap-align: start;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  transition:
-    color 180ms var(--ease-momentum),
-    background-color 180ms var(--ease-momentum),
-    border-color 180ms var(--ease-momentum);
-}
-
-.mathlab-view:hover {
-  color: var(--text-main);
-  background: color-mix(in srgb, var(--text-main) 7%, transparent);
-  border-color: color-mix(in srgb, var(--text-main) 22%, transparent);
-}
-
-.mathlab-view.is-active {
-  color: var(--text-main);
-  background: color-mix(in srgb, var(--text-main) 12%, transparent);
-  border-color: color-mix(in srgb, var(--text-main) 40%, transparent);
-}
-
-.mathlab-view__icon {
-  flex: 0 0 20px;
+  position: relative;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 100ms ease;
+  cursor: pointer;
+  color-scheme: dark;
 }
 
-.mathlab-view .h-3\.5,
-.mathlab-view .w-3\.5 {
+.mathlab-view__icon,
+.mathlab-view > svg {
+  flex-shrink: 0;
+  display: inline-block;
+  opacity: 0.95;
+  transition: opacity 120ms ease;
+}
+
+.mathlab-view.is-active,
+.mathlab-view:active {
+  background: rgba(200, 220, 255, 0.14);
+  border-color: rgba(200, 220, 255, 0.35);
+}
+
+.mathlab-view:active {
+  transform: scale(0.96);
+}
+
+.mathlab-view.is-active:focus-visible,
+.mathlab-view:focus-visible {
+  outline: none;
+}
+
+.mathlab-viewbar__google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 8px 24px -22px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  -webkit-user-drag: element;
+}
+
+.mathlab-viewbar__google:hover {
+  background: #f7f7f7 !important;
+  box-shadow: 0 10px 30px -24px rgba(0, 0, 0, 0.6);
+}
+
+.mathlab-viewbar__google:active {
+  transform: scale(0.97);
+  background: #ededed !important;
+}
+
+.mathlab-viewbar__google .mathlab-viewbar__google__goog {
+  display: block;
   width: 18px;
   height: 18px;
+  inline-size: 18px;
+  block-size: 18px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.mathlab-viewbar__row {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  width: 100%;
+.mathlab-viewbar__google .mathlab-viewbar__google__text {
+  display: none;
+}
+
+.mathlab-viewbar__google:focus-visible {
+  outline: 2px solid color-mix(in srgb, #4285f4 65%, transparent);
+  outline-offset: 2px;
 }
 
 .mathlab-solvepage {
